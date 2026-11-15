@@ -1,37 +1,57 @@
 # AI Video Agent
 
-A local-first Python CLI for editing personal travel footage. The project is intentionally **not** a SaaS application: media stays on your machine, source files are never modified, and every edit will be represented by a reviewable plan before rendering.
+A local-first Python CLI for editing personal travel footage. Media stays on your machine, source files are never modified, and every edit will be represented by a reviewable plan before rendering.
 
 ## MVP
 
 - Folder scanning and media metadata extraction
 - Scene detection and representative-frame sampling
 - Local vision-model descriptions for each detected scene
-- Natural-language editing instructions (planned)
-- Speech-aware pause removal that preserves quiet scenic footage (planned)
-- Speech transcription and subtitles (planned)
-- Automatic travel highlights (planned)
-- Dry-run edit-plan review (planned)
-- MP4 export through FFmpeg (planned)
+- Natural-language editing, speech-aware pause removal, subtitles, highlights, edit-plan review, and MP4 export (planned)
 
 ## Requirements
 
 - Python 3.11+
-- FFmpeg and ffprobe installed and available on PATH
-- Ollama installed and running locally for visual descriptions
-- A multimodal Ollama model, default: qwen2.5vl:7b
+- FFmpeg and ffprobe on PATH
+- Docker Engine and Docker Compose
 
-Check the media tools and prepare the local vision model:
+## Run the local vision model with Docker
+
+The recommended development setup runs **Ollama/Qwen in Docker** and runs the Python CLI in your Codespace or local Python environment. The Compose service publishes the Ollama API only on loopback port 11434 and persists downloaded models in a named Docker volume.
+
+Start Ollama:
 
 ```bash
-ffmpeg -version
-ffprobe -version
-ollama pull qwen2.5vl:7b
+docker compose up -d
 ```
 
-Keep Ollama running while using the understand command. The model runs locally; extracted frames and JSON artifacts stay in the project folder.
+Download the vision model into the running container (this is a one-time download; the Docker volume persists it):
 
-## Install for development
+```bash
+docker compose exec ollama ollama pull qwen2.5vl:7b
+```
+
+Confirm that Ollama responds and the model is installed:
+
+```bash
+curl http://127.0.0.1:11434/api/tags
+docker compose exec ollama ollama list
+```
+
+Optional: set the endpoint/model explicitly in your shell:
+
+```bash
+export OLLAMA_BASE_URL=http://127.0.0.1:11434
+export OLLAMA_MODEL=qwen2.5vl:7b
+```
+
+The CLI defaults to these values when the variables are not set. If the Python application itself is later run inside a separate Compose container on the same Compose network, set `OLLAMA_BASE_URL=http://ollama:11434` instead of localhost.
+
+### Resource notes
+
+Qwen2.5-VL 7B is a substantial model. First download can take several gigabytes, and inference may be slow on CPU-only Codespaces. Ensure the Codespace has sufficient memory and disk before pulling it. If resource usage is too high, use a smaller compatible Qwen2.5-VL model tag supported by Ollama and set `OLLAMA_MODEL` (or pass `--model`) accordingly. For NVIDIA acceleration, Docker must have NVIDIA Container Toolkit configured; the default Compose file intentionally makes no GPU assumption.
+
+## Install the Python CLI
 
 ```bash
 python -m venv .venv
@@ -39,36 +59,43 @@ source .venv/bin/activate
 python -m pip install -e ".[dev]"
 ```
 
-## Analyze a travel-footage folder
+## Test with a real travel clip
+
+Put one or more supported videos (`.mp4`, `.mov`, `.mkv`, `.avi`, `.m4v`, `.webm`) in a folder accessible to the Python environment. For the first test, use a short 30–90 second clip to validate the end-to-end path before processing a long trip.
 
 ```bash
-video-agent analyze ./travel-japan
+video-agent analyze ./travel-test
+video-agent understand ./travel-test --samples-per-scene 2
 ```
 
-The command recursively discovers supported video formats, extracts metadata using ffprobe, and writes .video-agent/analysis.json. Use --output to choose another JSON destination.
+The command detects scene boundaries, extracts two representative frames per scene, sends each frame to the local Ollama model, and writes:
 
-## Understand video content
+```text
+travel-test/
+└── .video-agent/
+    ├── analysis.json
+    ├── understanding.json
+    └── frames/
+        └── <video-hash>/scene-*/frame-*.jpg
+```
+
+Open `.video-agent/understanding.json` to review timestamps, scene descriptions, visible objects, activities, and confidence values. Extracted JPEGs are useful for checking whether the sampler chose representative moments. Original video files are not modified.
+
+## Useful commands
 
 ```bash
-video-agent understand ./travel-japan
+# Follow model server logs
+docker compose logs -f ollama
+
+# Stop the model container; downloaded weights remain in the named volume
+docker compose down
+
+# Stop and delete the downloaded model volume (destructive)
+docker compose down -v
+
+# Choose a model and fewer frames per scene
+video-agent understand ./travel-test --model qwen2.5vl:7b --samples-per-scene 1
 ```
-
-This command:
-
-1. Detects scene boundaries with PySceneDetect.
-2. Extracts three representative frames per scene with FFmpeg.
-3. Sends those frames to your local Ollama vision model for factual descriptions.
-4. Validates timestamped observations with Pydantic.
-5. Writes .video-agent/understanding.json and keeps extracted JPEGs under .video-agent/frames/.
-
-Choose a different installed vision model or sample count:
-
-```bash
-video-agent understand ./travel-japan --model qwen2.5vl:7b --samples-per-scene 2
-video-agent understand ./travel-japan --output ./reports/understanding.json
-```
-
-The JSON includes each scene's start/end time, summary, representative-frame paths, visible objects, activities, and model confidence. The first version analyzes still frames independently; it does not yet infer motion across frames, identify exact locations, or understand audio. Those are planned follow-up capabilities.
 
 ## Development
 
