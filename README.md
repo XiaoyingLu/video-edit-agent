@@ -28,7 +28,7 @@ docker compose up -d
 Download the vision model into the running container (this is a one-time download; the Docker volume persists it):
 
 ```bash
-docker compose exec ollama ollama pull qwen2.5vl:7b
+docker compose exec ollama ollama pull qwen2.5vl:3b
 ```
 
 Confirm that Ollama responds and the model is installed:
@@ -42,10 +42,10 @@ Optional: set the endpoint/model explicitly in your shell:
 
 ```bash
 export OLLAMA_BASE_URL=http://127.0.0.1:11434
-export OLLAMA_MODEL=qwen2.5vl:7b
+export OLLAMA_MODEL=qwen2.5vl:3b
 ```
 
-The CLI defaults to these values when the variables are not set. If the Python application itself is later run inside a separate Compose container on the same Compose network, set `OLLAMA_BASE_URL=http://ollama:11434` instead of localhost.
+The README uses the 3B variant as a lighter first test in a Codespace. On a machine with more available memory, you can pull `qwen2.5vl:7b` and set `OLLAMA_MODEL=qwen2.5vl:7b`. The CLI defaults to `qwen2.5vl:7b` when `OLLAMA_MODEL` is not set. If the Python application itself is later run inside a separate Compose container on the same Compose network, set `OLLAMA_BASE_URL=http://ollama:11434` instead of localhost.
 
 ### Resource notes
 
@@ -94,7 +94,7 @@ docker compose down
 docker compose down -v
 
 # Choose a model and fewer frames per scene
-video-agent understand ./travel-test --model qwen2.5vl:7b --samples-per-scene 1
+video-agent understand ./travel-test --model qwen2.5vl:3b --samples-per-scene 1
 ```
 
 ## Development
