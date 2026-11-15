@@ -83,12 +83,8 @@ def probe_video(path: Path, project_root: Path) -> MediaInfo:
         raise MediaToolError(f"ffprobe returned invalid JSON for {path}") from exc
 
     streams = payload.get("streams", [])
-    video_stream = next(
-        (stream for stream in streams if stream.get("codec_type") == "video"), None
-    )
-    audio_stream = next(
-        (stream for stream in streams if stream.get("codec_type") == "audio"), None
-    )
+    video_stream = next((stream for stream in streams if stream.get("codec_type") == "video"), None)
+    audio_stream = next((stream for stream in streams if stream.get("codec_type") == "audio"), None)
     duration = float(payload.get("format", {}).get("duration", 0.0) or 0.0)
 
     return MediaInfo(
@@ -96,9 +92,7 @@ def probe_video(path: Path, project_root: Path) -> MediaInfo:
         duration_seconds=duration,
         width=video_stream.get("width") if video_stream else None,
         height=video_stream.get("height") if video_stream else None,
-        frame_rate=_parse_frame_rate(video_stream.get("avg_frame_rate"))
-        if video_stream
-        else None,
+        frame_rate=_parse_frame_rate(video_stream.get("avg_frame_rate")) if video_stream else None,
         video_codec=video_stream.get("codec_name") if video_stream else None,
         audio_codec=audio_stream.get("codec_name") if audio_stream else None,
         has_video=video_stream is not None,

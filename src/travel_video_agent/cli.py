@@ -18,6 +18,11 @@ app = typer.Typer(
 console = Console()
 
 
+@app.callback()
+def main() -> None:
+    """Analyze and edit local travel footage."""
+
+
 @app.command()
 def analyze(
     folder: Annotated[
@@ -34,7 +39,6 @@ def analyze(
     output: Annotated[
         Path | None,
         typer.Option(
-            None,
             "--output",
             "-o",
             help="JSON output path (default: <folder>/.video-agent/analysis.json).",
@@ -64,9 +68,7 @@ def analyze(
     table.add_column("Audio")
 
     for video in analysis.videos:
-        resolution = (
-            f"{video.width}x{video.height}" if video.width and video.height else "—"
-        )
+        resolution = f"{video.width}x{video.height}" if video.width and video.height else "—"
         table.add_row(
             video.path,
             f"{video.duration_seconds:.2f}s",
