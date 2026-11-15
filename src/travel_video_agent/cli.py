@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -19,20 +20,26 @@ console = Console()
 
 @app.command()
 def analyze(
-    folder: Path = typer.Argument(
-        ...,
-        exists=True,
-        file_okay=False,
-        dir_okay=True,
-        readable=True,
-        help="Folder containing travel videos.",
-    ),
-    output: Path | None = typer.Option(
-        None,
-        "--output",
-        "-o",
-        help="JSON output path (default: <folder>/.video-agent/analysis.json).",
-    ),
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Folder containing travel videos.",
+        ),
+    ],
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            None,
+            "--output",
+            "-o",
+            help="JSON output path (default: <folder>/.video-agent/analysis.json).",
+        ),
+    ] = None,
 ) -> None:
     """Discover videos and extract metadata using ffprobe."""
     try:
