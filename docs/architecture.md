@@ -1,22 +1,34 @@
 # Architecture
 
-The application is a local-first CLI. The first slice is deliberately deterministic and does not require an LLM.
+The application is a local-first CLI. Media processing is deterministic where possible; visual interpretation is delegated to an optional local multimodal model.
 
-## Current flow
+## Current media-analysis flow
 
 ```text
 CLI (Typer)
-  -> folder discovery
-  -> ffprobe metadata extraction
+  -> folder discovery + ffprobe metadata
+  -> PySceneDetect scene boundaries
+  -> FFmpeg representative-frame extraction
+  -> local Ollama vision model
   -> Pydantic validation
-  -> local analysis.json
+  -> .video-agent/understanding.json + cached frame JPEGs
 ```
+
+## Video understanding boundaries
+
+- PySceneDetect proposes temporal scene boundaries; it does not describe scene meaning.
+- FFmpeg extracts a small number of representative still frames per scene.
+- Ollama describes only visible evidence in each still frame and returns structured JSON.
+- Each observation retains its timestamp, frame path, and confidence.
+- The first iteration does not infer motion between frames, transcribe audio, or identify exact geographic locations.
+
+The vision model is accessed through an adapter so other local or hosted providers can be added without changing the pipeline. The default Ollama model is qwen2.5vl:7b.
 
 ## Planned editing workflow
 
 ```text
 Input folder + natural-language instruction
-  -> media analysis (scenes, sampled frames, speech)
+  -> media understanding (visual scenes, speech, motion, quality)
   -> highlight ranking
   -> LLM planner (structured edit-plan output)
   -> deterministic plan validation
