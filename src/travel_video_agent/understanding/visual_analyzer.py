@@ -2,6 +2,7 @@
 
 import base64
 import json
+import os
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -18,11 +19,13 @@ class OllamaVisionAnalyzer:
     def __init__(
         self,
         model: str = "qwen2.5vl:7b",
-        base_url: str = "http://127.0.0.1:11434",
-        timeout_seconds: int = 180,
+        base_url: str | None = None,
+        timeout_seconds: int = 600,
     ) -> None:
         self.model = model
-        self.base_url = base_url.rstrip("/")
+        self.base_url = (
+            base_url or os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
+        ).rstrip("/")
         self.timeout_seconds = timeout_seconds
 
     def analyze_frame(self, frame_path: Path) -> dict[str, Any]:
@@ -61,7 +64,8 @@ class OllamaVisionAnalyzer:
             ) from exc
         except (URLError, TimeoutError) as exc:
             raise VisionModelError(
-                f"Could not reach Ollama at {self.base_url}. Start Ollama and pull '{self.model}'."
+                f"Could not reach Ollama at {self.base_url}. Start the Docker service "
+                "and verify OLLAMA_BASE_URL."
             ) from exc
         except (json.JSONDecodeError, UnicodeDecodeError, KeyError, TypeError) as exc:
             raise VisionModelError("Ollama returned an invalid response.") from exc
