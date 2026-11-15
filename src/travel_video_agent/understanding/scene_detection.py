@@ -16,7 +16,7 @@ def detect_scenes(
         from scenedetect import ContentDetector, SceneManager, open_video
     except ImportError as exc:
         raise MediaToolError(
-            'PySceneDetect is required. Install project dependencies with '
+            "PySceneDetect is required. Install project dependencies with "
             'python -m pip install -e ".[dev]".'
         ) from exc
 

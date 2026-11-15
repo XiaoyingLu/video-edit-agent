@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class FrameObservation(BaseModel):
     """What a vision model observes in one representative frame."""
+
     model_config = ConfigDict(extra="forbid")
     timestamp_seconds: float = Field(ge=0)
     frame_path: str
@@ -16,6 +17,7 @@ class FrameObservation(BaseModel):
 
 class VideoScene(BaseModel):
     """A detected scene with visual observations sampled across its duration."""
+
     model_config = ConfigDict(extra="forbid")
     scene_id: str
     start_seconds: float = Field(ge=0)
@@ -26,6 +28,7 @@ class VideoScene(BaseModel):
 
 class VideoUnderstanding(BaseModel):
     """Complete understanding artifact for one project folder."""
+
     model_config = ConfigDict(extra="forbid")
     project_path: str
     video_count: int = Field(ge=0)

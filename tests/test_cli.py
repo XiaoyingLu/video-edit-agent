@@ -41,8 +41,11 @@ def test_understand_command_writes_json(tmp_path: Path, monkeypatch) -> None:
     from travel_video_agent import cli
 
     expected = VideoUnderstanding(
-        project_path=str(tmp_path.resolve()), video_count=1, scene_count=0,
-        scenes=[], model="qwen2.5vl:7b",
+        project_path=str(tmp_path.resolve()),
+        video_count=1,
+        scene_count=0,
+        scenes=[],
+        model="qwen2.5vl:7b",
     )
     monkeypatch.setattr(cli, "understand_folder", lambda *args, **kwargs: expected)
     output = tmp_path / "custom" / "understanding.json"

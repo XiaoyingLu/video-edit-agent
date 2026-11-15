@@ -12,7 +12,9 @@ from .visual_analyzer import OllamaVisionAnalyzer
 
 def _scene_summary(observations: list[FrameObservation]) -> str:
     descriptions = [item.description for item in observations]
-    return " ".join(descriptions) if descriptions else "No representative frames could be extracted."
+    return (
+        " ".join(descriptions) if descriptions else "No representative frames could be extracted."
+    )
 
 
 def understand_folder(
@@ -40,20 +42,27 @@ def understand_folder(
             observations: list[FrameObservation] = []
             for timestamp, frame_path in frames:
                 result = analyzer.analyze_frame(frame_path)
-                observations.append(FrameObservation(
-                    timestamp_seconds=timestamp,
-                    frame_path=frame_path.relative_to(root).as_posix(),
-                    **result,
-                ))
-            scenes.append(VideoScene(
-                scene_id=f"{video_key}-scene-{scene_index:04d}",
-                start_seconds=start,
-                end_seconds=end,
-                summary=_scene_summary(observations),
-                observations=observations,
-            ))
+                observations.append(
+                    FrameObservation(
+                        timestamp_seconds=timestamp,
+                        frame_path=frame_path.relative_to(root).as_posix(),
+                        **result,
+                    )
+                )
+            scenes.append(
+                VideoScene(
+                    scene_id=f"{video_key}-scene-{scene_index:04d}",
+                    start_seconds=start,
+                    end_seconds=end,
+                    summary=_scene_summary(observations),
+                    observations=observations,
+                )
+            )
 
     return VideoUnderstanding(
-        project_path=str(root), video_count=media.video_count,
-        scene_count=len(scenes), scenes=scenes, model=model,
+        project_path=str(root),
+        video_count=media.video_count,
+        scene_count=len(scenes),
+        scenes=scenes,
+        model=model,
     )

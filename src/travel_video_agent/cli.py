@@ -41,7 +41,8 @@ def analyze(
     output: Annotated[
         Path | None,
         typer.Option(
-            "--output", "-o",
+            "--output",
+            "-o",
             help="JSON output path (default: <folder>/.video-agent/analysis.json).",
         ),
     ] = None,
@@ -70,8 +71,11 @@ def analyze(
     for video in analysis.videos:
         resolution = f"{video.width}x{video.height}" if video.width and video.height else "—"
         table.add_row(
-            video.path, f"{video.duration_seconds:.2f}s", resolution,
-            video.video_codec or "—", video.audio_codec or ("No" if not video.has_audio else "Yes"),
+            video.path,
+            f"{video.duration_seconds:.2f}s",
+            resolution,
+            video.video_codec or "—",
+            video.audio_codec or ("No" if not video.has_audio else "Yes"),
         )
     console.print(table)
     console.print(
@@ -97,7 +101,8 @@ def understand(
     output: Annotated[
         Path | None,
         typer.Option(
-            "--output", "-o",
+            "--output",
+            "-o",
             help="JSON output path (default: <folder>/.video-agent/understanding.json).",
         ),
     ] = None,
@@ -107,15 +112,14 @@ def understand(
     ] = "qwen2.5vl:7b",
     samples_per_scene: Annotated[
         int,
-        typer.Option("--samples-per-scene", min=1, max=10,
-                     help="Representative frames to inspect per scene."),
+        typer.Option(
+            "--samples-per-scene", min=1, max=10, help="Representative frames to inspect per scene."
+        ),
     ] = 3,
 ) -> None:
     """Detect scenes, sample frames, and describe footage with a local vision model."""
     try:
-        understanding = understand_folder(
-            folder, model=model, samples_per_scene=samples_per_scene
-        )
+        understanding = understand_folder(folder, model=model, samples_per_scene=samples_per_scene)
     except (FileNotFoundError, NotADirectoryError, MediaToolError, VisionModelError) as exc:
         console.print(f"[red]Video understanding failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
@@ -149,7 +153,8 @@ def understand(
     )
     console.print(f"Understanding saved to [green]{destination}[/green]")
     console.print(
-        f"Extracted frames are saved under [green]{folder.resolve() / '.video-agent' / 'frames'}[/green]"
+        "Extracted frames are saved under "
+        f"[green]{folder.resolve() / '.video-agent' / 'frames'}[/green]"
     )
 
 

@@ -35,16 +35,20 @@ class OllamaVisionAnalyzer:
             "(number from 0 to 1). Do not guess the location, identities, or events "
             "that cannot be established from this frame. If uncertain, say so."
         )
-        payload = json.dumps({
-            "model": self.model,
-            "stream": False,
-            "format": "json",
-            "messages": [{"role": "user", "content": prompt, "images": [image]}],
-            "options": {"temperature": 0},
-        }).encode("utf-8")
+        payload = json.dumps(
+            {
+                "model": self.model,
+                "stream": False,
+                "format": "json",
+                "messages": [{"role": "user", "content": prompt, "images": [image]}],
+                "options": {"temperature": 0},
+            }
+        ).encode("utf-8")
         request = Request(
-            f"{self.base_url}/api/chat", data=payload,
-            headers={"Content-Type": "application/json"}, method="POST",
+            f"{self.base_url}/api/chat",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
         )
         try:
             with urlopen(request, timeout=self.timeout_seconds) as response:
@@ -57,8 +61,7 @@ class OllamaVisionAnalyzer:
             ) from exc
         except (URLError, TimeoutError) as exc:
             raise VisionModelError(
-                f"Could not reach Ollama at {self.base_url}. Start Ollama and pull "
-                f"'{self.model}'."
+                f"Could not reach Ollama at {self.base_url}. Start Ollama and pull '{self.model}'."
             ) from exc
         except (json.JSONDecodeError, UnicodeDecodeError, KeyError, TypeError) as exc:
             raise VisionModelError("Ollama returned an invalid response.") from exc
