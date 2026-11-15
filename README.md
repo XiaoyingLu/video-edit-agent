@@ -52,6 +52,27 @@ Use `--output` to choose another JSON destination:
 video-agent analyze ./travel-japan --output ./reports/travel-analysis.json
 ```
 
+## Run with Docker
+
+Build the image from the repository root:
+
+```bash
+docker build -t video-agent .
+```
+
+Mount a footage folder into the container to analyze it. The default analysis
+file is written under the mounted folder, so it remains available on the host:
+
+```bash
+docker run --rm \
+  -v "$PWD/travel-japan:/media" \
+  video-agent analyze /media
+```
+
+To save the analysis elsewhere, use `--output` with a path in a mounted folder.
+For example, mount a separate reports folder at `/reports` and pass
+`--output /reports/travel-analysis.json`.
+
 The analysis file contains relative file paths, duration, dimensions, frame rate, video/audio codecs, and stream-presence flags. It does not copy or alter the source videos.
 
 ## Development
