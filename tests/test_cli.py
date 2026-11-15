@@ -41,4 +41,4 @@ def test_analyze_command_writes_json(
 def test_cli_help_is_available() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    assert "analyze " in result.output
+    assert "analyze" in result.output
