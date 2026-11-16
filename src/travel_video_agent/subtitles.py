@@ -98,7 +98,7 @@ def build_subtitle_cues(
                 if fragments:
                     texts = _split_text(speech.text, [item[2] for item in fragments])
                     for (start, end, _), text in zip(fragments, texts, strict=True):
-                        cleaned = " ".join(text.replace("\\r", " ").replace("\\n", " ").split())
+                        cleaned = " ".join(text.replace("\r", " ").replace("\n", " ").split())
                         if cleaned:
                             cues.append(SubtitleCue(start, end, cleaned))
         output_cursor += video.retained_duration_seconds
@@ -121,11 +121,10 @@ def render_srt(cues: list[SubtitleCue]) -> str:
         if cue.end_seconds <= cue.start_seconds:
             continue
         blocks.append(
-            f"{index}\\n{_srt_timestamp(cue.start_seconds)} --> "
-            f"{_srt_timestamp(cue.end_seconds)}\\n{cue.text}"
+            f"{index}\n{_srt_timestamp(cue.start_seconds)} --> "
+            f"{_srt_timestamp(cue.end_seconds)}\n{cue.text}"
         )
-    return "\\n\\n".join(blocks) + ("\\n" if blocks else "")
-
+    return "\n\n".join(blocks) + ("\n" if blocks else "")
 
 def generate_subtitles(
     folder: Path,
