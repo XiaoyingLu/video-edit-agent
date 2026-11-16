@@ -14,6 +14,8 @@ from .editing import (
     build_edit_proposal,
     build_project_timeline,
     load_edit_proposal,
+    parse_editing_intent,
+    IntentParsingError,
     save_edit_proposal,
 )
 from .highlights import find_highlights_folder
@@ -735,9 +737,6 @@ def find_highlights(
     )
 
 
-if __name__ == "__main__":
-    app()
-
 
 @app.command("plan")
 def plan_edit(
@@ -770,8 +769,6 @@ def plan_edit(
     ] = None,
 ) -> None:
     """Convert a natural-language request into a validated, reviewable editing plan."""
-    from .editing import IntentParsingError, parse_editing_intent
-
     try:
         editing_plan = parse_editing_intent(prompt, model=model)
     except (IntentParsingError, ValueError) as exc:
@@ -794,3 +791,7 @@ def plan_edit(
         "[yellow]This is an intent artifact only. No clips were selected, "
         "no timeline was changed, and no video was rendered.[/yellow]"
     )
+
+
+if __name__ == "__main__":
+    app()
