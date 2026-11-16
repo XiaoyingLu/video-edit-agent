@@ -839,7 +839,7 @@ def create_video(
         reject_ids: set[str] = set()
         for clip in timeline.clips:
             console.print(
-                f"\\n[bold cyan]{clip.sequence_index}. {clip.video_path}[/bold cyan] "
+                f"\n[bold cyan]{clip.sequence_index}. {clip.video_path}[/bold cyan] "
                 f"— {clip.clip_id} ({clip.source_start_seconds:.2f}–"
                 f"{clip.source_end_seconds:.2f}s)"
             )
