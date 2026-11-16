@@ -316,8 +316,6 @@ def test_render_command_reports_verified_output(tmp_path: Path, monkeypatch) -> 
     assert captured["overwrite"] is True
     assert captured["timeout_seconds"] == 120
 
-
-
 def test_plan_command_writes_validated_editing_plan(tmp_path: Path, monkeypatch) -> None:
     from travel_video_agent import cli
     from travel_video_agent.editing.intent_schemas import EditingPlan
