@@ -10,10 +10,12 @@ from rich.console import Console
 from rich.table import Table
 
 from .editing import (
+    IntentParsingError,
     apply_review_decisions,
     build_edit_proposal,
     build_project_timeline,
     load_edit_proposal,
+    parse_editing_intent,
     save_edit_proposal,
 )
 from .highlights import find_highlights_folder
@@ -732,6 +734,61 @@ def find_highlights(
         "[yellow]Scores are explainable visual heuristics, not aesthetic judgments. "
         "Review every candidate; quiet scenic footage is not penalized for low motion. "
         "No edits were applied and source media was not modified.[/yellow]"
+    )
+
+
+@app.command("plan")
+def plan_edit(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Folder containing travel videos.",
+        ),
+    ],
+    prompt: Annotated[
+        str,
+        typer.Option("--prompt", "-p", help="Describe the video you want to create."),
+    ],
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help="JSON output path (default: <folder>/.video-agent/editing-plan.json).",
+        ),
+    ] = None,
+    model: Annotated[
+        str | None,
+        typer.Option("--model", help="Ollama model (default: OLLAMA_MODEL or qwen2.5vl:3b)."),
+    ] = None,
+) -> None:
+    """Convert a natural-language request into a validated, reviewable editing plan."""
+    try:
+        editing_plan = parse_editing_intent(prompt, model=model)
+    except (IntentParsingError, ValueError) as exc:
+        console.print(f"[red]Editing-plan generation failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    destination = output or folder.resolve() / ".video-agent" / "editing-plan.json"
+    destination = destination.expanduser().resolve()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(
+        json.dumps(editing_plan.model_dump(mode="json"), indent=2) + "\n",
+        encoding="utf-8",
+    )
+    console.print("[bold]Validated Natural-language Editing Plan[/bold]")
+    console.print(f"Target duration: {editing_plan.target_duration_seconds:.1f}s")
+    console.print(f"Style: {editing_plan.style} | Pacing: {editing_plan.pacing}")
+    console.print(f"Priorities: {', '.join(editing_plan.priorities)}")
+    console.print(f"Plan saved to [green]{destination}[/green]")
+    console.print(
+        "[yellow]This is an intent artifact only. No clips were selected, "
+        "no timeline was changed, and no video was rendered.[/yellow]"
     )
 
 

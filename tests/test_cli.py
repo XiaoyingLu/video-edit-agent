@@ -104,6 +104,7 @@ def test_cli_help_is_available() -> None:
     assert "detect-silence" in result.output
     assert "subtitles" in result.output
     assert "find-highlights" in result.output
+    assert "plan" in result.output
 
 
 def test_propose_edits_command_writes_review_only_json(tmp_path: Path, monkeypatch) -> None:
@@ -314,3 +315,46 @@ def test_render_command_reports_verified_output(tmp_path: Path, monkeypatch) -> 
     assert captured["output_path"] == output
     assert captured["overwrite"] is True
     assert captured["timeout_seconds"] == 120
+
+
+def test_plan_command_writes_validated_editing_plan(tmp_path: Path, monkeypatch) -> None:
+    from travel_video_agent import cli
+    from travel_video_agent.editing.intent_schemas import EditingPlan
+
+    expected = EditingPlan(
+        source_prompt="Create a 60-second cinematic travel video",
+        target_duration_seconds=60,
+        style="cinematic",
+        priorities=["scenic_landscapes", "memorable_moments"],
+    )
+    captured = {}
+
+    def fake_parse(prompt: str, model: str | None = None):
+        captured["prompt"] = prompt
+        captured["model"] = model
+        return expected
+
+    monkeypatch.setattr(cli, "parse_editing_intent", fake_parse)
+    output = tmp_path / "custom" / "editing-plan.json"
+    result = runner.invoke(
+        app,
+        [
+            "plan",
+            str(tmp_path),
+            "--prompt",
+            "Create a 60-second cinematic travel video",
+            "--model",
+            "qwen2.5vl:3b",
+            "--output",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    saved = json.loads(output.read_text(encoding="utf-8"))
+    assert saved == expected.model_dump(mode="json")
+    assert captured == {
+        "prompt": "Create a 60-second cinematic travel video",
+        "model": "qwen2.5vl:3b",
+    }
+    assert "No clips were selected" in result.output
