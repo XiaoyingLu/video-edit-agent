@@ -25,7 +25,7 @@ from .editing import (
 )
 from .highlights import find_highlights_folder
 from .media import MediaToolError, analyze_folder
-from .rendering import RenderError, render_project
+from .rendering import RenderError, render_approved_shot_timeline, render_project
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
 from .subtitles import SubtitleError, generate_subtitles
@@ -671,6 +671,66 @@ def render(
     if burn_subtitles or subtitle_file:
         subtitle_display_path = subtitle_file or folder.resolve() / ".video-agent" / "subtitles.srt"
         console.print(f"Burned-in subtitles: [green]{subtitle_display_path}[/green]")
+    console.print("[yellow]Original source videos were not modified.[/yellow]")
+
+
+@app.command("render-draft")
+def render_draft(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder containing optimized-timeline.json and source videos.",
+        ),
+    ],
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help="MP4 output path (default: <folder>/.video-agent/rendered-draft.mp4).",
+        ),
+    ] = None,
+    timeline: Annotated[
+        Path | None,
+        typer.Option("--timeline", help="Path to the reviewed optimized timeline JSON."),
+    ] = None,
+    overwrite: Annotated[
+        bool,
+        typer.Option("--overwrite", help="Replace an existing output MP4."),
+    ] = False,
+    timeout_seconds: Annotated[
+        float,
+        typer.Option("--timeout", min=1, help="Maximum render time in seconds."),
+    ] = 3600,
+) -> None:
+    """Render the fully approved shot timeline with its proposed transitions."""
+    try:
+        report = render_approved_shot_timeline(
+            folder,
+            timeline_path=timeline,
+            output_path=output,
+            overwrite=overwrite,
+            timeout_seconds=timeout_seconds,
+        )
+    except (FileNotFoundError, FileExistsError, ValueError, RenderError) as exc:
+        console.print(f"[red]Draft render failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    console.print("[bold green]Approved shot timeline rendered and verified.[/bold green]")
+    console.print(f"Output: [green]{report.output_path}[/green]")
+    console.print(
+        f"Duration: {report.actual_duration_seconds:.2f}s "
+        f"({report.segment_count} approved shots from {report.source_video_count} source video(s))"
+    )
+    console.print(
+        f"Format: {report.width}x{report.height}, "
+        f"{report.video_codec.upper()} video + {report.audio_codec.upper()} audio"
+    )
     console.print("[yellow]Original source videos were not modified.[/yellow]")
 
 
