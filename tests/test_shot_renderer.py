@@ -347,8 +347,15 @@ def test_render_approved_shot_timeline_with_real_ffmpeg(tmp_path):
         timeline_approved=True,
     )
     (artifact / "optimized-timeline.json").write_text(timeline.model_dump_json(), encoding="utf-8")
+    subtitle_file = artifact / "draft-subtitles.srt"
+    subtitle_file.write_text(
+        "1\\n00:00:00,500 --> 00:00:01,500\\nA scenic view\\n",
+        encoding="utf-8",
+    )
 
-    report = render_approved_shot_timeline(tmp_path)
+    report = render_approved_shot_timeline(
+        tmp_path, subtitle_path=subtitle_file, subtitle_font_size=24
+    )
     output = artifact / "rendered-draft.mp4"
     assert output.is_file()
     assert report.video_codec == "h264"
