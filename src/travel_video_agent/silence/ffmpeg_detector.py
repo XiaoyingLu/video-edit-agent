@@ -8,9 +8,7 @@ from pathlib import Path
 from .schemas import SilenceInterval
 
 _SILENCE_START = re.compile(r"silence_start:\s*(-?\d+(?:\.\d+)?)")
-_SILENCE_END = re.compile(
-    r"silence_end:\s*(-?\d+(?:\.\d+)?).*?silence_duration:\s*(\d+(?:\.\d+)?)"
-)
+_SILENCE_END = re.compile(r"silence_end:\s*(-?\d+(?:\.\d+)?).*?silence_duration:\s*(\d+(?:\.\d+)?)")
 
 
 class SilenceDetectionError(RuntimeError):

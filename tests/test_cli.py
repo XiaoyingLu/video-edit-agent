@@ -74,7 +74,6 @@ def test_transcribe_command_writes_json(tmp_path: Path, monkeypatch) -> None:
     assert json.loads(output.read_text(encoding="utf-8")) == expected.model_dump(mode="json")
 
 
-
 def test_detect_silence_command_writes_json(tmp_path: Path, monkeypatch) -> None:
     from travel_video_agent import cli
 
