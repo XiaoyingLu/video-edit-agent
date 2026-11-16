@@ -1,7 +1,7 @@
 """Speech-aware audio silence analysis."""
 
 from .pipeline import analyze_silence_folder
-from .schemas import ProjectSilenceAnalysis, SilenceInterval, SilenceCandidate, VideoSilenceAnalysis
+from .schemas import ProjectSilenceAnalysis, SilenceCandidate, SilenceInterval, VideoSilenceAnalysis
 
 __all__ = [
     "ProjectSilenceAnalysis",
