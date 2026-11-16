@@ -43,6 +43,9 @@ docker compose run --rm video-agent analyze ./travel-test
 docker compose run --rm video-agent understand ./travel-test --samples-per-scene 2
 docker compose run --rm video-agent transcribe ./travel-test --model small
 docker compose run --rm video-agent detect-silence ./travel-test --noise-db -35 --min-duration 1.5
+docker compose run --rm video-agent propose-edits ./travel-test
+docker compose run --rm -it video-agent review-edits ./travel-test
+docker compose run --rm video-agent build-timeline ./travel-test
 ```
 
 You can pass any supported CLI arguments after `video-agent`:
