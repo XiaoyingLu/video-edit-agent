@@ -28,7 +28,7 @@ from .media import MediaToolError, analyze_folder
 from .rendering import RenderError, render_approved_shot_timeline, render_project
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
-from .subtitles import SubtitleError, generate_subtitles
+from .subtitles import SubtitleError, generate_draft_subtitles, generate_subtitles
 from .transcription import transcribe_folder
 from .transcription.whisper_backend import TranscriptionError
 from .understanding import understand_folder
@@ -674,6 +674,46 @@ def render(
     console.print("[yellow]Original source videos were not modified.[/yellow]")
 
 
+@app.command("draft-subtitles")
+def draft_subtitles(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder containing optimized-timeline.json and transcription.json.",
+        ),
+    ],
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="SRT output path."),
+    ] = None,
+    timeline: Annotated[
+        Path | None,
+        typer.Option("--timeline", help="Path to the reviewed optimized timeline JSON."),
+    ] = None,
+    transcription: Annotated[
+        Path | None,
+        typer.Option("--transcription", help="Path to transcription.json."),
+    ] = None,
+) -> None:
+    """Generate captions mapped to the fully reviewed approved-shot sequence."""
+    try:
+        destination, cue_count = generate_draft_subtitles(
+            folder,
+            timeline_path=timeline,
+            transcription_path=transcription,
+            output_path=output,
+        )
+    except (FileNotFoundError, ValueError, SubtitleError) as exc:
+        console.print(f"[red]Draft subtitle generation failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    console.print(f"Generated {cue_count} subtitle cue(s): [green]{destination}[/green]")
+
+
 @app.command("render-draft")
 def render_draft(
     folder: Annotated[
@@ -707,17 +747,45 @@ def render_draft(
         float,
         typer.Option("--timeout", min=1, help="Maximum render time in seconds."),
     ] = 3600,
+    burn_subtitles: Annotated[
+        bool, typer.Option("--burn-subtitles", help="Generate and burn approved-shot subtitles.")
+    ] = False,
+    subtitle_file: Annotated[
+        Path | None, typer.Option("--subtitle-file", help="Use a custom SRT file and burn it in.")
+    ] = None,
+    subtitle_font_size: Annotated[
+        int, typer.Option("--subtitle-font-size", min=12, max=72, help="Burned-in subtitle size.")
+    ] = 28,
+    subtitle_position: Annotated[
+        str,
+        typer.Option("--subtitle-position", help="Subtitle position: bottom, center, or top."),
+    ] = "bottom",
 ) -> None:
-    """Render the fully approved shot timeline with its proposed transitions."""
+    """Render the fully approved shot timeline with transitions and optional subtitles."""
     try:
+        effective_subtitle = subtitle_file
+        if burn_subtitles and effective_subtitle is None:
+            effective_subtitle, cue_count = generate_draft_subtitles(folder, timeline_path=timeline)
+            console.print(
+                f"Generated {cue_count} subtitle cue(s): [green]{effective_subtitle}[/green]"
+            )
         report = render_approved_shot_timeline(
             folder,
             timeline_path=timeline,
             output_path=output,
             overwrite=overwrite,
             timeout_seconds=timeout_seconds,
+            subtitle_path=effective_subtitle if burn_subtitles or subtitle_file else None,
+            subtitle_font_size=subtitle_font_size,
+            subtitle_position=subtitle_position,
         )
-    except (FileNotFoundError, FileExistsError, ValueError, RenderError) as exc:
+    except (
+        FileNotFoundError,
+        FileExistsError,
+        ValueError,
+        RenderError,
+        SubtitleError,
+    ) as exc:
         console.print(f"[red]Draft render failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 

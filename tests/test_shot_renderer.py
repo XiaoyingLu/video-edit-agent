@@ -108,6 +108,25 @@ def test_shot_renderer_uses_concat_for_hard_cuts(tmp_path):
     assert "anullsrc=r=48000:cl=stereo" in graph
 
 
+def test_shot_renderer_adds_subtitle_filter(tmp_path):
+    subtitle = tmp_path / "draft subtitles.srt"
+    command = _build_shot_render_command(
+        "ffmpeg",
+        [(tmp_path / "one.mp4", 0, 3, True, "cut", 0)],
+        tmp_path / "out.mp4",
+        1920,
+        1080,
+        subtitle_path=subtitle,
+        subtitle_font_size=32,
+        subtitle_position="top",
+    )
+    graph = command[command.index("-filter_complex") + 1]
+    assert "subtitles=filename=" in graph
+    assert "FontSize=32" in graph
+    assert "Alignment=8" in graph
+    assert "[vfinal]" in graph
+
+
 def test_render_requires_complete_human_approval(tmp_path):
     artifact = tmp_path / ".video-agent"
     artifact.mkdir()
@@ -192,6 +211,7 @@ def test_cli_help_includes_render_draft():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "render-draft" in result.output
+    assert "draft-subtitles" in result.output
 
 
 def test_approved_duration_does_not_apply_transition_across_rejected_shot(tmp_path):
@@ -327,8 +347,15 @@ def test_render_approved_shot_timeline_with_real_ffmpeg(tmp_path):
         timeline_approved=True,
     )
     (artifact / "optimized-timeline.json").write_text(timeline.model_dump_json(), encoding="utf-8")
+    subtitle_file = artifact / "draft-subtitles.srt"
+    subtitle_file.write_text(
+        "1\\n00:00:00,500 --> 00:00:01,500\\nA scenic view\\n",
+        encoding="utf-8",
+    )
 
-    report = render_approved_shot_timeline(tmp_path)
+    report = render_approved_shot_timeline(
+        tmp_path, subtitle_path=subtitle_file, subtitle_font_size=24
+    )
     output = artifact / "rendered-draft.mp4"
     assert output.is_file()
     assert report.video_codec == "h264"
