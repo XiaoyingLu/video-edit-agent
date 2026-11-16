@@ -55,18 +55,22 @@ def _timeline(root: Path, *, approved: bool = True) -> ProjectDraftTimeline:
         proposed_duration_seconds=5.5,
         approved_duration_seconds=5.5 if approved else 3,
         proposed_clip_count=2,
-        clips=clips if approved else [
-            clips[0],
-            _clip(
-                "two",
-                2,
-                5,
-                8,
-                decision="pending",
-                transition="crossfade",
-                transition_duration=0.5,
-            ),
-        ],
+        clips=(
+            clips
+            if approved
+            else [
+                clips[0],
+                _clip(
+                    "two",
+                    2,
+                    5,
+                    8,
+                    decision="pending",
+                    transition="crossfade",
+                    transition_duration=0.5,
+                ),
+            ]
+        ),
         timeline_approved=approved,
     )
 
