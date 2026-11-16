@@ -11,12 +11,19 @@ from .intent_schemas import EditingPlan
 
 
 _PRIORITY_TERMS = {
-    "scenic_landscapes": {"landscape", "mountain", "ocean", "beach", "lake", "forest", "waterfall", "sunset", "sky", "coast", "scenic"},
+    "scenic_landscapes": {
+        "landscape", "mountain", "ocean", "beach", "lake", "forest",
+        "waterfall", "sunset", "sky", "coast", "scenic",
+    },
     "city_highlights": {"city", "street", "traffic", "skyline", "downtown", "urban", "square"},
-    "people_and_activities": {"people", "person", "walking", "hiking", "cycling", "activity", "crowd", "family"},
+    "people_and_activities": {
+        "people", "person", "walking", "hiking", "cycling", "activity", "crowd", "family",
+    },
     "food_and_culture": {"food", "restaurant", "market", "festival", "culture", "cooking", "dish"},
     "architecture": {"building", "architecture", "church", "temple", "bridge", "museum", "castle"},
-    "memorable_moments": {"smile", "celebration", "sunset", "view", "landmark", "moment", "beautiful", "panorama"},
+    "memorable_moments": {
+        "smile", "celebration", "sunset", "view", "landmark", "moment", "beautiful", "panorama",
+    },
     "chronological_story": set(),
 }
 
@@ -156,7 +163,11 @@ def build_draft_selection(
     if "chronological_story" in editing_plan.priorities:
         candidates.sort(key=lambda item: (item.video_path, item.source_start_seconds))
     else:
-        candidates.sort(key=lambda item: (-item.combined_score, item.video_path, item.source_start_seconds))
+        candidates.sort(
+            key=lambda item: (
+                -item.combined_score, item.video_path, item.source_start_seconds
+            )
+        )
 
     remaining = editing_plan.target_duration_seconds
     selected_ids: set[str] = set()
