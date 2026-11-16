@@ -49,13 +49,11 @@ def _load_transcripts_by_path(
             )
         if video.has_audio != media.has_audio:
             raise ValueError(
-                f"audio-stream metadata changed for {video.path!r}; "
-                "rerun 'video-agent transcribe'"
+                f"audio-stream metadata changed for {video.path!r}; rerun 'video-agent transcribe'"
             )
         if abs(video.duration_seconds - media.duration_seconds) > 0.05:
             raise ValueError(
-                f"video duration changed for {video.path!r}; "
-                "rerun 'video-agent transcribe'"
+                f"video duration changed for {video.path!r}; rerun 'video-agent transcribe'"
             )
         if not video.has_audio and video.segments:
             raise ValueError(
@@ -79,8 +77,7 @@ def _load_transcripts_by_path(
     if missing_paths:
         missing = ", ".join(sorted(missing_paths))
         raise ValueError(
-            f"transcription artifact is missing video(s): {missing}; "
-            "rerun 'video-agent transcribe'"
+            f"transcription artifact is missing video(s): {missing}; rerun 'video-agent transcribe'"
         )
 
     if transcription.video_count != len(media_by_path):
@@ -89,16 +86,10 @@ def _load_transcripts_by_path(
         video.has_audio for video in transcription.videos
     ):
         raise ValueError("transcription audio-video count is inconsistent")
-    if transcription.segment_count != sum(
-        len(video.segments) for video in transcription.videos
-    ):
+    if transcription.segment_count != sum(len(video.segments) for video in transcription.videos):
         raise ValueError("transcription segment count is inconsistent")
 
-    return {
-        path: video.segments
-        for path, video in transcripts_by_path.items()
-        if video.has_audio
-    }
+    return {path: video.segments for path, video in transcripts_by_path.items() if video.has_audio}
 
 
 def _speech_free_candidates(
