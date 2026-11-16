@@ -4,11 +4,15 @@ import json
 from pathlib import Path
 
 from ..highlights import find_highlights_folder
+from ..highlights.schemas import ProjectHighlights
 from ..transcription import transcribe_folder
 from ..understanding import understand_folder
 from .draft_pipeline import build_draft_selection
+from .draft_schemas import ProjectDraftSelection
+from .intent_schemas import EditingPlan
 from .intent import parse_editing_intent
 from .timeline_pipeline import build_draft_timeline, save_draft_timeline
+from .timeline_schemas import ProjectDraftTimeline
 
 
 def create_video_draft(
@@ -18,13 +22,19 @@ def create_video_draft(
     vision_model: str | None = None,
     whisper_model: str = "small",
     samples_per_scene: int = 2,
-):
+) -> tuple[EditingPlan, ProjectHighlights, ProjectDraftSelection, ProjectDraftTimeline, Path]:
     """Run analysis and deterministic planning stages, stopping before review/render."""
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise FileNotFoundError(f"Project folder does not exist: {root}")
     artifact_dir = root / ".video-agent"
     artifact_dir.mkdir(parents=True, exist_ok=True)
+
+    plan = parse_editing_intent(prompt, model=vision_model)
+    (artifact_dir / "editing-plan.json").write_text(
+        json.dumps(plan.model_dump(mode="json"), indent=2) + "\n",
+        encoding="utf-8",
+    )
 
     understanding = understand_folder(
         root,
@@ -48,13 +58,9 @@ def create_video_draft(
         encoding="utf-8",
     )
     if not highlights.candidates:
-        raise ValueError("No highlight candidates were found; check that the folder contains readable videos.")
-
-    plan = parse_editing_intent(prompt, model=vision_model)
-    (artifact_dir / "editing-plan.json").write_text(
-        json.dumps(plan.model_dump(mode="json"), indent=2) + "\n",
-        encoding="utf-8",
-    )
+        raise ValueError(
+            "No highlight candidates were found; check that the folder contains readable videos."
+        )
 
     selection = build_draft_selection(root)
     (artifact_dir / "draft-selection.json").write_text(
