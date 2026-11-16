@@ -9,7 +9,8 @@ A local-first Python CLI for editing personal travel footage. Media stays on you
 - Local vision-model descriptions for each detected scene
 - Local speech transcription with timestamped segments and long-gap metadata
 - Human review of proposed cuts and validated retained-segment timeline
-- Timeline-aligned SRT subtitles and optional burned-in subtitles\n- Explainable visual highlight candidate detection and ranking
+- Timeline-aligned SRT subtitles and optional burned-in subtitles
+- Explainable visual highlight candidate detection and ranking
 - Natural-language editing, speech-aware pause removal, highlights, and richer edit planning (planned)
 
 ## Requirements
@@ -48,7 +49,8 @@ docker compose run --rm video-agent detect-silence ./travel-test --noise-db -35 
 docker compose run --rm video-agent propose-edits ./travel-test
 docker compose run --rm -it video-agent review-edits ./travel-test
 docker compose run --rm video-agent build-timeline ./travel-test
-docker compose run --rm video-agent find-highlights ./travel-test --samples-per-scene 3\ndocker compose run --rm video-agent subtitles ./travel-test
+docker compose run --rm video-agent find-highlights ./travel-test --samples-per-scene 3
+docker compose run --rm video-agent subtitles ./travel-test
 docker compose run --rm video-agent render ./travel-test --burn-subtitles --subtitle-font-size 28 --subtitle-position bottom
 ```
 
@@ -74,7 +76,8 @@ travel-test/
     ├── silence-analysis.json
     ├── edit-proposal.json
     ├── timeline.json
-    ├── highlights.json\n    ├── subtitles.srt
+    ├── highlights.json
+    ├── subtitles.srt
     ├── rendered.mp4
     ├── models/
     └── frames/
