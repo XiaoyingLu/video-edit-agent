@@ -808,7 +808,10 @@ def draft_edit(
     ],
     plan: Annotated[
         Path | None,
-        typer.Option("--plan", help="Editing plan JSON (default: <folder>/.video-agent/editing-plan.json)."),
+        typer.Option(
+            "--plan",
+            help="Editing plan JSON (default: <folder>/.video-agent/editing-plan.json).",
+        ),
     ] = None,
     output: Annotated[
         Path | None,
@@ -826,7 +829,7 @@ def draft_edit(
     destination = destination.expanduser().resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(
-        json.dumps(draft.model_dump(mode="json"), indent=2) + "\\n",
+        json.dumps(draft.model_dump(mode="json"), indent=2) + "\n",
         encoding="utf-8",
     )
     table = Table(title="Proposed Footage Sequence — Human Review Required")
