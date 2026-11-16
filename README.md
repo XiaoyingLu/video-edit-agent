@@ -39,7 +39,7 @@ For the first Codespaces test, use the lighter 3B model. On a machine with more 
 
 ### Run the CLI
 
-For the end-to-end workflow, use one natural-language command. It analyzes the footage, transcribes speech, ranks highlights, parses your request into a validated plan, selects shots, and builds a proposed timeline. It then asks you to explicitly approve or reject every shot before rendering; if no shot is approved, rendering is skipped. The command never auto-approves clips.
+For the end-to-end workflow, use one natural-language command. It analyzes the footage, transcribes speech, ranks highlights, parses your request into a validated plan, selects shots, and builds a proposed timeline. It then asks you to explicitly approve or reject every shot before rendering; if no shot is approved, rendering is skipped. The command never auto-approves clips. It requires an interactive terminal (`-it`) because approval is a deliberate human decision.
 
 ```bash
 docker compose run --rm -it video-agent create-video ./travel-test --prompt "Create a 60-second cinematic travel video"
