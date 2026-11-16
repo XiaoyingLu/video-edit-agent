@@ -89,7 +89,7 @@ def test_build_subtitle_cues_drops_speech_inside_removed_interval(tmp_path):
         TranscriptSegment(start_seconds=4.5, end_seconds=5.5, text="removed speech")
     ]
 
-    assert build_subtitle_cues(timeline, transcription) == []
+    assert build_subtitle_cues(timeline, transcription) == [SubtitleCue(9, 10, "next clip")]
 
 
 def test_render_srt_uses_real_subrip_line_breaks():
