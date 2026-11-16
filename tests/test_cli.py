@@ -106,6 +106,7 @@ def test_cli_help_is_available() -> None:
     assert "find-highlights" in result.output
     assert "plan" in result.output
     assert "draft-edit" in result.output
+    assert "create-video" in result.output
 
 
 def test_propose_edits_command_writes_review_only_json(tmp_path: Path, monkeypatch) -> None:
