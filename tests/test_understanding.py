@@ -102,3 +102,100 @@ def test_understanding_pipeline_builds_timestamped_scenes(monkeypatch, tmp_path:
     assert result.scene_count == 1
     assert result.scenes[0].start_seconds == 0.0
     assert result.scenes[0].observations[0].timestamp_seconds == 2.5
+
+
+def test_ollama_analyzer_requests_json_schema(monkeypatch, tmp_path: Path) -> None:
+    frame = tmp_path / "frame.jpg"
+    frame.write_bytes(b"fake-image")
+    captured = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self):
+            content = {
+                "description": "A lake beneath mountains.",
+                "objects": ["lake", "mountains"],
+                "activities": [],
+                "confidence": 0.9,
+            }
+            return json.dumps({"message": {"content": json.dumps(content)}}).encode()
+
+    def fake_urlopen(request, timeout):
+        captured["payload"] = json.loads(request.data.decode("utf-8"))
+        return FakeResponse()
+
+    monkeypatch.setattr("travel_video_agent.understanding.visual_analyzer.urlopen", fake_urlopen)
+    result = OllamaVisionAnalyzer(model="qwen2.5vl:3b").analyze_frame(frame)
+
+    assert result["description"] == "A lake beneath mountains."
+    assert captured["payload"]["format"]["type"] == "object"
+    assert set(captured["payload"]["format"]["required"]) == {
+        "description",
+        "objects",
+        "activities",
+        "confidence",
+    }
+
+
+def test_ollama_analyzer_accepts_markdown_wrapped_json(monkeypatch, tmp_path: Path) -> None:
+    frame = tmp_path / "frame.jpg"
+    frame.write_bytes(b"fake-image")
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self):
+            content = (
+                "```json\n"
+                '{"description":"A coastal road.","objects":["road"],'
+                '"activities":["driving"],"confidence":0.8}'
+                "\n```"
+            )
+            return json.dumps({"message": {"content": content}}).encode()
+
+    monkeypatch.setattr(
+        "travel_video_agent.understanding.visual_analyzer.urlopen",
+        lambda request, timeout: FakeResponse(),
+    )
+    result = OllamaVisionAnalyzer().analyze_frame(frame)
+
+    assert result["description"] == "A coastal road."
+    assert result["activities"] == ["driving"]
+
+
+def test_ollama_analyzer_reports_invalid_json_with_response_preview(
+    monkeypatch, tmp_path: Path
+) -> None:
+    from travel_video_agent.understanding.visual_analyzer import VisionModelError
+
+    frame = tmp_path / "frame.jpg"
+    frame.write_bytes(b"fake-image")
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self):
+            return json.dumps({"message": {"content": "not json"}}).encode()
+
+    monkeypatch.setattr(
+        "travel_video_agent.understanding.visual_analyzer.urlopen",
+        lambda request, timeout: FakeResponse(),
+    )
+
+    import pytest
+
+    with pytest.raises(VisionModelError, match="Response preview"):
+        OllamaVisionAnalyzer().analyze_frame(frame)
