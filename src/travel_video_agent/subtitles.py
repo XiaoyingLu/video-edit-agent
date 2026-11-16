@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from ..editing.schemas import ProjectTimeline
-from ..transcription.schemas import ProjectTranscription, TranscriptSegment
+from ..transcription.schemas import ProjectTranscription
 
 
 class SubtitleError(RuntimeError):
