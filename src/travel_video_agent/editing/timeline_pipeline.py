@@ -17,9 +17,15 @@ _PACING_RANGES = {
 def _pacing_guidance(duration: float, pacing: str) -> tuple[str, str]:
     lower, upper = _PACING_RANGES[pacing]
     if duration < lower:
-        return "short", f"Short for {pacing} pacing; consider whether this shot needs more breathing room."
+        return (
+            "short",
+            f"Short for {pacing} pacing; consider whether this shot needs more breathing room.",
+        )
     if duration > upper:
-        return "long", f"Long for {pacing} pacing; consider trimming if the visual moment feels static."
+        return (
+            "long",
+            f"Long for {pacing} pacing; consider trimming if the visual moment feels static.",
+        )
     return "within", f"Within the suggested {pacing} pacing range ({lower:g}–{upper:g}s)."
 
 
@@ -59,7 +65,13 @@ def build_draft_timeline(
         selected.sort(key=lambda clip: (clip.video_path, clip.source_start_seconds))
     else:
         # The draft selection is already ranked by its deterministic relevance score.
-        selected.sort(key=lambda clip: (-clip.combined_score, clip.video_path, clip.source_start_seconds))
+        selected.sort(
+            key=lambda clip: (
+                -clip.combined_score,
+                clip.video_path,
+                clip.source_start_seconds,
+            )
+        )
 
     timeline_clips: list[DraftTimelineClip] = []
     previous_duration: float | None = None
@@ -99,7 +111,10 @@ def build_draft_timeline(
         )
         previous_duration = clip.duration_seconds
 
-    duration = sum(clip.duration_seconds for clip in timeline_clips) - sum(\n        clip.transition_duration_seconds for clip in timeline_clips[1:]\n    )\n    return ProjectDraftTimeline(
+    duration = sum(clip.duration_seconds for clip in timeline_clips) - sum(
+        clip.transition_duration_seconds for clip in timeline_clips[1:]
+    )
+    return ProjectDraftTimeline(
         project_path=str(root),
         source_selection=(
             str(selection_file.relative_to(root))
@@ -172,5 +187,10 @@ def apply_timeline_review(
 
     pending = any(clip.decision == "pending" for clip in timeline.clips)
     has_approved = any(clip.decision == "approved" for clip in timeline.clips)
-    timeline.timeline_approved = not pending and has_approved\n    approved = [clip for clip in timeline.clips if clip.decision == "approved"]\n    timeline.approved_duration_seconds = sum(clip.duration_seconds for clip in approved) - sum(\n        clip.transition_duration_seconds for clip in approved[1:]\n    )\n    # Revalidate after mutable review decisions are applied.
+    timeline.timeline_approved = not pending and has_approved
+    approved = [clip for clip in timeline.clips if clip.decision == "approved"]
+    timeline.approved_duration_seconds = sum(
+        clip.duration_seconds for clip in approved
+    ) - sum(clip.transition_duration_seconds for clip in approved[1:])
+    # Revalidate after mutable review decisions are applied.
     return ProjectDraftTimeline.model_validate(timeline.model_dump())
