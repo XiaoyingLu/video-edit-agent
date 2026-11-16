@@ -9,7 +9,13 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from .editing import (\n    apply_review_decisions,\n    build_edit_proposal,\n    build_project_timeline,\n    load_edit_proposal,\n    save_edit_proposal,\n)
+from .editing import (
+    apply_review_decisions,
+    build_edit_proposal,
+    build_project_timeline,
+    load_edit_proposal,
+    save_edit_proposal,
+)
 from .media import MediaToolError, analyze_folder
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
