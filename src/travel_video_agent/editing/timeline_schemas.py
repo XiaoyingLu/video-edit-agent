@@ -79,7 +79,9 @@ class ProjectDraftTimeline(BaseModel):
             raise ValueError("proposed_duration_seconds must include transition overlaps")
         approved = [clip for clip in self.clips if clip.decision == "approved"]
         approved_duration = sum(clip.duration_seconds for clip in approved) - sum(
-            clip.transition_duration_seconds for clip in approved[1:]
+            clip.transition_duration_seconds
+            for clip in approved[1:]
+            if clip.transition_in != "cut"
         )
         if abs(approved_duration - self.approved_duration_seconds) > 0.02:
             raise ValueError("approved_duration_seconds must match approved clips and transitions")
