@@ -1,6 +1,5 @@
 """Project-level speech-aware silence analysis."""
 
-import json
 from pathlib import Path
 
 from ..media import analyze_folder, discover_videos
