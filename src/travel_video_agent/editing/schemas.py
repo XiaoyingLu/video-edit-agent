@@ -108,3 +108,10 @@ class ProjectTimeline(BaseModel):
     retained_duration_seconds: float = Field(ge=0)
     rendering_performed: bool = False
     videos: list[VideoTimeline] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_project_duration(self) -> "ProjectTimeline":
+        total = sum(video.retained_duration_seconds for video in self.videos)
+        if abs(total - self.retained_duration_seconds) > 0.01:
+            raise ValueError("project retained duration must equal the sum of video durations")
+        return self
