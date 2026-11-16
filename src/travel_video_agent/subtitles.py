@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .editing.schemas import ProjectTimeline
-from .editing.timeline_schemas import ProjectDraftTimeline
+from .editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
 from .transcription.schemas import ProjectTranscription
 
 
@@ -161,14 +161,13 @@ def generate_subtitles(
     return destination, len(cues)
 
 
-
 def build_draft_subtitle_cues(
     timeline: ProjectDraftTimeline, transcription: ProjectTranscription
 ) -> list[SubtitleCue]:
     """Map transcript speech onto approved shots in the rendered draft timebase."""
     transcript_by_path = {video.path: video for video in transcription.videos}
     approved = [clip for clip in timeline.clips if clip.decision == "approved"]
-    clip_positions: list[tuple[object, float]] = []
+    clip_positions: list[tuple[DraftTimelineClip, float]] = []
     output_cursor = 0.0
     previous = None
     for clip in approved:
