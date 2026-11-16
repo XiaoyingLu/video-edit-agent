@@ -13,9 +13,9 @@ from .editing import (
     apply_review_decisions,
     build_edit_proposal,
     build_project_timeline,
+    IntentParsingError,
     load_edit_proposal,
     parse_editing_intent,
-    IntentParsingError,
     save_edit_proposal,
 )
 from .highlights import find_highlights_folder
@@ -779,7 +779,7 @@ def plan_edit(
     destination = destination.expanduser().resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(
-        json.dumps(editing_plan.model_dump(mode="json"), indent=2) + "\\n",
+        json.dumps(editing_plan.model_dump(mode="json"), indent=2) + "\n",
         encoding="utf-8",
     )
     console.print("[bold]Validated Natural-language Editing Plan[/bold]")
