@@ -1,5 +1,3 @@
-import json
-
 import pytest
 
 from travel_video_agent.editing.draft_schemas import DraftClip, ProjectDraftSelection
@@ -9,6 +7,11 @@ from travel_video_agent.editing.timeline_pipeline import (
     build_draft_timeline,
 )
 from travel_video_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
+from typer.testing import CliRunner
+
+from travel_video_agent.cli import app
+
+runner = CliRunner()
 
 
 def _write_inputs(root, style="vlog", transition="crossfade"):
@@ -143,3 +146,35 @@ def test_timeline_review_requires_at_least_one_approved_clip(tmp_path):
     reviewed = apply_timeline_review(timeline, set(), {"earlier", "later"})
     assert reviewed.timeline_approved is False
     assert all(clip.decision == "rejected" for clip in reviewed.clips)
+
+
+
+def test_optimize_and_review_timeline_cli_commands(tmp_path):
+    _write_inputs(tmp_path)
+    optimized = runner.invoke(app, ["optimize-timeline", str(tmp_path)])
+    assert optimized.exit_code == 0, optimized.output
+    artifact = tmp_path / ".video-agent" / "optimized-timeline.json"
+    assert artifact.is_file()
+
+    reviewed = runner.invoke(
+        app,
+        [
+            "review-timeline",
+            str(tmp_path),
+            "--approve",
+            "earlier",
+            "--reject",
+            "later",
+        ],
+    )
+    assert reviewed.exit_code == 0, reviewed.output
+    saved = ProjectDraftTimeline.model_validate_json(artifact.read_text(encoding="utf-8"))
+    assert saved.timeline_approved is True
+    assert [clip.decision for clip in saved.clips] == ["approved", "rejected"]
+
+
+def test_cli_help_includes_timeline_commands():
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0
+    assert "optimize-timeline" in result.output
+    assert "review-timeline" in result.output
