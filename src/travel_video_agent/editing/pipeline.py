@@ -114,10 +114,14 @@ def build_edit_proposal(folder: Path) -> ProjectEditProposal:
     )
 
 
-def load_edit_proposal(folder: Path, proposal_path: Path | None = None) -> tuple[ProjectEditProposal, Path]:
+def load_edit_proposal(
+    folder: Path, proposal_path: Path | None = None
+) -> tuple[ProjectEditProposal, Path]:
     """Load the saved review artifact and return its resolved path."""
     root = folder.expanduser().resolve()
-    destination = (proposal_path or root / ".video-agent" / "edit-proposal.json").expanduser().resolve()
+    destination = (
+        proposal_path or root / ".video-agent" / "edit-proposal.json"
+    ).expanduser().resolve()
     if not destination.is_file():
         raise FileNotFoundError(f"Missing {destination}; run 'video-agent propose-edits' first.")
     proposal = ProjectEditProposal.model_validate_json(destination.read_text(encoding="utf-8"))
