@@ -59,10 +59,14 @@ class FFmpegSilenceDetector:
                 timeout=3600,
             )
         except subprocess.TimeoutExpired as exc:
-            raise SilenceDetectionError(f"FFmpeg silence detection timed out for {media_path}") from exc
+            raise SilenceDetectionError(
+                f"FFmpeg silence detection timed out for {media_path}"
+            ) from exc
         except subprocess.CalledProcessError as exc:
             detail = exc.stderr.strip() or "unknown FFmpeg error"
-            raise SilenceDetectionError(f"Could not analyze audio in {media_path}: {detail}") from exc
+            raise SilenceDetectionError(
+                f"Could not analyze audio in {media_path}: {detail}"
+            ) from exc
 
         return self.parse_output(result.stderr, duration_seconds)
 
