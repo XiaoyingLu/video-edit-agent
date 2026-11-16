@@ -129,8 +129,8 @@ def generate_subtitles(
     if not root.is_dir():
         raise FileNotFoundError(f"Project folder does not exist: {root}")
     timeline, timeline_file = _load_timeline(root, timeline_path)
-    transcript_file = (transcription_path or root / ".video-agent" / "transcription.json").expanduser()
-    transcript_file = transcript_file.resolve()
+    transcript_file = transcription_path or root / ".video-agent" / "transcription.json"
+    transcript_file = transcript_file.expanduser().resolve()
     if not transcript_file.is_file():
         raise FileNotFoundError(f"Missing {transcript_file}; run 'video-agent transcribe' first.")
     transcription = ProjectTranscription.model_validate_json(
