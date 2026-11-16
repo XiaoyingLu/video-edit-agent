@@ -137,3 +137,32 @@ def test_scene_context_is_joined_by_source_video_hash(tmp_path: Path) -> None:
     assert item.scene_id == f"{key}-scene-0001"
     assert item.scene_summary == "A mountain lake at sunset"
     assert item.decision == "pending"
+
+def test_review_item_rejects_invalid_interval() -> None:
+    from pydantic import ValidationError
+
+    from travel_video_agent.editing.schemas import EditReviewItem
+
+    with pytest.raises(ValidationError):
+        EditReviewItem(
+            item_id="invalid",
+            start_seconds=5,
+            end_seconds=4,
+            duration_seconds=1,
+            review_reason="invalid bounds",
+        )
+
+
+def test_review_item_rejects_duration_mismatch() -> None:
+    from pydantic import ValidationError
+
+    from travel_video_agent.editing.schemas import EditReviewItem
+
+    with pytest.raises(ValidationError):
+        EditReviewItem(
+            item_id="invalid",
+            start_seconds=1,
+            end_seconds=4,
+            duration_seconds=1,
+            review_reason="inconsistent duration",
+        )
