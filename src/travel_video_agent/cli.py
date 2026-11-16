@@ -10,10 +10,10 @@ from rich.console import Console
 from rich.table import Table
 
 from .editing import (
+    IntentParsingError,
     apply_review_decisions,
     build_edit_proposal,
     build_project_timeline,
-    IntentParsingError,
     load_edit_proposal,
     parse_editing_intent,
     save_edit_proposal,
