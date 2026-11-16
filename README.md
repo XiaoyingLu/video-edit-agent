@@ -56,7 +56,7 @@ docker compose run --rm video-agent transcribe ./travel-test --model small
 docker compose run --rm video-agent transcribe ./travel-test --min-pause-duration 1.5
 ```
 
-The first transcription run downloads the selected faster-whisper model into the Hugging Face model cache in the container. To retain that cache between one-off CLI containers, mount a named volume at `/root/.cache/huggingface` in the `video-agent` service. Without that additional volume, the model may be downloaded again on a later run.
+The first transcription run downloads the selected faster-whisper model into the persistent `whisper_cache` volume mounted at `/root/.cache/huggingface`. Later one-off CLI runs reuse the downloaded model.
 
 The transcription artifact contains per-video language metadata, speech segments, and gaps between speech. A gap is descriptive metadata only: **it is not a cut instruction**. Quiet scenic footage, ambient sound, music, and pauses must be preserved unless the user explicitly asks to remove them and a reviewed edit plan says so.
 
@@ -70,7 +70,7 @@ docker compose logs -f ollama
 docker compose down
 ```
 
-Downloaded Ollama weights persist in `ollama_data`. `docker compose down -v` deletes that volume.
+Downloaded model weights persist in `ollama_data` and `whisper_cache`. `docker compose down -v` deletes both volumes.
 
 ## Development
 
