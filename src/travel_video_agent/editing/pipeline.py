@@ -142,11 +142,13 @@ def apply_review_decisions(
     """Apply explicit decisions, rejecting unknown or conflicting item IDs."""
     if approve_ids & reject_ids:
         raise ValueError("an item cannot be both approved and rejected")
-    items = {
-        item.item_id: item
-        for video in proposal.videos
-        for item in video.review_items
-    }
+    all_items = [
+        item for video in proposal.videos for item in video.review_items
+    ]
+    item_ids = [item.item_id for item in all_items]
+    if len(item_ids) != len(set(item_ids)):
+        raise ValueError("review item IDs must be unique across the project")
+    items = {item.item_id: item for item in all_items}
     requested = approve_ids | reject_ids
     unknown = requested - items.keys()
     if unknown:
@@ -177,6 +179,12 @@ def build_project_timeline(proposal: ProjectEditProposal) -> ProjectTimeline:
     timelines: list[VideoTimeline] = []
     approved_count = 0
     project_retained = 0.0
+    all_item_ids = [
+        item.item_id for video in proposal.videos for item in video.review_items
+    ]
+    if len(all_item_ids) != len(set(all_item_ids)):
+        raise ValueError("review item IDs must be unique across the project")
+
     for video in proposal.videos:
         approved = sorted(
             (item for item in video.review_items if item.decision == "approved"),
@@ -185,6 +193,9 @@ def build_project_timeline(proposal: ProjectEditProposal) -> ProjectTimeline:
         previous_end = 0.0
         retained: list[TimelineSegment] = []
         for item in approved:
+            # Revalidate because Pydantic assignment validation is intentionally not required
+            # for the editable review artifact.
+            EditReviewItem.model_validate(item.model_dump())
             if item.end_seconds > video.duration_seconds + 0.01:
                 raise ValueError(f"approved cut {item.item_id} exceeds source duration")
             if item.start_seconds < previous_end - 0.01:
