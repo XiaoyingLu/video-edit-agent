@@ -60,3 +60,22 @@ def test_transcriber_cleans_up_temporary_audio(monkeypatch, tmp_path: Path) -> N
     assert language == "en"
     assert probability == 0.99
     assert list(tmp_path.iterdir()) == []
+
+
+def test_silent_project_does_not_load_whisper_model(monkeypatch, tmp_path: Path) -> None:
+    from travel_video_agent.audio import pipeline
+
+    monkeypatch.setattr(
+        pipeline,
+        "analyze_folder",
+        lambda root: SimpleNamespace(video_count=0, videos=[]),
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "FasterWhisperTranscriber",
+        lambda **kwargs: pytest.fail("Whisper should not load for a project with no audio"),
+    )
+    result = pipeline.transcribe_folder(tmp_path)
+    assert result.video_count == 0
+    assert result.transcribed_count == 0
+    assert result.transcripts == []
