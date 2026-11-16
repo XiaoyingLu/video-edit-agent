@@ -1,3 +1,5 @@
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -229,3 +231,114 @@ def test_approved_duration_does_not_apply_transition_across_rejected_shot(tmp_pa
         timeline_approved=True,
     )
     assert timeline.approved_duration_seconds == 6
+
+
+
+def test_render_approved_shot_timeline_with_real_ffmpeg(tmp_path):
+    ffmpeg = shutil.which("ffmpeg")
+    if ffmpeg is None or shutil.which("ffprobe") is None:
+        pytest.skip("FFmpeg and ffprobe are required for the renderer integration test")
+
+    first_source = tmp_path / "first.mp4"
+    second_source = tmp_path / "second.mp4"
+    subprocess.run(
+        [
+            ffmpeg,
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc=size=320x240:rate=30:duration=2",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:sample_rate=48000:duration=2",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            str(first_source),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        [
+            ffmpeg,
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=320x240:rate=30:duration=2",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            str(second_source),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    artifact = tmp_path / ".video-agent"
+    artifact.mkdir()
+    timeline = ProjectDraftTimeline(
+        project_path=str(tmp_path.resolve()),
+        style="cinematic",
+        pacing="moderate",
+        target_duration_seconds=5,
+        proposed_duration_seconds=3.6,
+        approved_duration_seconds=3.6,
+        proposed_clip_count=2,
+        clips=[
+            DraftTimelineClip(
+                clip_id="first",
+                sequence_index=1,
+                video_path="first.mp4",
+                source_start_seconds=0,
+                source_end_seconds=2,
+                duration_seconds=2,
+                combined_score=90,
+                pacing_fit="within",
+                pacing_note="Within pacing range.",
+                decision="approved",
+            ),
+            DraftTimelineClip(
+                clip_id="second",
+                sequence_index=2,
+                video_path="second.mp4",
+                source_start_seconds=0,
+                source_end_seconds=2,
+                duration_seconds=2,
+                combined_score=85,
+                transition_in="crossfade",
+                transition_duration_seconds=0.4,
+                pacing_fit="within",
+                pacing_note="Within pacing range.",
+                decision="approved",
+            ),
+        ],
+        timeline_approved=True,
+    )
+    (artifact / "optimized-timeline.json").write_text(
+        timeline.model_dump_json(), encoding="utf-8"
+    )
+
+    report = render_approved_shot_timeline(tmp_path)
+    output = artifact / "rendered-draft.mp4"
+    assert output.is_file()
+    assert report.video_codec == "h264"
+    assert report.audio_codec == "aac"
+    assert report.segment_count == 2
+    assert report.source_video_count == 2
+    assert report.actual_duration_seconds == pytest.approx(3.6, abs=0.2)
