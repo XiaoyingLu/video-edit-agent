@@ -1,83 +1,96 @@
 # AI Video Agent
 
-A local-first Python CLI for editing personal travel footage. The project is intentionally **not** a SaaS application: media stays on your machine, source files are never modified, and every edit will be represented by a reviewable plan before rendering.
+A local-first Python CLI for editing personal travel footage. Media stays on your machine, source files are never modified, and every edit will be represented by a reviewable plan before rendering.
 
 ## MVP
 
-- Natural-language editing instructions (planned)
-- Speech-aware pause removal that preserves quiet scenic footage (planned)
-- Speech transcription and subtitles (planned)
-- Automatic travel highlights (planned)
-- Dry-run edit-plan review (planned)
-- MP4 export through FFmpeg (planned)
-- First implemented slice: inspect a folder of videos and save metadata locally
+- Folder scanning and media metadata extraction
+- Scene detection and representative-frame sampling
+- Local vision-model descriptions for each detected scene
+- Natural-language editing, speech-aware pause removal, subtitles, highlights, edit-plan review, and MP4 export (planned)
 
 ## Requirements
 
-- Python 3.11+
-- FFmpeg and ffprobe installed and available on PATH
+- Docker Engine and Docker Compose
 
-Check the media tools:
+## Run the complete application with Docker
 
-```bash
-ffmpeg -version
-ffprobe -version
-```
+Both the Python CLI and Ollama/Qwen run in Docker. The CLI container mounts the current workspace at `/workspace`, so your source videos and generated `.video-agent` artifacts remain visible in the Codespace. The two containers communicate over the private Compose network; the CLI reaches Ollama at `http://ollama:11434`.
 
-## Install for development
+Build the CLI image and start Ollama:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install -e ".[dev]"
+docker compose build video-agent
+docker compose up -d ollama
 ```
 
-## Analyze a travel-footage folder
+Download the vision model into the Ollama container (one-time download; model weights persist in a named volume):
 
 ```bash
-video-agent analyze ./travel-japan
+docker compose exec ollama ollama pull qwen2.5vl:3b
+docker compose exec ollama ollama list
 ```
 
-The command recursively discovers supported video formats, extracts metadata using ffprobe, and writes:
+For the first Codespaces test, use the lighter 3B model. On a machine with more available memory, pull `qwen2.5vl:7b` and run with `OLLAMA_MODEL=qwen2.5vl:7b`.
+
+### Run the CLI
+
+Put a short travel clip in a folder in the repository, for example `travel-test/`, then run:
+
+```bash
+docker compose run --rm video-agent analyze ./travel-test
+docker compose run --rm video-agent understand ./travel-test --samples-per-scene 2
+```
+
+You can pass any supported CLI arguments after `video-agent`:
+
+```bash
+docker compose run --rm video-agent --help
+docker compose run --rm -e OLLAMA_MODEL=qwen2.5vl:7b video-agent understand ./travel-test
+```
+
+The first command scans the folder and extracts media metadata using ffprobe. The second detects scenes, extracts two representative frames per scene, sends each frame to the local Ollama model, and writes:
 
 ```text
-travel-japan/
+travel-test/
 └── .video-agent/
-    └── analysis.json
+    ├── analysis.json
+    ├── understanding.json
+    └── frames/
+        └── <video-hash>/scene-*/frame-*.jpg
 ```
 
-Use `--output` to choose another JSON destination:
+Open `.video-agent/understanding.json` to review timestamps, scene descriptions, visible objects, activities, and confidence values. Extracted JPEGs are useful for checking whether the sampler chose representative moments. Original video files are not modified.
+
+### Configuration and resources
+
+The Compose service defaults to `qwen2.5vl:3b`. Override it for a command with `-e OLLAMA_MODEL=...` as shown above. Ollama's API is also published on loopback port 11434 for optional diagnostics:
 
 ```bash
-video-agent analyze ./travel-japan --output ./reports/travel-analysis.json
+curl http://127.0.0.1:11434/api/tags
+docker compose logs -f ollama
 ```
 
-## Run with Docker
+Qwen vision models require several gigabytes of disk and memory; inference may be slow on CPU-only Codespaces. Start with a short 30–90 second clip and one or two frames per scene. The default Compose setup makes no GPU assumption. NVIDIA acceleration requires NVIDIA Container Toolkit and an appropriate Compose GPU configuration.
 
-Build the image from the repository root:
+### Stop services
 
 ```bash
-docker build -t video-agent .
+docker compose down
 ```
 
-Mount a footage folder into the container to analyze it. The default analysis
-file is written under the mounted folder, so it remains available on the host:
+Downloaded model weights remain in the named volume. To stop services and delete those weights too (destructive):
 
 ```bash
-docker run --rm \
-  -v "$PWD/travel-japan:/media" \
-  video-agent analyze /media
+docker compose down -v
 ```
-
-To save the analysis elsewhere, use `--output` with a path in a mounted folder.
-For example, mount a separate reports folder at `/reports` and pass
-`--output /reports/travel-analysis.json`.
-
-The analysis file contains relative file paths, duration, dimensions, frame rate, video/audio codecs, and stream-presence flags. It does not copy or alter the source videos.
 
 ## Development
 
+The Docker image installs the project and its runtime dependencies. To run tests and lint checks in the Codespace, install the development extra:
+
 ```bash
+python -m pip install -e ".[dev]"
 pytest
 ruff check .
 ruff format --check .
@@ -86,15 +99,15 @@ ruff format --check .
 ## Safety and privacy
 
 - Original media is read-only from this application.
-- Analysis artifacts are stored locally and ignored by Git.
-- Video/audio media, generated exports, and environment files are ignored by Git.
+- Analysis artifacts and extracted frames are stored in the mounted workspace and ignored by Git.
+- Video/audio media, generated renders, and environment files are ignored by Git.
 - Do not commit personal footage, generated renders, API keys, or private transcripts.
-- The LLM planner must produce a validated edit-plan data structure; it must never execute arbitrary model-generated shell commands.
+- Vision output is descriptive evidence, not an editing instruction. The future LLM planner must produce a validated edit-plan data structure and must never execute arbitrary model-generated shell commands.
 
 ## Roadmap
 
-1. Media scanning and ffprobe metadata extraction
-2. Thumbnail/contact-sheet generation and scene detection
-3. Speech transcription and speech-bounded silence detection
-4. Highlight ranking and validated edit-plan generation
-5. Dry-run review and deterministic FFmpeg rendering
+1. Media scanning, scene detection, representative-frame sampling, and visual descriptions
+2. Speech transcription and speech-bounded silence detection
+3. Motion understanding, highlight ranking, and quality assessment
+4. Validated edit-plan generation and dry-run review
+5. Deterministic FFmpeg rendering and output validation
