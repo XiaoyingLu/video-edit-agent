@@ -1,14 +1,13 @@
 import pytest
+from typer.testing import CliRunner
 
+from travel_video_agent.cli import app
 from travel_video_agent.editing.draft_schemas import DraftClip, ProjectDraftSelection
 from travel_video_agent.editing.intent_schemas import EditingPlan
 from travel_video_agent.editing.timeline_pipeline import (
     apply_timeline_review,
     build_draft_timeline,
 )
-from typer.testing import CliRunner
-
-from travel_video_agent.cli import app
 from travel_video_agent.editing.timeline_schemas import (
     DraftTimelineClip,
     ProjectDraftTimeline,
@@ -25,8 +24,15 @@ def _write_inputs(root, style="vlog", transition="crossfade"):
         target_duration_seconds=12,
         style=style,
         pacing="moderate",
-        priorities=(["chronological_story"] if style != "highlight_reel" else ["memorable_moments"]),
-        transitions={"default": transition, "duration_seconds": 0.8 if transition != "cut" else 0},
+        priorities=(
+            ["chronological_story"]
+            if style != "highlight_reel"
+            else ["memorable_moments"]
+        ),
+        transitions={
+            "default": transition,
+            "duration_seconds": 0.8 if transition != "cut" else 0,
+        },
     )
     selection = ProjectDraftSelection(
         project_path=str(root.resolve()),
@@ -120,7 +126,7 @@ def test_timeline_schema_rejects_non_cut_transition_on_first_clip():
             style="cinematic",
             pacing="slow",
             target_duration_seconds=5,
-            proposed_duration_seconds=2,
+            proposed_duration_seconds=1.8,
             proposed_clip_count=1,
             clips=[
                 DraftTimelineClip(
@@ -151,7 +157,7 @@ def test_timeline_review_requires_at_least_one_approved_clip(tmp_path):
     reviewed = apply_timeline_review(timeline, set(), {"earlier", "later"})
     assert reviewed.timeline_approved is False
     assert all(clip.decision == "rejected" for clip in reviewed.clips)
-
+    assert reviewed.approved_duration_seconds == 0
 
 
 def test_optimize_and_review_timeline_cli_commands(tmp_path):
