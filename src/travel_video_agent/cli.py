@@ -573,7 +573,7 @@ def subtitles_command(
         raise typer.Exit(code=1) from exc
 
     console.print(f"[bold green]Subtitles generated.[/bold green] {cue_count} cue(s).")
-    console.print(f"SRT: [green]{destination}[/green]")
+    console.print(f"SRT: [green]{destination}[/green]", soft_wrap=True)
     console.print(
         "[yellow]Subtitle timestamps follow the concatenated, reviewed timeline.[/yellow]"
     )
