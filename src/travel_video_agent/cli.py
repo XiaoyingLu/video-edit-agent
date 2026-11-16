@@ -661,9 +661,7 @@ def render(
         f"{report.video_codec.upper()} video + {report.audio_codec.upper()} audio"
     )
     if burn_subtitles or subtitle_file:
-        subtitle_display_path = (
-            subtitle_file or folder.resolve() / ".video-agent" / "subtitles.srt"
-        )
+        subtitle_display_path = subtitle_file or folder.resolve() / ".video-agent" / "subtitles.srt"
         console.print(f"Burned-in subtitles: [green]{subtitle_display_path}[/green]")
     console.print("[yellow]Original source videos were not modified.[/yellow]")
 
