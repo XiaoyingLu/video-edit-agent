@@ -120,8 +120,8 @@ def load_edit_proposal(
     """Load the saved review artifact and return its resolved path."""
     root = folder.expanduser().resolve()
     destination = (
-        proposal_path or root / ".video-agent" / "edit-proposal.json"
-    ).expanduser().resolve()
+        (proposal_path or root / ".video-agent" / "edit-proposal.json").expanduser().resolve()
+    )
     if not destination.is_file():
         raise FileNotFoundError(f"Missing {destination}; run 'video-agent propose-edits' first.")
     proposal = ProjectEditProposal.model_validate_json(destination.read_text(encoding="utf-8"))
@@ -146,9 +146,7 @@ def apply_review_decisions(
     """Apply explicit decisions, rejecting unknown or conflicting item IDs."""
     if approve_ids & reject_ids:
         raise ValueError("an item cannot be both approved and rejected")
-    all_items = [
-        item for video in proposal.videos for item in video.review_items
-    ]
+    all_items = [item for video in proposal.videos for item in video.review_items]
     item_ids = [item.item_id for item in all_items]
     if len(item_ids) != len(set(item_ids)):
         raise ValueError("review item IDs must be unique across the project")
@@ -183,9 +181,7 @@ def build_project_timeline(proposal: ProjectEditProposal) -> ProjectTimeline:
     timelines: list[VideoTimeline] = []
     approved_count = 0
     project_retained = 0.0
-    all_item_ids = [
-        item.item_id for video in proposal.videos for item in video.review_items
-    ]
+    all_item_ids = [item.item_id for video in proposal.videos for item in video.review_items]
     if len(all_item_ids) != len(set(all_item_ids)):
         raise ValueError("review item IDs must be unique across the project")
 
