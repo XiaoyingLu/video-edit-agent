@@ -203,15 +203,13 @@ def render_project(
 
     if not timeline.videos:
         raise RenderError("timeline contains no source videos")
-    source_entries = [
-        _probe_source(shutil.which("ffprobe") or "", root, video)
-        for video in timeline.videos
-    ]
-    if not shutil.which("ffprobe"):
+    ffprobe = shutil.which("ffprobe")
+    if ffprobe is None:
         raise RenderError("ffprobe was not found; install FFmpeg and ensure it is on PATH")
     ffmpeg = shutil.which("ffmpeg")
     if ffmpeg is None:
         raise RenderError("ffmpeg was not found; install FFmpeg and ensure it is on PATH")
+    source_entries = [_probe_source(ffprobe, root, video) for video in timeline.videos]
 
     source_paths = {entry[0] for entry in source_entries}
     if destination in source_paths:
@@ -285,7 +283,7 @@ def render_project(
         if not temporary_path.is_file() or temporary_path.stat().st_size == 0:
             raise RenderError("FFmpeg completed without producing a non-empty MP4")
 
-        output_probe = _run_probe(shutil.which("ffprobe") or "", temporary_path)
+        output_probe = _run_probe(ffprobe, temporary_path)
         output_streams = output_probe.get("streams", [])
         output_video = next(
             (item for item in output_streams if item.get("codec_type") == "video"), None
@@ -296,6 +294,8 @@ def render_project(
         actual_duration = float(output_probe.get("format", {}).get("duration") or 0)
         if output_video is None or output_audio is None or actual_duration <= 0:
             raise RenderError("rendered MP4 is missing a valid video or audio stream")
+        if output_video.get("codec_name") != "h264" or output_audio.get("codec_name") != "aac":
+            raise RenderError("rendered MP4 does not contain the expected H.264 video and AAC audio")
         duration_tolerance = max(0.75, len(segments) / frame_rate * 2)
         if abs(actual_duration - expected_duration) > duration_tolerance:
             raise RenderError(
