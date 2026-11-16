@@ -121,9 +121,7 @@ def test_render_project_burns_subtitles_after_concatenating_timeline(
     _write_timeline(tmp_path)
     commands = _fake_tools(monkeypatch)
     subtitle_file = tmp_path / ".video-agent" / "subtitles.srt"
-    subtitle_file.write_text(
-        "1\\n00:00:01,000 --> 00:00:02,000\\nHello\\n", encoding="utf-8"
-    )
+    subtitle_file.write_text("1\\n00:00:01,000 --> 00:00:02,000\\nHello\\n", encoding="utf-8")
 
     render_project(tmp_path, subtitle_path=subtitle_file, subtitle_font_size=32)
 
