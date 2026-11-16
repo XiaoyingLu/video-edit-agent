@@ -30,6 +30,9 @@ def _build_shot_render_command(
     width: int,
     height: int,
     frame_rate: float = 30.0,
+    subtitle_path: Path | None = None,
+    subtitle_font_size: int = 28,
+    subtitle_position: str = "bottom",
 ) -> list[str]:
     """Build a filter graph that preserves shot order and applies approved transitions."""
     command = [ffmpeg, "-hide_banner", "-nostdin", "-y"]
@@ -99,7 +102,29 @@ def _build_shot_render_command(
         current_video = output_video
         current_audio = output_audio
 
-    filters.append(f"[{current_video}]format=yuv420p[vfinal]")
+    if subtitle_path is None:
+        filters.append(f"[{current_video}]format=yuv420p[vfinal]")
+    else:
+        escaped_path = (
+            str(subtitle_path.resolve())
+            .replace("\\", "\\\\")
+            .replace(":", "\\:")
+            .replace("'", "\\'")
+        )
+        alignment, margin = {
+            "bottom": (2, 48),
+            "center": (5, 0),
+            "top": (8, 48),
+        }[subtitle_position]
+        style = (
+            f"FontName=DejaVu Sans,FontSize={subtitle_font_size},"
+            "PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,"
+            f"BorderStyle=1,Outline=2,Shadow=1,Alignment={alignment},MarginV={margin}"
+        )
+        filters.append(
+            f"[{current_video}]subtitles=filename='{escaped_path}':"
+            f"force_style='{style}',format=yuv420p[vfinal]"
+        )
     filters.append(f"[{current_audio}]aresample=48000[audiofinal]")
     command.extend(
         [
@@ -136,10 +161,17 @@ def render_approved_shot_timeline(
     *,
     overwrite: bool = False,
     timeout_seconds: float = 3600,
+    subtitle_path: Path | None = None,
+    subtitle_font_size: int = 28,
+    subtitle_position: str = "bottom",
 ) -> RenderReport:
     """Render only approved shots after every proposed shot has a decision."""
     if timeout_seconds <= 0:
         raise ValueError("timeout_seconds must be greater than zero")
+    if not 12 <= subtitle_font_size <= 72:
+        raise ValueError("subtitle_font_size must be between 12 and 72")
+    if subtitle_position not in {"bottom", "center", "top"}:
+        raise ValueError("subtitle_position must be bottom, center, or top")
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise FileNotFoundError(f"Project folder does not exist: {root}")
@@ -171,6 +203,11 @@ def render_approved_shot_timeline(
     )
     if destination.suffix.lower() != ".mp4":
         raise RenderError("render output must use the .mp4 extension")
+    subtitle_file = subtitle_path.expanduser().resolve() if subtitle_path else None
+    if subtitle_file is not None and not subtitle_file.is_file():
+        raise FileNotFoundError(f"Subtitle file does not exist: {subtitle_file}")
+    if subtitle_file is not None and destination == subtitle_file:
+        raise RenderError("render output cannot overwrite the subtitle file")
     if destination in {timeline_file, root / ".video-agent" / "optimized-timeline.json"}:
         raise RenderError("render output cannot overwrite the optimized timeline")
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -233,6 +270,8 @@ def render_approved_shot_timeline(
 
     if destination in source_paths:
         raise RenderError("render output cannot overwrite a source video")
+    if subtitle_file is not None and subtitle_file in source_paths:
+        raise RenderError("subtitle file cannot be a source video")
     first_payload = source_cache[clip_inputs[0][0]][0]
     first_video = next(
         item for item in first_payload["streams"] if item.get("codec_type") == "video"
@@ -257,7 +296,16 @@ def render_approved_shot_timeline(
     temporary_path = Path(temporary_file.name)
     temporary_file.close()
     try:
-        command = _build_shot_render_command(ffmpeg, clip_inputs, temporary_path, width, height)
+        command = _build_shot_render_command(
+            ffmpeg,
+            clip_inputs,
+            temporary_path,
+            width,
+            height,
+            subtitle_path=subtitle_file,
+            subtitle_font_size=subtitle_font_size,
+            subtitle_position=subtitle_position,
+        )
         try:
             result = subprocess.run(
                 command,
