@@ -108,7 +108,6 @@ def test_shot_renderer_uses_concat_for_hard_cuts(tmp_path):
     assert "anullsrc=r=48000:cl=stereo" in graph
 
 
-
 def test_shot_renderer_adds_subtitle_filter(tmp_path):
     subtitle = tmp_path / "draft subtitles.srt"
     command = _build_shot_render_command(
@@ -126,6 +125,7 @@ def test_shot_renderer_adds_subtitle_filter(tmp_path):
     assert "FontSize=32" in graph
     assert "Alignment=8" in graph
     assert "[vfinal]" in graph
+
 
 def test_render_requires_complete_human_approval(tmp_path):
     artifact = tmp_path / ".video-agent"
