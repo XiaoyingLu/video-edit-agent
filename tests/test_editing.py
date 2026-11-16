@@ -103,30 +103,36 @@ def test_scene_context_is_joined_by_source_video_hash(tmp_path: Path) -> None:
         "noise_threshold_db": -35,
         "min_silence_duration": 1.5,
         "speech_padding_seconds": 0.25,
-        "videos": [{
-            "path": video_path,
-            "duration_seconds": 12,
-            "has_audio": True,
-            "transcript_available": True,
-            "audio_silences": [],
-            "candidates": [{
-                "start_seconds": 3,
-                "end_seconds": 5,
-                "duration_seconds": 2,
-            }],
-        }],
+        "videos": [
+            {
+                "path": video_path,
+                "duration_seconds": 12,
+                "has_audio": True,
+                "transcript_available": True,
+                "audio_silences": [],
+                "candidates": [
+                    {
+                        "start_seconds": 3,
+                        "end_seconds": 5,
+                        "duration_seconds": 2,
+                    }
+                ],
+            }
+        ],
     }
     understanding = VideoUnderstanding(
         project_path=str(tmp_path),
         video_count=1,
         scene_count=1,
         model="qwen2.5vl:3b",
-        scenes=[VideoScene(
-            scene_id=f"{key}-scene-0001",
-            start_seconds=2,
-            end_seconds=6,
-            summary="A mountain lake at sunset",
-        )],
+        scenes=[
+            VideoScene(
+                scene_id=f"{key}-scene-0001",
+                start_seconds=2,
+                end_seconds=6,
+                summary="A mountain lake at sunset",
+            )
+        ],
     )
     (artifact_dir / "silence-analysis.json").write_text(json.dumps(silence), encoding="utf-8")
     (artifact_dir / "understanding.json").write_text(
