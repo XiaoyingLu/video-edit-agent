@@ -39,6 +39,15 @@ For the first Codespaces test, use the lighter 3B model. On a machine with more 
 
 ### Run the CLI
 
+For the end-to-end workflow, use one natural-language command. It analyzes the footage, transcribes speech, ranks highlights, parses your request into a validated plan, selects shots, and builds a proposed timeline. It then asks you to explicitly approve or reject every shot before rendering; if no shot is approved, rendering is skipped. The command never auto-approves clips.
+
+```bash
+docker compose run --rm -it video-agent create-video ./travel-test --prompt "Create a 60-second cinematic travel video"
+```
+
+Tune local resource usage with `--model qwen2.5vl:3b`, `--whisper-model tiny`, or `--samples-per-scene 1`. The workflow writes inspectable artifacts under `.video-agent/`; the individual commands remain available for finer control.
+
+
 Put a short travel clip in a folder in the repository, for example `travel-test/`, then run:
 
 ```bash
