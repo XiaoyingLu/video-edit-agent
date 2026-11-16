@@ -10,6 +10,8 @@ from rich.console import Console
 from rich.table import Table
 
 from .media import MediaToolError, analyze_folder
+from .transcription import transcribe_folder
+from .transcription.whisper_backend import TranscriptionError
 from .understanding import understand_folder
 from .understanding.visual_analyzer import VisionModelError
 
@@ -155,6 +157,80 @@ def understand(
         "Extracted frames are saved under "
         f"[green]{folder.resolve() / '.video-agent' / 'frames'}[/green]"
     )
+
+
+@app.command()
+def transcribe(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Folder containing travel videos.",
+        ),
+    ],
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help="JSON output path (default: <folder>/.video-agent/transcription.json).",
+        ),
+    ] = None,
+    model: Annotated[
+        str,
+        typer.Option("--model", help="faster-whisper model size (default: small)."),
+    ] = "small",
+    device: Annotated[
+        str,
+        typer.Option("--device", help="Inference device: cpu or cuda."),
+    ] = "cpu",
+    compute_type: Annotated[
+        str,
+        typer.Option("--compute-type", help="Model precision (default: int8 on CPU)."),
+    ] = "int8",
+) -> None:
+    """Transcribe speech locally and save timestamped segments as JSON."""
+    try:
+        transcription = transcribe_folder(
+            folder,
+            model=model,
+            device=device,
+            compute_type=compute_type,
+        )
+    except (FileNotFoundError, NotADirectoryError, MediaToolError, TranscriptionError) as exc:
+        console.print(f"[red]Transcription failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    destination = output or folder.resolve() / ".video-agent" / "transcription.json"
+    destination = destination.expanduser().resolve()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(
+        json.dumps(transcription.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
+    )
+
+    table = Table(title="Speech Transcription")
+    table.add_column("Video", style="cyan")
+    table.add_column("Language")
+    table.add_column("Segments", justify="right")
+    table.add_column("Transcript preview")
+    for video in transcription.videos:
+        preview = " ".join(segment.text for segment in video.segments)
+        table.add_row(
+            video.path,
+            video.language or ("No audio" if not video.has_audio else "—"),
+            str(len(video.segments)),
+            preview[:100] or "—",
+        )
+    console.print(table)
+    console.print(
+        f"Transcribed [bold]{transcription.transcribed_video_count}[/bold] video(s), "
+        f"recognized [bold]{transcription.segment_count}[/bold] speech segment(s)."
+    )
+    console.print(f"Transcription saved to [green]{destination}[/green]")
 
 
 if __name__ == "__main__":
