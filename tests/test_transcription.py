@@ -92,6 +92,7 @@ def test_transcribe_folder_builds_timestamped_transcript(tmp_path: Path, monkeyp
     assert result.videos[0].language == "en"
     assert result.videos[0].segments[0].text == "A scenic view."
     assert result.videos[0].segments[0].start_seconds == 1.0
+    assert len(result.videos[0].pauses) == 2
 
 
 def test_backend_reports_missing_optional_dependency(monkeypatch) -> None:
@@ -110,3 +111,19 @@ def test_backend_reports_missing_optional_dependency(monkeypatch) -> None:
 
     with pytest.raises(TranscriptionError, match="optional dependency"):
         FasterWhisperTranscriber()
+
+
+
+def test_detect_speech_pauses_reports_long_gaps_only() -> None:
+    from travel_video_agent.transcription.pipeline import detect_speech_pauses
+
+    segments = [
+        TranscriptSegment(start_seconds=2.0, end_seconds=3.0, text="First"),
+        TranscriptSegment(start_seconds=5.0, end_seconds=6.0, text="Second"),
+    ]
+    pauses = detect_speech_pauses(segments, 8.0, min_pause_duration=1.5)
+    assert [(pause.start_seconds, pause.end_seconds) for pause in pauses] == [
+        (0.0, 2.0),
+        (3.0, 5.0),
+        (6.0, 8.0),
+    ]
