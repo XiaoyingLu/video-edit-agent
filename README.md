@@ -55,7 +55,8 @@ docker compose run --rm video-agent draft-edit ./travel-test
 docker compose run --rm video-agent optimize-timeline ./travel-test
 docker compose run --rm -it video-agent review-timeline ./travel-test
 docker compose run --rm video-agent subtitles ./travel-test
-docker compose run --rm video-agent render ./travel-test --burn-subtitles --subtitle-font-size 28 --subtitle-position bottom\ndocker compose run --rm video-agent render-draft ./travel-test
+docker compose run --rm video-agent render ./travel-test --burn-subtitles --subtitle-font-size 28 --subtitle-position bottom
+docker compose run --rm video-agent render-draft ./travel-test
 ```
 
 You can pass any supported CLI arguments after `video-agent`:
@@ -145,4 +146,5 @@ ruff format --check .
 6. Timeline-aligned SRT generation and optional burned-in subtitles (implemented)
 7. Natural-language request parsing into a validated editing plan (implemented)
 8. Context-aware clip selection (implemented)
-9. Ordered shot timeline, transition proposals, pacing guidance, and human review (implemented)\n10. Render approved shot timelines with FFmpeg transitions and output verification (implemented; Docker validation pending)
+9. Ordered shot timeline, transition proposals, pacing guidance, and human review (implemented)
+10. Render approved shot timelines with FFmpeg transitions and output verification (implemented; Docker validation pending)
