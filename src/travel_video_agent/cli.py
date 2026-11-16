@@ -666,5 +666,63 @@ def render(
     console.print("[yellow]Original source videos were not modified.[/yellow]")
 
 
+@app.command("find-highlights")
+def find_highlights(
+    folder: Annotated[
+        Path,
+        typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True,
+                       help="Folder containing travel videos."),
+    ],
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o",
+                     help="JSON output path (default: <folder>/.video-agent/highlights.json)."),
+    ] = None,
+    samples_per_scene: Annotated[
+        int, typer.Option("--samples-per-scene", min=1, max=10, help="Frames sampled per scene.")
+    ] = 3,
+    understanding: Annotated[
+        Path | None, typer.Option("--understanding", help="Optional path to understanding.json.")
+    ] = None,
+) -> None:
+    """Find and rank visual highlight candidates; every candidate remains review-only."""
+    try:
+        report = find_highlights_folder(
+            folder, samples_per_scene=samples_per_scene, understanding_path=understanding
+        )
+    except (FileNotFoundError, NotADirectoryError, MediaToolError, ValueError) as exc:
+        console.print(f"[red]Highlight analysis failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    destination = output or folder.resolve() / ".video-agent" / "highlights.json"
+    destination = destination.expanduser().resolve()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(
+        json.dumps(report.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
+    )
+    table = Table(title="Visual Highlight Candidates — Human Review Required")
+    table.add_column("Rank", justify="right")
+    table.add_column("Video", style="cyan")
+    table.add_column("Time")
+    table.add_column("Score", justify="right")
+    table.add_column("Scene")
+    for rank, candidate in enumerate(report.candidates, start=1):
+        table.add_row(
+            str(rank), candidate.video_path,
+            f"{candidate.start_seconds:.1f}–{candidate.end_seconds:.1f}s",
+            f"{candidate.score:.1f}",
+            (candidate.scene_summary or "Visual signals only")[:55],
+        )
+    console.print(table)
+    console.print(
+        f"Found {report.candidate_count} candidate(s). Saved to [green]{destination}[/green]"
+    )
+    console.print(
+        "[yellow]Scores are explainable visual heuristics, not aesthetic judgments. "
+        "Review every candidate; quiet scenic footage is not penalized for low motion. "
+        "No edits were applied and source media was not modified.[/yellow]"
+    )
+
+
 if __name__ == "__main__":
     app()
