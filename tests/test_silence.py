@@ -1,7 +1,4 @@
-import json
 from pathlib import Path
-
-import pytest
 
 from travel_video_agent.silence.ffmpeg_detector import FFmpegSilenceDetector
 from travel_video_agent.silence.pipeline import _speech_free_candidates
