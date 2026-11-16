@@ -23,9 +23,9 @@ class OllamaVisionAnalyzer:
         timeout_seconds: int = 600,
     ) -> None:
         self.model = model
-        self.base_url = (
-            base_url or os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
-        ).rstrip("/")
+        self.base_url = (base_url or os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")).rstrip(
+            "/"
+        )
         self.timeout_seconds = timeout_seconds
 
     def analyze_frame(self, frame_path: Path) -> dict[str, Any]:

@@ -34,12 +34,7 @@ def test_frame_sampler_rejects_invalid_scene(monkeypatch, tmp_path: Path) -> Non
     monkeypatch.setattr(
         "travel_video_agent.understanding.frame_sampler.shutil.which", lambda _: "ffmpeg"
     )
-    assert (
-        extract_representative_frames(
-            tmp_path / "clip.mp4", 4.0, 4.0, tmp_path / "frames"
-        )
-        == []
-    )
+    assert extract_representative_frames(tmp_path / "clip.mp4", 4.0, 4.0, tmp_path / "frames") == []
 
 
 def test_ollama_analyzer_uses_environment_endpoint(monkeypatch) -> None:

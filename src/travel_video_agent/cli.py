@@ -30,13 +30,22 @@ def main() -> None:
 def analyze(
     folder: Annotated[
         Path,
-        typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True,
-            help="Folder containing travel videos."),
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Folder containing travel videos.",
+        ),
     ],
     output: Annotated[
         Path | None,
-        typer.Option("--output", "-o",
-            help="JSON output path (default: <folder>/.video-agent/analysis.json)."),
+        typer.Option(
+            "--output",
+            "-o",
+            help="JSON output path (default: <folder>/.video-agent/analysis.json).",
+        ),
     ] = None,
 ) -> None:
     """Discover videos and extract metadata using ffprobe."""
@@ -50,7 +59,7 @@ def analyze(
     destination = destination.expanduser().resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(
-        json.dumps(analysis.model_dump(mode="json"), indent=2) + "\\n", encoding="utf-8"
+        json.dumps(analysis.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
     )
 
     table = Table(title="Travel Video Analysis")
@@ -61,12 +70,18 @@ def analyze(
     table.add_column("Audio")
     for video in analysis.videos:
         resolution = f"{video.width}x{video.height}" if video.width and video.height else "—"
-        table.add_row(video.path, f"{video.duration_seconds:.2f}s", resolution,
-                      video.video_codec or "—",
-                      video.audio_codec or ("No" if not video.has_audio else "Yes"))
+        table.add_row(
+            video.path,
+            f"{video.duration_seconds:.2f}s",
+            resolution,
+            video.video_codec or "—",
+            video.audio_codec or ("No" if not video.has_audio else "Yes"),
+        )
     console.print(table)
-    console.print(f"Found [bold]{analysis.video_count}[/bold] video(s), "
-                  f"{analysis.total_duration_seconds:.2f}s total.")
+    console.print(
+        f"Found [bold]{analysis.video_count}[/bold] video(s), "
+        f"{analysis.total_duration_seconds:.2f}s total."
+    )
     console.print(f"Analysis saved to [green]{destination}[/green]")
 
 
@@ -74,13 +89,22 @@ def analyze(
 def understand(
     folder: Annotated[
         Path,
-        typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True,
-            help="Folder containing travel videos."),
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Folder containing travel videos.",
+        ),
     ],
     output: Annotated[
         Path | None,
-        typer.Option("--output", "-o",
-            help="JSON output path (default: <folder>/.video-agent/understanding.json)."),
+        typer.Option(
+            "--output",
+            "-o",
+            help="JSON output path (default: <folder>/.video-agent/understanding.json).",
+        ),
     ] = None,
     model: Annotated[
         str,
@@ -88,8 +112,9 @@ def understand(
     ] = os.getenv("OLLAMA_MODEL", "qwen2.5vl:7b"),
     samples_per_scene: Annotated[
         int,
-        typer.Option("--samples-per-scene", min=1, max=10,
-                     help="Representative frames to inspect per scene."),
+        typer.Option(
+            "--samples-per-scene", min=1, max=10, help="Representative frames to inspect per scene."
+        ),
     ] = 3,
 ) -> None:
     """Detect scenes, sample frames, and describe footage with a local vision model."""
@@ -103,7 +128,7 @@ def understand(
     destination = destination.expanduser().resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(
-        json.dumps(understanding.model_dump(mode="json"), indent=2) + "\\n", encoding="utf-8"
+        json.dumps(understanding.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
     )
 
     table = Table(title="Video Understanding")
@@ -113,14 +138,23 @@ def understand(
     table.add_column("Frames", justify="right")
     table.add_column("Summary")
     for scene in understanding.scenes:
-        table.add_row(scene.scene_id, f"{scene.start_seconds:.2f}s",
-                      f"{scene.end_seconds:.2f}s", str(len(scene.observations)), scene.summary)
+        table.add_row(
+            scene.scene_id,
+            f"{scene.start_seconds:.2f}s",
+            f"{scene.end_seconds:.2f}s",
+            str(len(scene.observations)),
+            scene.summary,
+        )
     console.print(table)
-    console.print(f"Analyzed [bold]{understanding.video_count}[/bold] video(s), "
-                  f"found [bold]{understanding.scene_count}[/bold] scene(s).")
+    console.print(
+        f"Analyzed [bold]{understanding.video_count}[/bold] video(s), "
+        f"found [bold]{understanding.scene_count}[/bold] scene(s)."
+    )
     console.print(f"Understanding saved to [green]{destination}[/green]")
-    console.print("Extracted frames are saved under "
-                  f"[green]{folder.resolve() / '.video-agent' / 'frames'}[/green]")
+    console.print(
+        "Extracted frames are saved under "
+        f"[green]{folder.resolve() / '.video-agent' / 'frames'}[/green]"
+    )
 
 
 if __name__ == "__main__":
