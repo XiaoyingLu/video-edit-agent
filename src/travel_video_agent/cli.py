@@ -10,6 +10,8 @@ from rich.console import Console
 from rich.table import Table
 
 from .media import MediaToolError, analyze_folder
+from .silence import analyze_silence_folder
+from .silence.ffmpeg_detector import SilenceDetectionError
 from .transcription import transcribe_folder
 from .transcription.whisper_backend import TranscriptionError
 from .understanding import understand_folder
@@ -251,6 +253,85 @@ def transcribe(
     console.print(
         "[yellow]Long gaps are not cut recommendations; "
         "preserve quiet scenic footage by default.[/yellow]"
+    )
+
+
+@app.command("detect-silence")
+def detect_silence(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Folder containing travel videos.",
+        ),
+    ],
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help="JSON output path (default: <folder>/.video-agent/silence-analysis.json).",
+        ),
+    ] = None,
+    noise_threshold_db: Annotated[
+        float,
+        typer.Option("--noise-db", min=-90.0, max=-1.0, help="Audio silence threshold in dB."),
+    ] = -35.0,
+    min_silence_duration: Annotated[
+        float,
+        typer.Option("--min-duration", min=0.1, help="Minimum quiet interval in seconds."),
+    ] = 1.5,
+    speech_padding_seconds: Annotated[
+        float,
+        typer.Option("--speech-padding", min=0.0, help="Protection around transcript speech."),
+    ] = 0.25,
+) -> None:
+    """Detect quiet audio and exclude intervals overlapping timestamped speech."""
+    try:
+        report = analyze_silence_folder(
+            folder,
+            noise_threshold_db=noise_threshold_db,
+            min_silence_duration=min_silence_duration,
+            speech_padding_seconds=speech_padding_seconds,
+        )
+    except (
+        FileNotFoundError,
+        NotADirectoryError,
+        MediaToolError,
+        SilenceDetectionError,
+        ValueError,
+    ) as exc:
+        console.print(f"[red]Silence analysis failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    destination = output or folder.resolve() / ".video-agent" / "silence-analysis.json"
+    destination = destination.expanduser().resolve()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(
+        json.dumps(report.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
+    )
+
+    table = Table(title="Speech-aware Silence Analysis")
+    table.add_column("Video", style="cyan")
+    table.add_column("Quiet intervals", justify="right")
+    table.add_column("Review candidates", justify="right")
+    table.add_column("Transcript")
+    for video in report.videos:
+        table.add_row(
+            video.path,
+            str(len(video.audio_silences)),
+            str(len(video.candidates)),
+            "Available" if video.transcript_available else "Missing",
+        )
+    console.print(table)
+    console.print(f"Silence report saved to [green]{destination}[/green]")
+    console.print(
+        "[yellow]Candidates are review-only. Check scenic ambience, quiet footage, and music; "
+        "source media is never modified.[/yellow]"
     )
 
 
