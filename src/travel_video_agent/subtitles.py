@@ -37,8 +37,11 @@ def _load_timeline(root: Path, path: Path | None) -> tuple[ProjectTimeline, Path
 def _split_text(text: str, durations: list[float]) -> list[str]:
     """Distribute words over fragments when a spoken cue crosses an edited cut."""
     words = text.split()
-    if len(durations) <= 1 or len(words) <= 1:
-        return [text] * len(durations)
+    if len(durations) <= 1:
+        return [text]
+    if len(words) <= 1:
+        longest = max(range(len(durations)), key=durations.__getitem__)
+        return [text if index == longest else "" for index in range(len(durations))]
     total = sum(durations)
     result: list[str] = []
     cursor = 0
