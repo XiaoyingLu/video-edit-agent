@@ -108,6 +108,25 @@ def test_shot_renderer_uses_concat_for_hard_cuts(tmp_path):
     assert "anullsrc=r=48000:cl=stereo" in graph
 
 
+
+def test_shot_renderer_adds_subtitle_filter(tmp_path):
+    subtitle = tmp_path / "draft subtitles.srt"
+    command = _build_shot_render_command(
+        "ffmpeg",
+        [(tmp_path / "one.mp4", 0, 3, True, "cut", 0)],
+        tmp_path / "out.mp4",
+        1920,
+        1080,
+        subtitle_path=subtitle,
+        subtitle_font_size=32,
+        subtitle_position="top",
+    )
+    graph = command[command.index("-filter_complex") + 1]
+    assert "subtitles=filename=" in graph
+    assert "FontSize=32" in graph
+    assert "Alignment=8" in graph
+    assert "[vfinal]" in graph
+
 def test_render_requires_complete_human_approval(tmp_path):
     artifact = tmp_path / ".video-agent"
     artifact.mkdir()
