@@ -1,6 +1,8 @@
 """Validated, review-first edit proposal artifacts."""
 
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class EditReviewItem(BaseModel):
@@ -12,12 +14,20 @@ class EditReviewItem(BaseModel):
     start_seconds: float = Field(ge=0)
     end_seconds: float = Field(gt=0)
     duration_seconds: float = Field(gt=0)
-    suggested_action: str = "consider_removing"
-    decision: str = "pending"
+    suggested_action: Literal["consider_removing"] = "consider_removing"
+    decision: Literal["pending", "approved", "rejected"] = "pending"
     review_required: bool = True
     review_reason: str
     scene_id: str | None = None
     scene_summary: str | None = None
+
+    @model_validator(mode="after")
+    def validate_interval(self) -> "EditReviewItem":
+        if self.end_seconds <= self.start_seconds:
+            raise ValueError("end_seconds must be greater than start_seconds")
+        if abs((self.end_seconds - self.start_seconds) - self.duration_seconds) > 0.01:
+            raise ValueError("duration_seconds must match the interval bounds")
+        return self
 
 
 class VideoEditProposal(BaseModel):
