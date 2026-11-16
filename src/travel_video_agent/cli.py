@@ -192,6 +192,14 @@ def transcribe(
         str,
         typer.Option("--compute-type", help="Model precision (default: int8 on CPU)."),
     ] = "int8",
+    min_pause_duration: Annotated[
+        float,
+        typer.Option(
+            "--min-pause-duration",
+            min=0.1,
+            help="Minimum speech gap to report, in seconds.",
+        ),
+    ] = 1.0,
 ) -> None:
     """Transcribe speech locally and save timestamped segments as JSON."""
     try:
@@ -200,8 +208,9 @@ def transcribe(
             model=model,
             device=device,
             compute_type=compute_type,
+            min_pause_duration=min_pause_duration,
         )
-    except (FileNotFoundError, NotADirectoryError, MediaToolError, TranscriptionError) as exc:
+    except (FileNotFoundError, NotADirectoryError, MediaToolError, TranscriptionError, ValueError) as exc:
         console.print(f"[red]Transcription failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
