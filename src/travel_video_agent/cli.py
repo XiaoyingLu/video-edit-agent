@@ -545,7 +545,11 @@ def subtitles_command(
     ],
     output: Annotated[
         Path | None,
-        typer.Option("--output", "-o", help="SRT output path (default: <folder>/.video-agent/subtitles.srt)."),
+        typer.Option(
+            "--output",
+            "-o",
+            help="SRT output path (default: <folder>/.video-agent/subtitles.srt).",
+        ),
     ] = None,
     timeline: Annotated[
         Path | None,
@@ -570,7 +574,9 @@ def subtitles_command(
 
     console.print(f"[bold green]Subtitles generated.[/bold green] {cue_count} cue(s).")
     console.print(f"SRT: [green]{destination}[/green]")
-    console.print("[yellow]Subtitle timestamps follow the concatenated, reviewed timeline.[/yellow]")
+    console.print(
+        "[yellow]Subtitle timestamps follow the concatenated, reviewed timeline.[/yellow]"
+    )
 
 
 @app.command()
@@ -655,9 +661,10 @@ def render(
         f"{report.video_codec.upper()} video + {report.audio_codec.upper()} audio"
     )
     if burn_subtitles or subtitle_file:
-        console.print(
-            f"Burned-in subtitles: [green]{subtitle_file or folder.resolve() / '.video-agent' / 'subtitles.srt'}[/green]"
+        subtitle_display_path = (
+            subtitle_file or folder.resolve() / ".video-agent" / "subtitles.srt"
         )
+        console.print(f"Burned-in subtitles: [green]{subtitle_display_path}[/green]")
     console.print("[yellow]Original source videos were not modified.[/yellow]")
 
 
