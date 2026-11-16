@@ -6,10 +6,7 @@ from travel_video_agent.editing.timeline_pipeline import (
     apply_timeline_review,
     build_draft_timeline,
 )
-from travel_video_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
-from typer.testing import CliRunner
-
-from travel_video_agent.cli import app
+from typer.testing import CliRunner\n\nfrom travel_video_agent.cli import app\nfrom travel_video_agent.editing.timeline_schemas import (\n    DraftTimelineClip,\n    ProjectDraftTimeline,\n)
 
 runner = CliRunner()
 
@@ -22,7 +19,7 @@ def _write_inputs(root, style="vlog", transition="crossfade"):
         target_duration_seconds=12,
         style=style,
         pacing="moderate",
-        priorities=["chronological_story"],
+        priorities=(["chronological_story"] if style != "highlight_reel" else ["memorable_moments"]),
         transitions={"default": transition, "duration_seconds": 0.8 if transition != "cut" else 0},
     )
     selection = ProjectDraftSelection(
@@ -73,8 +70,8 @@ def test_build_draft_timeline_orders_chronologically_and_proposes_transitions(tm
     assert timeline.clips[0].transition_duration_seconds == 0
     assert timeline.clips[1].transition_in == "crossfade"
     assert timeline.clips[1].transition_duration_seconds == 0.8
-    assert timeline.proposed_duration_seconds == 8
-    assert timeline.timeline_approved is False
+    assert timeline.proposed_duration_seconds == 7.2
+    assert timeline.approved_duration_seconds == 0\n    assert timeline.timeline_approved is False
     assert timeline.approval_required is True
     assert timeline.rendering_performed is False
 
@@ -94,7 +91,7 @@ def test_timeline_review_requires_all_clips_decided(tmp_path):
     assert sum(clip.decision == "pending" for clip in partially_reviewed.clips) == 1
 
     approved = apply_timeline_review(partially_reviewed, set(), {"later"})
-    assert approved.timeline_approved is True
+    assert approved.timeline_approved is True\n    assert approved.approved_duration_seconds == 4
     assert [clip.decision for clip in approved.clips] == ["approved", "rejected"]
 
 
