@@ -216,6 +216,7 @@ def transcribe(
     table.add_column("Video", style="cyan")
     table.add_column("Language")
     table.add_column("Segments", justify="right")
+    table.add_column("Long gaps", justify="right")
     table.add_column("Transcript preview")
     for video in transcription.videos:
         preview = " ".join(segment.text for segment in video.segments)
@@ -223,6 +224,7 @@ def transcribe(
             video.path,
             video.language or ("No audio" if not video.has_audio else "—"),
             str(len(video.segments)),
+            str(len(video.pauses)),
             preview[:100] or "—",
         )
     console.print(table)
@@ -231,6 +233,9 @@ def transcribe(
         f"recognized [bold]{transcription.segment_count}[/bold] speech segment(s)."
     )
     console.print(f"Transcription saved to [green]{destination}[/green]")
+    console.print(
+        "[yellow]Long gaps are not cut recommendations; preserve quiet scenic footage by default.[/yellow]"
+    )
 
 
 if __name__ == "__main__":
