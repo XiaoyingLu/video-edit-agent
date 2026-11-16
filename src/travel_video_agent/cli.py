@@ -572,7 +572,7 @@ def render(
             overwrite=overwrite,
             timeout_seconds=timeout_seconds,
         )
-    except (FileNotFoundError, ValueError, RenderError) as exc:
+    except (FileNotFoundError, FileExistsError, ValueError, RenderError) as exc:
         console.print(f"[red]Render failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
