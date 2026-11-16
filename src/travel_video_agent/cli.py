@@ -97,7 +97,9 @@ def understand(
 ) -> None:
     """Detect scenes, sample frames, and describe footage with a local vision model."""
     try:
-        understanding = understand_folder(folder, model=model, samples_per_scene=samples_per_scene)
+        understanding = understand_folder(
+            folder, model=model, samples_per_scene=samples_per_scene
+        )
     except (FileNotFoundError, NotADirectoryError, MediaToolError, VisionModelError) as exc:
         console.print(f"[red]Video understanding failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
@@ -143,7 +145,10 @@ def transcribe(
     ] = None,
     model: Annotated[
         str,
-        typer.Option("--model", help="faster-whisper model size (tiny, base, small, medium, large-v3)."),
+        typer.Option(
+            "--model",
+            help="faster-whisper model size (tiny, base, small, medium, large-v3).",
+        ),
     ] = "tiny",
     language: Annotated[
         str | None,
@@ -151,7 +156,11 @@ def transcribe(
     ] = None,
     min_pause_duration: Annotated[
         float,
-        typer.Option("--min-pause-duration", min=0.1, help="Minimum gap length to report, in seconds."),
+        typer.Option(
+            "--min-pause-duration",
+            min=0.1,
+            help="Minimum gap length to report, in seconds.",
+        ),
     ] = 1.0,
 ) -> None:
     """Transcribe speech locally and report gaps without marking them as cuts."""
@@ -162,7 +171,13 @@ def transcribe(
             language=language,
             min_pause_duration=min_pause_duration,
         )
-    except (FileNotFoundError, NotADirectoryError, MediaToolError, TranscriptionError, ValueError) as exc:
+    except (
+        FileNotFoundError,
+        NotADirectoryError,
+        MediaToolError,
+        TranscriptionError,
+        ValueError,
+    ) as exc:
         console.print(f"[red]Transcription failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
@@ -191,7 +206,9 @@ def transcribe(
         f"[bold]{result.video_count}[/bold] video(s)."
     )
     console.print(f"Transcript saved to [green]{destination}[/green]")
-    console.print("[yellow]Reported gaps are not cut recommendations; quiet footage is preserved.[/yellow]")
+    console.print(
+        "[yellow]Reported gaps are not cut recommendations; quiet footage is preserved.[/yellow]"
+    )
 
 
 if __name__ == "__main__":
