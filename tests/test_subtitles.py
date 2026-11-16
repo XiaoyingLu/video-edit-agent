@@ -120,8 +120,8 @@ def test_build_subtitle_cues_rejects_large_transcript_end_overrun(tmp_path):
 def test_render_srt_uses_real_subrip_line_breaks():
     result = render_srt([SubtitleCue(1.25, 2.5, "Hello world")])
 
-    assert result == "1\\n00:00:01,250 --> 00:00:02,500\\nHello world\\n"
-    assert "\\\\n" not in result
+    assert result == "1\n00:00:01,250 --> 00:00:02,500\nHello world\n"
+    assert "\\n" not in result
 
 
 def test_generate_subtitles_writes_srt_from_project_artifacts(tmp_path):
