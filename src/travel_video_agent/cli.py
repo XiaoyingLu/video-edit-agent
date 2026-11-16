@@ -834,7 +834,7 @@ def create_video(
             f"{selection.selected_clip_count} shots ({selection.selected_duration_seconds:.1f}s)."
         )
         console.print(f"Review artifact: [green]{timeline_path}[/green]")
-        console.print("[bold]Human review required — no video has been rendered.[/bold]")
+        console.print(\n            "[yellow]Output resolution/aspect ratio and subtitle/audio preferences are " \n            "recorded in the plan; this renderer currently preserves the first source shot dimensions.[/yellow]"\n        )\n        console.print("[bold]Human review required — no video has been rendered.[/bold]")
         approve_ids: set[str] = set()
         reject_ids: set[str] = set()
         for clip in timeline.clips:
