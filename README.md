@@ -144,4 +144,5 @@ ruff format --check .
 5. Deterministic FFmpeg rendering and output validation (implemented)
 6. Timeline-aligned SRT generation and optional burned-in subtitles (implemented)
 7. Natural-language request parsing into a validated editing plan (implemented)
-8. Context-aware clip selection (implemented)\n9. Ordered shot timeline, transition proposals, pacing guidance, and human review (implemented; renderer integration planned)
+8. Context-aware clip selection (implemented)
+9. Ordered shot timeline, transition proposals, pacing guidance, and human review (implemented; renderer integration planned)
