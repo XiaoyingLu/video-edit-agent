@@ -211,6 +211,7 @@ def test_cli_help_includes_render_draft():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "render-draft" in result.output
+    assert "draft-subtitles" in result.output
 
 
 def test_approved_duration_does_not_apply_transition_across_rejected_shot(tmp_path):
