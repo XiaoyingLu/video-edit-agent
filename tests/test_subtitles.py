@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from travel_video_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
 from travel_video_agent.editing.schemas import (
     ProjectTimeline,
     TimelineSegment,
@@ -10,7 +11,9 @@ from travel_video_agent.editing.schemas import (
 from travel_video_agent.subtitles import (
     SubtitleCue,
     SubtitleError,
+    build_draft_subtitle_cues,
     build_subtitle_cues,
+    generate_draft_subtitles,
     generate_subtitles,
     render_srt,
 )
@@ -141,3 +144,114 @@ def test_generate_subtitles_writes_srt_from_project_artifacts(tmp_path):
     assert "00:00:02,000 --> 00:00:04,000" in content
     assert "00:00:04,000 --> 00:00:06,000" in content
     assert "00:00:09,000 --> 00:00:10,000" in content
+
+
+
+def _draft_artifacts(root: Path):
+    timeline = ProjectDraftTimeline(
+        project_path=str(root.resolve()),
+        style="cinematic",
+        pacing="moderate",
+        target_duration_seconds=6,
+        proposed_duration_seconds=5.5,
+        approved_duration_seconds=5.5,
+        proposed_clip_count=2,
+        timeline_approved=True,
+        clips=[
+            DraftTimelineClip(
+                clip_id="first",
+                sequence_index=1,
+                video_path="first.mp4",
+                source_start_seconds=0,
+                source_end_seconds=3,
+                duration_seconds=3,
+                combined_score=90,
+                pacing_fit="within",
+                pacing_note="Within range.",
+                decision="approved",
+            ),
+            DraftTimelineClip(
+                clip_id="second",
+                sequence_index=2,
+                video_path="first.mp4",
+                source_start_seconds=5,
+                source_end_seconds=8,
+                duration_seconds=3,
+                combined_score=85,
+                transition_in="crossfade",
+                transition_duration_seconds=0.5,
+                pacing_fit="within",
+                pacing_note="Within range.",
+                decision="approved",
+            ),
+        ],
+    )
+    transcription = ProjectTranscription(
+        project_path=str(root.resolve()),
+        video_count=1,
+        transcribed_video_count=1,
+        segment_count=1,
+        model="tiny",
+        videos=[
+            VideoTranscript(
+                path="first.mp4",
+                duration_seconds=10,
+                has_audio=True,
+                segments=[
+                    TranscriptSegment(
+                        start_seconds=2,
+                        end_seconds=6,
+                        text="one two three four",
+                    )
+                ],
+            )
+        ],
+    )
+    return timeline, transcription
+
+
+def test_build_draft_subtitle_cues_maps_approved_clips_and_crossfade_overlap(tmp_path):
+    timeline, transcription = _draft_artifacts(tmp_path)
+
+    cues = build_draft_subtitle_cues(timeline, transcription)
+
+    assert cues == [
+        SubtitleCue(2, 3, "one two"),
+        SubtitleCue(2.5, 3.5, "three four"),
+    ]
+
+
+def test_generate_draft_subtitles_writes_approved_timeline_srt(tmp_path):
+    timeline, transcription = _draft_artifacts(tmp_path)
+    artifact = tmp_path / ".video-agent"
+    artifact.mkdir()
+    (artifact / "optimized-timeline.json").write_text(
+        timeline.model_dump_json(), encoding="utf-8"
+    )
+    (artifact / "transcription.json").write_text(
+        transcription.model_dump_json(), encoding="utf-8"
+    )
+
+    destination, count = generate_draft_subtitles(tmp_path)
+
+    assert destination == artifact / "draft-subtitles.srt"
+    assert count == 2
+    content = destination.read_text(encoding="utf-8")
+    assert "00:00:02,000 --> 00:00:03,000" in content
+    assert "00:00:02,500 --> 00:00:03,500" in content
+
+
+def test_generate_draft_subtitles_requires_full_review(tmp_path):
+    timeline, transcription = _draft_artifacts(tmp_path)
+    timeline.timeline_approved = False
+    artifact = tmp_path / ".video-agent"
+    artifact.mkdir()
+    (artifact / "optimized-timeline.json").write_text(
+        timeline.model_dump_json(), encoding="utf-8"
+    )
+    (artifact / "transcription.json").write_text(
+        transcription.model_dump_json(), encoding="utf-8"
+    )
+
+    with pytest.raises(SubtitleError, match="fully reviewed"):
+        generate_draft_subtitles(tmp_path)
