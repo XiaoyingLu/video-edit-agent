@@ -9,8 +9,8 @@ from ..transcription import transcribe_folder
 from ..understanding import understand_folder
 from .draft_pipeline import build_draft_selection
 from .draft_schemas import ProjectDraftSelection
-from .intent_schemas import EditingPlan
 from .intent import parse_editing_intent
+from .intent_schemas import EditingPlan
 from .timeline_pipeline import build_draft_timeline, save_draft_timeline
 from .timeline_schemas import ProjectDraftTimeline
 
