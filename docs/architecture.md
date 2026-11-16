@@ -39,7 +39,12 @@ The vision model is accessed through an adapter so other local or hosted provide
 - `propose-edits` reads the validated silence-analysis artifact and optionally joins visual scene summaries by the source-video hash embedded in scene IDs.
 - Each proposal item retains source-relative timestamps, a stable review ID, optional scene context, and an explicit pending decision.
 - A quiet interval is only a review candidate. The proposal never marks it approved, never changes source media, and never invokes FFmpeg rendering.
-- The proposal is serialized to `.video-agent/edit-proposal.json`. The `review-edits` command records explicit approvals/rejections; skipped items remain pending. Timeline generation refuses to proceed while any item is pending.\n- `build-timeline` subtracts approved cut intervals from each source duration and writes `.video-agent/timeline.json` with ordered retained source intervals. Rejected candidates remain in the retained footage.\n- The timeline schema validates non-negative, in-bounds, ordered, non-overlapping segments and retained-duration totals. Approved cuts are checked for overlap and source bounds.\n- The timeline is not an FFmpeg render plan: no source media is changed and no rendering is performed. A future renderer must consume only this validated artifact and revalidate media metadata.
+- The proposal is serialized to `.video-agent/edit-proposal.json`. The `review-edits` command records explicit approvals/rejections; skipped items remain pending. Timeline generation refuses to proceed while any item is pending.
+- `build-timeline` subtracts approved cut intervals from each source duration and writes `.video-agent/timeline.json` with ordered retained source intervals. Rejected candidates remain in the retained footage.
+- The timeline schema validates non-negative, in-bounds, ordered, non-overlapping segments and retained-duration totals. Approved cuts are checked for overlap and source bounds.
+- The timeline is a validated edit-decision artifact. `render` consumes only this artifact; it does not accept LLM output or arbitrary commands. Before rendering, the renderer revalidates every source path, source duration, segment boundary, and output destination. Source paths must resolve inside the project folder, and the destination cannot resolve to a source file.
+- FFmpeg trims each retained interval, resets timestamps, normalizes video dimensions/frame rate/pixel format and audio sample rate/channel layout, then concatenates the segments in timeline order. Sources without audio receive generated silence to keep the output stream layout consistent.
+- The renderer encodes H.264 video and AAC audio into a temporary MP4, probes the result for valid streams and expected duration, then atomically moves it to the destination. It refuses to overwrite an existing output unless `--overwrite` is explicitly passed. Failed renders clean up the temporary output; source media is never modified.
 
 ## Planned editing workflow
 
@@ -50,7 +55,8 @@ Input folder + natural-language instruction
   -> LLM planner (structured edit-plan output)
   -> deterministic plan validation
   -> dry-run timeline review
-  -> FFmpeg renderer
+  -> validated retained-segment timeline
+  -> deterministic FFmpeg renderer
   -> output validation and report
 ```
 

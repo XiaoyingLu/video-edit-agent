@@ -152,6 +152,7 @@ def test_cli_help_includes_propose_edits() -> None:
     assert "propose-edits" in result.output
     assert "review-edits" in result.output
     assert "build-timeline" in result.output
+    assert "render" in result.output
 
 
 def test_review_and_build_timeline_commands(tmp_path: Path) -> None:
@@ -253,3 +254,48 @@ def test_build_timeline_requires_all_review_items_decided(tmp_path: Path) -> Non
     result = runner.invoke(app, ["build-timeline", str(tmp_path)])
     assert result.exit_code == 1
     assert "all review items must be approved or rejected" in result.output
+
+
+def test_render_command_reports_verified_output(tmp_path: Path, monkeypatch) -> None:
+    from travel_video_agent import cli
+    from travel_video_agent.rendering import RenderReport
+
+    expected = RenderReport(
+        output_path=str(tmp_path / "rendered.mp4"),
+        source_timeline=str(tmp_path / ".video-agent" / "timeline.json"),
+        source_video_count=2,
+        segment_count=4,
+        expected_duration_seconds=18,
+        actual_duration_seconds=18.02,
+        width=1920,
+        height=1080,
+        video_codec="h264",
+        audio_codec="aac",
+    )
+    captured = {}
+
+    def fake_render(folder, **kwargs):
+        captured["folder"] = folder
+        captured.update(kwargs)
+        return expected
+
+    monkeypatch.setattr(cli, "render_project", fake_render)
+    output = tmp_path / "custom.mp4"
+    result = runner.invoke(
+        app,
+        [
+            "render",
+            str(tmp_path),
+            "--output",
+            str(output),
+            "--overwrite",
+            "--timeout",
+            "120",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Render completed and verified" in result.output
+    assert captured["output_path"] == output
+    assert captured["overwrite"] is True
+    assert captured["timeout_seconds"] == 120

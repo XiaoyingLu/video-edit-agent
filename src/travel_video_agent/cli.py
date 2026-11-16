@@ -17,6 +17,7 @@ from .editing import (
     save_edit_proposal,
 )
 from .media import MediaToolError, analyze_folder
+from .rendering import RenderError, render_project
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
 from .transcription import transcribe_folder
@@ -526,6 +527,67 @@ def build_timeline(
         "[yellow]This is a validated edit-decision artifact only. "
         "No FFmpeg commands were run and no video was rendered.[/yellow]"
     )
+
+
+@app.command()
+def render(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder containing the reviewed timeline and source videos.",
+        ),
+    ],
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help="MP4 output path (default: <folder>/.video-agent/rendered.mp4).",
+        ),
+    ] = None,
+    timeline: Annotated[
+        Path | None,
+        typer.Option("--timeline", help="Path to a validated timeline JSON file."),
+    ] = None,
+    overwrite: Annotated[
+        bool,
+        typer.Option("--overwrite", help="Replace an existing output MP4."),
+    ] = False,
+    timeout_seconds: Annotated[
+        float,
+        typer.Option("--timeout", min=1, help="Maximum render time in seconds."),
+    ] = 3600,
+) -> None:
+    """Render the human-approved timeline to a verified H.264/AAC MP4."""
+    try:
+        report = render_project(
+            folder,
+            timeline_path=timeline,
+            output_path=output,
+            overwrite=overwrite,
+            timeout_seconds=timeout_seconds,
+        )
+    except (FileNotFoundError, FileExistsError, ValueError, RenderError) as exc:
+        console.print(f"[red]Render failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    console.print("[bold green]Render completed and verified.[/bold green]")
+    console.print(f"Output: [green]{report.output_path}[/green]")
+    console.print(
+        f"Duration: {report.actual_duration_seconds:.2f}s "
+        f"({report.segment_count} retained segments from "
+        f"{report.source_video_count} source video(s))"
+    )
+    console.print(
+        f"Format: {report.width}x{report.height}, "
+        f"{report.video_codec.upper()} video + {report.audio_codec.upper()} audio"
+    )
+    console.print("[yellow]Original source videos were not modified.[/yellow]")
 
 
 if __name__ == "__main__":

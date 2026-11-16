@@ -1,0 +1,315 @@
+"""Render a reviewed project timeline with FFmpeg; never overwrite source media."""
+
+import json
+import shutil
+import subprocess
+import tempfile
+from pathlib import Path
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from ..editing.schemas import ProjectTimeline, VideoTimeline
+
+
+class RenderError(RuntimeError):
+    """Raised when a reviewed timeline cannot safely be rendered or verified."""
+
+
+class RenderReport(BaseModel):
+    """Metadata for a successfully rendered and verified MP4."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    output_path: str
+    source_timeline: str
+    source_video_count: int = Field(ge=0)
+    segment_count: int = Field(ge=1)
+    expected_duration_seconds: float = Field(gt=0)
+    actual_duration_seconds: float = Field(gt=0)
+    width: int = Field(gt=0)
+    height: int = Field(gt=0)
+    video_codec: str
+    audio_codec: str
+    rendering_performed: bool = True
+
+
+def _run_probe(executable: str, path: Path, timeout: float = 60) -> dict[str, Any]:
+    command = [
+        executable,
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration:stream=codec_type,codec_name,width,height",
+        "-of",
+        "json",
+        str(path),
+    ]
+    try:
+        result = subprocess.run(
+            command, capture_output=True, text=True, timeout=timeout, check=False
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RenderError(f"ffprobe timed out while inspecting {path}") from exc
+    if result.returncode != 0:
+        raise RenderError(f"ffprobe could not inspect {path}: {result.stderr.strip()}")
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise RenderError(f"ffprobe returned invalid JSON for {path}") from exc
+
+
+def _probe_source(
+    ffprobe: str, root: Path, video: VideoTimeline
+) -> tuple[Path, dict[str, Any], float]:
+    relative = Path(video.path)
+    if relative.is_absolute():
+        raise RenderError(f"Timeline source path must be project-relative: {video.path}")
+    source = (root / relative).resolve()
+    try:
+        source.relative_to(root)
+    except ValueError as exc:
+        raise RenderError(f"Timeline source escapes the project folder: {video.path}") from exc
+    if not source.is_file():
+        raise RenderError(f"Timeline source file does not exist: {source}")
+
+    payload = _run_probe(ffprobe, source)
+    streams = payload.get("streams", [])
+    video_stream = next((item for item in streams if item.get("codec_type") == "video"), None)
+    if video_stream is None:
+        raise RenderError(f"Timeline source has no video stream: {source}")
+    duration = float(payload.get("format", {}).get("duration") or 0)
+    if duration <= 0:
+        raise RenderError(f"Timeline source has an invalid duration: {source}")
+    if abs(duration - video.source_duration_seconds) > max(0.25, duration * 0.005):
+        raise RenderError(
+            f"Source duration changed since timeline creation for {video.path}: "
+            f"timeline={video.source_duration_seconds:.3f}s, actual={duration:.3f}s"
+        )
+    return source, payload, duration
+
+
+def _seconds(value: float) -> str:
+    return f"{value:.6f}"
+
+
+def _build_ffmpeg_command(
+    ffmpeg: str,
+    sources: list[tuple[Path, dict[str, Any], float]],
+    segments: list[tuple[int, float, float, bool]],
+    output: Path,
+    width: int,
+    height: int,
+    frame_rate: float,
+) -> list[str]:
+    command = [ffmpeg, "-hide_banner", "-nostdin", "-y"]
+    for source_index, _, _ in sources:
+        command.extend(["-i", str(source_index)])
+
+    filters: list[str] = []
+    concat_inputs: list[str] = []
+    for index, (input_index, start, end, has_audio) in enumerate(segments):
+        duration = end - start
+        video_label = f"v{index}"
+        audio_label = f"a{index}"
+        filters.append(
+            f"[{input_index}:v:0]trim=start={_seconds(start)}:end={_seconds(end)},"
+            f"setpts=PTS-STARTPTS,"
+            f"scale=w={width}:h={height}:force_original_aspect_ratio=decrease,"
+            f"pad=width={width}:height={height}:x=(ow-iw)/2:y=(oh-ih)/2,"
+            f"setsar=1,fps={_seconds(frame_rate)},format=yuv420p[{video_label}]"
+        )
+        if has_audio:
+            filters.append(
+                f"[{input_index}:a:0]atrim=start={_seconds(start)}:end={_seconds(end)},"
+                f"asetpts=PTS-STARTPTS,aresample=48000,"
+                f"aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo"
+                f"[{audio_label}]"
+            )
+        else:
+            filters.append(
+                f"anullsrc=r=48000:cl=stereo,atrim=duration={_seconds(duration)}[{audio_label}]"
+            )
+        concat_inputs.extend([f"[{video_label}]", f"[{audio_label}]"])
+
+    filters.append(f"{''.join(concat_inputs)}concat=n={len(segments)}:v=1:a=1[outv][outa]")
+    command.extend(
+        [
+            "-filter_complex",
+            ";".join(filters),
+            "-map",
+            "[outv]",
+            "-map",
+            "[outa]",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "medium",
+            "-crf",
+            "20",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            "-movflags",
+            "+faststart",
+            str(output),
+        ]
+    )
+    return command
+
+
+def render_project(
+    folder: Path,
+    timeline_path: Path | None = None,
+    output_path: Path | None = None,
+    *,
+    overwrite: bool = False,
+    timeout_seconds: float = 3600,
+) -> RenderReport:
+    """Render the approved retained intervals into one MP4 and verify the result.
+
+    All source paths are constrained to the project root. Rendering uses a temporary
+    output followed by an atomic replace, and never writes to a source file.
+    """
+    if timeout_seconds <= 0:
+        raise ValueError("timeout_seconds must be greater than zero")
+    root = folder.expanduser().resolve()
+    if not root.is_dir():
+        raise FileNotFoundError(f"Project folder does not exist: {root}")
+
+    timeline_file = (
+        (timeline_path or root / ".video-agent" / "timeline.json").expanduser().resolve()
+    )
+    if not timeline_file.is_file():
+        raise FileNotFoundError(f"Missing {timeline_file}; run 'video-agent build-timeline' first.")
+    timeline = ProjectTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
+    if Path(timeline.project_path).resolve() != root:
+        raise RenderError("timeline belongs to a different project folder")
+    if timeline.rendering_performed:
+        raise RenderError("timeline artifact must describe an edit decision, not a prior render")
+
+    destination = (output_path or root / ".video-agent" / "rendered.mp4").expanduser().resolve()
+    if destination.suffix.lower() != ".mp4":
+        raise RenderError("render output must use the .mp4 extension")
+    if destination == timeline_file:
+        raise RenderError("render output cannot overwrite the timeline artifact")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+
+    if not timeline.videos:
+        raise RenderError("timeline contains no source videos")
+    ffprobe = shutil.which("ffprobe")
+    if ffprobe is None:
+        raise RenderError("ffprobe was not found; install FFmpeg and ensure it is on PATH")
+    ffmpeg = shutil.which("ffmpeg")
+    if ffmpeg is None:
+        raise RenderError("ffmpeg was not found; install FFmpeg and ensure it is on PATH")
+    source_entries = [_probe_source(ffprobe, root, video) for video in timeline.videos]
+
+    source_paths = {entry[0] for entry in source_entries}
+    if destination in source_paths:
+        raise RenderError("render output cannot overwrite a source video")
+    if destination.exists() and not overwrite:
+        raise FileExistsError(
+            f"Render output already exists: {destination}; pass --overwrite to replace it."
+        )
+
+    segments: list[tuple[int, float, float, bool]] = []
+    for source_index, (video, (_, payload, duration)) in enumerate(
+        zip(timeline.videos, source_entries, strict=True)
+    ):
+        streams = payload.get("streams", [])
+        has_audio = any(item.get("codec_type") == "audio" for item in streams)
+        for segment in video.segments:
+            if segment.start_seconds < 0 or segment.end_seconds > duration + 0.01:
+                raise RenderError(f"timeline segment is outside source bounds: {video.path}")
+            if segment.end_seconds <= segment.start_seconds:
+                raise RenderError(f"timeline contains an empty segment: {video.path}")
+            segments.append((source_index, segment.start_seconds, segment.end_seconds, has_audio))
+    if not segments:
+        raise RenderError("timeline retains no footage; refusing to create an empty video")
+
+    first_video_stream = next(
+        item for item in source_entries[0][1]["streams"] if item.get("codec_type") == "video"
+    )
+    width = int(first_video_stream.get("width") or 0)
+    height = int(first_video_stream.get("height") or 0)
+    width -= width % 2
+    height -= height % 2
+    if width < 2 or height < 2:
+        raise RenderError("could not determine a valid output resolution from the first source")
+    frame_rate = 30.0
+
+    expected_duration = sum(end - start for _, start, end, _ in segments)
+    temporary_file = tempfile.NamedTemporaryFile(
+        prefix=".video-agent-render-", suffix=".mp4", dir=destination.parent, delete=False
+    )
+    temporary_path = Path(temporary_file.name)
+    temporary_file.close()
+    try:
+        command = _build_ffmpeg_command(
+            ffmpeg,
+            [(entry[0], entry[1], entry[2]) for entry in source_entries],
+            segments,
+            temporary_path,
+            width,
+            height,
+            frame_rate,
+        )
+        try:
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                timeout=timeout_seconds,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise RenderError(f"FFmpeg render exceeded the {timeout_seconds:.0f}s timeout") from exc
+        if result.returncode != 0:
+            detail = result.stderr.strip()[-4000:] or "unknown FFmpeg error"
+            raise RenderError(f"FFmpeg render failed: {detail}")
+        if not temporary_path.is_file() or temporary_path.stat().st_size == 0:
+            raise RenderError("FFmpeg completed without producing a non-empty MP4")
+
+        output_probe = _run_probe(ffprobe, temporary_path)
+        output_streams = output_probe.get("streams", [])
+        output_video = next(
+            (item for item in output_streams if item.get("codec_type") == "video"), None
+        )
+        output_audio = next(
+            (item for item in output_streams if item.get("codec_type") == "audio"), None
+        )
+        actual_duration = float(output_probe.get("format", {}).get("duration") or 0)
+        if output_video is None or output_audio is None or actual_duration <= 0:
+            raise RenderError("rendered MP4 is missing a valid video or audio stream")
+        if output_video.get("codec_name") != "h264" or output_audio.get("codec_name") != "aac":
+            raise RenderError(
+                "rendered MP4 does not contain the expected H.264 video and AAC audio"
+            )
+        duration_tolerance = max(0.75, len(segments) / frame_rate * 2)
+        if abs(actual_duration - expected_duration) > duration_tolerance:
+            raise RenderError(
+                f"rendered duration mismatch: expected about {expected_duration:.2f}s, "
+                f"got {actual_duration:.2f}s"
+            )
+
+        temporary_path.replace(destination)
+    except Exception:
+        temporary_path.unlink(missing_ok=True)
+        raise
+
+    return RenderReport(
+        output_path=str(destination),
+        source_timeline=str(timeline_file),
+        source_video_count=len(timeline.videos),
+        segment_count=len(segments),
+        expected_duration_seconds=expected_duration,
+        actual_duration_seconds=actual_duration,
+        width=int(output_video.get("width") or width),
+        height=int(output_video.get("height") or height),
+        video_codec=str(output_video.get("codec_name") or "unknown"),
+        audio_codec=str(output_audio.get("codec_name") or "unknown"),
+    )
