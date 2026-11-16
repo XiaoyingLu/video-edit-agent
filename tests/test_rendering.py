@@ -152,7 +152,7 @@ def test_render_project_rejects_source_path_outside_project(tmp_path: Path, monk
 
 
 def test_render_project_rejects_changed_source_duration(tmp_path: Path, monkeypatch) -> None:
-    _write_timeline(tmp_path, duration=9)
+    _write_timeline(tmp_path, duration=9, segments=[(0, 2), (4, 9)])
     _fake_tools(monkeypatch)
 
     with pytest.raises(RenderError, match="duration changed"):
