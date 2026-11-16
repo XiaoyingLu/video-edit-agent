@@ -64,9 +64,7 @@ def _artifacts(root: Path):
                 path="second.mp4",
                 duration_seconds=5,
                 has_audio=True,
-                segments=[
-                    TranscriptSegment(start_seconds=1, end_seconds=2, text="next clip")
-                ],
+                segments=[TranscriptSegment(start_seconds=1, end_seconds=2, text="next clip")],
             ),
         ],
     )
