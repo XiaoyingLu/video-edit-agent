@@ -45,7 +45,7 @@ For the end-to-end workflow, use one natural-language command. It analyzes the f
 docker compose run --rm -it video-agent create-video ./travel-test --prompt "Create a 60-second cinematic travel video"
 ```
 
-Tune local resource usage with `--model qwen2.5vl:3b`, `--whisper-model tiny`, or `--samples-per-scene 1`. The workflow writes inspectable artifacts under `.video-agent/`; the individual commands remain available for finer control.
+Tune local resource usage with `--model qwen2.5vl:3b`, `--whisper-model tiny`, or `--samples-per-scene 1`. The workflow writes inspectable artifacts under `.video-agent/`; the individual commands remain available for finer control. Current renderer limitation: it preserves the dimensions of the first approved source shot. Requested aspect ratio/resolution and subtitle/audio preferences are retained in the editing plan but are not yet all applied by this end-to-end command.
 
 
 Put a short travel clip in a folder in the repository, for example `travel-test/`, then run:
