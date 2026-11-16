@@ -4,8 +4,50 @@ from pathlib import Path
 
 from ..media import analyze_folder, discover_videos
 from ..models import relative_media_path
-from .schemas import ProjectTranscription, TranscriptSegment, VideoTranscript
+from .schemas import (
+    PauseInterval,
+    ProjectTranscription,
+    TranscriptSegment,
+    VideoTranscript,
+)
 from .whisper_backend import FasterWhisperTranscriber
+
+
+def detect_speech_pauses(
+    segments: list[TranscriptSegment],
+    duration_seconds: float,
+    min_pause_duration: float = 1.0,
+) -> list[PauseInterval]:
+    """Find long gaps around speech; gaps are metadata, never automatic cut decisions."""
+    if min_pause_duration < 0:
+        raise ValueError("min_pause_duration must be non-negative")
+
+    pauses: list[PauseInterval] = []
+    cursor = 0.0
+    for segment in sorted(segments, key=lambda item: item.start_seconds):
+        start = min(duration_seconds, max(0.0, segment.start_seconds))
+        end = min(duration_seconds, max(start, segment.end_seconds))
+        gap = start - cursor
+        if gap >= min_pause_duration and gap > 0:
+            pauses.append(
+                PauseInterval(
+                    start_seconds=cursor,
+                    end_seconds=start,
+                    duration_seconds=gap,
+                )
+            )
+        cursor = max(cursor, end)
+
+    tail = max(0.0, duration_seconds - cursor)
+    if tail >= min_pause_duration and tail > 0:
+        pauses.append(
+            PauseInterval(
+                start_seconds=cursor,
+                end_seconds=duration_seconds,
+                duration_seconds=tail,
+            )
+        )
+    return pauses
 
 
 def transcribe_folder(
@@ -13,8 +55,12 @@ def transcribe_folder(
     model: str = "small",
     device: str = "cpu",
     compute_type: str = "int8",
+    min_pause_duration: float = 1.0,
 ) -> ProjectTranscription:
     """Transcribe every video with an audio stream; source media remains untouched."""
+    if min_pause_duration < 0:
+        raise ValueError("min_pause_duration must be non-negative")
+
     root = folder.expanduser().resolve()
     analysis = analyze_folder(root)
     media_with_audio = {item.path for item in analysis.videos if item.has_audio}
@@ -46,6 +92,7 @@ def transcribe_folder(
         assert backend is not None
         result = backend.transcribe(path)
         segments = [TranscriptSegment.model_validate(item) for item in result["segments"]]
+        pauses = detect_speech_pauses(segments, info.duration_seconds, min_pause_duration)
         transcripts.append(
             VideoTranscript(
                 path=relative_path,
@@ -54,6 +101,7 @@ def transcribe_folder(
                 language=result.get("language"),
                 language_probability=result.get("language_probability"),
                 segments=segments,
+                pauses=pauses,
             )
         )
 
