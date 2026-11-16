@@ -25,9 +25,7 @@ def _write_inputs(root, style="vlog", transition="crossfade"):
         style=style,
         pacing="moderate",
         priorities=(
-            ["chronological_story"]
-            if style != "highlight_reel"
-            else ["memorable_moments"]
+            ["chronological_story"] if style != "highlight_reel" else ["memorable_moments"]
         ),
         transitions={
             "default": transition,
@@ -126,7 +124,7 @@ def test_timeline_schema_rejects_non_cut_transition_on_first_clip():
             style="cinematic",
             pacing="slow",
             target_duration_seconds=5,
-            proposed_duration_seconds=1.8,
+            proposed_duration_seconds=2,
             proposed_clip_count=1,
             clips=[
                 DraftTimelineClip(

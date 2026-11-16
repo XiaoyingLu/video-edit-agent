@@ -47,9 +47,7 @@ def build_draft_timeline(
     )
     plan_file = (plan_path or artifact_dir / "editing-plan.json").expanduser().resolve()
     if not selection_file.is_file():
-        raise FileNotFoundError(
-            f"Missing {selection_file}; run 'video-agent draft-edit' first."
-        )
+        raise FileNotFoundError(f"Missing {selection_file}; run 'video-agent draft-edit' first.")
     if not plan_file.is_file():
         raise FileNotFoundError(f"Missing {plan_file}; run 'video-agent plan' first.")
 
@@ -139,17 +137,13 @@ def load_draft_timeline(
     """Load a draft timeline and ensure it belongs to the requested project."""
     root = folder.expanduser().resolve()
     destination = (
-        (timeline_path or root / ".video-agent" / "optimized-timeline.json")
-        .expanduser()
-        .resolve()
+        (timeline_path or root / ".video-agent" / "optimized-timeline.json").expanduser().resolve()
     )
     if not destination.is_file():
         raise FileNotFoundError(
             f"Missing {destination}; run 'video-agent optimize-timeline' first."
         )
-    timeline = ProjectDraftTimeline.model_validate_json(
-        destination.read_text(encoding="utf-8")
-    )
+    timeline = ProjectDraftTimeline.model_validate_json(destination.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root:
         raise ValueError("draft timeline belongs to a different project folder")
     return timeline, destination
@@ -189,8 +183,8 @@ def apply_timeline_review(
     has_approved = any(clip.decision == "approved" for clip in timeline.clips)
     timeline.timeline_approved = not pending and has_approved
     approved = [clip for clip in timeline.clips if clip.decision == "approved"]
-    timeline.approved_duration_seconds = sum(
-        clip.duration_seconds for clip in approved
-    ) - sum(clip.transition_duration_seconds for clip in approved[1:])
+    timeline.approved_duration_seconds = sum(clip.duration_seconds for clip in approved) - sum(
+        clip.transition_duration_seconds for clip in approved[1:]
+    )
     # Revalidate after mutable review decisions are applied.
     return ProjectDraftTimeline.model_validate(timeline.model_dump())

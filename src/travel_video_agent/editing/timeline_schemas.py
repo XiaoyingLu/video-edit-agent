@@ -86,8 +86,7 @@ class ProjectDraftTimeline(BaseModel):
         if self.proposed_duration_seconds > self.target_duration_seconds + 0.02:
             raise ValueError("proposed duration cannot exceed the requested duration")
         if self.clips and (
-            self.clips[0].transition_in != "cut"
-            or self.clips[0].transition_duration_seconds != 0
+            self.clips[0].transition_in != "cut" or self.clips[0].transition_duration_seconds != 0
         ):
             raise ValueError("the first clip must begin with a cut")
         if self.timeline_approved:

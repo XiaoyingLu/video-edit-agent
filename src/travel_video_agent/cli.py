@@ -987,7 +987,9 @@ def review_timeline(
                         f"({clip.transition_duration_seconds:.2f}s)"
                     )
                 while True:
-                    choice = console.input("Decision [a]pprove / [r]eject / [s]kip: ").strip().lower()
+                    choice = (
+                        console.input("Decision [a]pprove / [r]eject / [s]kip: ").strip().lower()
+                    )
                     if choice in {"a", "approve"}:
                         approve_ids.add(clip.clip_id)
                         break
