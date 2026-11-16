@@ -361,7 +361,6 @@ def test_plan_command_writes_validated_editing_plan(tmp_path: Path, monkeypatch)
     assert "No clips were selected" in result.output
 
 
-
 def test_draft_edit_command_writes_selection_json(tmp_path: Path, monkeypatch) -> None:
     from travel_video_agent import cli
     from travel_video_agent.editing.draft_schemas import DraftClip, ProjectDraftSelection

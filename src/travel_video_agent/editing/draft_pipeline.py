@@ -9,20 +9,42 @@ from ..understanding.schemas import VideoUnderstanding
 from .draft_schemas import DraftClip, ProjectDraftSelection
 from .intent_schemas import EditingPlan
 
-
 _PRIORITY_TERMS = {
     "scenic_landscapes": {
-        "landscape", "mountain", "ocean", "beach", "lake", "forest",
-        "waterfall", "sunset", "sky", "coast", "scenic",
+        "landscape",
+        "mountain",
+        "ocean",
+        "beach",
+        "lake",
+        "forest",
+        "waterfall",
+        "sunset",
+        "sky",
+        "coast",
+        "scenic",
     },
     "city_highlights": {"city", "street", "traffic", "skyline", "downtown", "urban", "square"},
     "people_and_activities": {
-        "people", "person", "walking", "hiking", "cycling", "activity", "crowd", "family",
+        "people",
+        "person",
+        "walking",
+        "hiking",
+        "cycling",
+        "activity",
+        "crowd",
+        "family",
     },
     "food_and_culture": {"food", "restaurant", "market", "festival", "culture", "cooking", "dish"},
     "architecture": {"building", "architecture", "church", "temple", "bridge", "museum", "castle"},
     "memorable_moments": {
-        "smile", "celebration", "sunset", "view", "landmark", "moment", "beautiful", "panorama",
+        "smile",
+        "celebration",
+        "sunset",
+        "view",
+        "landmark",
+        "moment",
+        "beautiful",
+        "panorama",
     },
     "chronological_story": set(),
 }
@@ -30,7 +52,8 @@ _PRIORITY_TERMS = {
 
 def _scene_for_candidate(candidate, scenes):
     overlaps = [
-        scene for scene in scenes
+        scene
+        for scene in scenes
         if scene.start_seconds < candidate.end_seconds
         and scene.end_seconds > candidate.start_seconds
     ]
@@ -38,8 +61,10 @@ def _scene_for_candidate(candidate, scenes):
         return None
     return max(
         overlaps,
-        key=lambda scene: min(candidate.end_seconds, scene.end_seconds)
-        - max(candidate.start_seconds, scene.start_seconds),
+        key=lambda scene: (
+            min(candidate.end_seconds, scene.end_seconds)
+            - max(candidate.start_seconds, scene.start_seconds)
+        ),
     )
 
 
@@ -100,9 +125,7 @@ def build_draft_selection(
         raise FileNotFoundError(
             f"Missing {highlights_file}; run 'video-agent find-highlights' first."
         )
-    highlights = ProjectHighlights.model_validate_json(
-        highlights_file.read_text(encoding="utf-8")
-    )
+    highlights = ProjectHighlights.model_validate_json(highlights_file.read_text(encoding="utf-8"))
     understanding_file = artifact_dir / "understanding.json"
     understanding = (
         VideoUnderstanding.model_validate_json(understanding_file.read_text(encoding="utf-8"))
@@ -111,9 +134,7 @@ def build_draft_selection(
     )
     transcription_file = artifact_dir / "transcription.json"
     transcription = (
-        ProjectTranscription.model_validate_json(
-            transcription_file.read_text(encoding="utf-8")
-        )
+        ProjectTranscription.model_validate_json(transcription_file.read_text(encoding="utf-8"))
         if transcription_file.is_file()
         else None
     )
@@ -137,9 +158,13 @@ def build_draft_selection(
             candidate.end_seconds,
         )
         combined = round(candidate.score * 0.65 + relevance * 0.35, 1)
-        if excerpt and editing_plan.priorities and (
-            "people_and_activities" in editing_plan.priorities
-            or "memorable_moments" in editing_plan.priorities
+        if (
+            excerpt
+            and editing_plan.priorities
+            and (
+                "people_and_activities" in editing_plan.priorities
+                or "memorable_moments" in editing_plan.priorities
+            )
         ):
             combined = min(100.0, combined + 5.0)
             reasons.append("Overlapping speech may add human context to this moment.")
@@ -164,9 +189,7 @@ def build_draft_selection(
         candidates.sort(key=lambda item: (item.video_path, item.source_start_seconds))
     else:
         candidates.sort(
-            key=lambda item: (
-                -item.combined_score, item.video_path, item.source_start_seconds
-            )
+            key=lambda item: (-item.combined_score, item.video_path, item.source_start_seconds)
         )
 
     remaining = editing_plan.target_duration_seconds
@@ -200,14 +223,8 @@ def build_draft_selection(
         source_artifacts=[
             str(plan_file.relative_to(root)) if plan_file.is_relative_to(root) else str(plan_file),
             ".video-agent/highlights.json",
-            *(
-                [".video-agent/understanding.json"]
-                if understanding is not None else []
-            ),
-            *(
-                [".video-agent/transcription.json"]
-                if transcription is not None else []
-            ),
+            *([".video-agent/understanding.json"] if understanding is not None else []),
+            *([".video-agent/transcription.json"] if transcription is not None else []),
         ],
         target_duration_seconds=editing_plan.target_duration_seconds,
         selected_duration_seconds=round(selected_duration, 3),

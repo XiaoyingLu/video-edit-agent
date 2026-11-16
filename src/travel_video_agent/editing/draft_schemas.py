@@ -28,9 +28,7 @@ class DraftClip(BaseModel):
     def validate_interval(self) -> "DraftClip":
         if self.source_end_seconds <= self.source_start_seconds:
             raise ValueError("source_end_seconds must be greater than source_start_seconds")
-        if abs(
-            self.source_end_seconds - self.source_start_seconds - self.duration_seconds
-        ) > 0.02:
+        if abs(self.source_end_seconds - self.source_start_seconds - self.duration_seconds) > 0.02:
             raise ValueError("duration_seconds must match source interval")
         return self
 
