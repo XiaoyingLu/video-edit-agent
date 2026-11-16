@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from travel_video_agent.silence.ffmpeg_detector import FFmpegSilenceDetector
 from travel_video_agent.silence.pipeline import _speech_free_candidates
 from travel_video_agent.silence.schemas import SilenceInterval
@@ -132,3 +134,77 @@ def test_transcript_speech_excludes_silence_candidate(tmp_path: Path, monkeypatc
     assert [(item.start_seconds, item.end_seconds) for item in result.videos[0].candidates] == [
         (5, 8)
     ]
+
+
+@pytest.mark.parametrize(
+    ("artifact_project_path", "artifact_duration", "segment_end", "message"),
+    [
+        ("different-project", 10.0, 3.0, "different project folder"),
+        ("current-project", 9.0, 3.0, "video duration changed"),
+        ("current-project", 10.0, 10.5, "exceeds source duration"),
+    ],
+)
+def test_rejects_stale_or_out_of_bounds_transcription(
+    tmp_path: Path,
+    monkeypatch,
+    artifact_project_path: str,
+    artifact_duration: float,
+    segment_end: float,
+    message: str,
+) -> None:
+    from travel_video_agent.models import MediaInfo, ProjectAnalysis
+    from travel_video_agent.silence import pipeline
+    from travel_video_agent.transcription.schemas import ProjectTranscription, VideoTranscript
+
+    video = tmp_path / "clip.mp4"
+    video.touch()
+    artifact_dir = tmp_path / ".video-agent"
+    artifact_dir.mkdir()
+    project_path = (
+        str(tmp_path / "previous")
+        if artifact_project_path == "different-project"
+        else str(tmp_path)
+    )
+    transcription = ProjectTranscription(
+        project_path=project_path,
+        video_count=1,
+        transcribed_video_count=1,
+        segment_count=1,
+        model="tiny",
+        videos=[
+            VideoTranscript(
+                path="clip.mp4",
+                duration_seconds=artifact_duration,
+                has_audio=True,
+                segments=[
+                    TranscriptSegment(start_seconds=2.0, end_seconds=segment_end, text="speech")
+                ],
+            )
+        ],
+    )
+    (artifact_dir / "transcription.json").write_text(
+        transcription.model_dump_json(), encoding="utf-8"
+    )
+    analysis = ProjectAnalysis(
+        project_path=str(tmp_path),
+        video_count=1,
+        total_duration_seconds=10,
+        videos=[
+            MediaInfo(
+                path="clip.mp4",
+                duration_seconds=10,
+                has_video=True,
+                has_audio=True,
+            )
+        ],
+    )
+    monkeypatch.setattr(pipeline, "analyze_folder", lambda folder: analysis)
+    monkeypatch.setattr(pipeline, "discover_videos", lambda folder: [video])
+    monkeypatch.setattr(
+        pipeline,
+        "FFmpegSilenceDetector",
+        lambda: pytest.fail("FFmpeg must not run for a stale transcript artifact"),
+    )
+
+    with pytest.raises(ValueError, match=message):
+        pipeline.analyze_silence_folder(tmp_path)
