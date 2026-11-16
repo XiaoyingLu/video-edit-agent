@@ -249,7 +249,8 @@ def transcribe(
     )
     console.print(f"Transcription saved to [green]{destination}[/green]")
     console.print(
-        "[yellow]Long gaps are not cut recommendations; preserve quiet scenic footage by default.[/yellow]"
+        "[yellow]Long gaps are not cut recommendations; "
+        "preserve quiet scenic footage by default.[/yellow]"
 
     )
 
