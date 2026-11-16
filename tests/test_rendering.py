@@ -111,6 +111,7 @@ def test_render_project_creates_verified_mp4_without_changing_source(
     filter_graph = ffmpeg_command[ffmpeg_command.index("-filter_complex") + 1]
     assert "trim=start=0.000000:end=2.000000" in filter_graph
     assert "concat=n=2:v=1:a=1" in filter_graph
+    assert "pad=width=640:height=360:x=(ow-iw)/2:y=(oh-ih)/2" in filter_graph
     assert "-c:v" in ffmpeg_command and "libx264" in ffmpeg_command
 
 
