@@ -16,6 +16,7 @@ from .highlights import find_highlights_folder\nfrom .editing import (
     load_edit_proposal,
     save_edit_proposal,
 )
+from .highlights import find_highlights_folder
 from .media import MediaToolError, analyze_folder
 from .rendering import RenderError, render_project
 from .silence import analyze_silence_folder
