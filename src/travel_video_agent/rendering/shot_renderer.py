@@ -72,7 +72,7 @@ def _build_shot_render_command(
 
         if transition == "cut" or transition_duration <= 0:
             filters.append(
-                f"[{current_video}][{next_video}][{current_audio}][{next_audio}]"
+                f"[{current_video}][{current_audio}][{next_video}][{next_audio}]"
                 f"concat=n=2:v=1:a=1[{output_video}][{output_audio}]"
             )
             current_duration += clip_duration
