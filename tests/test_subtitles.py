@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from travel_video_agent.editing.schemas import (
     ProjectTimeline,
     TimelineSegment,
@@ -7,6 +9,7 @@ from travel_video_agent.editing.schemas import (
 )
 from travel_video_agent.subtitles import (
     SubtitleCue,
+    SubtitleError,
     build_subtitle_cues,
     generate_subtitles,
     render_srt,
@@ -92,11 +95,33 @@ def test_build_subtitle_cues_drops_speech_inside_removed_interval(tmp_path):
     assert build_subtitle_cues(timeline, transcription) == [SubtitleCue(9, 10, "next clip")]
 
 
+def test_build_subtitle_cues_clamps_small_whisper_end_overrun(tmp_path):
+    timeline, transcription = _artifacts(tmp_path)
+    transcription.videos[0].segments = [
+        TranscriptSegment(start_seconds=9.9, end_seconds=10.2, text="last words")
+    ]
+
+    assert build_subtitle_cues(timeline, transcription) == [
+        SubtitleCue(7.9, 8.0, "last words"),
+        SubtitleCue(9, 10, "next clip"),
+    ]
+
+
+def test_build_subtitle_cues_rejects_large_transcript_end_overrun(tmp_path):
+    timeline, transcription = _artifacts(tmp_path)
+    transcription.videos[0].segments = [
+        TranscriptSegment(start_seconds=9.0, end_seconds=10.5, text="bad timestamp")
+    ]
+
+    with pytest.raises(SubtitleError, match="transcript segment exceeds source duration"):
+        build_subtitle_cues(timeline, transcription)
+
+
 def test_render_srt_uses_real_subrip_line_breaks():
     result = render_srt([SubtitleCue(1.25, 2.5, "Hello world")])
 
-    assert result == "1\n00:00:01,250 --> 00:00:02,500\nHello world\n"
-    assert "\\n" not in result
+    assert result == "1\\n00:00:01,250 --> 00:00:02,500\\nHello world\\n"
+    assert "\\\\n" not in result
 
 
 def test_generate_subtitles_writes_srt_from_project_artifacts(tmp_path):
