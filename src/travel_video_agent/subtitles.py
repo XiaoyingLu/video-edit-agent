@@ -126,6 +126,7 @@ def render_srt(cues: list[SubtitleCue]) -> str:
         )
     return "\n\n".join(blocks) + ("\n" if blocks else "")
 
+
 def generate_subtitles(
     folder: Path,
     timeline_path: Path | None = None,
