@@ -3,8 +3,8 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..editing.schemas import ProjectTimeline
-from ..transcription.schemas import ProjectTranscription
+from .editing.schemas import ProjectTimeline
+from .transcription.schemas import ProjectTranscription
 
 
 class SubtitleError(RuntimeError):
