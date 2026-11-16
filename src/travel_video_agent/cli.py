@@ -23,6 +23,7 @@ from .editing import (
     save_draft_timeline,
     save_edit_proposal,
 )
+from .editing.workflow import create_video_draft
 from .highlights import find_highlights_folder
 from .media import MediaToolError, analyze_folder
 from .rendering import RenderError, render_approved_shot_timeline, render_project
@@ -800,6 +801,94 @@ def find_highlights(
         "Review every candidate; quiet scenic footage is not penalized for low motion. "
         "No edits were applied and source media was not modified.[/yellow]"
     )
+
+
+
+@app.command("create-video")
+def create_video(
+    folder: Annotated[
+        Path,
+        typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True,
+                       help="Folder containing travel videos."),
+    ],
+    prompt: Annotated[str, typer.Option("--prompt", "-p", help="Describe the video you want.")],
+    model: Annotated[str | None, typer.Option("--model", help="Ollama model.")] = None,
+    whisper_model: Annotated[str, typer.Option("--whisper-model", help="Whisper model size.")] = "small",
+    samples_per_scene: Annotated[int, typer.Option("--samples-per-scene", min=1, max=10)] = 2,
+    output: Annotated[Path | None, typer.Option("--output", "-o", help="Rendered MP4 path.")] = None,
+    overwrite: Annotated[bool, typer.Option("--overwrite", help="Replace existing output.")] = False,
+) -> None:
+    """Create a video from natural language with mandatory shot-by-shot approval."""
+    try:
+        plan, highlights, selection, timeline, timeline_path = create_video_draft(
+            folder, prompt, vision_model=model, whisper_model=whisper_model,
+            samples_per_scene=samples_per_scene,
+        )
+        console.print("[bold green]Analysis and draft planning complete.[/bold green]")
+        console.print(
+            f"Intent: {plan.style}, {plan.target_duration_seconds:.0f}s, "
+            f"{plan.aspect_ratio}, {plan.resolution}"
+        )
+        console.print(
+            f"Found {highlights.candidate_count} highlights; selected "
+            f"{selection.selected_clip_count} shots ({selection.selected_duration_seconds:.1f}s)."
+        )
+        console.print(f"Review artifact: [green]{timeline_path}[/green]")
+        console.print("[bold]Human review required — no video has been rendered.[/bold]")
+        approve_ids: set[str] = set()
+        reject_ids: set[str] = set()
+        for clip in timeline.clips:
+            console.print(
+                f"\\n[bold cyan]{clip.sequence_index}. {clip.video_path}[/bold cyan] "
+                f"— {clip.clip_id} ({clip.source_start_seconds:.2f}–"
+                f"{clip.source_end_seconds:.2f}s)"
+            )
+            if clip.scene_summary:
+                console.print(f"Scene: {clip.scene_summary}")
+            console.print(clip.pacing_note)
+            if clip.transition_in != "cut":
+                console.print(
+                    f"Incoming transition: {clip.transition_in} "
+                    f"({clip.transition_duration_seconds:.2f}s)"
+                )
+            while True:
+                choice = console.input("Decision [a]pprove / [r]eject: ").strip().lower()
+                if choice in {"a", "approve"}:
+                    approve_ids.add(clip.clip_id)
+                    break
+                if choice in {"r", "reject"}:
+                    reject_ids.add(clip.clip_id)
+                    break
+                console.print("[yellow]Enter a or r. Every shot needs an explicit decision.[/yellow]")
+
+        timeline = apply_timeline_review(timeline, approve_ids, reject_ids)
+        save_draft_timeline(timeline, timeline_path)
+        if not timeline.timeline_approved:
+            console.print("[yellow]No shots were approved. Rendering was skipped.[/yellow]")
+            raise typer.Exit(code=2)
+
+        report = render_approved_shot_timeline(
+            folder, timeline_path=timeline_path, output_path=output, overwrite=overwrite,
+        )
+    except typer.Exit:
+        raise
+    except (
+        FileNotFoundError, ValueError, IntentParsingError, VisionModelError,
+        TranscriptionError, MediaToolError, RenderError,
+    ) as exc:
+        console.print(f"[red]Video creation failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    console.print("[bold green]Approved video rendered and verified.[/bold green]")
+    console.print(f"Output: [green]{report.output_path}[/green]")
+    console.print(
+        f"Duration: {report.actual_duration_seconds:.2f}s — {report.segment_count} approved shots."
+    )
+    console.print(
+        f"Format: {report.width}x{report.height}, "
+        f"{report.video_codec.upper()} video + {report.audio_codec.upper()} audio"
+    )
+    console.print("[yellow]Original source videos were not modified.[/yellow]")
 
 
 @app.command("plan")
