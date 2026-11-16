@@ -1,6 +1,6 @@
 """Validated timestamped speech transcription artifacts."""
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class TranscriptSegment(BaseModel):
@@ -14,6 +14,21 @@ class TranscriptSegment(BaseModel):
     average_log_probability: float | None = None
     no_speech_probability: float | None = Field(default=None, ge=0, le=1)
 
+    @field_validator("text")
+    @classmethod
+    def normalize_text(cls, value: str) -> str:
+        return value.strip()
+
+
+class PauseInterval(BaseModel):
+    """A gap between speech segments, not an instruction to remove footage."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    start_seconds: float = Field(ge=0)
+    end_seconds: float = Field(gt=0)
+    duration_seconds: float = Field(gt=0)
+
 
 class VideoTranscript(BaseModel):
     """Transcription result for one video."""
@@ -26,6 +41,7 @@ class VideoTranscript(BaseModel):
     language: str | None = None
     language_probability: float | None = Field(default=None, ge=0, le=1)
     segments: list[TranscriptSegment] = Field(default_factory=list)
+    pauses: list[PauseInterval] = Field(default_factory=list)
 
 
 class ProjectTranscription(BaseModel):
