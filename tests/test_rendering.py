@@ -31,8 +31,7 @@ def _write_timeline(
                 source_duration_seconds=duration,
                 retained_duration_seconds=sum(end - start for start, end in selected),
                 segments=[
-                    TimelineSegment(start_seconds=start, end_seconds=end)
-                    for start, end in selected
+                    TimelineSegment(start_seconds=start, end_seconds=end) for start, end in selected
                 ],
             )
         ],
@@ -129,9 +128,7 @@ def test_render_project_generates_silence_for_source_without_audio(
     assert report.audio_codec == "aac"
 
 
-def test_render_project_refuses_to_overwrite_existing_output(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_render_project_refuses_to_overwrite_existing_output(tmp_path: Path, monkeypatch) -> None:
     _write_timeline(tmp_path)
     commands = _fake_tools(monkeypatch)
     output = tmp_path / ".video-agent" / "rendered.mp4"
@@ -144,9 +141,7 @@ def test_render_project_refuses_to_overwrite_existing_output(
     assert not any(command[0].endswith("ffmpeg") for command in commands)
 
 
-def test_render_project_rejects_source_path_outside_project(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_render_project_rejects_source_path_outside_project(tmp_path: Path, monkeypatch) -> None:
     outside = tmp_path.parent / "outside.mp4"
     outside.write_bytes(b"outside")
     _write_timeline(tmp_path, source_path="../outside.mp4")
@@ -156,9 +151,7 @@ def test_render_project_rejects_source_path_outside_project(
         render_project(tmp_path)
 
 
-def test_render_project_rejects_changed_source_duration(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_render_project_rejects_changed_source_duration(tmp_path: Path, monkeypatch) -> None:
     _write_timeline(tmp_path, duration=9)
     _fake_tools(monkeypatch)
 
@@ -179,9 +172,7 @@ def test_render_project_rejects_invalid_output_duration_and_cleans_temp_file(
     assert list((tmp_path / ".video-agent").glob(".video-agent-render-*.mp4")) == []
 
 
-def test_render_project_refuses_output_path_equal_to_source(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_render_project_refuses_output_path_equal_to_source(tmp_path: Path, monkeypatch) -> None:
     _write_timeline(tmp_path)
     _fake_tools(monkeypatch)
 
@@ -189,9 +180,7 @@ def test_render_project_refuses_output_path_equal_to_source(
         render_project(tmp_path, output_path=tmp_path / "clip.mp4")
 
 
-def test_render_project_requires_a_validated_timeline(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_render_project_requires_a_validated_timeline(tmp_path: Path, monkeypatch) -> None:
     _fake_tools(monkeypatch)
     (tmp_path / ".video-agent").mkdir()
     (tmp_path / ".video-agent" / "timeline.json").write_text("{}", encoding="utf-8")
