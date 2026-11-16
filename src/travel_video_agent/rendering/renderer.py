@@ -187,18 +187,14 @@ def render_project(
         timeline_path or root / ".video-agent" / "timeline.json"
     ).expanduser().resolve()
     if not timeline_file.is_file():
-        raise FileNotFoundError(
-            f"Missing {timeline_file}; run 'video-agent build-timeline' first."
-        )
+        raise FileNotFoundError(f"Missing {timeline_file}; run 'video-agent build-timeline' first.")
     timeline = ProjectTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root:
         raise RenderError("timeline belongs to a different project folder")
     if timeline.rendering_performed:
         raise RenderError("timeline artifact must describe an edit decision, not a prior render")
 
-    destination = (
-        output_path or root / ".video-agent" / "rendered.mp4"
-    ).expanduser().resolve()
+    destination = (output_path or root / ".video-agent" / "rendered.mp4").expanduser().resolve()
     if destination.suffix.lower() != ".mp4":
         raise RenderError("render output must use the .mp4 extension")
     if destination == timeline_file:
@@ -234,16 +230,12 @@ def render_project(
                 raise RenderError(f"timeline segment is outside source bounds: {video.path}")
             if segment.end_seconds <= segment.start_seconds:
                 raise RenderError(f"timeline contains an empty segment: {video.path}")
-            segments.append(
-                (source_index, segment.start_seconds, segment.end_seconds, has_audio)
-            )
+            segments.append((source_index, segment.start_seconds, segment.end_seconds, has_audio))
     if not segments:
         raise RenderError("timeline retains no footage; refusing to create an empty video")
 
     first_video_stream = next(
-        item
-        for item in source_entries[0][1]["streams"]
-        if item.get("codec_type") == "video"
+        item for item in source_entries[0][1]["streams"] if item.get("codec_type") == "video"
     )
     width = int(first_video_stream.get("width") or 0)
     height = int(first_video_stream.get("height") or 0)
@@ -278,9 +270,7 @@ def render_project(
                 check=False,
             )
         except subprocess.TimeoutExpired as exc:
-            raise RenderError(
-                f"FFmpeg render exceeded the {timeout_seconds:.0f}s timeout"
-            ) from exc
+            raise RenderError(f"FFmpeg render exceeded the {timeout_seconds:.0f}s timeout") from exc
         if result.returncode != 0:
             detail = result.stderr.strip()[-4000:] or "unknown FFmpeg error"
             raise RenderError(f"FFmpeg render failed: {detail}")
