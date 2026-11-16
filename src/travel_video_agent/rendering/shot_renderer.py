@@ -192,7 +192,7 @@ def render_approved_shot_timeline(
     clip_inputs: list[tuple[Path, float, float, bool, str, float]] = []
     source_paths: set[Path] = set()
     previous_sequence_index: int | None = None
-    for index, clip in enumerate(approved):
+    for clip in approved:
         source = _safe_source(root, clip.video_path)
         source_paths.add(source)
         if source not in source_cache:
