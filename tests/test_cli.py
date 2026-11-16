@@ -102,3 +102,50 @@ def test_cli_help_is_available() -> None:
     assert "understand" in result.output
     assert "transcribe" in result.output
     assert "detect-silence" in result.output
+
+def test_propose_edits_command_writes_review_only_json(tmp_path: Path) -> None:
+    from travel_video_agent import cli
+    from travel_video_agent.editing.schemas import (
+        EditReviewItem,
+        ProjectEditProposal,
+        VideoEditProposal,
+    )
+
+    expected = ProjectEditProposal(
+        project_path=str(tmp_path.resolve()),
+        source_artifacts=[".video-agent/silence-analysis.json"],
+        video_count=1,
+        review_item_count=1,
+        videos=[
+            VideoEditProposal(
+                path="clip.mp4",
+                duration_seconds=10,
+                review_items=[
+                    EditReviewItem(
+                        item_id="clip-review-001",
+                        start_seconds=2,
+                        end_seconds=4,
+                        duration_seconds=2,
+                        review_reason="Review the footage.",
+                    )
+                ],
+            )
+        ],
+    )
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(cli, "build_edit_proposal", lambda folder: expected)
+    output = tmp_path / "custom" / "proposal.json"
+    result = runner.invoke(app, ["propose-edits", str(tmp_path), "-o", str(output)])
+    monkeypatch.undo()
+
+    assert result.exit_code == 0
+    saved = json.loads(output.read_text(encoding="utf-8"))
+    assert saved == expected.model_dump(mode="json")
+    assert saved["approval_required"] is True
+    assert saved["rendering_performed"] is False
+
+
+def test_cli_help_includes_propose_edits() -> None:
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0
+    assert "propose-edits" in result.output
