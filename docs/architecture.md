@@ -34,6 +34,13 @@ The vision model is accessed through an adapter so other local or hosted provide
 - Without a transcript artifact, only audio-level observations are emitted; no candidates are proposed.
 - Every candidate remains review-only because quiet scenic footage, ambience, and music can be intentional. No source media is modified.
 
+## Reviewable edit proposals
+
+- `propose-edits` reads the validated silence-analysis artifact and optionally joins visual scene summaries by the source-video hash embedded in scene IDs.
+- Each proposal item retains source-relative timestamps, a stable review ID, optional scene context, and an explicit pending decision.
+- A quiet interval is only a review candidate. The proposal never marks it approved, never changes source media, and never invokes FFmpeg rendering.
+- The proposal is serialized to `.video-agent/edit-proposal.json`; downstream renderers must require an explicit approved decision and validate all timestamps again.
+
 ## Planned editing workflow
 
 ```text

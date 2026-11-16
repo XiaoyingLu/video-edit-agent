@@ -9,6 +9,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from .editing import build_edit_proposal
 from .media import MediaToolError, analyze_folder
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
@@ -332,6 +333,58 @@ def detect_silence(
     console.print(
         "[yellow]Candidates are review-only. Check scenic ambience, quiet footage, and music; "
         "source media is never modified.[/yellow]"
+    )
+
+
+@app.command("propose-edits")
+def propose_edits(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Folder containing travel videos.",
+        ),
+    ],
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help="JSON output path (default: <folder>/.video-agent/edit-proposal.json).",
+        ),
+    ] = None,
+) -> None:
+    """Create a human-reviewable edit proposal from existing analysis artifacts."""
+    try:
+        proposal = build_edit_proposal(folder)
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[red]Edit proposal failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    destination = output or folder.resolve() / ".video-agent" / "edit-proposal.json"
+    destination = destination.expanduser().resolve()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(
+        json.dumps(proposal.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
+    )
+
+    table = Table(title="Draft Edit Proposal — Human Review Required")
+    table.add_column("Video", style="cyan")
+    table.add_column("Review items", justify="right")
+    table.add_column("Candidate duration", justify="right")
+    for video in proposal.videos:
+        total = sum(item.duration_seconds for item in video.review_items)
+        table.add_row(video.path, str(len(video.review_items)), f"{total:.2f}s")
+    console.print(table)
+    console.print(f"Proposal saved to [green]{destination}[/green]")
+    console.print(
+        "[yellow]No edits were applied and no video was rendered. "
+        "Every item is pending human approval; review visual context and audio "
+        "before deciding.[/yellow]"
     )
 
 
