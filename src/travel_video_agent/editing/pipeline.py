@@ -4,14 +4,14 @@ import hashlib
 from pathlib import Path
 
 from ..silence.schemas import ProjectSilenceAnalysis
-from ..understanding.schemas import VideoUnderstanding
+from ..understanding.schemas import VideoScene, VideoUnderstanding
 from .schemas import EditReviewItem, ProjectEditProposal, VideoEditProposal
 
 
 def _scene_context(
     start_seconds: float,
     end_seconds: float,
-    scenes: list,
+    scenes: list[VideoScene],
 ) -> tuple[str | None, str | None]:
     """Return the scene with the greatest temporal overlap, if any."""
     overlapping = [
@@ -57,7 +57,7 @@ def build_edit_proposal(folder: Path) -> ProjectEditProposal:
         else None
     )
 
-    scenes_by_video: dict[str, list] = {}
+    scenes_by_video: dict[str, list[VideoScene]] = {}
     if understanding is not None:
         for video in silence.videos:
             video_key = hashlib.sha256(video.path.encode("utf-8")).hexdigest()[:12]
