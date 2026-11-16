@@ -251,7 +251,6 @@ def transcribe(
     console.print(
         "[yellow]Long gaps are not cut recommendations; "
         "preserve quiet scenic footage by default.[/yellow]"
-
     )
 
 
