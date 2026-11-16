@@ -142,8 +142,8 @@ def _build_ffmpeg_command(
         escaped_path = (
             str(subtitle_path.resolve())
             .replace("\\", "\\\\")
-            .replace(":", "\\\\:")
-            .replace("'", "\\\\'")
+            .replace(":", "\\:")
+            .replace("'", "\\'")
         )
         alignment, margin = {
             "bottom": (2, 48),
