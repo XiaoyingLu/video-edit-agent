@@ -52,6 +52,8 @@ docker compose run --rm video-agent build-timeline ./travel-test
 docker compose run --rm video-agent find-highlights ./travel-test --samples-per-scene 3
 docker compose run --rm video-agent plan ./travel-test --prompt "Create a 60-second cinematic travel video"
 docker compose run --rm video-agent draft-edit ./travel-test
+docker compose run --rm video-agent optimize-timeline ./travel-test
+docker compose run --rm -it video-agent review-timeline ./travel-test
 docker compose run --rm video-agent subtitles ./travel-test
 docker compose run --rm video-agent render ./travel-test --burn-subtitles --subtitle-font-size 28 --subtitle-position bottom
 ```
@@ -79,6 +81,8 @@ travel-test/
     ├── edit-proposal.json
     ├── timeline.json
     ├── highlights.json
+    ├── draft-selection.json
+    ├── optimized-timeline.json
     ├── subtitles.srt
     ├── rendered.mp4
     ├── models/
