@@ -299,7 +299,9 @@ def render_project(
         if output_video is None or output_audio is None or actual_duration <= 0:
             raise RenderError("rendered MP4 is missing a valid video or audio stream")
         if output_video.get("codec_name") != "h264" or output_audio.get("codec_name") != "aac":
-            raise RenderError("rendered MP4 does not contain the expected H.264 video and AAC audio")
+            raise RenderError(
+                "rendered MP4 does not contain the expected H.264 video and AAC audio"
+            )
         duration_tolerance = max(0.75, len(segments) / frame_rate * 2)
         if abs(actual_duration - expected_duration) > duration_tolerance:
             raise RenderError(
