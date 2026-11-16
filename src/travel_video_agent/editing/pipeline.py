@@ -1,11 +1,19 @@
-"""Build deterministic edit proposals from existing analysis artifacts."""
+"""Build deterministic edit proposals and validated retained timelines."""
 
 import hashlib
+import json
 from pathlib import Path
 
 from ..silence.schemas import ProjectSilenceAnalysis
 from ..understanding.schemas import VideoScene, VideoUnderstanding
-from .schemas import EditReviewItem, ProjectEditProposal, VideoEditProposal
+from .schemas import (
+    EditReviewItem,
+    ProjectEditProposal,
+    ProjectTimeline,
+    TimelineSegment,
+    VideoEditProposal,
+    VideoTimeline,
+)
 
 
 def _scene_context(
@@ -103,4 +111,108 @@ def build_edit_proposal(folder: Path) -> ProjectEditProposal:
         video_count=len(videos),
         review_item_count=item_count,
         videos=videos,
+    )
+
+
+def load_edit_proposal(folder: Path, proposal_path: Path | None = None) -> tuple[ProjectEditProposal, Path]:
+    """Load the saved review artifact and return its resolved path."""
+    root = folder.expanduser().resolve()
+    destination = (proposal_path or root / ".video-agent" / "edit-proposal.json").expanduser().resolve()
+    if not destination.is_file():
+        raise FileNotFoundError(f"Missing {destination}; run 'video-agent propose-edits' first.")
+    proposal = ProjectEditProposal.model_validate_json(destination.read_text(encoding="utf-8"))
+    if Path(proposal.project_path).resolve() != root:
+        raise ValueError("edit proposal belongs to a different project folder")
+    return proposal, destination
+
+
+def save_edit_proposal(proposal: ProjectEditProposal, destination: Path) -> None:
+    """Persist review decisions without touching source media."""
+    destination.write_text(
+        json.dumps(proposal.model_dump(mode="json"), indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def apply_review_decisions(
+    proposal: ProjectEditProposal,
+    approve_ids: set[str],
+    reject_ids: set[str],
+) -> ProjectEditProposal:
+    """Apply explicit decisions, rejecting unknown or conflicting item IDs."""
+    if approve_ids & reject_ids:
+        raise ValueError("an item cannot be both approved and rejected")
+    items = {
+        item.item_id: item
+        for video in proposal.videos
+        for item in video.review_items
+    }
+    requested = approve_ids | reject_ids
+    unknown = requested - items.keys()
+    if unknown:
+        raise ValueError(f"unknown review item ID(s): {', '.join(sorted(unknown))}")
+    for video in proposal.videos:
+        for item in video.review_items:
+            if item.item_id in approve_ids:
+                item.decision = "approved"
+            elif item.item_id in reject_ids:
+                item.decision = "rejected"
+    return proposal
+
+
+def build_project_timeline(proposal: ProjectEditProposal) -> ProjectTimeline:
+    """Build retained source intervals after every candidate has an explicit decision."""
+    pending = [
+        item.item_id
+        for video in proposal.videos
+        for item in video.review_items
+        if item.decision == "pending"
+    ]
+    if pending:
+        raise ValueError(
+            "all review items must be approved or rejected before building a timeline; "
+            f"pending: {', '.join(pending)}"
+        )
+
+    timelines: list[VideoTimeline] = []
+    approved_count = 0
+    project_retained = 0.0
+    for video in proposal.videos:
+        approved = sorted(
+            (item for item in video.review_items if item.decision == "approved"),
+            key=lambda item: (item.start_seconds, item.end_seconds),
+        )
+        previous_end = 0.0
+        retained: list[TimelineSegment] = []
+        for item in approved:
+            if item.end_seconds > video.duration_seconds + 0.01:
+                raise ValueError(f"approved cut {item.item_id} exceeds source duration")
+            if item.start_seconds < previous_end - 0.01:
+                raise ValueError(f"approved cuts overlap in {video.path}")
+            if item.start_seconds > previous_end:
+                retained.append(
+                    TimelineSegment(start_seconds=previous_end, end_seconds=item.start_seconds)
+                )
+            previous_end = item.end_seconds
+            approved_count += 1
+        if previous_end < video.duration_seconds:
+            retained.append(
+                TimelineSegment(start_seconds=previous_end, end_seconds=video.duration_seconds)
+            )
+        retained_duration = sum(segment.end_seconds - segment.start_seconds for segment in retained)
+        project_retained += retained_duration
+        timelines.append(
+            VideoTimeline(
+                path=video.path,
+                source_duration_seconds=video.duration_seconds,
+                retained_duration_seconds=retained_duration,
+                segments=retained,
+            )
+        )
+
+    return ProjectTimeline(
+        project_path=proposal.project_path,
+        approved_cut_count=approved_count,
+        retained_duration_seconds=project_retained,
+        videos=timelines,
     )
