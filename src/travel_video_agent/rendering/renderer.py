@@ -141,7 +141,7 @@ def _build_ffmpeg_command(
     if subtitle_path is not None:
         escaped_path = (
             str(subtitle_path.resolve())
-            .replace("\\\\", "\\\\\\\\")
+            .replace("\\", "\\\\")
             .replace(":", "\\\\:")
             .replace("'", "\\\\'")
         )
