@@ -12,7 +12,7 @@ from rich.table import Table
 from .editing import (
     IntentParsingError,
     apply_review_decisions,
-    build_draft_selection,
+    build_draft_selection,\n    build_draft_timeline,\n    load_draft_timeline,\n    save_draft_timeline,\n    apply_timeline_review,
     build_edit_proposal,
     build_project_timeline,
     load_edit_proposal,
@@ -858,6 +858,161 @@ def draft_edit(
         "[yellow]All selections require human review. No existing timeline was changed "
         "and no video was rendered.[/yellow]"
     )
+
+
+@app.command("optimize-timeline")
+def optimize_timeline(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Folder containing the draft selection and editing plan.",
+        ),
+    ],
+    selection: Annotated[
+        Path | None,
+        typer.Option("--selection", help="Draft selection JSON path."),
+    ] = None,
+    plan: Annotated[
+        Path | None,
+        typer.Option("--plan", help="Editing plan JSON path."),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help="Output path (default: <folder>/.video-agent/optimized-timeline.json).",
+        ),
+    ] = None,
+) -> None:
+    """Order selected shots and propose pacing and transitions for human review."""
+    try:
+        timeline = build_draft_timeline(folder, selection_path=selection, plan_path=plan)
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[red]Timeline optimization failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    destination = output or folder.resolve() / ".video-agent" / "optimized-timeline.json"
+    destination = destination.expanduser().resolve()
+    save_draft_timeline(timeline, destination)
+
+    table = Table(title="Optimized Shot Timeline — Human Review Required")
+    table.add_column("#", justify="right")
+    table.add_column("Video", style="cyan")
+    table.add_column("Source interval")
+    table.add_column("Duration", justify="right")
+    table.add_column("Transition")
+    table.add_column("Pacing")
+    for clip in timeline.clips:
+        transition = (
+            f"{clip.transition_in} ({clip.transition_duration_seconds:.2f}s)"
+            if clip.transition_in != "cut"
+            else "cut"
+        )
+        table.add_row(
+            str(clip.sequence_index),
+            clip.video_path,
+            f"{clip.source_start_seconds:.2f}–{clip.source_end_seconds:.2f}s",
+            f"{clip.duration_seconds:.2f}s",
+            transition,
+            clip.pacing_fit,
+        )
+    console.print(table)
+    console.print(
+        f"Proposed {timeline.proposed_duration_seconds:.1f}s across "
+        f"{timeline.proposed_clip_count} clip(s); target {timeline.target_duration_seconds:.1f}s."
+    )
+    console.print(f"Optimized timeline saved to [green]{destination}[/green]")
+    console.print(
+        "[yellow]Review every clip with review-timeline. This is not the renderer's "
+        "timeline.json; no source media was changed and no video was rendered.[/yellow]"
+    )
+
+
+@app.command("review-timeline")
+def review_timeline(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Folder containing optimized-timeline.json.",
+        ),
+    ],
+    approve: Annotated[
+        list[str] | None,
+        typer.Option("--approve", help="Clip ID to approve; repeat for multiple IDs."),
+    ] = None,
+    reject: Annotated[
+        list[str] | None,
+        typer.Option("--reject", help="Clip ID to reject; repeat for multiple IDs."),
+    ] = None,
+    timeline_path: Annotated[
+        Path | None,
+        typer.Option("--timeline", help="Path to an optimized timeline JSON file."),
+    ] = None,
+) -> None:
+    """Approve or reject proposed shots; skipped clips remain pending."""
+    try:
+        timeline, destination = load_draft_timeline(folder, timeline_path)
+        approve_ids = set(approve or [])
+        reject_ids = set(reject or [])
+        if approve is None and reject is None:
+            for clip in timeline.clips:
+                if clip.decision != "pending":
+                    continue
+                console.print(
+                    f"\\n[bold cyan]{clip.sequence_index}. {clip.video_path}[/bold cyan] "
+                    f"— {clip.clip_id} ({clip.source_start_seconds:.2f}s–"
+                    f"{clip.source_end_seconds:.2f}s)"
+                )
+                if clip.scene_summary:
+                    console.print(f"Scene: {clip.scene_summary}")
+                console.print(clip.pacing_note)
+                if clip.transition_in != "cut":
+                    console.print(
+                        f"Incoming transition: {clip.transition_in} "
+                        f"({clip.transition_duration_seconds:.2f}s)"
+                    )
+                while True:
+                    choice = console.input("Decision [a]pprove / [r]eject / [s]kip: ").strip().lower()
+                    if choice in {"a", "approve"}:
+                        approve_ids.add(clip.clip_id)
+                        break
+                    if choice in {"r", "reject"}:
+                        reject_ids.add(clip.clip_id)
+                        break
+                    if choice in {"s", "skip", ""}:
+                        break
+                    console.print("[yellow]Enter a, r, or s.[/yellow]")
+        timeline = apply_timeline_review(timeline, approve_ids, reject_ids)
+        save_draft_timeline(timeline, destination)
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[red]Timeline review failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    counts = {
+        decision: sum(clip.decision == decision for clip in timeline.clips)
+        for decision in ("approved", "rejected", "pending")
+    }
+    console.print(
+        f"Review saved to [green]{destination}[/green] — "
+        f"{counts['approved']} approved, {counts['rejected']} rejected, "
+        f"{counts['pending']} pending."
+    )
+    if timeline.timeline_approved:
+        console.print("[bold green]Shot sequence approved.[/bold green]")
+    else:
+        console.print("[yellow]Sequence is not approved yet; resolve all pending clips.[/yellow]")
+    console.print("[yellow]No renderer timeline was created and no video was rendered.[/yellow]")
 
 
 if __name__ == "__main__":
