@@ -169,6 +169,7 @@ def test_cli_help_includes_propose_edits() -> None:
     assert "review-edits" in result.output
     assert "build-timeline" in result.output
     assert "render" in result.output
+    assert "subtitles" in result.output
 
 
 def test_review_and_build_timeline_commands(tmp_path: Path) -> None:
