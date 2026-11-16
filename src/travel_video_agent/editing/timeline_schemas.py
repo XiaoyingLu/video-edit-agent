@@ -72,7 +72,17 @@ class ProjectDraftTimeline(BaseModel):
             raise ValueError("clip IDs must be unique in the proposed timeline")
         if self.proposed_clip_count != len(self.clips):
             raise ValueError("proposed_clip_count must match the clips list")
-        total = sum(clip.duration_seconds for clip in self.clips) - sum(\n            clip.transition_duration_seconds for clip in self.clips[1:]\n        )\n        if abs(total - self.proposed_duration_seconds) > 0.02:\n            raise ValueError("proposed_duration_seconds must include transition overlaps")\n        approved = [clip for clip in self.clips if clip.decision == "approved"]\n        approved_duration = sum(clip.duration_seconds for clip in approved) - sum(\n            clip.transition_duration_seconds for clip in approved[1:]\n        )\n        if abs(approved_duration - self.approved_duration_seconds) > 0.02:\n            raise ValueError("approved_duration_seconds must match approved clips and transitions")
+        total = sum(clip.duration_seconds for clip in self.clips) - sum(
+            clip.transition_duration_seconds for clip in self.clips[1:]
+        )
+        if abs(total - self.proposed_duration_seconds) > 0.02:
+            raise ValueError("proposed_duration_seconds must include transition overlaps")
+        approved = [clip for clip in self.clips if clip.decision == "approved"]
+        approved_duration = sum(clip.duration_seconds for clip in approved) - sum(
+            clip.transition_duration_seconds for clip in approved[1:]
+        )
+        if abs(approved_duration - self.approved_duration_seconds) > 0.02:
+            raise ValueError("approved_duration_seconds must match approved clips and transitions")
         if self.proposed_duration_seconds > self.target_duration_seconds + 0.02:
             raise ValueError("proposed duration cannot exceed the requested duration")
         if self.clips and (
