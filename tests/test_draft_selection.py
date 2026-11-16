@@ -16,23 +16,27 @@ def _write_artifacts(root, candidates, scenes=None, transcript=None):
     )
     (artifact / "editing-plan.json").write_text(plan.model_dump_json(), encoding="utf-8")
     (artifact / "highlights.json").write_text(
-        json.dumps({
-            "project_path": str(root),
-            "video_count": 1,
-            "candidate_count": len(candidates),
-            "candidates": candidates,
-        }),
+        json.dumps(
+            {
+                "project_path": str(root),
+                "video_count": 1,
+                "candidate_count": len(candidates),
+                "candidates": candidates,
+            }
+        ),
         encoding="utf-8",
     )
     if scenes is not None:
         (artifact / "understanding.json").write_text(
-            json.dumps({
-                "project_path": str(root),
-                "video_count": 1,
-                "scene_count": len(scenes),
-                "model": "test",
-                "scenes": scenes,
-            }),
+            json.dumps(
+                {
+                    "project_path": str(root),
+                    "video_count": 1,
+                    "scene_count": len(scenes),
+                    "model": "test",
+                    "scenes": scenes,
+                }
+            ),
             encoding="utf-8",
         )
     if transcript is not None:
@@ -41,8 +45,6 @@ def _write_artifacts(root, candidates, scenes=None, transcript=None):
 
 def test_draft_selection_ranks_by_visual_score_and_scene_relevance(tmp_path):
     video_path = "clip-a.mp4"
-    import hashlib
-    video_key = hashlib.sha256(video_path.encode()).hexdigest()[:12]
     candidates = [
         {
             "candidate_id": "low",
@@ -92,18 +94,20 @@ def test_draft_selection_requires_highlight_artifact(tmp_path):
 
 
 def test_draft_selection_never_exceeds_target_duration(tmp_path):
-    candidates = [{
-        "candidate_id": "long",
-        "video_path": "clip.mp4",
-        "start_seconds": 0,
-        "end_seconds": 30,
-        "duration_seconds": 30,
-        "score": 95,
-        "signals": {"motion": 0.5, "sharpness": 0.9, "exposure": 0.9, "saturation": 0.8},
-        "reasons": [],
-        "scene_summary": "Mountain landscape",
-        "review_required": True,
-    }]
+    candidates = [
+        {
+            "candidate_id": "long",
+            "video_path": "clip.mp4",
+            "start_seconds": 0,
+            "end_seconds": 30,
+            "duration_seconds": 30,
+            "score": 95,
+            "signals": {"motion": 0.5, "sharpness": 0.9, "exposure": 0.9, "saturation": 0.8},
+            "reasons": [],
+            "scene_summary": "Mountain landscape",
+            "review_required": True,
+        }
+    ]
     _write_artifacts(tmp_path, candidates)
     plan = EditingPlan(source_prompt="Make a video", target_duration_seconds=10)
     draft = build_draft_selection(tmp_path, plan)

@@ -105,6 +105,7 @@ def test_cli_help_is_available() -> None:
     assert "subtitles" in result.output
     assert "find-highlights" in result.output
     assert "plan" in result.output
+    assert "draft-edit" in result.output
 
 
 def test_propose_edits_command_writes_review_only_json(tmp_path: Path, monkeypatch) -> None:
@@ -358,3 +359,39 @@ def test_plan_command_writes_validated_editing_plan(tmp_path: Path, monkeypatch)
         "model": "qwen2.5vl:3b",
     }
     assert "No clips were selected" in result.output
+
+
+def test_draft_edit_command_writes_selection_json(tmp_path: Path, monkeypatch) -> None:
+    from travel_video_agent import cli
+    from travel_video_agent.editing.draft_schemas import DraftClip, ProjectDraftSelection
+
+    expected = ProjectDraftSelection(
+        project_path=str(tmp_path.resolve()),
+        source_artifacts=[".video-agent/editing-plan.json", ".video-agent/highlights.json"],
+        target_duration_seconds=5,
+        selected_duration_seconds=5,
+        selected_clip_count=1,
+        candidates_considered=1,
+        clips=[
+            DraftClip(
+                clip_id="clip-1",
+                video_path="travel.mp4",
+                source_start_seconds=0,
+                source_end_seconds=5,
+                duration_seconds=5,
+                highlight_score=90,
+                relevance_score=80,
+                combined_score=86.5,
+                selected=True,
+            )
+        ],
+    )
+    monkeypatch.setattr(cli, "build_draft_selection", lambda folder, plan_path=None: expected)
+    output = tmp_path / "custom" / "draft-selection.json"
+    result = runner.invoke(
+        app,
+        ["draft-edit", str(tmp_path), "--output", str(output)],
+    )
+    assert result.exit_code == 0, result.output
+    assert json.loads(output.read_text(encoding="utf-8")) == expected.model_dump(mode="json")
+    assert "No existing timeline was changed" in result.output
