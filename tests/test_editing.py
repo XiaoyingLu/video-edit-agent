@@ -233,8 +233,7 @@ def test_review_decisions_generate_retained_timeline(tmp_path: Path) -> None:
     assert timeline.approved_cut_count == 1
     assert timeline.retained_duration_seconds == 8
     assert [
-        (segment.start_seconds, segment.end_seconds)
-        for segment in timeline.videos[0].segments
+        (segment.start_seconds, segment.end_seconds) for segment in timeline.videos[0].segments
     ] == [(0, 2), (4, 10)]
     assert timeline.rendering_performed is False
 
