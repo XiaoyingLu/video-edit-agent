@@ -792,5 +792,71 @@ def plan_edit(
     )
 
 
+@app.command("draft-edit")
+def draft_edit(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Folder containing analyzed travel videos.",
+        ),
+    ],
+    plan: Annotated[
+        Path | None,
+        typer.Option("--plan", help="Editing plan JSON (default: <folder>/.video-agent/editing-plan.json)."),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Draft selection JSON output path."),
+    ] = None,
+) -> None:
+    """Select and rank footage using the editing plan and existing analysis artifacts."""
+    from .editing import build_draft_selection
+
+    try:
+        draft = build_draft_selection(folder, plan_path=plan)
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[red]Draft selection failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    destination = output or folder.resolve() / ".video-agent" / "draft-selection.json"
+    destination = destination.expanduser().resolve()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(
+        json.dumps(draft.model_dump(mode="json"), indent=2) + "\\n",
+        encoding="utf-8",
+    )
+    table = Table(title="Proposed Footage Sequence — Human Review Required")
+    table.add_column("Selected", justify="center")
+    table.add_column("Video", style="cyan")
+    table.add_column("Source interval")
+    table.add_column("Duration", justify="right")
+    table.add_column("Score", justify="right")
+    for clip in draft.clips:
+        if clip.selected:
+            table.add_row(
+                "Yes",
+                clip.video_path,
+                f"{clip.source_start_seconds:.2f}–{clip.source_end_seconds:.2f}s",
+                f"{clip.duration_seconds:.2f}s",
+                f"{clip.combined_score:.1f}",
+            )
+    console.print(table)
+    console.print(
+        f"Selected {draft.selected_duration_seconds:.1f}s of "
+        f"{draft.target_duration_seconds:.1f}s requested footage "
+        f"from {draft.candidates_considered} candidate(s)."
+    )
+    console.print(f"Draft selection saved to [green]{destination}[/green]")
+    console.print(
+        "[yellow]All selections require human review. No existing timeline was changed "
+        "and no video was rendered.[/yellow]"
+    )
+
+
 if __name__ == "__main__":
     app()
