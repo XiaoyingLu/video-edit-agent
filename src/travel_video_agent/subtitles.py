@@ -173,9 +173,7 @@ def build_draft_subtitle_cues(
     for clip in approved:
         adjacent = previous is not None and clip.sequence_index == previous.sequence_index + 1
         overlap = (
-            clip.transition_duration_seconds
-            if adjacent and clip.transition_in != "cut"
-            else 0.0
+            clip.transition_duration_seconds if adjacent and clip.transition_in != "cut" else 0.0
         )
         clip_start = output_cursor - overlap
         clip_positions.append((clip, clip_start))
@@ -231,33 +229,25 @@ def generate_draft_subtitles(
     if not root.is_dir():
         raise FileNotFoundError(f"Project folder does not exist: {root}")
     timeline_file = (
-        (timeline_path or root / ".video-agent" / "optimized-timeline.json")
-        .expanduser()
-        .resolve()
+        (timeline_path or root / ".video-agent" / "optimized-timeline.json").expanduser().resolve()
     )
     if not timeline_file.is_file():
         raise FileNotFoundError(
             f"Missing {timeline_file}; run 'video-agent optimize-timeline' first."
         )
-    timeline = ProjectDraftTimeline.model_validate_json(
-        timeline_file.read_text(encoding="utf-8")
-    )
+    timeline = ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root:
         raise SubtitleError("optimized timeline belongs to a different project folder")
-    if not timeline.timeline_approved or any(
-        clip.decision == "pending" for clip in timeline.clips
-    ):
+    if not timeline.timeline_approved or any(clip.decision == "pending" for clip in timeline.clips):
         raise SubtitleError("shot timeline must be fully reviewed before generating subtitles")
     if not any(clip.decision == "approved" for clip in timeline.clips):
         raise SubtitleError("shot timeline contains no approved clips")
 
     transcript_file = (
-        transcription_path or root / ".video-agent" / "transcription.json"
-    ).expanduser().resolve()
+        (transcription_path or root / ".video-agent" / "transcription.json").expanduser().resolve()
+    )
     if not transcript_file.is_file():
-        raise FileNotFoundError(
-            f"Missing {transcript_file}; run 'video-agent transcribe' first."
-        )
+        raise FileNotFoundError(f"Missing {transcript_file}; run 'video-agent transcribe' first.")
     transcription = ProjectTranscription.model_validate_json(
         transcript_file.read_text(encoding="utf-8")
     )
@@ -265,8 +255,8 @@ def generate_draft_subtitles(
         raise SubtitleError("transcription belongs to a different project folder")
 
     destination = (
-        output_path or root / ".video-agent" / "draft-subtitles.srt"
-    ).expanduser().resolve()
+        (output_path or root / ".video-agent" / "draft-subtitles.srt").expanduser().resolve()
+    )
     if destination in {timeline_file, transcript_file}:
         raise SubtitleError("subtitle output cannot overwrite an input artifact")
     for clip in timeline.clips:

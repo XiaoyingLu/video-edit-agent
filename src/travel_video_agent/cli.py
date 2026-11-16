@@ -765,9 +765,7 @@ def render_draft(
     try:
         effective_subtitle = subtitle_file
         if burn_subtitles and effective_subtitle is None:
-            effective_subtitle, cue_count = generate_draft_subtitles(
-                folder, timeline_path=timeline
-            )
+            effective_subtitle, cue_count = generate_draft_subtitles(folder, timeline_path=timeline)
             console.print(
                 f"Generated {cue_count} subtitle cue(s): [green]{effective_subtitle}[/green]"
             )

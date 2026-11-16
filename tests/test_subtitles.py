@@ -146,7 +146,6 @@ def test_generate_subtitles_writes_srt_from_project_artifacts(tmp_path):
     assert "00:00:09,000 --> 00:00:10,000" in content
 
 
-
 def _draft_artifacts(root: Path):
     timeline = ProjectDraftTimeline(
         project_path=str(root.resolve()),
@@ -225,12 +224,8 @@ def test_generate_draft_subtitles_writes_approved_timeline_srt(tmp_path):
     timeline, transcription = _draft_artifacts(tmp_path)
     artifact = tmp_path / ".video-agent"
     artifact.mkdir()
-    (artifact / "optimized-timeline.json").write_text(
-        timeline.model_dump_json(), encoding="utf-8"
-    )
-    (artifact / "transcription.json").write_text(
-        transcription.model_dump_json(), encoding="utf-8"
-    )
+    (artifact / "optimized-timeline.json").write_text(timeline.model_dump_json(), encoding="utf-8")
+    (artifact / "transcription.json").write_text(transcription.model_dump_json(), encoding="utf-8")
 
     destination, count = generate_draft_subtitles(tmp_path)
 
@@ -246,12 +241,8 @@ def test_generate_draft_subtitles_requires_full_review(tmp_path):
     timeline.timeline_approved = False
     artifact = tmp_path / ".video-agent"
     artifact.mkdir()
-    (artifact / "optimized-timeline.json").write_text(
-        timeline.model_dump_json(), encoding="utf-8"
-    )
-    (artifact / "transcription.json").write_text(
-        transcription.model_dump_json(), encoding="utf-8"
-    )
+    (artifact / "optimized-timeline.json").write_text(timeline.model_dump_json(), encoding="utf-8")
+    (artifact / "transcription.json").write_text(transcription.model_dump_json(), encoding="utf-8")
 
     with pytest.raises(SubtitleError, match="fully reviewed"):
         generate_draft_subtitles(tmp_path)
