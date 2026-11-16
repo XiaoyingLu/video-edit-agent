@@ -633,7 +633,7 @@ def render(
             timeout_seconds=timeout_seconds,
             subtitle_path=(
                 subtitle_file or folder.resolve() / ".video-agent" / "subtitles.srt"
-                if burn_subtitles
+                if burn_subtitles or subtitle_file
                 else None
             ),
             subtitle_font_size=subtitle_font_size,
@@ -654,7 +654,7 @@ def render(
         f"Format: {report.width}x{report.height}, "
         f"{report.video_codec.upper()} video + {report.audio_codec.upper()} audio"
     )
-    if burn_subtitles:
+    if burn_subtitles or subtitle_file:
         console.print(
             f"Burned-in subtitles: [green]{subtitle_file or folder.resolve() / '.video-agent' / 'subtitles.srt'}[/green]"
         )
