@@ -9,7 +9,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from .editing import (
+from .highlights import find_highlights_folder\nfrom .editing import (
     apply_review_decisions,
     build_edit_proposal,
     build_project_timeline,
