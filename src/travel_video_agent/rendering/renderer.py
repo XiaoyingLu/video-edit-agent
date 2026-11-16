@@ -116,7 +116,7 @@ def _build_ffmpeg_command(
             f"[{input_index}:v:0]trim=start={_seconds(start)}:end={_seconds(end)},"
             f"setpts=PTS-STARTPTS,"
             f"scale=w={width}:h={height}:force_original_aspect_ratio=decrease,"
-            f"pad=w={width}:h={height}:(ow-iw)/2:(oh-ih)/2,"
+            f"pad=width={width}:height={height}:x=(ow-iw)/2:y=(oh-ih)/2,"
             f"setsar=1,fps={_seconds(frame_rate)},format=yuv420p[{video_label}]"
         )
         if has_audio:
