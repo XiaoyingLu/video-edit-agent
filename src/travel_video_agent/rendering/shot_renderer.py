@@ -145,17 +145,13 @@ def render_approved_shot_timeline(
         raise FileNotFoundError(f"Project folder does not exist: {root}")
 
     timeline_file = (
-        (timeline_path or root / ".video-agent" / "optimized-timeline.json")
-        .expanduser()
-        .resolve()
+        (timeline_path or root / ".video-agent" / "optimized-timeline.json").expanduser().resolve()
     )
     if not timeline_file.is_file():
         raise FileNotFoundError(
             f"Missing {timeline_file}; run 'video-agent optimize-timeline' first."
         )
-    timeline = ProjectDraftTimeline.model_validate_json(
-        timeline_file.read_text(encoding="utf-8")
-    )
+    timeline = ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root:
         raise RenderError("optimized timeline belongs to a different project folder")
     if timeline.rendering_performed:
@@ -171,8 +167,8 @@ def render_approved_shot_timeline(
         raise RenderError("shot timeline contains no approved clips")
 
     destination = (
-        output_path or root / ".video-agent" / "rendered-draft.mp4"
-    ).expanduser().resolve()
+        (output_path or root / ".video-agent" / "rendered-draft.mp4").expanduser().resolve()
+    )
     if destination.suffix.lower() != ".mp4":
         raise RenderError("render output must use the .mp4 extension")
     if destination in {timeline_file, root / ".video-agent" / "optimized-timeline.json"}:
@@ -249,7 +245,8 @@ def render_approved_shot_timeline(
         raise RenderError("could not determine a valid output resolution from the first source")
 
     expected_duration = sum(end - start for _, start, end, *_ in clip_inputs) - sum(
-        transition_duration for *_, transition, transition_duration in clip_inputs[1:]
+        transition_duration
+        for *_, transition, transition_duration in clip_inputs[1:]
         if transition != "cut"
     )
     if expected_duration <= 0:
@@ -260,9 +257,7 @@ def render_approved_shot_timeline(
     temporary_path = Path(temporary_file.name)
     temporary_file.close()
     try:
-        command = _build_shot_render_command(
-            ffmpeg, clip_inputs, temporary_path, width, height
-        )
+        command = _build_shot_render_command(ffmpeg, clip_inputs, temporary_path, width, height)
         try:
             result = subprocess.run(
                 command,

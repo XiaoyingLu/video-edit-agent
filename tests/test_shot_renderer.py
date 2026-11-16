@@ -112,9 +112,7 @@ def test_render_requires_complete_human_approval(tmp_path):
     artifact = tmp_path / ".video-agent"
     artifact.mkdir()
     timeline = _timeline(tmp_path, approved=False)
-    (artifact / "optimized-timeline.json").write_text(
-        timeline.model_dump_json(), encoding="utf-8"
-    )
+    (artifact / "optimized-timeline.json").write_text(timeline.model_dump_json(), encoding="utf-8")
 
     with pytest.raises(RenderError, match="not been fully approved"):
         render_approved_shot_timeline(tmp_path)
@@ -147,9 +145,7 @@ def test_render_rejects_path_traversal_before_invoking_ffmpeg(tmp_path, monkeypa
         ],
         timeline_approved=True,
     )
-    (artifact / "optimized-timeline.json").write_text(
-        timeline.model_dump_json(), encoding="utf-8"
-    )
+    (artifact / "optimized-timeline.json").write_text(timeline.model_dump_json(), encoding="utf-8")
     monkeypatch.setattr(
         "travel_video_agent.rendering.shot_renderer.shutil.which",
         lambda _: "ffmpeg",
@@ -163,9 +159,7 @@ def test_render_rejects_existing_output_without_overwrite(tmp_path):
     artifact = tmp_path / ".video-agent"
     artifact.mkdir()
     timeline = _timeline(tmp_path)
-    (artifact / "optimized-timeline.json").write_text(
-        timeline.model_dump_json(), encoding="utf-8"
-    )
+    (artifact / "optimized-timeline.json").write_text(timeline.model_dump_json(), encoding="utf-8")
     output = artifact / "rendered.mp4"
     output.write_bytes(b"existing")
     with pytest.raises(FileExistsError, match="pass --overwrite"):
@@ -198,7 +192,6 @@ def test_cli_help_includes_render_draft():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "render-draft" in result.output
-
 
 
 def test_approved_duration_does_not_apply_transition_across_rejected_shot(tmp_path):
@@ -235,7 +228,6 @@ def test_approved_duration_does_not_apply_transition_across_rejected_shot(tmp_pa
         timeline_approved=True,
     )
     assert timeline.approved_duration_seconds == 6
-
 
 
 def test_render_approved_shot_timeline_with_real_ffmpeg(tmp_path):
@@ -334,9 +326,7 @@ def test_render_approved_shot_timeline_with_real_ffmpeg(tmp_path):
         ],
         timeline_approved=True,
     )
-    (artifact / "optimized-timeline.json").write_text(
-        timeline.model_dump_json(), encoding="utf-8"
-    )
+    (artifact / "optimized-timeline.json").write_text(timeline.model_dump_json(), encoding="utf-8")
 
     report = render_approved_shot_timeline(tmp_path)
     output = artifact / "rendered-draft.mp4"
