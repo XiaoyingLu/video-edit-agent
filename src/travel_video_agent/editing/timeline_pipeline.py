@@ -99,8 +99,7 @@ def build_draft_timeline(
         )
         previous_duration = clip.duration_seconds
 
-    duration = sum(clip.duration_seconds for clip in timeline_clips)
-    return ProjectDraftTimeline(
+    duration = sum(clip.duration_seconds for clip in timeline_clips) - sum(\n        clip.transition_duration_seconds for clip in timeline_clips[1:]\n    )\n    return ProjectDraftTimeline(
         project_path=str(root),
         source_selection=(
             str(selection_file.relative_to(root))
@@ -173,6 +172,5 @@ def apply_timeline_review(
 
     pending = any(clip.decision == "pending" for clip in timeline.clips)
     has_approved = any(clip.decision == "approved" for clip in timeline.clips)
-    timeline.timeline_approved = not pending and has_approved
-    # Revalidate after mutable review decisions are applied.
+    timeline.timeline_approved = not pending and has_approved\n    approved = [clip for clip in timeline.clips if clip.decision == "approved"]\n    timeline.approved_duration_seconds = sum(clip.duration_seconds for clip in approved) - sum(\n        clip.transition_duration_seconds for clip in approved[1:]\n    )\n    # Revalidate after mutable review decisions are applied.
     return ProjectDraftTimeline.model_validate(timeline.model_dump())
