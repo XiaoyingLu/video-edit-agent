@@ -40,7 +40,7 @@ def _measure_frames(frame_paths: list[Path]) -> HighlightSignals:
         raise ValueError("Could not read any sampled frames.")
 
     motion_values: list[float] = []
-    for previous, current in zip(frames, frames[1:]):
+    for previous, current in zip(frames, frames[1:], strict=False):
         previous_gray = cv2.cvtColor(previous, cv2.COLOR_BGR2GRAY)
         current_gray = cv2.cvtColor(current, cv2.COLOR_BGR2GRAY)
         flow = cv2.calcOpticalFlowFarneback(
