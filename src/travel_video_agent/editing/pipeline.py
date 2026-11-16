@@ -1,5 +1,6 @@
 """Build deterministic edit proposals from existing analysis artifacts."""
 
+import hashlib
 from pathlib import Path
 
 from ..silence.schemas import ProjectSilenceAnalysis
@@ -55,16 +56,21 @@ def build_edit_proposal(folder: Path) -> ProjectEditProposal:
         if understanding_path.is_file()
         else None
     )
-    scenes_by_video = {}
+
+    scenes_by_video: dict[str, list] = {}
     if understanding is not None:
-        # Current understanding output is project-scoped. Match a scene only
-        # when its source path is known; otherwise keep visual context unset.
-        scenes_by_video = getattr(understanding, "videos", {}) or {}
+        for video in silence.videos:
+            video_key = hashlib.sha256(video.path.encode("utf-8")).hexdigest()[:12]
+            scenes_by_video[video.path] = [
+                scene
+                for scene in understanding.scenes
+                if scene.scene_id.startswith(f"{video_key}-")
+            ]
 
     videos: list[VideoEditProposal] = []
     item_count = 0
     for video in silence.videos:
-        scenes = scenes_by_video.get(video.path, []) if isinstance(scenes_by_video, dict) else []
+        scenes = scenes_by_video.get(video.path, [])
         items: list[EditReviewItem] = []
         for index, candidate in enumerate(video.candidates, start=1):
             scene_id, scene_summary = _scene_context(
