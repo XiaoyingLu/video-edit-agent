@@ -65,22 +65,31 @@ def build_subtitle_cues(
     for video in timeline.videos:
         transcript = transcript_by_path.get(video.path)
         if transcript is not None:
-            if abs(transcript.duration_seconds - video.source_duration_seconds) > max(
-                0.25, video.source_duration_seconds * 0.005
-            ):
+            source_duration = video.source_duration_seconds
+            duration_tolerance = max(0.25, source_duration * 0.005)
+            if abs(transcript.duration_seconds - source_duration) > duration_tolerance:
                 raise SubtitleError(
                     f"transcription duration does not match timeline source: {video.path}"
                 )
             for speech in transcript.segments:
                 if speech.end_seconds <= speech.start_seconds:
                     continue
-                if speech.end_seconds > video.source_duration_seconds + 0.01:
+                if speech.end_seconds > source_duration + duration_tolerance:
                     raise SubtitleError(f"transcript segment exceeds source duration: {video.path}")
+
+                # Whisper may timestamp the final speech frame a little beyond the
+                # duration reported by ffprobe. Clamp only within the same bounded
+                # tolerance used for duration agreement; never extend cues past media.
+                speech_start = speech.start_seconds
+                speech_end = min(speech.end_seconds, source_duration)
+                if speech_start >= speech_end:
+                    continue
+
                 fragments: list[tuple[float, float, float]] = []
                 segment_cursor = output_cursor
                 for retained in video.segments:
-                    start = max(speech.start_seconds, retained.start_seconds)
-                    end = min(speech.end_seconds, retained.end_seconds)
+                    start = max(speech_start, retained.start_seconds)
+                    end = min(speech_end, retained.end_seconds)
                     if end - start > 0.02:
                         mapped_start = segment_cursor + start - retained.start_seconds
                         mapped_end = segment_cursor + end - retained.start_seconds
@@ -89,7 +98,7 @@ def build_subtitle_cues(
                 if fragments:
                     texts = _split_text(speech.text, [item[2] for item in fragments])
                     for (start, end, _), text in zip(fragments, texts, strict=True):
-                        cleaned = " ".join(text.replace("\r", " ").replace("\n", " ").split())
+                        cleaned = " ".join(text.replace("\\r", " ").replace("\\n", " ").split())
                         if cleaned:
                             cues.append(SubtitleCue(start, end, cleaned))
         output_cursor += video.retained_duration_seconds
@@ -112,10 +121,10 @@ def render_srt(cues: list[SubtitleCue]) -> str:
         if cue.end_seconds <= cue.start_seconds:
             continue
         blocks.append(
-            f"{index}\n{_srt_timestamp(cue.start_seconds)} --> "
-            f"{_srt_timestamp(cue.end_seconds)}\n{cue.text}"
+            f"{index}\\n{_srt_timestamp(cue.start_seconds)} --> "
+            f"{_srt_timestamp(cue.end_seconds)}\\n{cue.text}"
         )
-    return "\n\n".join(blocks) + ("\n" if blocks else "")
+    return "\\n\\n".join(blocks) + ("\\n" if blocks else "")
 
 
 def generate_subtitles(
