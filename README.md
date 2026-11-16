@@ -118,7 +118,16 @@ docker compose down -v
 
 ## Development
 
-Install the development and transcription extras in the Codespace:
+The Docker image includes the development tools. Run tests and lint without starting Ollama:
+
+```bash
+docker compose build video-agent
+docker compose run --rm --no-deps --entrypoint python video-agent -m pytest
+docker compose run --rm --no-deps --entrypoint ruff video-agent check .
+docker compose run --rm --no-deps --entrypoint ruff video-agent format --check .
+```
+
+For a non-Docker development environment, install the development and transcription extras:
 
 ```bash
 python -m pip install -e ".[dev,transcription]"
