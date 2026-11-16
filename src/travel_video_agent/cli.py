@@ -12,11 +12,15 @@ from rich.table import Table
 from .editing import (
     IntentParsingError,
     apply_review_decisions,
-    build_draft_selection,\n    build_draft_timeline,\n    load_draft_timeline,\n    save_draft_timeline,\n    apply_timeline_review,
+    apply_timeline_review,
+    build_draft_selection,
+    build_draft_timeline,
     build_edit_proposal,
     build_project_timeline,
+    load_draft_timeline,
     load_edit_proposal,
     parse_editing_intent,
+    save_draft_timeline,
     save_edit_proposal,
 )
 from .highlights import find_highlights_folder
