@@ -29,7 +29,10 @@ The vision model is accessed through an adapter so other local or hosted provide
 - faster-whisper runs locally and returns timestamped speech segments with language and confidence metadata.
 - Long gaps before, between, and after speech are recorded as candidate pause intervals.
 - A gap is not proof of dead air: ambient sound, music, and quiet scenic footage may continue through it.
-- Pause metadata never triggers a cut. The user must review a future typed edit plan before rendering.
+- FFmpeg’s `silencedetect` filter reports low-volume intervals using configurable dB and duration thresholds.
+- Quiet intervals overlapping transcript speech (including a configurable safety margin) are excluded from review candidates.
+- Without a transcript artifact, only audio-level observations are emitted; no candidates are proposed.
+- Every candidate remains review-only because quiet scenic footage, ambience, and music can be intentional. No source media is modified.
 
 ## Planned editing workflow
 

@@ -42,6 +42,7 @@ Put a short travel clip in a folder in the repository, for example `travel-test/
 docker compose run --rm video-agent analyze ./travel-test
 docker compose run --rm video-agent understand ./travel-test --samples-per-scene 2
 docker compose run --rm video-agent transcribe ./travel-test --model small
+docker compose run --rm video-agent detect-silence ./travel-test --noise-db -35 --min-duration 1.5
 ```
 
 You can pass any supported CLI arguments after `video-agent`:
@@ -51,7 +52,7 @@ docker compose run --rm video-agent --help
 docker compose run --rm -e OLLAMA_MODEL=qwen2.5vl:7b video-agent understand ./travel-test
 ```
 
-The `analyze` command scans the folder and extracts media metadata using ffprobe. The `understand` command detects scenes, extracts representative frames, sends each frame to the local Ollama model, and writes `.video-agent/understanding.json`. The `transcribe` command uses faster-whisper locally to recognize speech from video audio streams and writes `.video-agent/transcription.json`.
+The `analyze` command scans the folder and extracts media metadata using ffprobe. The `understand` command detects scenes, extracts representative frames, sends each frame to the local Ollama model, and writes `.video-agent/understanding.json`. The `transcribe` command uses faster-whisper locally to recognize speech from video audio streams and writes `.video-agent/transcription.json`. The `detect-silence` command runs FFmpeg’s `silencedetect` filter and writes `.video-agent/silence-analysis.json`, correlating quiet intervals with transcript timestamps when available.
 
 Transcription defaults to the CPU-friendly `small` model with `int8` compute. The first run downloads Whisper model weights into `.video-agent/models/`; subsequent runs reuse the cache. Use `--model tiny` for a quicker smoke test or `--device cuda --compute-type float16` on a compatible NVIDIA setup. Videos without audio are recorded in the output with an empty segment list and are not sent to Whisper.
 
@@ -63,12 +64,13 @@ travel-test/
     ├── analysis.json
     ├── understanding.json
     ├── transcription.json
+    ├── silence-analysis.json
     ├── models/
     └── frames/
         └── <video-hash>/scene-*/frame-*.jpg
 ```
 
-Each transcript segment contains start/end timestamps, recognized text, and optional Whisper confidence diagnostics. The artifact also reports long gaps before, between, and after speech segments. These gaps are descriptive only—not automatic cut suggestions. Quiet scenic footage, ambient sound, and music are preserved by default. Original video files are not modified.
+Each transcript segment contains start/end timestamps, recognized text, and optional Whisper confidence diagnostics. The artifact also reports long gaps before, between, and after speech segments. These gaps are descriptive only—not automatic cut suggestions. Silence analysis reports low-volume intervals and emits review candidates only when a transcript is available and no speech overlaps the interval (with a configurable safety margin). Quiet intervals may still contain scenic ambience, music, wind, or other intentional sound: candidates are never automatic cuts and always require human review. Original video files are not modified.
 
 ### Configuration and resources
 
