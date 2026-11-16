@@ -23,9 +23,7 @@ class SubtitleCue:
 def _load_timeline(root: Path, path: Path | None) -> tuple[ProjectTimeline, Path]:
     timeline_path = (path or root / ".video-agent" / "timeline.json").expanduser().resolve()
     if not timeline_path.is_file():
-        raise FileNotFoundError(
-            f"Missing {timeline_path}; run 'video-agent build-timeline' first."
-        )
+        raise FileNotFoundError(f"Missing {timeline_path}; run 'video-agent build-timeline' first.")
     timeline = ProjectTimeline.model_validate_json(timeline_path.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root:
         raise SubtitleError("timeline belongs to a different project folder")
@@ -77,9 +75,7 @@ def build_subtitle_cues(
                 if speech.end_seconds <= speech.start_seconds:
                     continue
                 if speech.end_seconds > video.source_duration_seconds + 0.01:
-                    raise SubtitleError(
-                        f"transcript segment exceeds source duration: {video.path}"
-                    )
+                    raise SubtitleError(f"transcript segment exceeds source duration: {video.path}")
                 fragments: list[tuple[float, float, float]] = []
                 segment_cursor = output_cursor
                 for retained in video.segments:
@@ -133,24 +129,16 @@ def generate_subtitles(
     if not root.is_dir():
         raise FileNotFoundError(f"Project folder does not exist: {root}")
     timeline, timeline_file = _load_timeline(root, timeline_path)
-    transcript_file = (
-        (transcription_path or root / ".video-agent" / "transcription.json")
-        .expanduser()
-        .resolve()
-    )
+    transcript_file = (transcription_path or root / ".video-agent" / "transcription.json").expanduser().resolve()
     if not transcript_file.is_file():
-        raise FileNotFoundError(
-            f"Missing {transcript_file}; run 'video-agent transcribe' first."
-        )
+        raise FileNotFoundError(f"Missing {transcript_file}; run 'video-agent transcribe' first.")
     transcription = ProjectTranscription.model_validate_json(
         transcript_file.read_text(encoding="utf-8")
     )
     if Path(transcription.project_path).resolve() != root:
         raise SubtitleError("transcription belongs to a different project folder")
 
-    destination = (
-        output_path or root / ".video-agent" / "subtitles.srt"
-    ).expanduser().resolve()
+    destination = (output_path or root / ".video-agent" / "subtitles.srt").expanduser().resolve()
     if destination in {timeline_file, transcript_file}:
         raise SubtitleError("subtitle output cannot overwrite an input artifact")
     source_paths = {(root / video.path).resolve() for video in timeline.videos}
