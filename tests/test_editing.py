@@ -87,6 +87,7 @@ def test_scene_context_is_optional_and_never_auto_approves(tmp_path: Path) -> No
     assert item.scene_id is None
     assert item.decision == "pending"
 
+
 def test_scene_context_is_joined_by_source_video_hash(tmp_path: Path) -> None:
     import hashlib
 
@@ -143,6 +144,7 @@ def test_scene_context_is_joined_by_source_video_hash(tmp_path: Path) -> None:
     assert item.scene_id == f"{key}-scene-0001"
     assert item.scene_summary == "A mountain lake at sunset"
     assert item.decision == "pending"
+
 
 def test_review_item_rejects_invalid_interval() -> None:
     from pydantic import ValidationError
