@@ -1,5 +1,6 @@
 from pathlib import Path
-from types import SimpleNamespace
+
+import pytest
 
 from travel_video_agent.models import MediaInfo, ProjectAnalysis
 from travel_video_agent.transcription.pipeline import transcribe_folder
@@ -104,8 +105,6 @@ def test_backend_reports_missing_optional_dependency(monkeypatch) -> None:
         return original_import(name, *args, **kwargs)
 
     monkeypatch.setattr(builtins, "__import__", guarded_import)
-
-    import pytest
 
     from travel_video_agent.transcription.whisper_backend import TranscriptionError
 
