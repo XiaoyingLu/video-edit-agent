@@ -184,7 +184,9 @@ def apply_timeline_review(
     timeline.timeline_approved = not pending and has_approved
     approved = [clip for clip in timeline.clips if clip.decision == "approved"]
     timeline.approved_duration_seconds = sum(clip.duration_seconds for clip in approved) - sum(
-        clip.transition_duration_seconds for clip in approved[1:]
+        clip.transition_duration_seconds
+        for clip in approved[1:]
+        if clip.transition_in != "cut"
     )
     # Revalidate after mutable review decisions are applied.
     return ProjectDraftTimeline.model_validate(timeline.model_dump())
