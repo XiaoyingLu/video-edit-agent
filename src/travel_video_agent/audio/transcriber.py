@@ -4,7 +4,7 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 
 class TranscriptionError(RuntimeError):
@@ -34,7 +34,9 @@ class FasterWhisperTranscriber:
         try:
             self.model = WhisperModel(model, device=device, compute_type=compute_type)
         except Exception as exc:
-            raise TranscriptionError(f"Could not load faster-whisper model '{model}': {exc}") from exc
+            raise TranscriptionError(
+                f"Could not load faster-whisper model '{model}': {exc}"
+            ) from exc
 
     def transcribe(
         self, video_path: Path, cache_dir: Path, vad_filter: bool = True
@@ -55,17 +57,35 @@ class FasterWhisperTranscriber:
                 temporary_path = Path(temporary.name)
 
             command = [
-                ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
-                "-i", str(video_path), "-vn", "-ac", "1", "-ar", "16000",
-                "-c:a", "pcm_s16le", str(temporary_path),
+                ffmpeg,
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-i",
+                str(video_path),
+                "-vn",
+                "-ac",
+                "1",
+                "-ar",
+                "16000",
+                "-c:a",
+                "pcm_s16le",
+                str(temporary_path),
             ]
             try:
-                subprocess.run(command, check=True, capture_output=True, text=True, timeout=600)
+                subprocess.run(
+                    command, check=True, capture_output=True, text=True, timeout=600
+                )
             except subprocess.TimeoutExpired as exc:
-                raise TranscriptionError(f"Audio extraction timed out for {video_path}") from exc
+                raise TranscriptionError(
+                    f"Audio extraction timed out for {video_path}"
+                ) from exc
             except subprocess.CalledProcessError as exc:
                 detail = exc.stderr.strip() or "unknown FFmpeg error"
-                raise TranscriptionError(f"Could not extract audio from {video_path}: {detail}") from exc
+                raise TranscriptionError(
+                    f"Could not extract audio from {video_path}: {detail}"
+                ) from exc
 
             try:
                 raw_segments, info = self.model.transcribe(
@@ -85,7 +105,9 @@ class FasterWhisperTranscriber:
                     if float(item.end) > float(item.start) and str(item.text).strip()
                 ]
             except Exception as exc:
-                raise TranscriptionError(f"Transcription failed for {video_path}: {exc}") from exc
+                raise TranscriptionError(
+                    f"Transcription failed for {video_path}: {exc}"
+                ) from exc
 
             return segments, getattr(info, "language", None), _probability(
                 getattr(info, "language_probability", None)
