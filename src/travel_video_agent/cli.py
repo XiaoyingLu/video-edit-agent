@@ -210,7 +210,13 @@ def transcribe(
             compute_type=compute_type,
             min_pause_duration=min_pause_duration,
         )
-    except (FileNotFoundError, NotADirectoryError, MediaToolError, TranscriptionError, ValueError) as exc:
+    except (
+        FileNotFoundError,
+        NotADirectoryError,
+        MediaToolError,
+        TranscriptionError,
+        ValueError,
+    ) as exc:
         console.print(f"[red]Transcription failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
@@ -244,6 +250,7 @@ def transcribe(
     console.print(f"Transcription saved to [green]{destination}[/green]")
     console.print(
         "[yellow]Long gaps are not cut recommendations; preserve quiet scenic footage by default.[/yellow]"
+
     )
 
 
