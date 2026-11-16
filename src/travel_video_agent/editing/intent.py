@@ -24,9 +24,9 @@ class OllamaIntentParser:
         timeout_seconds: int = 180,
     ) -> None:
         self.model = model or os.getenv("OLLAMA_MODEL", "qwen2.5vl:3b")
-        self.base_url = (
-            base_url or os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
-        ).rstrip("/")
+        self.base_url = (base_url or os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")).rstrip(
+            "/"
+        )
         self.timeout_seconds = timeout_seconds
 
     def parse(self, prompt: str) -> EditingPlan:
@@ -43,10 +43,10 @@ class OllamaIntentParser:
         schema["properties"].pop("approval_required", None)
         schema["properties"].pop("rendering_performed", None)
         schema["required"] = [
-            field for field in schema.get("required", [])
-            if field not in {
-                "source_prompt", "schema_version", "approval_required", "rendering_performed"
-            }
+            field
+            for field in schema.get("required", [])
+            if field
+            not in {"source_prompt", "schema_version", "approval_required", "rendering_performed"}
         ]
         system_prompt = (
             "Translate the user's video editing request into the supplied JSON schema. "
@@ -113,8 +113,6 @@ class OllamaIntentParser:
             ) from exc
 
 
-def parse_editing_intent(
-    prompt: str, model: str | None = None
-) -> EditingPlan:
+def parse_editing_intent(prompt: str, model: str | None = None) -> EditingPlan:
     """Parse one natural-language request into a validated plan."""
     return OllamaIntentParser(model=model).parse(prompt)

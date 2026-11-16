@@ -37,9 +37,9 @@ class EditingPlan(BaseModel):
     schema_version: Literal["1.0"] = "1.0"
     source_prompt: str = Field(min_length=1, max_length=4000)
     target_duration_seconds: float = Field(default=60, gt=0, le=3600)
-    style: Literal[
-        "cinematic", "vlog", "documentary", "highlight_reel", "social_media"
-    ] = "cinematic"
+    style: Literal["cinematic", "vlog", "documentary", "highlight_reel", "social_media"] = (
+        "cinematic"
+    )
     aspect_ratio: Literal["16:9", "9:16", "1:1"] = "16:9"
     resolution: Literal["720p", "1080p", "4k"] = "1080p"
     pacing: Literal["slow", "moderate", "fast"] = "moderate"

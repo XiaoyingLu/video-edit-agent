@@ -736,6 +736,7 @@ def find_highlights(
         "No edits were applied and source media was not modified.[/yellow]"
     )
 
+
 @app.command("plan")
 def plan_edit(
     folder: Annotated[
