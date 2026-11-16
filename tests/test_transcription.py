@@ -113,7 +113,6 @@ def test_backend_reports_missing_optional_dependency(monkeypatch) -> None:
         FasterWhisperTranscriber()
 
 
-
 def test_detect_speech_pauses_reports_long_gaps_only() -> None:
     from travel_video_agent.transcription.pipeline import detect_speech_pauses
 
