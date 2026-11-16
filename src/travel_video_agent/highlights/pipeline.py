@@ -64,8 +64,7 @@ def _score(signals: HighlightSignals) -> tuple[float, list[str]]:
     values = signals.model_dump()
     score = sum(values[name] * weight for name, weight in weights.items()) * 100
     reasons = [
-        f"{name.title()} contributed {values[name] * weight * 100:.1f}/"
-        f"{weight * 100:.0f} points"
+        f"{name.title()} contributed {values[name] * weight * 100:.1f}/{weight * 100:.0f} points"
         for name, weight in weights.items()
     ]
     if signals.motion < 0.08:

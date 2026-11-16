@@ -671,13 +671,22 @@ def render(
 def find_highlights(
     folder: Annotated[
         Path,
-        typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True,
-                       help="Folder containing travel videos."),
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Folder containing travel videos.",
+        ),
     ],
     output: Annotated[
         Path | None,
-        typer.Option("--output", "-o",
-                     help="JSON output path (default: <folder>/.video-agent/highlights.json)."),
+        typer.Option(
+            "--output",
+            "-o",
+            help="JSON output path (default: <folder>/.video-agent/highlights.json).",
+        ),
     ] = None,
     samples_per_scene: Annotated[
         int, typer.Option("--samples-per-scene", min=1, max=10, help="Frames sampled per scene.")
@@ -709,7 +718,8 @@ def find_highlights(
     table.add_column("Scene")
     for rank, candidate in enumerate(report.candidates, start=1):
         table.add_row(
-            str(rank), candidate.video_path,
+            str(rank),
+            candidate.video_path,
             f"{candidate.start_seconds:.1f}–{candidate.end_seconds:.1f}s",
             f"{candidate.score:.1f}",
             (candidate.scene_summary or "Visual signals only")[:55],

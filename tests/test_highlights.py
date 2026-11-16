@@ -27,13 +27,16 @@ def test_highlight_pipeline_ranks_candidates_without_understanding(
     frame = tmp_path / "frame.jpg"
     frame.write_bytes(b"sample")
     monkeypatch.setattr(
-        pipeline, "extract_representative_frames",
+        pipeline,
+        "extract_representative_frames",
         lambda *args, **kwargs: [(1.0, frame), (2.0, frame)],
     )
-    scores = iter([
-        HighlightSignals(motion=0.1, sharpness=0.3, exposure=0.5, saturation=0.2),
-        HighlightSignals(motion=0.2, sharpness=0.9, exposure=0.9, saturation=0.8),
-    ])
+    scores = iter(
+        [
+            HighlightSignals(motion=0.1, sharpness=0.3, exposure=0.5, saturation=0.2),
+            HighlightSignals(motion=0.2, sharpness=0.9, exposure=0.9, saturation=0.8),
+        ]
+    )
     monkeypatch.setattr(pipeline, "_measure_frames", lambda paths: next(scores))
 
     report = find_highlights_folder(tmp_path)
