@@ -19,6 +19,7 @@ from .editing import (
 from .media import MediaToolError, analyze_folder
 from .rendering import RenderError, render_project
 from .silence import analyze_silence_folder
+from .subtitles import SubtitleError, generate_subtitles
 from .silence.ffmpeg_detector import SilenceDetectionError
 from .transcription import transcribe_folder
 from .transcription.whisper_backend import TranscriptionError
@@ -529,6 +530,49 @@ def build_timeline(
     )
 
 
+@app.command("subtitles")
+def subtitles_command(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder containing the reviewed timeline and transcription.",
+        ),
+    ],
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="SRT output path (default: <folder>/.video-agent/subtitles.srt)."),
+    ] = None,
+    timeline: Annotated[
+        Path | None,
+        typer.Option("--timeline", help="Path to a validated timeline JSON file."),
+    ] = None,
+    transcription: Annotated[
+        Path | None,
+        typer.Option("--transcription", help="Path to a Whisper transcription JSON file."),
+    ] = None,
+) -> None:
+    """Generate an SRT subtitle file aligned to the reviewed final timeline."""
+    try:
+        destination, cue_count = generate_subtitles(
+            folder,
+            timeline_path=timeline,
+            transcription_path=transcription,
+            output_path=output,
+        )
+    except (FileNotFoundError, ValueError, SubtitleError) as exc:
+        console.print(f"[red]Subtitle generation failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    console.print(f"[bold green]Subtitles generated.[/bold green] {cue_count} cue(s).")
+    console.print(f"SRT: [green]{destination}[/green]")
+    console.print("[yellow]Subtitle timestamps follow the concatenated, reviewed timeline.[/yellow]")
+
+
 @app.command()
 def render(
     folder: Annotated[
@@ -562,6 +606,22 @@ def render(
         float,
         typer.Option("--timeout", min=1, help="Maximum render time in seconds."),
     ] = 3600,
+    burn_subtitles: Annotated[
+        bool,
+        typer.Option("--burn-subtitles", help="Burn .video-agent/subtitles.srt into the video."),
+    ] = False,
+    subtitle_file: Annotated[
+        Path | None,
+        typer.Option("--subtitle-file", help="Custom SRT file to burn into the output."),
+    ] = None,
+    subtitle_font_size: Annotated[
+        int,
+        typer.Option("--subtitle-font-size", min=12, max=72, help="Burned-in subtitle font size."),
+    ] = 28,
+    subtitle_position: Annotated[
+        str,
+        typer.Option("--subtitle-position", help="Subtitle position: bottom, center, or top."),
+    ] = "bottom",
 ) -> None:
     """Render the human-approved timeline to a verified H.264/AAC MP4."""
     try:
@@ -571,6 +631,13 @@ def render(
             output_path=output,
             overwrite=overwrite,
             timeout_seconds=timeout_seconds,
+            subtitle_path=(
+                subtitle_file or folder.resolve() / ".video-agent" / "subtitles.srt"
+                if burn_subtitles
+                else None
+            ),
+            subtitle_font_size=subtitle_font_size,
+            subtitle_position=subtitle_position,
         )
     except (FileNotFoundError, FileExistsError, ValueError, RenderError) as exc:
         console.print(f"[red]Render failed:[/red] {exc}")
@@ -587,6 +654,10 @@ def render(
         f"Format: {report.width}x{report.height}, "
         f"{report.video_codec.upper()} video + {report.audio_codec.upper()} audio"
     )
+    if burn_subtitles:
+        console.print(
+            f"Burned-in subtitles: [green]{subtitle_file or folder.resolve() / '.video-agent' / 'subtitles.srt'}[/green]"
+        )
     console.print("[yellow]Original source videos were not modified.[/yellow]")
 
 
