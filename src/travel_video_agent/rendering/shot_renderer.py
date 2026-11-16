@@ -56,7 +56,8 @@ def _build_shot_render_command(
         else:
             filters.append(
                 f"anullsrc=r=48000:cl=stereo,atrim=duration={_seconds(duration)},"
-                f"asetpts=PTS-STARTPTS[a{index}]"
+                f"asetpts=PTS-STARTPTS,aresample=48000,"
+                f"aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[a{index}]"
             )
 
     current_video = "v0"
@@ -160,7 +161,9 @@ def render_approved_shot_timeline(
     if timeline.rendering_performed:
         raise RenderError("optimized timeline must be a review artifact, not a render report")
     if not timeline.timeline_approved:
-        raise RenderError("shot timeline has not been fully approved; run 'video-agent review-timeline'")
+        raise RenderError(
+            "shot timeline has not been fully approved; run 'video-agent review-timeline'"
+        )
     if any(clip.decision == "pending" for clip in timeline.clips):
         raise RenderError("all proposed shots must have an explicit review decision")
     approved = [clip for clip in timeline.clips if clip.decision == "approved"]
