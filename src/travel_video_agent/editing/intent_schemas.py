@@ -10,7 +10,7 @@ class TransitionPreferences(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     default: Literal["cut", "crossfade", "dissolve"] = "cut"
-    duration_seconds: float = Field(default=0.5, ge=0, le=2)
+    duration_seconds: float = Field(default=0.0, ge=0, le=2)
 
 
 class SubtitlePreferences(BaseModel):
