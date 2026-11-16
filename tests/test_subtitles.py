@@ -2,12 +2,12 @@ from pathlib import Path
 
 import pytest
 
-from travel_video_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
 from travel_video_agent.editing.schemas import (
     ProjectTimeline,
     TimelineSegment,
     VideoTimeline,
 )
+from travel_video_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
 from travel_video_agent.subtitles import (
     SubtitleCue,
     SubtitleError,
