@@ -188,6 +188,7 @@ def render_approved_shot_timeline(
     source_cache: dict[Path, tuple[dict, float]] = {}
     clip_inputs: list[tuple[Path, float, float, bool, str, float]] = []
     source_paths: set[Path] = set()
+    previous_sequence_index: int | None = None
     for index, clip in enumerate(approved):
         source = _safe_source(root, clip.video_path)
         source_paths.add(source)
@@ -213,8 +214,12 @@ def render_approved_shot_timeline(
         has_audio = any(item.get("codec_type") == "audio" for item in streams)
         # The first approved shot always starts with a hard cut, even if earlier
         # proposed shots carrying its transition metadata were rejected.
-        transition = clip.transition_in if index > 0 else "cut"
-        transition_duration = clip.transition_duration_seconds if index > 0 else 0.0
+        adjacent_to_previous = (
+            previous_sequence_index is not None
+            and clip.sequence_index == previous_sequence_index + 1
+        )
+        transition = clip.transition_in if adjacent_to_previous else "cut"
+        transition_duration = clip.transition_duration_seconds if adjacent_to_previous else 0.0
         clip_inputs.append(
             (
                 source,
@@ -225,6 +230,7 @@ def render_approved_shot_timeline(
                 transition_duration,
             )
         )
+        previous_sequence_index = clip.sequence_index
 
     if destination in source_paths:
         raise RenderError("render output cannot overwrite a source video")
