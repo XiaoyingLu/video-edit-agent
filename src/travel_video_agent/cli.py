@@ -19,8 +19,8 @@ from .editing import (
 from .media import MediaToolError, analyze_folder
 from .rendering import RenderError, render_project
 from .silence import analyze_silence_folder
-from .subtitles import SubtitleError, generate_subtitles
 from .silence.ffmpeg_detector import SilenceDetectionError
+from .subtitles import SubtitleError, generate_subtitles
 from .transcription import transcribe_folder
 from .transcription.whisper_backend import TranscriptionError
 from .understanding import understand_folder
