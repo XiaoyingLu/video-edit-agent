@@ -7,7 +7,7 @@ A local-first Python CLI for editing personal travel footage. Media stays on you
 - Folder scanning and media metadata extraction
 - Scene detection and representative-frame sampling
 - Local vision-model descriptions for each detected scene
-- Local speech transcription with timestamped segments
+- Local speech transcription with timestamped segments and long-gap metadata
 - Natural-language editing, speech-aware pause removal, subtitles, highlights, edit-plan review, and MP4 export (planned)
 
 ## Requirements
@@ -68,7 +68,7 @@ travel-test/
         └── <video-hash>/scene-*/frame-*.jpg
 ```
 
-Each transcript segment contains start/end timestamps, recognized text, and optional Whisper confidence diagnostics. These timestamps will be used by the later speech-aware silence detector and subtitle generator. Original video files are not modified.
+Each transcript segment contains start/end timestamps, recognized text, and optional Whisper confidence diagnostics. The artifact also reports long gaps before, between, and after speech segments. These gaps are descriptive only—not automatic cut suggestions. Quiet scenic footage, ambient sound, and music are preserved by default. Original video files are not modified.
 
 ### Configuration and resources
 
