@@ -177,6 +177,8 @@ def render_project(
     All source paths are constrained to the project root. Rendering uses a temporary
     output followed by an atomic replace, and never writes to a source file.
     """
+    if timeout_seconds <= 0:
+        raise ValueError("timeout_seconds must be greater than zero")
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise FileNotFoundError(f"Project folder does not exist: {root}")
@@ -199,6 +201,8 @@ def render_project(
     ).expanduser().resolve()
     if destination.suffix.lower() != ".mp4":
         raise RenderError("render output must use the .mp4 extension")
+    if destination == timeline_file:
+        raise RenderError("render output cannot overwrite the timeline artifact")
     destination.parent.mkdir(parents=True, exist_ok=True)
 
     if not timeline.videos:
