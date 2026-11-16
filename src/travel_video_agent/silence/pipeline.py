@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from ..media import analyze_folder, discover_videos
-from ..models import relative_media_path
+from ..models import ProjectAnalysis, relative_media_path
 from ..transcription.schemas import ProjectTranscription, TranscriptSegment
 from .ffmpeg_detector import FFmpegSilenceDetector
 from .schemas import (
@@ -12,6 +12,93 @@ from .schemas import (
     SilenceInterval,
     VideoSilenceAnalysis,
 )
+
+
+def _load_transcripts_by_path(
+    transcript_path: Path,
+    root: Path,
+    analysis: ProjectAnalysis,
+) -> dict[str, list[TranscriptSegment]]:
+    """Load only a transcript artifact that matches the current media inventory."""
+    if not transcript_path.is_file():
+        return {}
+
+    transcription = ProjectTranscription.model_validate_json(
+        transcript_path.read_text(encoding="utf-8")
+    )
+    if Path(transcription.project_path).expanduser().resolve() != root:
+        raise ValueError(
+            "transcription artifact belongs to a different project folder; "
+            "rerun 'video-agent transcribe'"
+        )
+
+    media_by_path = {video.path: video for video in analysis.videos}
+    if len(media_by_path) != len(analysis.videos):
+        raise ValueError("media analysis contains duplicate video paths")
+
+    transcripts_by_path = {}
+    for video in transcription.videos:
+        if video.path in transcripts_by_path:
+            raise ValueError(f"transcription artifact contains duplicate video path: {video.path}")
+
+        media = media_by_path.get(video.path)
+        if media is None:
+            raise ValueError(
+                f"transcription artifact references unknown video {video.path!r}; "
+                "rerun 'video-agent transcribe'"
+            )
+        if video.has_audio != media.has_audio:
+            raise ValueError(
+                f"audio-stream metadata changed for {video.path!r}; "
+                "rerun 'video-agent transcribe'"
+            )
+        if abs(video.duration_seconds - media.duration_seconds) > 0.05:
+            raise ValueError(
+                f"video duration changed for {video.path!r}; "
+                "rerun 'video-agent transcribe'"
+            )
+        if not video.has_audio and video.segments:
+            raise ValueError(
+                f"transcript contains speech for a video without audio: {video.path!r}"
+            )
+
+        for segment in video.segments:
+            if segment.end_seconds <= segment.start_seconds:
+                raise ValueError(
+                    f"transcript contains an invalid speech interval for {video.path!r}"
+                )
+            if segment.end_seconds > media.duration_seconds + 0.01:
+                raise ValueError(
+                    f"transcript speech interval exceeds source duration for {video.path!r}; "
+                    "rerun 'video-agent transcribe'"
+                )
+
+        transcripts_by_path[video.path] = video
+
+    missing_paths = media_by_path.keys() - transcripts_by_path.keys()
+    if missing_paths:
+        missing = ", ".join(sorted(missing_paths))
+        raise ValueError(
+            f"transcription artifact is missing video(s): {missing}; "
+            "rerun 'video-agent transcribe'"
+        )
+
+    if transcription.video_count != len(media_by_path):
+        raise ValueError("transcription video count does not match media analysis")
+    if transcription.transcribed_video_count != sum(
+        video.has_audio for video in transcription.videos
+    ):
+        raise ValueError("transcription audio-video count is inconsistent")
+    if transcription.segment_count != sum(
+        len(video.segments) for video in transcription.videos
+    ):
+        raise ValueError("transcription segment count is inconsistent")
+
+    return {
+        path: video.segments
+        for path, video in transcripts_by_path.items()
+        if video.has_audio
+    }
 
 
 def _speech_free_candidates(
@@ -65,14 +152,7 @@ def analyze_silence_folder(
     root = folder.expanduser().resolve()
     analysis = analyze_folder(root)
     transcript_path = root / ".video-agent" / "transcription.json"
-    transcripts_by_path: dict[str, list[TranscriptSegment]] = {}
-    if transcript_path.is_file():
-        transcription = ProjectTranscription.model_validate_json(
-            transcript_path.read_text(encoding="utf-8")
-        )
-        transcripts_by_path = {
-            video.path: video.segments for video in transcription.videos if video.has_audio
-        }
+    transcripts_by_path = _load_transcripts_by_path(transcript_path, root, analysis)
 
     detector = FFmpegSilenceDetector()
     videos: list[VideoSilenceAnalysis] = []
