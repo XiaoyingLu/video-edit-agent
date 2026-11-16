@@ -41,18 +41,12 @@ def build_edit_proposal(folder: Path) -> ProjectEditProposal:
     artifact_dir = root / ".video-agent"
     silence_path = artifact_dir / "silence-analysis.json"
     if not silence_path.is_file():
-        raise FileNotFoundError(
-            f"Missing {silence_path}; run 'video-agent detect-silence' first."
-        )
+        raise FileNotFoundError(f"Missing {silence_path}; run 'video-agent detect-silence' first.")
 
-    silence = ProjectSilenceAnalysis.model_validate_json(
-        silence_path.read_text(encoding="utf-8")
-    )
+    silence = ProjectSilenceAnalysis.model_validate_json(silence_path.read_text(encoding="utf-8"))
     understanding_path = artifact_dir / "understanding.json"
     understanding = (
-        VideoUnderstanding.model_validate_json(
-            understanding_path.read_text(encoding="utf-8")
-        )
+        VideoUnderstanding.model_validate_json(understanding_path.read_text(encoding="utf-8"))
         if understanding_path.is_file()
         else None
     )
