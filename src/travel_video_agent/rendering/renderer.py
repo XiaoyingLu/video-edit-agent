@@ -120,29 +120,9 @@ def _build_ffmpeg_command(
             f"setpts=PTS-STARTPTS,"
             f"scale=w={width}:h={height}:force_original_aspect_ratio=decrease,"
             f"pad=width={width}:height={height}:x=(ow-iw)/2:y=(oh-ih)/2,"
-            f"setsar=1,fps={_seconds(frame_rate)},format=yuv420p"
+            f"setsar=1,fps={_seconds(frame_rate)},format=yuv420p[{video_label}]"
         )
-        if subtitle_path is not None:
-            escaped_path = (
-                str(subtitle_path.resolve())
-                .replace("\\\\", "\\\\\\\\")
-                .replace(":", "\\\\:")
-                .replace("'", "\\\\'")
-            )
-            alignment, margin = {
-                "bottom": (2, 48),
-                "center": (5, 0),
-                "top": (8, 48),
-            }[subtitle_position]
-            style = (
-                f"FontName=DejaVu Sans,FontSize={subtitle_font_size},"
-                f"PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,"
-                f"BorderStyle=1,Outline=2,Shadow=1,Alignment={alignment},MarginV={margin}"
-            )
-            video_filter += (
-                f",subtitles=filename='{escaped_path}':force_style='{style}'"
-            )
-        filters.append(f"{video_filter}[{video_label}]")
+        filters.append(video_filter)
         if has_audio:
             filters.append(
                 f"[{input_index}:a:0]atrim=start={_seconds(start)}:end={_seconds(end)},"
@@ -157,12 +137,34 @@ def _build_ffmpeg_command(
         concat_inputs.extend([f"[{video_label}]", f"[{audio_label}]"])
 
     filters.append(f"{''.join(concat_inputs)}concat=n={len(segments)}:v=1:a=1[outv][outa]")
+    video_output = "[outv]"
+    if subtitle_path is not None:
+        escaped_path = (
+            str(subtitle_path.resolve())
+            .replace("\\\\", "\\\\\\\\")
+            .replace(":", "\\\\:")
+            .replace("'", "\\\\'")
+        )
+        alignment, margin = {
+            "bottom": (2, 48),
+            "center": (5, 0),
+            "top": (8, 48),
+        }[subtitle_position]
+        style = (
+            f"FontName=DejaVu Sans,FontSize={subtitle_font_size},"
+            f"PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,"
+            f"BorderStyle=1,Outline=2,Shadow=1,Alignment={alignment},MarginV={margin}"
+        )
+        filters.append(
+            f"[outv]subtitles=filename='{escaped_path}':force_style='{style}'[subtitled]"
+        )
+        video_output = "[subtitled]"
     command.extend(
         [
             "-filter_complex",
             ";".join(filters),
             "-map",
-            "[outv]",
+            video_output,
             "-map",
             "[outa]",
             "-c:v",
