@@ -439,9 +439,11 @@ def review_edits(
                         console.print(f"Scene: {item.scene_summary}")
                     console.print(item.review_reason)
                     while True:
-                        choice = console.input(
-                            "Decision [a]pprove / [r]eject / [s]kip: "
-                        ).strip().lower()
+                        choice = (
+                            console.input("Decision [a]pprove / [r]eject / [s]kip: ")
+                            .strip()
+                            .lower()
+                        )
                         if choice in {"a", "approve"}:
                             approve_ids.add(item.item_id)
                             break
@@ -459,9 +461,7 @@ def review_edits(
 
     counts = {
         decision: sum(
-            item.decision == decision
-            for video in proposal.videos
-            for item in video.review_items
+            item.decision == decision for video in proposal.videos for item in video.review_items
         )
         for decision in ("approved", "rejected", "pending")
     }
