@@ -151,12 +151,8 @@ def test_subtitles_command_writes_srt_path(tmp_path: Path, monkeypatch) -> None:
     from travel_video_agent import cli
 
     destination = tmp_path / "custom" / "captions.srt"
-    monkeypatch.setattr(
-        cli, "generate_subtitles", lambda *args, **kwargs: (destination, 7)
-    )
-    result = runner.invoke(
-        app, ["subtitles", str(tmp_path), "--output", str(destination)]
-    )
+    monkeypatch.setattr(cli, "generate_subtitles", lambda *args, **kwargs: (destination, 7))
+    result = runner.invoke(app, ["subtitles", str(tmp_path), "--output", str(destination)])
 
     assert result.exit_code == 0, result.output
     assert "7 cue(s)" in result.output
