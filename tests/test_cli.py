@@ -103,6 +103,7 @@ def test_cli_help_is_available() -> None:
     assert "transcribe" in result.output
     assert "detect-silence" in result.output
 
+
 def test_propose_edits_command_writes_review_only_json(tmp_path: Path, monkeypatch) -> None:
     from travel_video_agent import cli
     from travel_video_agent.editing.schemas import (
