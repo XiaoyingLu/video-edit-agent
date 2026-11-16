@@ -803,25 +803,39 @@ def find_highlights(
     )
 
 
-
 @app.command("create-video")
 def create_video(
     folder: Annotated[
         Path,
-        typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True,
-                       help="Folder containing travel videos."),
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Folder containing travel videos.",
+        ),
     ],
     prompt: Annotated[str, typer.Option("--prompt", "-p", help="Describe the video you want.")],
     model: Annotated[str | None, typer.Option("--model", help="Ollama model.")] = None,
-    whisper_model: Annotated[str, typer.Option("--whisper-model", help="Whisper model size.")] = "small",
+    whisper_model: Annotated[
+        str, typer.Option("--whisper-model", help="Whisper model size.")
+    ] = "small",
     samples_per_scene: Annotated[int, typer.Option("--samples-per-scene", min=1, max=10)] = 2,
-    output: Annotated[Path | None, typer.Option("--output", "-o", help="Rendered MP4 path.")] = None,
-    overwrite: Annotated[bool, typer.Option("--overwrite", help="Replace existing output.")] = False,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Rendered MP4 path.")
+    ] = None,
+    overwrite: Annotated[
+        bool, typer.Option("--overwrite", help="Replace existing output.")
+    ] = False,
 ) -> None:
     """Create a video from natural language with mandatory shot-by-shot approval."""
     try:
         plan, highlights, selection, timeline, timeline_path = create_video_draft(
-            folder, prompt, vision_model=model, whisper_model=whisper_model,
+            folder,
+            prompt,
+            vision_model=model,
+            whisper_model=whisper_model,
             samples_per_scene=samples_per_scene,
         )
         console.print("[bold green]Analysis and draft planning complete.[/bold green]")
@@ -834,7 +848,12 @@ def create_video(
             f"{selection.selected_clip_count} shots ({selection.selected_duration_seconds:.1f}s)."
         )
         console.print(f"Review artifact: [green]{timeline_path}[/green]")
-        console.print(\n            "[yellow]Output resolution/aspect ratio and subtitle/audio preferences are " \n            "recorded in the plan; this renderer currently preserves the first source shot dimensions.[/yellow]"\n        )\n        console.print("[bold]Human review required — no video has been rendered.[/bold]")
+        console.print(
+            "[yellow]Output resolution/aspect ratio and subtitle/audio preferences are "
+            "recorded in the plan; this renderer currently preserves the first source shot "
+            "dimensions.[/yellow]"
+        )
+        console.print("[bold]Human review required — no video has been rendered.[/bold]")
         approve_ids: set[str] = set()
         reject_ids: set[str] = set()
         for clip in timeline.clips:
@@ -859,7 +878,9 @@ def create_video(
                 if choice in {"r", "reject"}:
                     reject_ids.add(clip.clip_id)
                     break
-                console.print("[yellow]Enter a or r. Every shot needs an explicit decision.[/yellow]")
+                console.print(
+                    "[yellow]Enter a or r. Every shot needs an explicit decision.[/yellow]"
+                )
 
         timeline = apply_timeline_review(timeline, approve_ids, reject_ids)
         save_draft_timeline(timeline, timeline_path)
@@ -868,13 +889,21 @@ def create_video(
             raise typer.Exit(code=2)
 
         report = render_approved_shot_timeline(
-            folder, timeline_path=timeline_path, output_path=output, overwrite=overwrite,
+            folder,
+            timeline_path=timeline_path,
+            output_path=output,
+            overwrite=overwrite,
         )
     except typer.Exit:
         raise
     except (
-        FileNotFoundError, ValueError, IntentParsingError, VisionModelError,
-        TranscriptionError, MediaToolError, RenderError,
+        FileNotFoundError,
+        ValueError,
+        IntentParsingError,
+        VisionModelError,
+        TranscriptionError,
+        MediaToolError,
+        RenderError,
     ) as exc:
         console.print(f"[red]Video creation failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc

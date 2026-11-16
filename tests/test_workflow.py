@@ -45,15 +45,18 @@ def test_create_video_draft_writes_review_artifacts_and_stops_before_render(
 
     monkeypatch.setattr(workflow, "parse_editing_intent", lambda *args, **kwargs: plan)
     monkeypatch.setattr(
-        workflow, "understand_folder",
+        workflow,
+        "understand_folder",
         lambda *args, **kwargs: calls.append("understand") or understanding,
     )
     monkeypatch.setattr(
-        workflow, "transcribe_folder",
+        workflow,
+        "transcribe_folder",
         lambda *args, **kwargs: calls.append("transcribe") or transcription,
     )
     monkeypatch.setattr(
-        workflow, "find_highlights_folder",
+        workflow,
+        "find_highlights_folder",
         lambda *args, **kwargs: calls.append("highlights") or highlights,
     )
     monkeypatch.setattr(workflow, "build_draft_selection", lambda *args, **kwargs: selection)
@@ -84,9 +87,7 @@ def test_create_video_draft_writes_review_artifacts_and_stops_before_render(
         assert (tmp_path / ".video-agent" / artifact).is_file()
 
 
-def test_create_video_draft_stops_when_no_highlights_are_found(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_create_video_draft_stops_when_no_highlights_are_found(tmp_path: Path, monkeypatch) -> None:
     plan = SimpleNamespace(model_dump=lambda **kwargs: {"style": "cinematic"})
     empty_highlights = SimpleNamespace(
         candidates=[],
@@ -95,14 +96,18 @@ def test_create_video_draft_stops_when_no_highlights_are_found(
     )
     monkeypatch.setattr(workflow, "parse_editing_intent", lambda *args, **kwargs: plan)
     monkeypatch.setattr(
-        workflow, "understand_folder",
+        workflow,
+        "understand_folder",
         lambda *args, **kwargs: SimpleNamespace(model_dump=lambda **kwargs: {}),
     )
     monkeypatch.setattr(
-        workflow, "transcribe_folder",
+        workflow,
+        "transcribe_folder",
         lambda *args, **kwargs: SimpleNamespace(model_dump=lambda **kwargs: {}),
     )
-    monkeypatch.setattr(workflow, "find_highlights_folder", lambda *args, **kwargs: empty_highlights)
+    monkeypatch.setattr(
+        workflow, "find_highlights_folder", lambda *args, **kwargs: empty_highlights
+    )
 
     with pytest.raises(ValueError, match="No highlight candidates"):
         workflow.create_video_draft(tmp_path, "Create a travel video")
