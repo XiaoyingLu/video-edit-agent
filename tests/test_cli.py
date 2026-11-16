@@ -150,3 +150,106 @@ def test_cli_help_includes_propose_edits() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "propose-edits" in result.output
+    assert "review-edits" in result.output
+    assert "build-timeline" in result.output
+
+
+def test_review_and_build_timeline_commands(tmp_path: Path) -> None:
+    from travel_video_agent.editing.schemas import (
+        EditReviewItem,
+        ProjectEditProposal,
+        VideoEditProposal,
+    )
+
+    artifact_dir = tmp_path / ".video-agent"
+    artifact_dir.mkdir()
+    proposal = ProjectEditProposal(
+        project_path=str(tmp_path.resolve()),
+        source_artifacts=[".video-agent/silence-analysis.json"],
+        video_count=1,
+        review_item_count=2,
+        videos=[
+            VideoEditProposal(
+                path="clip.mp4",
+                duration_seconds=10,
+                review_items=[
+                    EditReviewItem(
+                        item_id="clip-review-001",
+                        start_seconds=2,
+                        end_seconds=4,
+                        duration_seconds=2,
+                        review_reason="Review first interval.",
+                    ),
+                    EditReviewItem(
+                        item_id="clip-review-002",
+                        start_seconds=6,
+                        end_seconds=7,
+                        duration_seconds=1,
+                        review_reason="Review second interval.",
+                    ),
+                ],
+            )
+        ],
+    )
+    proposal_path = artifact_dir / "edit-proposal.json"
+    proposal_path.write_text(proposal.model_dump_json(), encoding="utf-8")
+
+    review = runner.invoke(
+        app,
+        [
+            "review-edits",
+            str(tmp_path),
+            "--approve",
+            "clip-review-001",
+            "--reject",
+            "clip-review-002",
+        ],
+    )
+    assert review.exit_code == 0, review.output
+
+    build = runner.invoke(app, ["build-timeline", str(tmp_path)])
+    assert build.exit_code == 0, build.output
+    saved = json.loads((artifact_dir / "timeline.json").read_text(encoding="utf-8"))
+    assert saved["approved_cut_count"] == 1
+    assert saved["retained_duration_seconds"] == 8
+    assert saved["rendering_performed"] is False
+    assert saved["videos"][0]["segments"] == [
+        {"start_seconds": 0, "end_seconds": 2},
+        {"start_seconds": 4, "end_seconds": 10},
+    ]
+
+
+def test_build_timeline_requires_all_review_items_decided(tmp_path: Path) -> None:
+    from travel_video_agent.editing.schemas import (
+        EditReviewItem,
+        ProjectEditProposal,
+        VideoEditProposal,
+    )
+
+    artifact_dir = tmp_path / ".video-agent"
+    artifact_dir.mkdir()
+    proposal = ProjectEditProposal(
+        project_path=str(tmp_path.resolve()),
+        source_artifacts=[],
+        video_count=1,
+        review_item_count=1,
+        videos=[
+            VideoEditProposal(
+                path="clip.mp4",
+                duration_seconds=10,
+                review_items=[
+                    EditReviewItem(
+                        item_id="clip-review-001",
+                        start_seconds=2,
+                        end_seconds=4,
+                        duration_seconds=2,
+                        review_reason="Needs review.",
+                    )
+                ],
+            )
+        ],
+    )
+    (artifact_dir / "edit-proposal.json").write_text(proposal.model_dump_json(), encoding="utf-8")
+    result = runner.invoke(app, ["build-timeline", str(tmp_path)])
+    assert result.exit_code == 1
+    assert "all review items must be approved or rejected" in result.output

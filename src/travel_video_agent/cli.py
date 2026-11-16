@@ -9,7 +9,13 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from .editing import build_edit_proposal
+from .editing import (
+    apply_review_decisions,
+    build_edit_proposal,
+    build_project_timeline,
+    load_edit_proposal,
+    save_edit_proposal,
+)
 from .media import MediaToolError, analyze_folder
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
@@ -385,6 +391,140 @@ def propose_edits(
         "[yellow]No edits were applied and no video was rendered. "
         "Every item is pending human approval; review visual context and audio "
         "before deciding.[/yellow]"
+    )
+
+
+@app.command("review-edits")
+def review_edits(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Folder containing the saved edit proposal.",
+        ),
+    ],
+    approve: Annotated[
+        list[str] | None,
+        typer.Option("--approve", help="Review item ID to approve; repeat for multiple IDs."),
+    ] = None,
+    reject: Annotated[
+        list[str] | None,
+        typer.Option("--reject", help="Review item ID to reject; repeat for multiple IDs."),
+    ] = None,
+    proposal_path: Annotated[
+        Path | None,
+        typer.Option("--proposal", help="Path to an edit proposal JSON file."),
+    ] = None,
+) -> None:
+    """Approve or reject proposed cuts; without IDs, review pending items interactively."""
+    try:
+        proposal, destination = load_edit_proposal(folder, proposal_path)
+        approve_ids = set(approve or [])
+        reject_ids = set(reject or [])
+        if approve is None and reject is None:
+            for video in proposal.videos:
+                for item in video.review_items:
+                    if item.decision != "pending":
+                        continue
+                    console.print(
+                        f"\n[bold cyan]{video.path}[/bold cyan] — {item.item_id} "
+                        f"({item.start_seconds:.2f}s–{item.end_seconds:.2f}s, "
+                        f"{item.duration_seconds:.2f}s)"
+                    )
+                    if item.scene_summary:
+                        console.print(f"Scene: {item.scene_summary}")
+                    console.print(item.review_reason)
+                    while True:
+                        choice = (
+                            console.input("Decision [a]pprove / [r]eject / [s]kip: ")
+                            .strip()
+                            .lower()
+                        )
+                        if choice in {"a", "approve"}:
+                            approve_ids.add(item.item_id)
+                            break
+                        if choice in {"r", "reject"}:
+                            reject_ids.add(item.item_id)
+                            break
+                        if choice in {"s", "skip", ""}:
+                            break
+                        console.print("[yellow]Enter a, r, or s.[/yellow]")
+        apply_review_decisions(proposal, approve_ids, reject_ids)
+        save_edit_proposal(proposal, destination)
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[red]Review failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    counts = {
+        decision: sum(
+            item.decision == decision for video in proposal.videos for item in video.review_items
+        )
+        for decision in ("approved", "rejected", "pending")
+    }
+    console.print(
+        f"Review saved to [green]{destination}[/green] — "
+        f"{counts['approved']} approved, {counts['rejected']} rejected, "
+        f"{counts['pending']} pending."
+    )
+    console.print("[yellow]No source media was modified or rendered.[/yellow]")
+
+
+@app.command("build-timeline")
+def build_timeline(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Folder containing the reviewed edit proposal.",
+        ),
+    ],
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help="JSON output path (default: <folder>/.video-agent/timeline.json).",
+        ),
+    ] = None,
+    proposal_path: Annotated[
+        Path | None,
+        typer.Option("--proposal", help="Path to an edit proposal JSON file."),
+    ] = None,
+) -> None:
+    """Build a validated retained-segment timeline after all cuts are reviewed."""
+    try:
+        proposal, _ = load_edit_proposal(folder, proposal_path)
+        timeline = build_project_timeline(proposal)
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[red]Timeline generation failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    destination = output or folder.resolve() / ".video-agent" / "timeline.json"
+    destination = destination.expanduser().resolve()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(
+        json.dumps(timeline.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
+    )
+    table = Table(title="Validated Edit Timeline — No Rendering")
+    table.add_column("Video", style="cyan")
+    table.add_column("Approved cuts", justify="right")
+    table.add_column("Retained", justify="right")
+    for source, video in zip(proposal.videos, timeline.videos, strict=True):
+        approved_count = sum(item.decision == "approved" for item in source.review_items)
+        table.add_row(video.path, str(approved_count), f"{video.retained_duration_seconds:.2f}s")
+    console.print(table)
+    console.print(f"Timeline saved to [green]{destination}[/green]")
+    console.print(
+        "[yellow]This is a validated edit-decision artifact only. "
+        "No FFmpeg commands were run and no video was rendered.[/yellow]"
     )
 
 

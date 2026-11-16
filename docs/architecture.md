@@ -39,7 +39,7 @@ The vision model is accessed through an adapter so other local or hosted provide
 - `propose-edits` reads the validated silence-analysis artifact and optionally joins visual scene summaries by the source-video hash embedded in scene IDs.
 - Each proposal item retains source-relative timestamps, a stable review ID, optional scene context, and an explicit pending decision.
 - A quiet interval is only a review candidate. The proposal never marks it approved, never changes source media, and never invokes FFmpeg rendering.
-- The proposal is serialized to `.video-agent/edit-proposal.json`; downstream renderers must require an explicit approved decision and validate all timestamps again.
+- The proposal is serialized to `.video-agent/edit-proposal.json`. The `review-edits` command records explicit approvals/rejections; skipped items remain pending. Timeline generation refuses to proceed while any item is pending.\n- `build-timeline` subtracts approved cut intervals from each source duration and writes `.video-agent/timeline.json` with ordered retained source intervals. Rejected candidates remain in the retained footage.\n- The timeline schema validates non-negative, in-bounds, ordered, non-overlapping segments and retained-duration totals. Approved cuts are checked for overlap and source bounds.\n- The timeline is not an FFmpeg render plan: no source media is changed and no rendering is performed. A future renderer must consume only this validated artifact and revalidate media metadata.
 
 ## Planned editing workflow
 

@@ -8,7 +8,7 @@ A local-first Python CLI for editing personal travel footage. Media stays on you
 - Scene detection and representative-frame sampling
 - Local vision-model descriptions for each detected scene
 - Local speech transcription with timestamped segments and long-gap metadata
-- Natural-language editing, speech-aware pause removal, subtitles, highlights, edit-plan review, and MP4 export (planned)
+- Human review of proposed cuts and validated retained-segment timeline\n- Natural-language editing, speech-aware pause removal, subtitles, highlights, and MP4 export (planned)
 
 ## Requirements
 
@@ -43,6 +43,9 @@ docker compose run --rm video-agent analyze ./travel-test
 docker compose run --rm video-agent understand ./travel-test --samples-per-scene 2
 docker compose run --rm video-agent transcribe ./travel-test --model small
 docker compose run --rm video-agent detect-silence ./travel-test --noise-db -35 --min-duration 1.5
+docker compose run --rm video-agent propose-edits ./travel-test
+docker compose run --rm -it video-agent review-edits ./travel-test
+docker compose run --rm video-agent build-timeline ./travel-test
 ```
 
 You can pass any supported CLI arguments after `video-agent`:
@@ -52,7 +55,7 @@ docker compose run --rm video-agent --help
 docker compose run --rm -e OLLAMA_MODEL=qwen2.5vl:7b video-agent understand ./travel-test
 ```
 
-The `analyze` command scans the folder and extracts media metadata using ffprobe. The `understand` command detects scenes, extracts representative frames, sends each frame to the local Ollama model, and writes `.video-agent/understanding.json`. The `transcribe` command uses faster-whisper locally to recognize speech from video audio streams and writes `.video-agent/transcription.json`. The `detect-silence` command runs FFmpeg’s `silencedetect` filter and writes `.video-agent/silence-analysis.json`, correlating quiet intervals with transcript timestamps when available. The `propose-edits` command combines those review candidates with optional scene descriptions and writes a human-reviewable `.video-agent/edit-proposal.json`.
+The `analyze` command scans the folder and extracts media metadata using ffprobe. The `understand` command detects scenes, extracts representative frames, sends each frame to the local Ollama model, and writes `.video-agent/understanding.json`. The `transcribe` command uses faster-whisper locally to recognize speech from video audio streams and writes `.video-agent/transcription.json`. The `detect-silence` command runs FFmpeg’s `silencedetect` filter and writes `.video-agent/silence-analysis.json`, correlating quiet intervals with transcript timestamps when available. The `propose-edits` command combines those review candidates with optional scene descriptions and writes a human-reviewable `.video-agent/edit-proposal.json`. Use `review-edits` to approve/reject each item interactively, or pass repeated `--approve ITEM_ID` and `--reject ITEM_ID` options for scripted review. Skipped items remain pending. Once every item has an explicit decision, `build-timeline` writes `.video-agent/timeline.json` containing the ordered source intervals to retain. This validated timeline is an edit-decision artifact only; it does not render or modify media.
 
 Transcription defaults to the CPU-friendly `small` model with `int8` compute. The first run downloads Whisper model weights into `.video-agent/models/`; subsequent runs reuse the cache. Use `--model tiny` for a quicker smoke test or `--device cuda --compute-type float16` on a compatible NVIDIA setup. Videos without audio are recorded in the output with an empty segment list and are not sent to Whisper.
 
