@@ -52,9 +52,16 @@ def transcribe_folder(
     min_pause_duration: float = 1.0,
 ) -> ProjectTranscription:
     """Transcribe all videos locally and write only derived JSON at the CLI layer."""
+    if min_pause_duration < 0:
+        raise ValueError("min_pause_duration must be non-negative")
+
     root = folder.expanduser().resolve()
     analysis = analyze_folder(root)
-    transcriber = FasterWhisperTranscriber(model=model, language=language)
+    transcriber = (
+        FasterWhisperTranscriber(model=model, language=language)
+        if any(video.has_audio for video in analysis.videos)
+        else None
+    )
     transcripts: list[AudioTranscript] = []
     transcribed_count = 0
 
@@ -71,6 +78,8 @@ def transcribe_folder(
             )
             continue
 
+        if transcriber is None:
+            raise RuntimeError("Transcriber was not initialized for a video with audio.")
         key = hashlib.sha256(relative_path.encode("utf-8")).hexdigest()[:12]
         raw_segments, detected_language, language_probability = transcriber.transcribe(
             video_path, root / ".video-agent" / "audio-cache" / key
