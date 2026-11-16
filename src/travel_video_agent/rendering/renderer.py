@@ -128,14 +128,11 @@ def _build_ffmpeg_command(
             )
         else:
             filters.append(
-                f"anullsrc=r=48000:cl=stereo,atrim=duration={_seconds(duration)}"
-                f"[{audio_label}]"
+                f"anullsrc=r=48000:cl=stereo,atrim=duration={_seconds(duration)}[{audio_label}]"
             )
         concat_inputs.extend([f"[{video_label}]", f"[{audio_label}]"])
 
-    filters.append(
-        f"{''.join(concat_inputs)}concat=n={len(segments)}:v=1:a=1[outv][outa]"
-    )
+    filters.append(f"{''.join(concat_inputs)}concat=n={len(segments)}:v=1:a=1[outv][outa]")
     command.extend(
         [
             "-filter_complex",
@@ -184,8 +181,8 @@ def render_project(
         raise FileNotFoundError(f"Project folder does not exist: {root}")
 
     timeline_file = (
-        timeline_path or root / ".video-agent" / "timeline.json"
-    ).expanduser().resolve()
+        (timeline_path or root / ".video-agent" / "timeline.json").expanduser().resolve()
+    )
     if not timeline_file.is_file():
         raise FileNotFoundError(f"Missing {timeline_file}; run 'video-agent build-timeline' first.")
     timeline = ProjectTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
