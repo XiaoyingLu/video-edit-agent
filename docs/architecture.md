@@ -46,6 +46,14 @@ The vision model is accessed through an adapter so other local or hosted provide
 - FFmpeg trims each retained interval, resets timestamps, normalizes video dimensions/frame rate/pixel format and audio sample rate/channel layout, then concatenates the segments in timeline order. Sources without audio receive generated silence to keep the output stream layout consistent.
 - The renderer encodes H.264 video and AAC audio into a temporary MP4, probes the result for valid streams and expected duration, then atomically moves it to the destination. It refuses to overwrite an existing output unless `--overwrite` is explicitly passed. Failed renders clean up the temporary output; source media is never modified.
 
+## Timeline-aligned subtitles
+
+- The subtitles command reads the validated timeline and timestamped Whisper transcription; it does not run recognition again.
+- Source-time speech cues are intersected with retained timeline intervals and shifted into the final concatenated output timebase. Speech entirely inside removed intervals is omitted. A cue crossing a cut is split across the retained fragments.
+- The generated .video-agent/subtitles.srt is a sidecar artifact and does not modify source media.
+- render --burn-subtitles applies FFmpeg's libass-backed subtitles filter after segment concatenation, ensuring cue timestamps refer to the final output rather than individual source clips. Font size and vertical placement are configurable.
+- The Docker image installs DejaVu Sans for predictable default subtitle typography. Rendering without subtitles remains unchanged.
+
 ## Planned editing workflow
 
 ```text
@@ -56,7 +64,8 @@ Input folder + natural-language instruction
   -> deterministic plan validation
   -> dry-run timeline review
   -> validated retained-segment timeline
-  -> deterministic FFmpeg renderer
+  -> timeline-aligned SRT generation (optional)
+  -> deterministic FFmpeg renderer (optional subtitle burn-in)
   -> output validation and report
 ```
 
