@@ -101,6 +101,9 @@ def _build_ffmpeg_command(
     width: int,
     height: int,
     frame_rate: float,
+    subtitle_path: Path | None = None,
+    subtitle_font_size: int = 28,
+    subtitle_position: str = "bottom",
 ) -> list[str]:
     command = [ffmpeg, "-hide_banner", "-nostdin", "-y"]
     for source_index, _, _ in sources:
@@ -112,13 +115,14 @@ def _build_ffmpeg_command(
         duration = end - start
         video_label = f"v{index}"
         audio_label = f"a{index}"
-        filters.append(
+        video_filter = (
             f"[{input_index}:v:0]trim=start={_seconds(start)}:end={_seconds(end)},"
             f"setpts=PTS-STARTPTS,"
             f"scale=w={width}:h={height}:force_original_aspect_ratio=decrease,"
             f"pad=width={width}:height={height}:x=(ow-iw)/2:y=(oh-ih)/2,"
             f"setsar=1,fps={_seconds(frame_rate)},format=yuv420p[{video_label}]"
         )
+        filters.append(video_filter)
         if has_audio:
             filters.append(
                 f"[{input_index}:a:0]atrim=start={_seconds(start)}:end={_seconds(end)},"
@@ -133,12 +137,34 @@ def _build_ffmpeg_command(
         concat_inputs.extend([f"[{video_label}]", f"[{audio_label}]"])
 
     filters.append(f"{''.join(concat_inputs)}concat=n={len(segments)}:v=1:a=1[outv][outa]")
+    video_output = "[outv]"
+    if subtitle_path is not None:
+        escaped_path = (
+            str(subtitle_path.resolve())
+            .replace("\\", "\\\\")
+            .replace(":", "\\:")
+            .replace("'", "\\'")
+        )
+        alignment, margin = {
+            "bottom": (2, 48),
+            "center": (5, 0),
+            "top": (8, 48),
+        }[subtitle_position]
+        style = (
+            f"FontName=DejaVu Sans,FontSize={subtitle_font_size},"
+            f"PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,"
+            f"BorderStyle=1,Outline=2,Shadow=1,Alignment={alignment},MarginV={margin}"
+        )
+        filters.append(
+            f"[outv]subtitles=filename='{escaped_path}':force_style='{style}'[subtitled]"
+        )
+        video_output = "[subtitled]"
     command.extend(
         [
             "-filter_complex",
             ";".join(filters),
             "-map",
-            "[outv]",
+            video_output,
             "-map",
             "[outa]",
             "-c:v",
@@ -168,6 +194,9 @@ def render_project(
     *,
     overwrite: bool = False,
     timeout_seconds: float = 3600,
+    subtitle_path: Path | None = None,
+    subtitle_font_size: int = 28,
+    subtitle_position: str = "bottom",
 ) -> RenderReport:
     """Render the approved retained intervals into one MP4 and verify the result.
 
@@ -176,6 +205,10 @@ def render_project(
     """
     if timeout_seconds <= 0:
         raise ValueError("timeout_seconds must be greater than zero")
+    if not 12 <= subtitle_font_size <= 72:
+        raise ValueError("subtitle_font_size must be between 12 and 72")
+    if subtitle_position not in {"bottom", "center", "top"}:
+        raise ValueError("subtitle_position must be bottom, center, or top")
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise FileNotFoundError(f"Project folder does not exist: {root}")
@@ -194,6 +227,13 @@ def render_project(
     destination = (output_path or root / ".video-agent" / "rendered.mp4").expanduser().resolve()
     if destination.suffix.lower() != ".mp4":
         raise RenderError("render output must use the .mp4 extension")
+    subtitle_file = subtitle_path.expanduser().resolve() if subtitle_path else None
+    if subtitle_file is not None and not subtitle_file.is_file():
+        raise FileNotFoundError(
+            f"Subtitle file does not exist: {subtitle_file}; run 'video-agent subtitles' first."
+        )
+    if subtitle_file is not None and destination == subtitle_file:
+        raise RenderError("render output cannot overwrite the subtitle file")
     if destination == timeline_file:
         raise RenderError("render output cannot overwrite the timeline artifact")
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -257,6 +297,9 @@ def render_project(
             width,
             height,
             frame_rate,
+            subtitle_path=subtitle_file,
+            subtitle_font_size=subtitle_font_size,
+            subtitle_position=subtitle_position,
         )
         try:
             result = subprocess.run(

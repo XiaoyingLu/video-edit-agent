@@ -9,7 +9,8 @@ A local-first Python CLI for editing personal travel footage. Media stays on you
 - Local vision-model descriptions for each detected scene
 - Local speech transcription with timestamped segments and long-gap metadata
 - Human review of proposed cuts and validated retained-segment timeline
-- Natural-language editing, speech-aware pause removal, subtitles, highlights, and MP4 export (planned)
+- Timeline-aligned SRT subtitles and optional burned-in subtitles
+- Natural-language editing, speech-aware pause removal, highlights, and richer edit planning (planned)
 
 ## Requirements
 
@@ -47,7 +48,8 @@ docker compose run --rm video-agent detect-silence ./travel-test --noise-db -35 
 docker compose run --rm video-agent propose-edits ./travel-test
 docker compose run --rm -it video-agent review-edits ./travel-test
 docker compose run --rm video-agent build-timeline ./travel-test
-docker compose run --rm video-agent render ./travel-test
+docker compose run --rm video-agent subtitles ./travel-test
+docker compose run --rm video-agent render ./travel-test --burn-subtitles --subtitle-font-size 28 --subtitle-position bottom
 ```
 
 You can pass any supported CLI arguments after `video-agent`:
@@ -57,7 +59,7 @@ docker compose run --rm video-agent --help
 docker compose run --rm -e OLLAMA_MODEL=qwen2.5vl:7b video-agent understand ./travel-test
 ```
 
-The `analyze` command scans the folder and extracts media metadata using ffprobe. The `understand` command detects scenes, extracts representative frames, sends each frame to the local Ollama model, and writes `.video-agent/understanding.json`. The `transcribe` command uses faster-whisper locally to recognize speech from video audio streams and writes `.video-agent/transcription.json`. The `detect-silence` command runs FFmpeg’s `silencedetect` filter and writes `.video-agent/silence-analysis.json`, correlating quiet intervals with transcript timestamps when available. The `propose-edits` command combines those review candidates with optional scene descriptions and writes a human-reviewable `.video-agent/edit-proposal.json`. Use `review-edits` to approve/reject each item interactively, or pass repeated `--approve ITEM_ID` and `--reject ITEM_ID` options for scripted review. Skipped items remain pending. Once every item has an explicit decision, `build-timeline` writes `.video-agent/timeline.json` containing the ordered source intervals to retain. This validated timeline is an edit-decision artifact only. After every cut has been reviewed, `render` uses FFmpeg to create `.video-agent/rendered.mp4` as an H.264/AAC MP4. The renderer checks the timeline and source files, keeps all source media untouched, refuses to overwrite an existing output unless `--overwrite` is supplied, and probes the finished MP4 before reporting success. Clips with no audio receive generated silence so all segments can be concatenated consistently.
+The `analyze` command scans the folder and extracts media metadata using ffprobe. The `understand` command detects scenes, extracts representative frames, sends each frame to the local Ollama model, and writes `.video-agent/understanding.json`. The `transcribe` command uses faster-whisper locally to recognize speech from video audio streams and writes `.video-agent/transcription.json`. The `detect-silence` command runs FFmpeg’s `silencedetect` filter and writes `.video-agent/silence-analysis.json`, correlating quiet intervals with transcript timestamps when available. The `propose-edits` command combines those review candidates with optional scene descriptions and writes a human-reviewable `.video-agent/edit-proposal.json`. Use `review-edits` to approve/reject each item interactively, or pass repeated `--approve ITEM_ID` and `--reject ITEM_ID` options for scripted review. Skipped items remain pending. Once every item has an explicit decision, `build-timeline` writes `.video-agent/timeline.json` containing the ordered source intervals to retain. This validated timeline is an edit-decision artifact only. After every cut has been reviewed, `render` uses FFmpeg to create `.video-agent/rendered.mp4` as an H.264/AAC MP4. The renderer checks the timeline and source files, keeps all source media untouched, refuses to overwrite an existing output unless `--overwrite` is supplied, and probes the finished MP4 before reporting success. Clips with no audio receive generated silence so all segments can be concatenated consistently. The subtitles command reads the Whisper transcription and validated timeline, remaps speech captions through removed intervals and concatenated clips, and writes .video-agent/subtitles.srt. Render with --burn-subtitles to burn the SRT into the final output after concatenation; use --subtitle-font-size (12–72) and --subtitle-position (bottom, center, top) to adjust its appearance, or pass --subtitle-file for a custom SRT.
 
 Transcription defaults to the CPU-friendly `small` model with `int8` compute. The first run downloads Whisper model weights into `.video-agent/models/`; subsequent runs reuse the cache. Use `--model tiny` for a quicker smoke test or `--device cuda --compute-type float16` on a compatible NVIDIA setup. Videos without audio are recorded in the output with an empty segment list and are not sent to Whisper.
 
@@ -72,6 +74,7 @@ travel-test/
     ├── silence-analysis.json
     ├── edit-proposal.json
     ├── timeline.json
+    ├── subtitles.srt
     ├── rendered.mp4
     ├── models/
     └── frames/
@@ -130,3 +133,4 @@ ruff format --check .
 3. Motion understanding, highlight ranking, and quality assessment
 4. Validated edit-plan generation and dry-run review
 5. Deterministic FFmpeg rendering and output validation (implemented)
+6. Timeline-aligned SRT generation and optional burned-in subtitles (implemented)

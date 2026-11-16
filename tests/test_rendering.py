@@ -115,6 +115,24 @@ def test_render_project_creates_verified_mp4_without_changing_source(
     assert "-c:v" in ffmpeg_command and "libx264" in ffmpeg_command
 
 
+def test_render_project_burns_subtitles_after_concatenating_timeline(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _write_timeline(tmp_path)
+    commands = _fake_tools(monkeypatch)
+    subtitle_file = tmp_path / ".video-agent" / "subtitles.srt"
+    subtitle_file.write_text("1\\n00:00:01,000 --> 00:00:02,000\\nHello\\n", encoding="utf-8")
+
+    render_project(tmp_path, subtitle_path=subtitle_file, subtitle_font_size=32)
+
+    ffmpeg_command = next(command for command in commands if command[0].endswith("ffmpeg"))
+    filter_graph = ffmpeg_command[ffmpeg_command.index("-filter_complex") + 1]
+    assert "concat=n=2:v=1:a=1[outv][outa];[outv]subtitles=" in filter_graph
+    assert "FontSize=32" in filter_graph
+    assert "-map" in ffmpeg_command
+    assert ffmpeg_command[ffmpeg_command.index("-map") + 1] == "[subtitled]"
+
+
 def test_render_project_generates_silence_for_source_without_audio(
     tmp_path: Path, monkeypatch
 ) -> None:

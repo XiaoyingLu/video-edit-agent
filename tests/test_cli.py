@@ -102,6 +102,7 @@ def test_cli_help_is_available() -> None:
     assert "understand" in result.output
     assert "transcribe" in result.output
     assert "detect-silence" in result.output
+    assert "subtitles" in result.output
 
 
 def test_propose_edits_command_writes_review_only_json(tmp_path: Path, monkeypatch) -> None:
@@ -146,6 +147,18 @@ def test_propose_edits_command_writes_review_only_json(tmp_path: Path, monkeypat
     assert saved["rendering_performed"] is False
 
 
+def test_subtitles_command_writes_srt_path(tmp_path: Path, monkeypatch) -> None:
+    from travel_video_agent import cli
+
+    destination = tmp_path / "custom" / "captions.srt"
+    monkeypatch.setattr(cli, "generate_subtitles", lambda *args, **kwargs: (destination, 7))
+    result = runner.invoke(app, ["subtitles", str(tmp_path), "--output", str(destination)])
+
+    assert result.exit_code == 0, result.output
+    assert "7 cue(s)" in result.output
+    assert str(destination) in result.output
+
+
 def test_cli_help_includes_propose_edits() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
@@ -153,6 +166,7 @@ def test_cli_help_includes_propose_edits() -> None:
     assert "review-edits" in result.output
     assert "build-timeline" in result.output
     assert "render" in result.output
+    assert "subtitles" in result.output
 
 
 def test_review_and_build_timeline_commands(tmp_path: Path) -> None:
