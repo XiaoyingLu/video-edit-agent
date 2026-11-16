@@ -55,7 +55,15 @@ def _timeline(root: Path, *, approved: bool = True) -> ProjectDraftTimeline:
         proposed_clip_count=2,
         clips=clips if approved else [
             clips[0],
-            _clip("two", 2, 5, 8, decision="pending", transition="crossfade", transition_duration=0.5),
+            _clip(
+                "two",
+                2,
+                5,
+                8,
+                decision="pending",
+                transition="crossfade",
+                transition_duration=0.5,
+            ),
         ],
         timeline_approved=approved,
     )
@@ -136,7 +144,10 @@ def test_render_rejects_path_traversal_before_invoking_ffmpeg(tmp_path, monkeypa
     (artifact / "optimized-timeline.json").write_text(
         timeline.model_dump_json(), encoding="utf-8"
     )
-    monkeypatch.setattr("travel_video_agent.rendering.shot_renderer.shutil.which", lambda _: "ffmpeg")
+    monkeypatch.setattr(
+        "travel_video_agent.rendering.shot_renderer.shutil.which",
+        lambda _: "ffmpeg",
+    )
 
     with pytest.raises(RenderError, match="escapes the project folder"):
         render_approved_shot_timeline(tmp_path)
@@ -187,8 +198,24 @@ def test_cli_help_includes_render_draft():
 def test_approved_duration_does_not_apply_transition_across_rejected_shot(tmp_path):
     clips = [
         _clip("first", 1, 0, 3, decision="approved"),
-        _clip("middle", 2, 4, 7, decision="rejected", transition="crossfade", transition_duration=0.5),
-        _clip("last", 3, 8, 11, decision="approved", transition="crossfade", transition_duration=0.5),
+        _clip(
+            "middle",
+            2,
+            4,
+            7,
+            decision="rejected",
+            transition="crossfade",
+            transition_duration=0.5,
+        ),
+        _clip(
+            "last",
+            3,
+            8,
+            11,
+            decision="approved",
+            transition="crossfade",
+            transition_duration=0.5,
+        ),
     ]
     timeline = ProjectDraftTimeline(
         project_path=str(tmp_path.resolve()),
