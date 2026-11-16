@@ -68,9 +68,7 @@ def _parse_observation(content: Any, frame_path: Path) -> dict[str, Any]:
         raise VisionModelError(
             f"The vision model response for {frame_path} must contain an objects string array."
         )
-    if not isinstance(activities, list) or not all(
-        isinstance(item, str) for item in activities
-    ):
+    if not isinstance(activities, list) or not all(isinstance(item, str) for item in activities):
         raise VisionModelError(
             f"The vision model response for {frame_path} must contain an activities string array."
         )

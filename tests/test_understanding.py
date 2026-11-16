@@ -129,9 +129,7 @@ def test_ollama_analyzer_requests_json_schema(monkeypatch, tmp_path: Path) -> No
         captured["payload"] = json.loads(request.data.decode("utf-8"))
         return FakeResponse()
 
-    monkeypatch.setattr(
-        "travel_video_agent.understanding.visual_analyzer.urlopen", fake_urlopen
-    )
+    monkeypatch.setattr("travel_video_agent.understanding.visual_analyzer.urlopen", fake_urlopen)
     result = OllamaVisionAnalyzer(model="qwen2.5vl:3b").analyze_frame(frame)
 
     assert result["description"] == "A lake beneath mountains."
@@ -157,10 +155,10 @@ def test_ollama_analyzer_accepts_markdown_wrapped_json(monkeypatch, tmp_path: Pa
 
         def read(self):
             content = (
-                "```json\\n"
+                "```json\n"
                 '{"description":"A coastal road.","objects":["road"],'
                 '"activities":["driving"],"confidence":0.8}'
-                "\\n```"
+                "\n```"
             )
             return json.dumps({"message": {"content": content}}).encode()
 
