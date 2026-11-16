@@ -12,6 +12,7 @@ from rich.table import Table
 from .editing import (
     IntentParsingError,
     apply_review_decisions,
+    build_draft_selection,
     build_edit_proposal,
     build_project_timeline,
     load_edit_proposal,
@@ -815,8 +816,6 @@ def draft_edit(
     ] = None,
 ) -> None:
     """Select and rank footage using the editing plan and existing analysis artifacts."""
-    from .editing import build_draft_selection
-
     try:
         draft = build_draft_selection(folder, plan_path=plan)
     except (FileNotFoundError, ValueError) as exc:
