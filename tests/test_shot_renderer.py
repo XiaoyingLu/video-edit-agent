@@ -51,7 +51,7 @@ def _timeline(root: Path, *, approved: bool = True) -> ProjectDraftTimeline:
         pacing="moderate",
         target_duration_seconds=10,
         proposed_duration_seconds=5.5,
-        approved_duration_seconds=5.5 if approved else 0,
+        approved_duration_seconds=5.5 if approved else 3,
         proposed_clip_count=2,
         clips=clips if approved else [
             clips[0],
@@ -181,3 +181,24 @@ def test_cli_help_includes_render_draft():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "render-draft" in result.output
+
+
+
+def test_approved_duration_does_not_apply_transition_across_rejected_shot(tmp_path):
+    clips = [
+        _clip("first", 1, 0, 3, decision="approved"),
+        _clip("middle", 2, 4, 7, decision="rejected", transition="crossfade", transition_duration=0.5),
+        _clip("last", 3, 8, 11, decision="approved", transition="crossfade", transition_duration=0.5),
+    ]
+    timeline = ProjectDraftTimeline(
+        project_path=str(tmp_path.resolve()),
+        style="cinematic",
+        pacing="moderate",
+        target_duration_seconds=10,
+        proposed_duration_seconds=8,
+        approved_duration_seconds=6,
+        proposed_clip_count=3,
+        clips=clips,
+        timeline_approved=True,
+    )
+    assert timeline.approved_duration_seconds == 6
