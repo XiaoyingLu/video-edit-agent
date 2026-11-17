@@ -118,3 +118,17 @@ def test_intent_parser_unloads_model(monkeypatch) -> None:
     assert parser.unload_model() is True
     assert captured["url"].endswith("/api/generate")
     assert captured["payload"] == {"model": "qwen2.5vl:3b", "keep_alive": 0}
+
+
+
+def test_intent_memory_preflight_rejects_before_parser_can_run(monkeypatch) -> None:
+    from travel_video_agent.resource_manager import ResourceError
+
+    def reject(required_gb, task):
+        raise ResourceError("Not enough available memory")
+
+    monkeypatch.setattr(
+        "travel_video_agent.editing.intent.ensure_memory_available", reject
+    )
+    with pytest.raises(IntentParsingError, match="Not enough available memory"):
+        OllamaIntentParser(model="qwen2.5vl:7b")
