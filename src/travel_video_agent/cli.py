@@ -825,8 +825,9 @@ def create_motion_project(
         f"Composition: {report.width}x{report.height}, {report.duration_seconds:.2f}s, "
         f"{'with audio' if report.has_audio else 'silent video'}"
     )
-    console.print("Preview and render from the generated project directory:")
+    console.print("Lint, preview, and render from the generated project directory:")
     console.print(f"  cd {report.project_directory}")
+    console.print("  npx hyperframes lint")
     console.print("  npx hyperframes preview")
     console.print("  npx hyperframes render --output final-motion-graphics.mp4")
     console.print(
