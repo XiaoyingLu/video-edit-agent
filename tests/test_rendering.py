@@ -56,7 +56,8 @@ def _fake_tools(monkeypatch, *, output_duration: float = 8, has_audio: bool = Tr
     def fake_run(command, **kwargs):
         commands.append(command)
         if command[0].endswith("ffmpeg"):
-            Path(command[-1]).write_bytes(b"rendered-mp4")
+            if command[-1] != "-":
+                Path(command[-1]).write_bytes(b"rendered-mp4")
             return subprocess.CompletedProcess(command, 0, "", "")
         inspected = Path(command[-1])
         if inspected.name == "clip.mp4":
@@ -113,6 +114,23 @@ def test_render_project_creates_verified_mp4_without_changing_source(
     assert "concat=n=2:v=1:a=1" in filter_graph
     assert "pad=width=640:height=360:x=(ow-iw)/2:y=(oh-ih)/2" in filter_graph
     assert "-c:v" in ffmpeg_command and "libx264" in ffmpeg_command
+
+
+def test_render_project_dry_run_validates_graph_without_creating_output(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _write_timeline(tmp_path)
+    commands = _fake_tools(monkeypatch)
+
+    report = render_project(tmp_path, dry_run=True)
+
+    output = tmp_path / ".video-agent" / "rendered.mp4"
+    assert report is None
+    assert not output.exists()
+    validation_command = next(command for command in commands if command[0].endswith("ffmpeg"))
+    assert validation_command[-5:] == ["-t", "0.5", "-f", "null", "-"]
+    assert "-filter_complex" in validation_command
+    assert "-c:v" not in validation_command
 
 
 def test_render_project_burns_subtitles_after_concatenating_timeline(
