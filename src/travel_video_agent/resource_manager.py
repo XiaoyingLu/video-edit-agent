@@ -111,7 +111,7 @@ def required_whisper_memory_gb(model: str) -> float:
             value = float(override)
         except ValueError as exc:
             raise ResourceError("WHISPER_MIN_MEMORY_GB must be a positive number.") from exc
-        if value <= 0:
+        if not math.isfinite(value) or value <= 0:
             raise ResourceError("WHISPER_MIN_MEMORY_GB must be a positive number.")
         return value
     return _WHISPER_MEMORY_GB.get(model.lower(), 4.0)
@@ -125,7 +125,7 @@ def required_whisper_vram_gb(model: str) -> float:
             value = float(override)
         except ValueError as exc:
             raise ResourceError("WHISPER_MIN_VRAM_GB must be a positive number.") from exc
-        if value <= 0:
+        if not math.isfinite(value) or value <= 0:
             raise ResourceError("WHISPER_MIN_VRAM_GB must be a positive number.")
         return value
     return _WHISPER_VRAM_GB.get(model.lower(), 4.0)
