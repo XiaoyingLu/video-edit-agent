@@ -48,9 +48,7 @@ def test_filter_graph_preflight_surfaces_ffmpeg_diagnostics(monkeypatch):
     def fake_run(command, **kwargs):
         return subprocess.CompletedProcess(command, 1, stdout="", stderr="Invalid filter graph")
 
-    monkeypatch.setattr(
-        "travel_video_agent.rendering.renderer.subprocess.run", fake_run
-    )
+    monkeypatch.setattr("travel_video_agent.rendering.renderer.subprocess.run", fake_run)
     command = [
         "ffmpeg",
         "-filter_complex",
