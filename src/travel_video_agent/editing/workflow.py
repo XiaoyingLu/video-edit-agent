@@ -1,6 +1,7 @@
 """End-to-end natural-language video creation workflow."""
 
 import json
+import os
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact
@@ -50,17 +51,18 @@ def create_video_draft(
     artifact_dir = root / ".video-agent"
     artifact_dir.mkdir(parents=True, exist_ok=True)
 
-    plan = parse_editing_intent(prompt, model=vision_model)
+    resolved_vision_model = vision_model or os.getenv("OLLAMA_MODEL", "qwen2.5vl:3b")
+    plan = parse_editing_intent(prompt, model=resolved_vision_model)
     _save_artifact(
         root,
         "editing-plan.json",
         plan,
-        config={"prompt": prompt, "model": vision_model},
+        config={"prompt": prompt, "model": resolved_vision_model},
     )
 
     understanding = understand_folder(
         root,
-        **({"model": vision_model} if vision_model else {}),
+        model=resolved_vision_model,
         samples_per_scene=samples_per_scene,
     )
     _save_artifact(
@@ -68,7 +70,7 @@ def create_video_draft(
         "understanding.json",
         understanding,
         config={
-            "model": getattr(understanding, "model", vision_model),
+            "model": getattr(understanding, "model", resolved_vision_model),
             "samples_per_scene": samples_per_scene,
         },
     )
