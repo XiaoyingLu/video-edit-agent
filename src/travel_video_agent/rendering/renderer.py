@@ -95,6 +95,29 @@ def _validate_filter_graph(command: list[str], timeout: float = 120) -> None:
         raise RenderError(f"FFmpeg filter-graph preflight failed: {detail}")
 
 
+
+def _validate_source_stream_metadata(payload: dict[str, Any], path: Path) -> None:
+    """Reject unusable video dimensions or malformed audio stream metadata."""
+    streams = payload.get("streams", [])
+    video_streams = [item for item in streams if item.get("codec_type") == "video"]
+    if not video_streams:
+        raise RenderError(f"Timeline source has no video stream: {path}")
+    for stream in video_streams:
+        width = int(stream.get("width") or 0)
+        height = int(stream.get("height") or 0)
+        if width < 2 or height < 2:
+            raise RenderError(f"Timeline source has invalid video dimensions: {path}")
+    for stream in streams:
+        if stream.get("codec_type") != "audio":
+            continue
+        sample_rate = stream.get("sample_rate")
+        channels = stream.get("channels")
+        if sample_rate is not None and int(sample_rate) <= 0:
+            raise RenderError(f"Timeline source has an invalid audio sample rate: {path}")
+        if channels is not None and int(channels) <= 0:
+            raise RenderError(f"Timeline source has an invalid audio channel count: {path}")
+
+
 def _probe_source(
     ffprobe: str, root: Path, video: VideoTimeline
 ) -> tuple[Path, dict[str, Any], float]:
@@ -114,6 +137,7 @@ def _probe_source(
     video_stream = next((item for item in streams if item.get("codec_type") == "video"), None)
     if video_stream is None:
         raise RenderError(f"Timeline source has no video stream: {source}")
+    _validate_source_stream_metadata(payload, source)
     duration = float(payload.get("format", {}).get("duration") or 0)
     if duration <= 0:
         raise RenderError(f"Timeline source has an invalid duration: {source}")
