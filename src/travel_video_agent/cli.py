@@ -688,6 +688,13 @@ def render(
         str,
         typer.Option("--subtitle-position", help="Subtitle position: bottom, center, or top."),
     ] = "bottom",
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run",
+            help="Probe inputs and validate the FFmpeg filter graph without writing an MP4.",
+        ),
+    ] = False,
 ) -> None:
     """Render the human-approved timeline to a verified H.264/AAC MP4."""
     try:
@@ -704,10 +711,16 @@ def render(
             ),
             subtitle_font_size=subtitle_font_size,
             subtitle_position=subtitle_position,
+            dry_run=dry_run,
         )
     except (FileNotFoundError, FileExistsError, ValueError, RenderError) as exc:
         console.print(f"[red]Render failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
+
+    if dry_run:
+        console.print("[bold green]FFmpeg filter-graph preflight passed.[/bold green]")
+        console.print("Inputs and stream metadata were probed; no MP4 was written.")
+        return
 
     console.print("[bold green]Render completed and verified.[/bold green]")
     console.print(f"Output: [green]{report.output_path}[/green]")
@@ -759,6 +772,13 @@ def render_draft(
         float,
         typer.Option("--timeout", min=1, help="Maximum render time in seconds."),
     ] = 3600,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run",
+            help="Probe inputs and validate the FFmpeg transition graph without writing an MP4.",
+        ),
+    ] = False,
 ) -> None:
     """Render the fully approved shot timeline with its proposed transitions."""
     try:
@@ -768,10 +788,16 @@ def render_draft(
             output_path=output,
             overwrite=overwrite,
             timeout_seconds=timeout_seconds,
+            dry_run=dry_run,
         )
     except (FileNotFoundError, FileExistsError, ValueError, RenderError) as exc:
         console.print(f"[red]Draft render failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
+
+    if dry_run:
+        console.print("[bold green]FFmpeg transition-graph preflight passed.[/bold green]")
+        console.print("Inputs and stream metadata were probed; no MP4 was written.")
+        return
 
     console.print("[bold green]Approved shot timeline rendered and verified.[/bold green]")
     console.print(f"Output: [green]{report.output_path}[/green]")

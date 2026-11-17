@@ -7,7 +7,14 @@ from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
 from ..editing.timeline_schemas import ProjectDraftTimeline
-from .renderer import RenderError, RenderReport, _run_probe, _seconds
+from .renderer import (
+    RenderError,
+    RenderReport,
+    _run_probe,
+    _seconds,
+    _validate_filter_graph,
+    _validate_source_stream_metadata,
+)
 
 
 def _safe_source(root: Path, relative_path: str) -> Path:
@@ -137,7 +144,8 @@ def render_approved_shot_timeline(
     *,
     overwrite: bool = False,
     timeout_seconds: float = 3600,
-) -> RenderReport:
+    dry_run: bool = False,
+) -> RenderReport | None:
     """Render only approved shots after every proposed shot has a decision."""
     if timeout_seconds <= 0:
         raise ValueError("timeout_seconds must be greater than zero")
@@ -175,8 +183,9 @@ def render_approved_shot_timeline(
         raise RenderError("render output must use the .mp4 extension")
     if destination in {timeline_file, root / ".video-agent" / "optimized-timeline.json"}:
         raise RenderError("render output cannot overwrite the optimized timeline")
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    if destination.exists() and not overwrite:
+    if not dry_run:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+    if destination.exists() and not overwrite and not dry_run:
         raise FileExistsError(
             f"Render output already exists: {destination}; pass --overwrite to replace it."
         )
@@ -201,6 +210,7 @@ def render_approved_shot_timeline(
             )
             if video_stream is None:
                 raise RenderError(f"Timeline source has no video stream: {source}")
+            _validate_source_stream_metadata(payload, source)
             duration = float(payload.get("format", {}).get("duration") or 0)
             if duration <= 0:
                 raise RenderError(f"Timeline source has an invalid duration: {source}")
@@ -253,13 +263,18 @@ def render_approved_shot_timeline(
     )
     if expected_duration <= 0:
         raise RenderError("approved shot sequence has no positive output duration")
-    temporary_file = tempfile.NamedTemporaryFile(
-        prefix=".video-agent-shot-render-", suffix=".mp4", dir=destination.parent, delete=False
-    )
-    temporary_path = Path(temporary_file.name)
-    temporary_file.close()
+    temporary_path = destination
+    if not dry_run:
+        temporary_file = tempfile.NamedTemporaryFile(
+            prefix=".video-agent-shot-render-", suffix=".mp4", dir=destination.parent, delete=False
+        )
+        temporary_path = Path(temporary_file.name)
+        temporary_file.close()
     try:
         command = _build_shot_render_command(ffmpeg, clip_inputs, temporary_path, width, height)
+        if dry_run:
+            _validate_filter_graph(command, timeout=min(timeout_seconds, 120))
+            return None
         try:
             result = subprocess.run(
                 command,
@@ -297,7 +312,8 @@ def render_approved_shot_timeline(
             )
         temporary_path.replace(destination)
     except Exception:
-        temporary_path.unlink(missing_ok=True)
+        if not dry_run:
+            temporary_path.unlink(missing_ok=True)
         raise
 
     register_artifact(root, destination, dependencies=[timeline_file], verify_content=False)

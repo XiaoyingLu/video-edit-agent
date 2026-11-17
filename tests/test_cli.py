@@ -320,6 +320,24 @@ def test_render_command_reports_verified_output(tmp_path: Path, monkeypatch) -> 
     assert captured["timeout_seconds"] == 120
 
 
+def test_render_command_dry_run_reports_preflight(tmp_path: Path, monkeypatch) -> None:
+    from travel_video_agent import cli
+
+    captured = {}
+
+    def fake_render(folder, **kwargs):
+        captured.update(kwargs)
+        return None
+
+    monkeypatch.setattr(cli, "render_project", fake_render)
+    result = runner.invoke(app, ["render", str(tmp_path), "--dry-run"])
+
+    assert result.exit_code == 0, result.output
+    assert captured["dry_run"] is True
+    assert "filter-graph preflight passed" in result.output
+    assert "no MP4 was written" in result.output
+
+
 def test_plan_command_writes_validated_editing_plan(tmp_path: Path, monkeypatch) -> None:
     from travel_video_agent import cli
     from travel_video_agent.editing.intent_schemas import EditingPlan
