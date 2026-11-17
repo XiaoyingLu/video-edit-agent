@@ -4,6 +4,9 @@ from pathlib import Path
 
 import pytest
 
+from typer.testing import CliRunner
+
+from travel_video_agent.cli import app
 from travel_video_agent.editing.timeline_schemas import ProjectDraftTimeline
 from travel_video_agent.motion_graphics.pipeline import (
     MotionGraphicsError,
@@ -125,3 +128,30 @@ def test_existing_project_requires_overwrite(tmp_path, monkeypatch):
     create_hyperframes_project(tmp_path, title="A Journey")
     with pytest.raises(FileExistsError, match="--overwrite"):
         create_hyperframes_project(tmp_path, title="A Journey")
+
+
+
+def test_create_motion_project_cli_invokes_generator(tmp_path, monkeypatch):
+    from travel_video_agent import cli
+
+    expected = {
+        "project_directory": str(tmp_path / ".video-agent" / "hyperframes-project"),
+        "composition_path": str(tmp_path / ".video-agent" / "hyperframes-project" / "index.html"),
+        "media_path": str(tmp_path / ".video-agent" / "hyperframes-project" / "assets" / "rendered-draft.mp4"),
+        "duration_seconds": 5.0,
+        "width": 1920,
+        "height": 1080,
+        "has_audio": True,
+        "title": "A Journey",
+        "location": "Nova Scotia",
+    }
+    monkeypatch.setattr(cli, "create_hyperframes_project", lambda *args, **kwargs: type(
+        "Report", (), expected
+    )())
+    result = CliRunner().invoke(
+        app,
+        ["create-motion-project", str(tmp_path), "--title", "A Journey", "--location", "Nova Scotia"],
+    )
+    assert result.exit_code == 0
+    assert "HyperFrames project generated" in result.stdout
+    assert "npx hyperframes preview" in result.stdout
