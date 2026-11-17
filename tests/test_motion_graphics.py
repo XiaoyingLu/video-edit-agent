@@ -93,12 +93,16 @@ def test_generates_hyperframes_project_from_approved_draft(tmp_path, monkeypatch
     project = Path(report.project_directory)
     assert (project / "index.html").is_file()
     assert (project / "meta.json").is_file()
-    assert (project / "assets" / "rendered-draft.mp4").is_file()
+    copied_media = project / "assets" / "rendered-draft.mp4"
+    assert copied_media.is_file()
+    assert copied_media.read_bytes() == video.read_bytes()
+    assert copied_media.stat().st_ino != video.stat().st_ino
     assert report.width == 1920 and report.height == 1080
     assert report.duration_seconds == 5
     assert report.has_audio is True
     assert "Nova Scotia" in (project / "index.html").read_text()
     from travel_video_agent.artifact_tracking import validate_artifact
+
     assert validate_artifact(tmp_path, project / "index.html")
     assert timeline.is_file()
 
