@@ -51,7 +51,7 @@ def create_video_draft(
     artifact_dir.mkdir(parents=True, exist_ok=True)
 
     plan = parse_editing_intent(prompt, model=vision_model)
-    plan_path = _save_artifact(
+    _save_artifact(
         root,
         "editing-plan.json",
         plan,
@@ -63,7 +63,7 @@ def create_video_draft(
         **({"model": vision_model} if vision_model else {}),
         samples_per_scene=samples_per_scene,
     )
-    understanding_path = _save_artifact(
+    _save_artifact(
         root,
         "understanding.json",
         understanding,
@@ -71,7 +71,7 @@ def create_video_draft(
     )
 
     transcription = transcribe_folder(root, model=whisper_model)
-    transcription_path = _save_artifact(
+    _save_artifact(
         root,
         "transcription.json",
         transcription,
@@ -79,7 +79,7 @@ def create_video_draft(
     )
 
     highlights = find_highlights_folder(root, samples_per_scene=samples_per_scene)
-    highlights_path = _save_artifact(
+    _save_artifact(
         root,
         "highlights.json",
         highlights,
@@ -92,7 +92,7 @@ def create_video_draft(
         )
 
     selection = build_draft_selection(root)
-    selection_path = _save_artifact(
+    _save_artifact(
         root,
         "draft-selection.json",
         selection,
