@@ -2,6 +2,7 @@
 
 import hashlib
 from pathlib import Path
+import warnings
 
 from ..media import analyze_folder, discover_videos
 from .frame_sampler import extract_representative_frames
@@ -68,4 +69,9 @@ def understand_folder(
             model=model,
         )
     finally:
-        analyzer.unload_model()
+        if not analyzer.unload_model():
+            warnings.warn(
+                f"Could not unload Ollama model '{model}'; it may remain resident in memory.",
+                ResourceWarning,
+                stacklevel=2,
+            )
