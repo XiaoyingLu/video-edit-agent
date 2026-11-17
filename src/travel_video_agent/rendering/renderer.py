@@ -60,7 +60,6 @@ def _run_probe(executable: str, path: Path, timeout: float = 60) -> dict[str, An
         raise RenderError(f"ffprobe returned invalid JSON for {path}") from exc
 
 
-
 def _validate_filter_graph(command: list[str], timeout: float = 120) -> None:
     """Run the exact filter graph briefly to catch parser and stream-negotiation errors."""
     try:
@@ -93,7 +92,6 @@ def _validate_filter_graph(command: list[str], timeout: float = 120) -> None:
     if result.returncode != 0:
         detail = result.stderr.strip()[-4000:] or "unknown FFmpeg filter-graph error"
         raise RenderError(f"FFmpeg filter-graph preflight failed: {detail}")
-
 
 
 def _validate_source_stream_metadata(payload: dict[str, Any], path: Path) -> None:
