@@ -12,6 +12,7 @@ A local-first Python CLI for editing personal travel footage. Media stays on you
 - Timeline-aligned SRT subtitles and optional burned-in subtitles
 - Explainable visual highlight candidate detection and ranking
 - Natural-language editing intent parsing into a validated, reviewable plan
+- Local soundtrack tempo, beat/downbeat, and energy-section analysis
 
 ## Cinematic scene understanding
 
@@ -24,6 +25,18 @@ These are model-assisted visual classifications, not ground truth. The prompt ex
 The `optimize-timeline` stage uses the scene metadata to build a deterministic visual arc for cinematic and social-media edits. When reliable labels are available, it prefers an establishing view near the opening, varies action/detail/reaction beats through the middle, alternates shot scales where possible, and favors a scenic-breath or establishing shot for the ending. If scene-role metadata is missing or uncertain, it preserves the existing score-ranked order. Vlog and documentary edits, or plans with the `chronological_story` priority, retain source chronology.
 
 Pacing recommendations are now role-aware: establishing and scenic-breath shots receive more room, while action and detail shots receive shorter targets. The timeline records each shot's editorial role, scale, sequence rationale, and recommended duration. These targets are advisory only: source intervals remain unchanged, and the reviewer decides whether to trim or extend footage. The ordering is deterministic and reviewable; it does not auto-approve shots or render media.
+
+## Music-aware editing
+
+Analyze an explicit soundtrack independently of the video clips:
+
+```bash
+docker compose run --rm video-agent analyze-music ./travel-test --music ./travel-test/music/travel-score.mp3
+```
+
+The command decodes audio locally with FFmpeg, computes a spectral-flux onset envelope, estimates tempo with FFT-based autocorrelation, builds a beat grid, and summarizes relative RMS energy in eight-second sections. It writes `.video-agent/music-analysis.json` with estimated BPM, beat and four-beat downbeat timestamps, energy sections, and candidate cut anchors. The soundtrack is recorded as a direct artifact dependency, so replacing the music invalidates the analysis.
+
+This is an advisory analysis stage, not automatic synchronization: beat estimates can be ambiguous for ambient, rubato, syncopated, or rhythmically sparse music. Four-beat downbeats are a practical default rather than inferred time-signature detection. Use beat anchors selectively and preserve natural shot duration; no clip is trimmed, approved, or rendered by this command.
 
 ## Requirements
 
@@ -105,6 +118,7 @@ travel-test/
     ├── highlights.json
     ├── draft-selection.json
     ├── optimized-timeline.json
+    ├── music-analysis.json
     ├── subtitles.srt
     ├── rendered.mp4
     ├── models/
@@ -228,3 +242,4 @@ Source files are never modified. File size and modification time provide a fast 
 8. Context-aware clip selection (implemented)
 9. Cinematic scene metadata, role-aware shot sequencing, adaptive pacing targets, transition proposals, and human review (implemented)
 10. Render approved shot timelines with FFmpeg transitions and output verification (implemented; Docker validation pending)
+11. Music-aware soundtrack tempo, beat/downbeat, and energy-section analysis (implemented as review guidance; automatic beat synchronization remains a future step)
