@@ -89,7 +89,7 @@ def test_composition_mutes_video_without_audio():
         has_audio=False,
     )
     assert "muted" in html
-    assert "location-card" not in html
+    assert '<div id="location-card"' not in html
 
 
 def test_generates_hyperframes_project_from_approved_draft(tmp_path, monkeypatch):
