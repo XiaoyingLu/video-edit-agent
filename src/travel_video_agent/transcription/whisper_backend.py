@@ -5,12 +5,12 @@ from pathlib import Path
 from typing import Any
 
 from ..resource_manager import (
+    ResourceError,
     ensure_gpu_memory_available,
     ensure_memory_available,
     required_whisper_memory_gb,
     required_whisper_vram_gb,
 )
-from typing import Any
 
 
 class TranscriptionError(RuntimeError):
@@ -27,13 +27,16 @@ class FasterWhisperTranscriber:
         compute_type: str = "int8",
         download_root: Path | None = None,
     ) -> None:
-        ensure_memory_available(
-            required_whisper_memory_gb(model), f"faster-whisper model '{model}'"
-        )
-        if device.lower() == "cuda":
-            ensure_gpu_memory_available(
-                required_whisper_vram_gb(model), f"faster-whisper model '{model}'"
+        try:
+            ensure_memory_available(
+                required_whisper_memory_gb(model), f"faster-whisper model '{model}'"
             )
+            if device.lower() == "cuda":
+                ensure_gpu_memory_available(
+                    required_whisper_vram_gb(model), f"faster-whisper model '{model}'"
+                )
+        except ResourceError as exc:
+            raise TranscriptionError(str(exc)) from exc
 
         try:
             from faster_whisper import WhisperModel
