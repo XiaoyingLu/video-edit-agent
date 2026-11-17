@@ -14,9 +14,9 @@ class CreativeBrief(BaseModel):
 
     source_prompt: str = Field(min_length=1, max_length=4000)
     intended_audience: str | None = Field(default=None, max_length=160)
-    platform: Literal[
-        "general", "youtube", "youtube_shorts", "instagram_reels", "tiktok"
-    ] = "general"
+    platform: Literal["general", "youtube", "youtube_shorts", "instagram_reels", "tiktok"] = (
+        "general"
+    )
     target_duration_seconds: float = Field(gt=0, le=3600)
     style: Literal["cinematic", "vlog", "documentary", "highlight_reel", "social_media"]
     aspect_ratio: Literal["16:9", "9:16", "1:1"]
@@ -61,8 +61,14 @@ class StoryboardShot(BaseModel):
         "extreme_wide", "wide", "medium", "close_up", "extreme_close_up", "aerial", "unknown"
     ] = "unknown"
     visual_role: Literal[
-        "establishing", "action", "detail", "reaction", "transition",
-        "portrait", "scenic_breath", "unknown"
+        "establishing",
+        "action",
+        "detail",
+        "reaction",
+        "transition",
+        "portrait",
+        "scenic_breath",
+        "unknown",
     ] = "unknown"
     target_duration_seconds: float = Field(gt=0, le=60)
     narration: str | None = Field(default=None, max_length=1000)
@@ -131,9 +137,7 @@ class VideoProjectPlan(BaseModel):
         scene_ids = [scene.scene_id for scene in self.scenes]
         if len(scene_ids) != len(set(scene_ids)):
             raise ValueError("scene IDs must be unique")
-        if [scene.sequence_index for scene in self.scenes] != list(
-            range(1, len(self.scenes) + 1)
-        ):
+        if [scene.sequence_index for scene in self.scenes] != list(range(1, len(self.scenes) + 1)):
             raise ValueError("scene sequence indices must be contiguous and ordered from 1")
         shot_ids = [shot.shot_id for scene in self.scenes for shot in scene.shots]
         if len(shot_ids) != len(set(shot_ids)):
@@ -144,9 +148,11 @@ class VideoProjectPlan(BaseModel):
             self.story_treatment is not None or self.scenes
         ):
             raise ValueError("brief_ready plans cannot contain story or storyboard content")
-        if self.planning_stage in {
-            "story_ready", "storyboard_ready", "footage_mapped", "production_ready"
-        } and self.story_treatment is None:
+        if (
+            self.planning_stage
+            in {"story_ready", "storyboard_ready", "footage_mapped", "production_ready"}
+            and self.story_treatment is None
+        ):
             raise ValueError("story stages require a story treatment")
         if self.planning_stage in {"storyboard_ready", "footage_mapped", "production_ready"}:
             if not self.scenes:
