@@ -30,6 +30,8 @@ def create_video_project_plan(
     editing_plan = parse_editing_intent(prompt, model=model)
     explicit_duration = explicit_duration_seconds(prompt)
     if explicit_duration is not None:
+        if explicit_duration > 3600:
+            raise ValueError("requested video duration cannot exceed 3600 seconds")
         editing_plan = editing_plan.model_copy(
             update={"target_duration_seconds": explicit_duration}
         )
