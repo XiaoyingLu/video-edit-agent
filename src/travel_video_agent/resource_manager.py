@@ -116,6 +116,20 @@ def required_whisper_memory_gb(model: str) -> float:
     return _WHISPER_MEMORY_GB.get(model.lower(), 4.0)
 
 
+def required_whisper_vram_gb(model: str) -> float:
+    """Estimate NVIDIA VRAM required for faster-whisper CUDA inference."""
+    override = os.getenv("WHISPER_MIN_VRAM_GB")
+    if override:
+        try:
+            value = float(override)
+        except ValueError as exc:
+            raise ResourceError("WHISPER_MIN_VRAM_GB must be a positive number.") from exc
+        if value <= 0:
+            raise ResourceError("WHISPER_MIN_VRAM_GB must be a positive number.")
+        return value
+    return _WHISPER_VRAM_GB.get(model.lower(), 4.0)
+
+
 def available_gpu_memory_gb() -> float | None:
     """Return free NVIDIA VRAM when nvidia-smi is available."""
     executable = shutil.which("nvidia-smi")
