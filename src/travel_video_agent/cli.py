@@ -759,8 +759,6 @@ def create_motion_project(
         str,
         typer.Option(
             "--title",
-            min_length=1,
-            max_length=120,
             help="Opening title displayed over the footage.",
         ),
     ],
@@ -768,7 +766,6 @@ def create_motion_project(
         str | None,
         typer.Option(
             "--location",
-            max_length=100,
             help="Optional location label shown as a lower third.",
         ),
     ] = None,
