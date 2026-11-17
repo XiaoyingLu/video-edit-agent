@@ -1107,12 +1107,14 @@ def create_plan(
     console.print(f"Target: {brief.target_duration_seconds:.1f}s | {brief.style}")
     console.print(f"Format: {brief.aspect_ratio} | {brief.resolution} | {brief.pacing} pacing")
     console.print(f"Creative priorities: {', '.join(brief.creative_priorities)}")
+    console.print(f"Working title: [bold]{project_plan.story_treatment.working_title}[/bold]")
+    shot_count = sum(len(scene.shots) for scene in project_plan.scenes)
+    console.print(f"Scenes: {len(project_plan.scenes)} | Storyboard shots: {shot_count}")
     console.print(f"Planning stage: [cyan]{project_plan.planning_stage}[/cyan]")
     console.print(f"Plan saved to [green]{destination}[/green]")
     console.print(
-        "[yellow]This creates the creative-brief foundation only. "
-        "It does not invent a storyboard, select footage, change a timeline, or render video."
-        "[/yellow]"
+        "[yellow]Storyboard shots are creative proposals only; no source footage was "
+        "assigned and no video was rendered.[/yellow]"
     )
 
 
