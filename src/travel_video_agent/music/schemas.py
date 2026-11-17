@@ -1,6 +1,6 @@
 """Validated soundtrack analysis artifacts."""
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -27,8 +27,8 @@ class MusicAnalysis(BaseModel):
     bpm: float | None = Field(default=None, ge=40, le=240)
     beat_confidence: float = Field(ge=0, le=1)
     beat_interval_seconds: float | None = Field(default=None, gt=0)
-    beat_times_seconds: list[float] = Field(default_factory=list)
-    downbeat_times_seconds: list[float] = Field(default_factory=list)
+    beat_times_seconds: list[Annotated[float, Field(ge=0)]] = Field(default_factory=list)
+    downbeat_times_seconds: list[Annotated[float, Field(ge=0)]] = Field(default_factory=list)
     sections: list[MusicSection] = Field(default_factory=list)
-    suggested_cut_points_seconds: list[float] = Field(default_factory=list)
+    suggested_cut_points_seconds: list[Annotated[float, Field(ge=0)]] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
