@@ -8,6 +8,14 @@ from travel_video_agent.editing.intent import IntentParsingError, OllamaIntentPa
 from travel_video_agent.editing.intent_schemas import EditingPlan
 
 
+@pytest.fixture(autouse=True)
+def disable_environment_dependent_memory_preflight(monkeypatch):
+    monkeypatch.setattr(
+        "travel_video_agent.editing.intent.ensure_memory_available",
+        lambda required_gb, task: None,
+    )
+
+
 class FakeResponse:
     def __init__(self, payload: dict):
         self.payload = payload
@@ -75,6 +83,7 @@ def test_ollama_intent_parser_validates_structured_response(monkeypatch) -> None
     assert plan.transitions.default == "crossfade"
     assert plan.approval_required is True
     assert plan.rendering_performed is False
+    assert captured["request"]["keep_alive"] == "5m"
     assert captured["request"]["options"]["temperature"] == 0
     assert captured["request"]["format"]["properties"].get("source_prompt") is None
 
@@ -92,3 +101,19 @@ def test_ollama_intent_parser_rejects_invalid_model_output(monkeypatch) -> None:
 def test_ollama_intent_parser_rejects_empty_prompt() -> None:
     with pytest.raises(ValueError, match="must not be empty"):
         OllamaIntentParser().parse("   ")
+
+
+
+def test_intent_parser_unloads_model(monkeypatch) -> None:
+    captured = {}
+
+    def fake_urlopen(request: Request, timeout: int):
+        captured["url"] = request.full_url
+        captured["payload"] = json.loads(request.data.decode("utf-8"))
+        return FakeResponse({"response": ""})
+
+    monkeypatch.setattr("travel_video_agent.editing.intent.urlopen", fake_urlopen)
+    parser = OllamaIntentParser(model="qwen2.5vl:3b")
+    assert parser.unload_model() is True
+    assert captured["url"].endswith("/api/generate")
+    assert captured["payload"] == {"model": "qwen2.5vl:3b", "keep_alive": 0}
