@@ -9,6 +9,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from ..artifact_tracking import register_artifact, validate_artifact
 from ..editing.schemas import ProjectTimeline, VideoTimeline
 
 
