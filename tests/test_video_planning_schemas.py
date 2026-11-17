@@ -1,14 +1,12 @@
-import json
-
 import pytest
 from pydantic import ValidationError
 
+from travel_video_agent.editing.intent_schemas import EditingPlan
 from travel_video_agent.editing.planning_schemas import (
     CreativeBrief,
     StoryboardShot,
     VideoProjectPlan,
 )
-from travel_video_agent.editing.intent_schemas import EditingPlan
 
 
 def _brief():
