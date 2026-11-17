@@ -62,9 +62,14 @@ def test_transcribe_folder_builds_timestamped_transcript(tmp_path: Path, monkeyp
         ],
     )
 
+    closed = []
+
     class FakeTranscriber:
         def __init__(self, **kwargs) -> None:
             self.kwargs = kwargs
+
+        def close(self) -> None:
+            closed.append(True)
 
         def transcribe(self, path: Path) -> dict:
             return {
@@ -93,10 +98,16 @@ def test_transcribe_folder_builds_timestamped_transcript(tmp_path: Path, monkeyp
     assert result.videos[0].segments[0].text == "A scenic view."
     assert result.videos[0].segments[0].start_seconds == 1.0
     assert len(result.videos[0].pauses) == 2
+    assert closed == [True]
 
 
 def test_backend_reports_missing_optional_dependency(monkeypatch) -> None:
     import builtins
+
+    monkeypatch.setattr(
+        "travel_video_agent.transcription.whisper_backend.ensure_memory_available",
+        lambda required_gb, task: None,
+    )
 
     original_import = builtins.__import__
 
@@ -126,3 +137,32 @@ def test_detect_speech_pauses_reports_long_gaps_only() -> None:
         (3.0, 5.0),
         (6.0, 8.0),
     ]
+
+
+def test_whisper_backend_close_releases_model_reference(monkeypatch) -> None:
+    backend = FasterWhisperTranscriber.__new__(FasterWhisperTranscriber)
+    backend._model = object()
+    collected = []
+    monkeypatch.setattr(
+        "travel_video_agent.transcription.whisper_backend.gc.collect",
+        lambda: collected.append(True),
+    )
+
+    backend.close()
+
+    assert backend._model is None
+    assert collected == [True]
+
+
+def test_whisper_memory_preflight_rejects_before_loading_backend(monkeypatch) -> None:
+    from travel_video_agent.resource_manager import ResourceError
+    from travel_video_agent.transcription.whisper_backend import TranscriptionError
+
+    def reject(required_gb, task):
+        raise ResourceError("Not enough available memory")
+
+    monkeypatch.setattr(
+        "travel_video_agent.transcription.whisper_backend.ensure_memory_available", reject
+    )
+    with pytest.raises(TranscriptionError, match="Not enough available memory"):
+        FasterWhisperTranscriber(model="small")

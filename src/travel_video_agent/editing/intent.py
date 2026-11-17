@@ -2,11 +2,13 @@
 
 import json
 import os
+import warnings
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from pydantic import ValidationError
 
+from ..resource_manager import ResourceError, ensure_memory_available, required_vision_memory_gb
 from .intent_schemas import EditingPlan
 
 
@@ -28,6 +30,14 @@ class OllamaIntentParser:
             "/"
         )
         self.timeout_seconds = timeout_seconds
+        self.keep_alive = os.getenv("OLLAMA_KEEP_ALIVE", "5m")
+        self._model_used = False
+        try:
+            ensure_memory_available(
+                required_vision_memory_gb(self.model), f"Ollama intent model '{self.model}'"
+            )
+        except ResourceError as exc:
+            raise IntentParsingError(str(exc)) from exc
 
     def parse(self, prompt: str) -> EditingPlan:
         """Ask Ollama for structured intent, then validate it locally."""
@@ -61,6 +71,7 @@ class OllamaIntentParser:
         payload = json.dumps(
             {
                 "model": self.model,
+                "keep_alive": self.keep_alive,
                 "stream": False,
                 "format": schema,
                 "messages": [
@@ -78,7 +89,9 @@ class OllamaIntentParser:
         )
         try:
             with urlopen(request, timeout=self.timeout_seconds) as response:
-                result = json.loads(response.read().decode("utf-8"))
+                raw_response = response.read()
+                self._model_used = True
+                result = json.loads(raw_response.decode("utf-8"))
             content = result["message"]["content"]
             parsed = json.loads(content)
         except HTTPError as exc:
@@ -112,7 +125,34 @@ class OllamaIntentParser:
                 f"The model response did not satisfy the editing-plan schema: {exc}"
             ) from exc
 
+    def unload_model(self) -> bool:
+        """Ask Ollama to evict the intent model before another model phase begins."""
+        if not self._model_used:
+            return True
+        payload = json.dumps({"model": self.model, "keep_alive": 0}).encode("utf-8")
+        request = Request(
+            f"{self.base_url}/api/generate",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urlopen(request, timeout=min(self.timeout_seconds, 30)):
+                return True
+        except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError):
+            return False
+
 
 def parse_editing_intent(prompt: str, model: str | None = None) -> EditingPlan:
-    """Parse one natural-language request into a validated plan."""
-    return OllamaIntentParser(model=model).parse(prompt)
+    """Parse one natural-language request, then release the model from memory."""
+    parser = OllamaIntentParser(model=model)
+    try:
+        return parser.parse(prompt)
+    finally:
+        if not parser.unload_model():
+            warnings.warn(
+                f"Could not unload Ollama model '{parser.model}'; it may remain "
+                "resident in memory.",
+                RuntimeWarning,
+                stacklevel=2,
+            )

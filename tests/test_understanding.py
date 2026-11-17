@@ -1,10 +1,20 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from travel_video_agent.understanding.frame_sampler import extract_representative_frames
 from travel_video_agent.understanding.pipeline import understand_folder
 from travel_video_agent.understanding.scene_detection import detect_scenes
 from travel_video_agent.understanding.visual_analyzer import OllamaVisionAnalyzer
+
+
+@pytest.fixture(autouse=True)
+def disable_environment_dependent_memory_preflight(monkeypatch):
+    monkeypatch.setattr(
+        "travel_video_agent.understanding.visual_analyzer.ensure_memory_available",
+        lambda required_gb, task: None,
+    )
 
 
 def test_scene_detection_falls_back_to_one_scene_when_detector_finds_none(
@@ -88,6 +98,7 @@ def test_understanding_pipeline_builds_timestamped_scenes(monkeypatch, tmp_path:
         "extract_representative_frames",
         lambda *args, **kwargs: [(2.5, frame)],
     )
+    monkeypatch.setattr(pipeline.OllamaVisionAnalyzer, "unload_model", lambda self: True)
     monkeypatch.setattr(
         pipeline.OllamaVisionAnalyzer,
         "analyze_frame",
@@ -317,3 +328,62 @@ def test_ollama_analyzer_rejects_too_many_objects(monkeypatch, tmp_path: Path) -
 
     with pytest.raises(VisionModelError, match="after one short-output retry"):
         OllamaVisionAnalyzer().analyze_frame(frame)
+
+
+def test_ollama_analyzer_sends_keep_alive_and_can_unload(monkeypatch, tmp_path: Path) -> None:
+    frame = tmp_path / "frame.jpg"
+    frame.write_bytes(b"fake-image")
+    requests = []
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self):
+            content = {
+                "description": "A coastal road.",
+                "objects": ["road"],
+                "activities": [],
+                "confidence": 0.9,
+            }
+            return json.dumps({"message": {"content": json.dumps(content)}}).encode()
+
+    def fake_urlopen(request, timeout):
+        requests.append((request.full_url, json.loads(request.data.decode("utf-8"))))
+        return FakeResponse()
+
+    monkeypatch.setattr("travel_video_agent.understanding.visual_analyzer.urlopen", fake_urlopen)
+    monkeypatch.setattr(
+        "travel_video_agent.understanding.visual_analyzer.ensure_memory_available",
+        lambda required_gb, task: None,
+    )
+    analyzer = OllamaVisionAnalyzer(model="qwen2.5vl:3b")
+    analyzer.analyze_frame(frame)
+    assert requests[0][1]["keep_alive"] == "5m"
+    assert analyzer.unload_model() is True
+    assert requests[1][0].endswith("/api/generate")
+    assert requests[1][1] == {"model": "qwen2.5vl:3b", "keep_alive": 0}
+
+
+def test_vision_memory_preflight_stops_before_ollama_request(monkeypatch, tmp_path: Path) -> None:
+    from travel_video_agent.resource_manager import ResourceError
+    from travel_video_agent.understanding.visual_analyzer import VisionModelError
+
+    frame = tmp_path / "frame.jpg"
+    frame.write_bytes(b"fake-image")
+
+    def reject(required_gb, task):
+        raise ResourceError("Not enough available memory")
+
+    monkeypatch.setattr(
+        "travel_video_agent.understanding.visual_analyzer.ensure_memory_available", reject
+    )
+    monkeypatch.setattr(
+        "travel_video_agent.understanding.visual_analyzer.urlopen",
+        lambda *args, **kwargs: pytest.fail("Ollama must not be called after failed preflight"),
+    )
+    with pytest.raises(VisionModelError, match="Not enough available memory"):
+        OllamaVisionAnalyzer(model="qwen2.5vl:7b").analyze_frame(frame)

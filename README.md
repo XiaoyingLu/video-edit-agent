@@ -104,7 +104,24 @@ Each transcript segment contains start/end timestamps, recognized text, and opti
 
 ### Configuration and resources
 
-The Compose service defaults to `qwen2.5vl:3b`. Override it for a command with `-e OLLAMA_MODEL=...`. Ollama's API is also published on loopback port 11434 for optional diagnostics:
+The Compose service defaults to `qwen2.5vl:3b`. Override it for a command with `-e OLLAMA_MODEL=...`. Ollama is configured for one loaded model and one parallel inference request. Intent parsing and frame understanding explicitly unload their model when each phase ends; the end-to-end workflow therefore releases Qwen before starting CPU-heavy Whisper transcription. Whisper releases its CTranslate2 model references and runs garbage collection when transcription completes. These are best-effort release operations and do not discard successful artifacts if the Ollama unload request fails.
+
+Before loading a model, the CLI checks available host/container memory against conservative model-size estimates. Whisper CUDA mode also checks free NVIDIA VRAM when `nvidia-smi` is available. If memory cannot be measured, the check is skipped rather than blocking execution. These estimates are guardrails, not guarantees: actual usage depends on quantization, context size, concurrent applications, and backend configuration. In the default Compose setup, containers share the host memory pool; if you add separate memory limits to the Ollama service, ensure the configured budget reflects that service's limit.
+
+Default estimates are 6 GB for Qwen 2.5 VL 3B, 12 GB for 7B, 3 GB for Whisper small, and 3 GB VRAM for Whisper small on CUDA. Adjust them when your hardware/model quantization differs:
+
+```bash
+# Lower or raise the preflight thresholds in GB (use only when you know the real budget).
+OLLAMA_MIN_MEMORY_GB=9 WHISPER_MIN_MEMORY_GB=2 WHISPER_MIN_VRAM_GB=2 \
+  docker compose run --rm video-agent transcribe ./travel-test --model small
+
+# Change how long Ollama keeps a model resident between requests.
+# Put this in your shell or .env file before starting services and running commands.
+export OLLAMA_KEEP_ALIVE=2m
+docker compose up -d ollama
+```
+
+Ollama's API is also published on loopback port 11434 for optional diagnostics:
 
 ```bash
 curl http://127.0.0.1:11434/api/tags
