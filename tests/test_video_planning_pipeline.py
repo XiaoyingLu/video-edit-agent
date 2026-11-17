@@ -10,7 +10,7 @@ from travel_video_agent.editing.planning_generation import (
     explicit_duration_seconds,
     infer_creative_priorities,
 )
-from travel_video_agent.editing.planning_schemas import PlannedScene, StoryTreatment, StoryboardShot
+from travel_video_agent.editing.planning_schemas import (\n    PlannedScene,\n    StoryTreatment,\n    StoryboardShot,\n)
 
 
 def _generated_content():
@@ -28,12 +28,12 @@ def _generated_content():
                 title="First Light",
                 purpose="Establish the scale and atmosphere of the destination.",
                 narrative_function="hook",
-                target_duration_seconds=30,
+                target_duration_seconds=45,
                 shots=[
                     StoryboardShot(
                         shot_id="shot-01", scene_id="scene-01", sequence_index=1,
                         purpose="Reveal the destination", visual_description="A wide mountain panorama at first light.",
-                        shot_scale="extreme_wide", visual_role="establishing", target_duration_seconds=30,
+                        shot_scale="extreme_wide", visual_role="establishing", target_duration_seconds=45,
                     )
                 ],
             ),
@@ -48,7 +48,7 @@ def _generated_content():
                     StoryboardShot(
                         shot_id="shot-02", scene_id="scene-02", sequence_index=1,
                         purpose="Show the journey", visual_description="A traveler approaches a turquoise alpine lake.",
-                        shot_scale="wide", visual_role="action", target_duration_seconds=30,
+                        shot_scale="wide", visual_role="action", target_duration_seconds=45,
                     )
                 ],
             ),
