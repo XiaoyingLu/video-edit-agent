@@ -69,7 +69,6 @@ def test_filter_graph_preflight_rejects_missing_encoder_marker():
         _validate_filter_graph(["ffmpeg", "-filter_complex", "null"])
 
 
-
 def test_source_metadata_validation_checks_dimensions_and_audio_fields(tmp_path):
     payload = {
         "streams": [
