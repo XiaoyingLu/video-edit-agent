@@ -163,6 +163,18 @@ class VideoProjectPlan(BaseModel):
             shots = [shot for scene in self.scenes for shot in scene.shots]
             if not shots or any(shot.assignment_status == "unassigned" for shot in shots):
                 raise ValueError("footage-mapped stages require every shot to have an assignment")
+        if self.planning_stage in {"storyboard_ready", "footage_mapped", "production_ready"}:
+            if any(not scene.shots for scene in self.scenes):
+                raise ValueError("every storyboard scene must contain at least one shot")
+            for scene in self.scenes:
+                shot_duration = sum(shot.target_duration_seconds for shot in scene.shots)
+                if abs(scene.target_duration_seconds - shot_duration) > 0.05:
+                    raise ValueError("scene duration must equal the sum of its shot durations")
+            storyboard_duration = sum(
+                shot.target_duration_seconds for scene in self.scenes for shot in scene.shots
+            )
+            if abs(storyboard_duration - self.brief.target_duration_seconds) > 0.05:
+                raise ValueError("storyboard duration must equal the creative brief target duration")
         if self.planning_stage == "production_ready":
             shots = [shot for scene in self.scenes for shot in scene.shots]
             if not self.approved or any(shot.assignment_status != "approved" for shot in shots):
