@@ -60,8 +60,10 @@ def _load_manifest(root: Path) -> dict[str, Any]:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise StaleArtifactError(f"Could not read artifact manifest {path}: {exc}") from exc
-    if not isinstance(payload, dict) or payload.get("version") != MANIFEST_VERSION or not isinstance(
-        payload.get("artifacts"), dict
+    if (
+        not isinstance(payload, dict)
+        or payload.get("version") != MANIFEST_VERSION
+        or not isinstance(payload.get("artifacts"), dict)
     ):
         raise StaleArtifactError(
             f"Unsupported or invalid artifact manifest {path}; "
