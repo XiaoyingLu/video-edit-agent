@@ -1,5 +1,6 @@
 """Memory preflight and local model lifecycle helpers."""
 
+import math
 import os
 import re
 import shutil
@@ -95,7 +96,7 @@ def required_vision_memory_gb(model: str) -> float:
             value = float(override)
         except ValueError as exc:
             raise ResourceError("OLLAMA_MIN_MEMORY_GB must be a positive number.") from exc
-        if value <= 0:
+        if not math.isfinite(value) or value <= 0:
             raise ResourceError("OLLAMA_MIN_MEMORY_GB must be a positive number.")
         return value
     match = re.search(r"(?<![0-9.])(3|7|32|72)b(?:$|[-_:])", model.lower())
@@ -143,7 +144,11 @@ def available_gpu_memory_gb() -> float | None:
             text=True,
             timeout=5,
         )
-        values = [float(line.strip()) / 1024 for line in result.stdout.splitlines() if line.strip()]
+        values = [
+            float(line.strip()) / 1024
+            for line in result.stdout.splitlines()
+            if line.strip() and math.isfinite(float(line.strip()))
+        ]
         return values[0] if values else None
     except (OSError, ValueError, subprocess.SubprocessError):
         return None
