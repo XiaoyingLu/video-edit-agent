@@ -50,9 +50,7 @@ def create_video_project_plan(
         creative_priorities=editing_plan.priorities,
         assumptions=editing_plan.assumptions,
     )
-    generated = generate_video_plan_content(
-        prompt, brief.model_dump(mode="json"), model=model
-    )
+    generated = generate_video_plan_content(prompt, brief.model_dump(mode="json"), model=model)
     project_plan = VideoProjectPlan(
         project_path=str(root),
         brief=brief,
