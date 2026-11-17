@@ -118,6 +118,7 @@ travel-test/
     ├── highlights.json
     ├── draft-selection.json
     ├── optimized-timeline.json
+    ├── music-analysis.json
     ├── subtitles.srt
     ├── rendered.mp4
     ├── models/
@@ -241,3 +242,4 @@ Source files are never modified. File size and modification time provide a fast 
 8. Context-aware clip selection (implemented)
 9. Cinematic scene metadata, role-aware shot sequencing, adaptive pacing targets, transition proposals, and human review (implemented)
 10. Render approved shot timelines with FFmpeg transitions and output verification (implemented; Docker validation pending)
+11. Music-aware soundtrack tempo, beat/downbeat, and energy-section analysis (implemented as review guidance; automatic beat synchronization remains a future step)
