@@ -10,7 +10,11 @@ from travel_video_agent.editing.planning_generation import (
     explicit_duration_seconds,
     infer_creative_priorities,
 )
-from travel_video_agent.editing.planning_schemas import (\n    PlannedScene,\n    StoryTreatment,\n    StoryboardShot,\n)
+from travel_video_agent.editing.planning_schemas import (
+    PlannedScene,
+    StoryTreatment,
+    StoryboardShot,
+)
 
 
 def _generated_content():
