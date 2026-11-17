@@ -452,12 +452,14 @@ def test_create_plan_command_writes_hierarchical_brief(tmp_path: Path, monkeypat
             "shots": [
                 {
                     "shot_id": "shot-1", "scene_id": "scene-1", "sequence_index": 1,
-                    "purpose": "Reveal the mountains.", "visual_description": "A wide mountain panorama.",
+                    "purpose": "Reveal the mountains.",
+                    "visual_description": "A wide mountain panorama.",
                     "target_duration_seconds": 45,
                 },
                 {
                     "shot_id": "shot-2", "scene_id": "scene-1", "sequence_index": 2,
-                    "purpose": "Move toward the lake.", "visual_description": "A slow approach to a turquoise lake.",
+                    "purpose": "Move toward the lake.",
+                    "visual_description": "A slow approach to a turquoise lake.",
                     "target_duration_seconds": 45,
                 },
             ],
