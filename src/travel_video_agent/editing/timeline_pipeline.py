@@ -153,10 +153,12 @@ def _cinematic_order(clips: list) -> list:
                 score -= 12
             if candidate.shot_scale == previous.shot_scale and candidate.shot_scale != "unknown":
                 score -= 8
-            elif {candidate.shot_scale, previous.shot_scale} & {"wide", "extreme_wide", "aerial"} and {
-                candidate.shot_scale,
-                previous.shot_scale,
-            } & {"close_up", "extreme_close_up"}:
+            elif (
+                {candidate.shot_scale, previous.shot_scale}
+                & {"wide", "extreme_wide", "aerial"}
+                and {candidate.shot_scale, previous.shot_scale}
+                & {"close_up", "extreme_close_up"}
+            ):
                 score += 7
             return (
                 score,
