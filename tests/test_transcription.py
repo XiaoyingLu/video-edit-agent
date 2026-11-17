@@ -98,6 +98,11 @@ def test_transcribe_folder_builds_timestamped_transcript(tmp_path: Path, monkeyp
 def test_backend_reports_missing_optional_dependency(monkeypatch) -> None:
     import builtins
 
+    monkeypatch.setattr(
+        "travel_video_agent.transcription.whisper_backend.ensure_memory_available",
+        lambda required_gb, task: None,
+    )
+
     original_import = builtins.__import__
 
     def guarded_import(name, *args, **kwargs):
@@ -126,3 +131,19 @@ def test_detect_speech_pauses_reports_long_gaps_only() -> None:
         (3.0, 5.0),
         (6.0, 8.0),
     ]
+
+
+
+def test_whisper_backend_close_releases_model_reference(monkeypatch) -> None:
+    backend = FasterWhisperTranscriber.__new__(FasterWhisperTranscriber)
+    backend._model = object()
+    collected = []
+    monkeypatch.setattr(
+        "travel_video_agent.transcription.whisper_backend.gc.collect",
+        lambda: collected.append(True),
+    )
+
+    backend.close()
+
+    assert backend._model is None
+    assert collected == [True]
