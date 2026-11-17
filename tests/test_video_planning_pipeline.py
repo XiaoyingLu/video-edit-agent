@@ -8,6 +8,7 @@ from travel_video_agent.editing.intent_schemas import EditingPlan
 from travel_video_agent.editing.planning_generation import (
     GeneratedVideoPlanContent,
     explicit_duration_seconds,
+    infer_creative_priorities,
 )
 from travel_video_agent.editing.planning_schemas import PlannedScene, StoryTreatment, StoryboardShot
 
