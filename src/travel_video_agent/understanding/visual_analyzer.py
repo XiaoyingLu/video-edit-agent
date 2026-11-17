@@ -9,6 +9,8 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from ..resource_manager import ResourceError, ensure_memory_available, required_vision_memory_gb
+
 
 class VisionModelError(RuntimeError):
     """Raised when the configured local vision model cannot analyze a frame."""
@@ -116,9 +118,19 @@ class OllamaVisionAnalyzer:
             "/"
         )
         self.timeout_seconds = timeout_seconds
+        self.keep_alive = os.getenv("OLLAMA_KEEP_ALIVE", "5m")
+        self._memory_checked = False
 
     def analyze_frame(self, frame_path: Path) -> dict[str, Any]:
         """Return a normalized observation, retrying once if the model emits invalid JSON."""
+        if not self._memory_checked:
+            try:
+                ensure_memory_available(
+                    required_vision_memory_gb(self.model), f"Ollama vision model '{self.model}'"
+                )
+            except ResourceError as exc:
+                raise VisionModelError(str(exc)) from exc
+            self._memory_checked = True
         image = base64.b64encode(frame_path.read_bytes()).decode("ascii")
         prompts = (
             "Analyze this travel-video frame. Return one JSON object matching the supplied "
@@ -136,6 +148,7 @@ class OllamaVisionAnalyzer:
             payload = json.dumps(
                 {
                     "model": self.model,
+                    "keep_alive": self.keep_alive,
                     "stream": False,
                     "format": _VISION_RESPONSE_SCHEMA,
                     "messages": [{"role": "user", "content": prompt, "images": [image]}],
@@ -184,3 +197,20 @@ class OllamaVisionAnalyzer:
                 ) from exc
 
         raise VisionModelError(f"The vision model could not analyze {frame_path}.")
+
+
+    def unload_model(self) -> bool:
+        """Ask Ollama to evict this model from VRAM/RAM after the vision phase."""
+        payload = json.dumps({"model": self.model, "keep_alive": 0}).encode("utf-8")
+        request = Request(
+            f"{self.base_url}/api/generate",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urlopen(request, timeout=min(self.timeout_seconds, 30)):
+                return True
+        except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError):
+            # A completed analysis must not be discarded just because best-effort eviction failed.
+            return False
