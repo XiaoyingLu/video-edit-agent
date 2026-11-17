@@ -338,3 +338,22 @@ def test_role_aware_pacing_uses_different_targets_for_action_and_scenic_shots():
     assert scenic[0] == "within"
     assert action[2] == 3.0
     assert scenic[2] == 4.5
+
+
+def test_cinematic_timeline_preserves_ranked_order_without_scene_metadata(tmp_path):
+    _write_inputs(tmp_path, style="highlight_reel", transition="cut")
+    artifact = tmp_path / ".video-agent"
+    plan = EditingPlan(
+        source_prompt="Create a cinematic travel video",
+        target_duration_seconds=12,
+        style="cinematic",
+        priorities=["memorable_moments"],
+        transitions={"default": "cut", "duration_seconds": 0},
+    )
+    (artifact / "editing-plan.json").write_text(plan.model_dump_json(), encoding="utf-8")
+
+    timeline = build_draft_timeline(tmp_path)
+
+    assert [clip.clip_id for clip in timeline.clips] == ["later", "earlier"]
+    assert all(clip.visual_role == "unknown" for clip in timeline.clips)
+    assert all("metadata is uncertain" in clip.sequence_reason for clip in timeline.clips)
