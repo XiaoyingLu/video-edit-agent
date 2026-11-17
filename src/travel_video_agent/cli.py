@@ -31,6 +31,7 @@ from .rendering import RenderError, render_approved_shot_timeline, render_projec
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
 from .subtitles import SubtitleError, generate_subtitles
+from .storage_cleanup import cleanup_generated_storage
 from .transcription import transcribe_folder
 from .transcription.whisper_backend import TranscriptionError
 from .understanding import understand_folder
@@ -1296,6 +1297,71 @@ def validate_artifacts(
         "[dim]Legacy artifacts without manifest entries are not checked; regenerate them "
         "with the current CLI to enable dependency tracking.[/dim]"
     )
+
+
+
+@app.command()
+def clean(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder whose generated frame caches should be cleaned.",
+        ),
+    ],
+    max_age_days: Annotated[
+        float,
+        typer.Option("--max-age-days", min=0, help="Prune cached frames older than this many days."),
+    ] = 7,
+    max_cache_gb: Annotated[
+        float,
+        typer.Option("--max-cache-gb", min=0.001, help="Maximum combined frame-cache size in GB."),
+    ] = 5,
+    keep_artifacts: Annotated[
+        bool,
+        typer.Option(
+            "--keep-artifacts",
+            help="Preserve frames referenced by understanding.json as well as durable artifacts.",
+        ),
+    ] = False,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Report cleanup candidates without deleting files."),
+    ] = False,
+) -> None:
+    """Prune old or oversized extracted-frame caches without deleting project outputs."""
+    try:
+        report = cleanup_generated_storage(
+            folder,
+            max_age_days=max_age_days,
+            max_cache_gb=max_cache_gb,
+            keep_artifacts=keep_artifacts,
+            dry_run=dry_run,
+        )
+    except (NotADirectoryError, ValueError, OSError) as exc:
+        console.print(f"[red]Cleanup failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    action = "Would remove" if dry_run else "Removed"
+    console.print(
+        f"{action} [bold]{report.candidate_files}[/bold] frame-cache file(s) "
+        f"({report.reclaimed_bytes / 1024**2:.1f} MiB)."
+    )
+    console.print(
+        f"Scanned {report.scanned_files} file(s); "
+        f"estimated remaining cache: {report.remaining_bytes / 1024**2:.1f} MiB."
+    )
+    if dry_run:
+        console.print("[yellow]Dry run only; no files were deleted.[/yellow]")
+    else:
+        console.print(
+            "[yellow]JSON artifacts, manifests, rendered videos, model weights, "
+            "and original source media were preserved.[/yellow]"
+        )
 
 
 if __name__ == "__main__":
