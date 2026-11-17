@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from ..media import discover_videos
+from .media import discover_videos
 
 MANIFEST_NAME = "artifact-manifest.json"
 MANIFEST_VERSION = 1
