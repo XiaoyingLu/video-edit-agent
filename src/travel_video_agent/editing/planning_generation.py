@@ -113,18 +113,18 @@ class OllamaVideoPlanner:
     def generate(self, prompt: str, brief: dict) -> GeneratedVideoPlanContent:
         schema = GeneratedVideoPlanContent.model_json_schema()
         system_prompt = (
-            "You are an experienced travel-film director and storyboard artist. Create a specific, "
-            "coherent production storyboard from the creative brief. "
-            "Do not merely restate the prompt. "
-            "Include a compelling title, logline, beginning-middle-ending narrative arc, and 3-6 "
-            "distinct scenes. Each scene must contain 2-5 concrete storyboard shots. "
-            "Describe visible "
-            "composition and subject, not generic phrases. Include shot scale, editorial role, purpose, "
-            "optional concise narration/on-screen text, and useful audio cues. Use only supported enum "
-            "values. The sum of all shot durations MUST equal the requested target duration exactly; "
-            "each scene duration must equal the sum of its shot durations. Do not assign source footage. "
-            "Do not claim real footage has been inspected. Make choices grounded in the user's brief; "
-            "flag uncertain details as assumptions rather than inventing personal trip events."
+            "You are an experienced travel-film director and storyboard artist. "
+            "Create a specific, coherent production storyboard from the creative brief. "
+            "Do not merely restate the prompt. Include a compelling title, logline, "
+            "beginning-middle-ending narrative arc, and 3-6 distinct scenes. "
+            "Each scene must contain 2-5 concrete storyboard shots. Describe visible "
+            "composition and subject, not generic phrases. Include shot scale, editorial "
+            "role, purpose, optional concise narration/on-screen text, and useful audio cues. "
+            "Use only supported enum values. The sum of all shot durations MUST equal the "
+            "requested target duration exactly; each scene duration must equal the sum of "
+            "its shot durations. Do not assign source footage or claim real footage has been "
+            "inspected. Make choices grounded in the user's brief; flag uncertain details "
+            "as assumptions rather than inventing personal trip events."
         )
         payload = json.dumps(
             {
