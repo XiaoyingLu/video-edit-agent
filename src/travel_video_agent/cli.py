@@ -30,8 +30,8 @@ from .media import MediaToolError, analyze_folder
 from .rendering import RenderError, render_approved_shot_timeline, render_project
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
-from .subtitles import SubtitleError, generate_subtitles
 from .storage_cleanup import cleanup_generated_storage
+from .subtitles import SubtitleError, generate_subtitles
 from .transcription import transcribe_folder
 from .transcription.whisper_backend import TranscriptionError
 from .understanding import understand_folder
@@ -1299,7 +1299,6 @@ def validate_artifacts(
     )
 
 
-
 @app.command()
 def clean(
     folder: Annotated[
@@ -1315,7 +1314,9 @@ def clean(
     ],
     max_age_days: Annotated[
         float,
-        typer.Option("--max-age-days", min=0, help="Prune cached frames older than this many days."),
+        typer.Option(
+            "--max-age-days", min=0, help="Prune cached frames older than this many days."
+        ),
     ] = 7,
     max_cache_gb: Annotated[
         float,
