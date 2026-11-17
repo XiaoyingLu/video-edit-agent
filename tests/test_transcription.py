@@ -62,9 +62,14 @@ def test_transcribe_folder_builds_timestamped_transcript(tmp_path: Path, monkeyp
         ],
     )
 
+    closed = []
+
     class FakeTranscriber:
         def __init__(self, **kwargs) -> None:
             self.kwargs = kwargs
+
+        def close(self) -> None:
+            closed.append(True)
 
         def transcribe(self, path: Path) -> dict:
             return {
@@ -93,6 +98,7 @@ def test_transcribe_folder_builds_timestamped_transcript(tmp_path: Path, monkeyp
     assert result.videos[0].segments[0].text == "A scenic view."
     assert result.videos[0].segments[0].start_seconds == 1.0
     assert len(result.videos[0].pauses) == 2
+    assert closed == [True]
 
 
 def test_backend_reports_missing_optional_dependency(monkeypatch) -> None:
