@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from ..artifact_tracking import validate_artifact
 from ..media import analyze_folder, discover_videos
 from ..models import ProjectAnalysis, relative_media_path
 from ..transcription.schemas import ProjectTranscription, TranscriptSegment
@@ -143,6 +144,8 @@ def analyze_silence_folder(
     root = folder.expanduser().resolve()
     analysis = analyze_folder(root)
     transcript_path = root / ".video-agent" / "transcription.json"
+    if transcript_path.is_file():
+        validate_artifact(root, transcript_path)
     transcripts_by_path = _load_transcripts_by_path(transcript_path, root, analysis)
 
     detector = FFmpegSilenceDetector()

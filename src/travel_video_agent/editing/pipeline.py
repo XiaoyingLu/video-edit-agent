@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 
+from ..artifact_tracking import validate_artifact
 from ..silence.schemas import ProjectSilenceAnalysis
 from ..understanding.schemas import VideoScene, VideoUnderstanding
 from .schemas import (
@@ -51,13 +52,16 @@ def build_edit_proposal(folder: Path) -> ProjectEditProposal:
     if not silence_path.is_file():
         raise FileNotFoundError(f"Missing {silence_path}; run 'video-agent detect-silence' first.")
 
+    validate_artifact(root, silence_path)
     silence = ProjectSilenceAnalysis.model_validate_json(silence_path.read_text(encoding="utf-8"))
     understanding_path = artifact_dir / "understanding.json"
-    understanding = (
-        VideoUnderstanding.model_validate_json(understanding_path.read_text(encoding="utf-8"))
-        if understanding_path.is_file()
-        else None
-    )
+    if understanding_path.is_file():
+        validate_artifact(root, understanding_path)
+        understanding = VideoUnderstanding.model_validate_json(
+            understanding_path.read_text(encoding="utf-8")
+        )
+    else:
+        understanding = None
 
     scenes_by_video: dict[str, list[VideoScene]] = {}
     if understanding is not None:
@@ -124,6 +128,7 @@ def load_edit_proposal(
     )
     if not destination.is_file():
         raise FileNotFoundError(f"Missing {destination}; run 'video-agent propose-edits' first.")
+    validate_artifact(root, destination)
     proposal = ProjectEditProposal.model_validate_json(destination.read_text(encoding="utf-8"))
     if Path(proposal.project_path).resolve() != root:
         raise ValueError("edit proposal belongs to a different project folder")

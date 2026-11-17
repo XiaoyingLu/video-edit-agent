@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+from ..artifact_tracking import register_artifact, validate_artifact
 from .draft_schemas import ProjectDraftSelection
 from .intent_schemas import EditingPlan
 from .timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
@@ -51,6 +52,8 @@ def build_draft_timeline(
     if not plan_file.is_file():
         raise FileNotFoundError(f"Missing {plan_file}; run 'video-agent plan' first.")
 
+    validate_artifact(root, selection_file)
+    validate_artifact(root, plan_file)
     selection = ProjectDraftSelection.model_validate_json(
         selection_file.read_text(encoding="utf-8")
     )
@@ -143,6 +146,7 @@ def load_draft_timeline(
         raise FileNotFoundError(
             f"Missing {destination}; run 'video-agent optimize-timeline' first."
         )
+    validate_artifact(root, destination)
     timeline = ProjectDraftTimeline.model_validate_json(destination.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root:
         raise ValueError("draft timeline belongs to a different project folder")
@@ -156,6 +160,13 @@ def save_draft_timeline(timeline: ProjectDraftTimeline, destination: Path) -> No
         json.dumps(timeline.model_dump(mode="json"), indent=2) + "\n",
         encoding="utf-8",
     )
+    if (destination.parent / "artifact-manifest.json").is_file():
+        root = Path(timeline.project_path).expanduser().resolve()
+        dependencies = [
+            Path(value) if Path(value).is_absolute() else root / value
+            for value in (timeline.source_selection, timeline.source_editing_plan)
+        ]
+        register_artifact(root, destination, dependencies=dependencies)
 
 
 def apply_timeline_review(

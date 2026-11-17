@@ -6,6 +6,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from ..artifact_tracking import validate_artifact
 from ..media import analyze_folder, discover_videos
 from ..understanding.frame_sampler import extract_representative_frames
 from ..understanding.scene_detection import detect_scenes
@@ -88,6 +89,7 @@ def find_highlights_folder(
     source_understanding = understanding_path or artifact_dir / "understanding.json"
     understanding: VideoUnderstanding | None = None
     if source_understanding.exists():
+        validate_artifact(root, source_understanding)
         understanding = VideoUnderstanding.model_validate_json(
             source_understanding.read_text(encoding="utf-8")
         )

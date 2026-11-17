@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from .artifact_tracking import validate_artifact
 from .editing.schemas import ProjectTimeline
 from .transcription.schemas import ProjectTranscription
 
@@ -138,10 +139,12 @@ def generate_subtitles(
     if not root.is_dir():
         raise FileNotFoundError(f"Project folder does not exist: {root}")
     timeline, timeline_file = _load_timeline(root, timeline_path)
+    validate_artifact(root, timeline_file)
     transcript_file = transcription_path or root / ".video-agent" / "transcription.json"
     transcript_file = transcript_file.expanduser().resolve()
     if not transcript_file.is_file():
         raise FileNotFoundError(f"Missing {transcript_file}; run 'video-agent transcribe' first.")
+    validate_artifact(root, transcript_file)
     transcription = ProjectTranscription.model_validate_json(
         transcript_file.read_text(encoding="utf-8")
     )
