@@ -370,7 +370,6 @@ def test_ollama_analyzer_sends_keep_alive_and_can_unload(
     assert requests[1][1] == {"model": "qwen2.5vl:3b", "keep_alive": 0}
 
 
-
 def test_vision_memory_preflight_stops_before_ollama_request(
     monkeypatch, tmp_path: Path
 ) -> None:
