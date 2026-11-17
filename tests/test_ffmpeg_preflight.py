@@ -5,7 +5,10 @@ import subprocess
 import pytest
 
 from travel_video_agent.rendering import RenderError
-from travel_video_agent.rendering.renderer import _validate_filter_graph
+from travel_video_agent.rendering.renderer import (
+    _validate_filter_graph,
+    _validate_source_stream_metadata,
+)
 
 
 def test_filter_graph_preflight_uses_null_muxer_and_short_probe(monkeypatch):
@@ -68,3 +71,26 @@ def test_filter_graph_preflight_surfaces_ffmpeg_diagnostics(monkeypatch):
 def test_filter_graph_preflight_rejects_missing_encoder_marker():
     with pytest.raises(RenderError, match="encoder options"):
         _validate_filter_graph(["ffmpeg", "-filter_complex", "null"])
+
+
+
+def test_source_metadata_validation_checks_dimensions_and_audio_fields(tmp_path):
+    payload = {
+        "streams": [
+            {"codec_type": "video", "width": 1920, "height": 1080},
+            {"codec_type": "audio", "sample_rate": "48000", "channels": 2},
+        ]
+    }
+
+    _validate_source_stream_metadata(payload, tmp_path / "clip.mp4")
+
+    payload["streams"][1]["sample_rate"] = "0"
+    with pytest.raises(RenderError, match="sample rate"):
+        _validate_source_stream_metadata(payload, tmp_path / "clip.mp4")
+
+
+def test_source_metadata_validation_rejects_invalid_video_dimensions(tmp_path):
+    payload = {"streams": [{"codec_type": "video", "width": 0, "height": 1080}]}
+
+    with pytest.raises(RenderError, match="dimensions"):
+        _validate_source_stream_metadata(payload, tmp_path / "clip.mp4")
