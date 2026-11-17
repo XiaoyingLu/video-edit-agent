@@ -80,9 +80,7 @@ def _estimate_tempo(
         return None, 0.0, None
     fft_size = 1 << (2 * len(centered) - 1).bit_length()
     spectrum = np.fft.rfft(centered, n=fft_size)
-    correlations = np.fft.irfft(
-        spectrum * np.conjugate(spectrum), n=fft_size
-    )[: len(centered)]
+    correlations = np.fft.irfft(spectrum * np.conjugate(spectrum), n=fft_size)[: len(centered)]
     candidates = correlations[min_lag : max_lag + 1]
     lag = min_lag + int(np.argmax(candidates))
     baseline = float(np.mean(np.abs(candidates))) + 1e-9
