@@ -445,25 +445,34 @@ def test_create_plan_command_writes_hierarchical_brief(tmp_path: Path, monkeypat
             "narrative_arc": ["Arrival", "Discovery"],
             "emotional_journey": "Anticipation becomes wonder.",
         },
-        scenes=[{
-            "scene_id": "scene-1", "sequence_index": 1, "title": "Arrival",
-            "purpose": "Introduce the landscape.", "narrative_function": "hook",
-            "target_duration_seconds": 90,
-            "shots": [
-                {
-                    "shot_id": "shot-1", "scene_id": "scene-1", "sequence_index": 1,
-                    "purpose": "Reveal the mountains.",
-                    "visual_description": "A wide mountain panorama.",
-                    "target_duration_seconds": 45,
-                },
-                {
-                    "shot_id": "shot-2", "scene_id": "scene-1", "sequence_index": 2,
-                    "purpose": "Move toward the lake.",
-                    "visual_description": "A slow approach to a turquoise lake.",
-                    "target_duration_seconds": 45,
-                },
-            ],
-        }],
+        scenes=[
+            {
+                "scene_id": "scene-1",
+                "sequence_index": 1,
+                "title": "Arrival",
+                "purpose": "Introduce the landscape.",
+                "narrative_function": "hook",
+                "target_duration_seconds": 90,
+                "shots": [
+                    {
+                        "shot_id": "shot-1",
+                        "scene_id": "scene-1",
+                        "sequence_index": 1,
+                        "purpose": "Reveal the mountains.",
+                        "visual_description": "A wide mountain panorama.",
+                        "target_duration_seconds": 45,
+                    },
+                    {
+                        "shot_id": "shot-2",
+                        "scene_id": "scene-1",
+                        "sequence_index": 2,
+                        "purpose": "Move toward the lake.",
+                        "visual_description": "A slow approach to a turquoise lake.",
+                        "target_duration_seconds": 45,
+                    },
+                ],
+            }
+        ],
         planning_stage="storyboard_ready",
     )
     destination = tmp_path / ".video-agent" / "video-project-plan.json"
@@ -476,9 +485,12 @@ def test_create_plan_command_writes_hierarchical_brief(tmp_path: Path, monkeypat
     result = runner.invoke(
         app,
         [
-            "create-plan", str(tmp_path),
-            "--prompt", "Create a 90-second cinematic travel film",
-            "--model", "qwen2.5vl:3b",
+            "create-plan",
+            str(tmp_path),
+            "--prompt",
+            "Create a 90-second cinematic travel film",
+            "--model",
+            "qwen2.5vl:3b",
         ],
     )
 
