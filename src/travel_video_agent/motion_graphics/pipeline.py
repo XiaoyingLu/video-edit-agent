@@ -99,7 +99,7 @@ def _composition_html(
         location_markup = f"""
       <div id="location-card" class="clip location-card"
            data-start="{location_start:.3f}" data-duration="{location_duration:.3f}"
-           data-track-index="2">
+           data-track-index="3">
         <span class="location-rule"></span>
         <span class="location-label">{safe_location}</span>
       </div>"""
