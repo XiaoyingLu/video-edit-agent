@@ -75,6 +75,7 @@ def test_composition_escapes_user_text_and_preserves_audio():
     assert 'data-duration="12.000"' in html
     assert "window.__timelines.main = timeline" in html
     assert 'data-has-audio="true"' in html
+    assert 'data-track-index="3"' in html
     assert "muted" not in html
 
 
