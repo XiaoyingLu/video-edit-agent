@@ -26,8 +26,13 @@ _VISION_RESPONSE_SCHEMA: dict[str, Any] = {
         "shot_scale": {
             "type": "string",
             "enum": [
-                "extreme_wide", "wide", "medium", "close_up", "extreme_close_up",
-                "aerial", "unknown"
+                "extreme_wide",
+                "wide",
+                "medium",
+                "close_up",
+                "extreme_close_up",
+                "aerial",
+                "unknown",
             ],
         },
         "camera_angle": {
@@ -37,41 +42,75 @@ _VISION_RESPONSE_SCHEMA: dict[str, Any] = {
         "composition": {
             "type": "string",
             "enum": [
-                "centered", "rule_of_thirds", "leading_lines", "symmetrical",
-                "layered_depth", "negative_space", "unknown"
+                "centered",
+                "rule_of_thirds",
+                "leading_lines",
+                "symmetrical",
+                "layered_depth",
+                "negative_space",
+                "unknown",
             ],
         },
         "lighting": {
             "type": "string",
             "enum": [
-                "golden_hour", "blue_hour", "daylight", "overcast", "low_light",
-                "artificial", "backlit", "mixed", "unknown"
+                "golden_hour",
+                "blue_hour",
+                "daylight",
+                "overcast",
+                "low_light",
+                "artificial",
+                "backlit",
+                "mixed",
+                "unknown",
             ],
         },
         "mood": {
             "type": "string",
             "enum": [
-                "serene", "energetic", "dramatic", "romantic", "mysterious",
-                "joyful", "contemplative", "tense", "unknown"
+                "serene",
+                "energetic",
+                "dramatic",
+                "romantic",
+                "mysterious",
+                "joyful",
+                "contemplative",
+                "tense",
+                "unknown",
             ],
         },
         "visual_role": {
             "type": "string",
             "enum": [
-                "establishing", "action", "detail", "reaction", "transition",
-                "portrait", "scenic_breath", "unknown"
+                "establishing",
+                "action",
+                "detail",
+                "reaction",
+                "transition",
+                "portrait",
+                "scenic_breath",
+                "unknown",
             ],
         },
         "setting": {"type": "string", "maxLength": 100},
         "primary_subject": {"type": "string", "maxLength": 100},
     },
     "required": [
-        "description", "objects", "activities", "confidence", "shot_scale", "camera_angle",
-        "composition", "lighting", "mood", "visual_role", "setting", "primary_subject",
+        "description",
+        "objects",
+        "activities",
+        "confidence",
+        "shot_scale",
+        "camera_angle",
+        "composition",
+        "lighting",
+        "mood",
+        "visual_role",
+        "setting",
+        "primary_subject",
     ],
     "additionalProperties": False,
 }
-
 
 
 def _enum_value(value: Any, allowed: set[str]) -> str:
@@ -159,8 +198,13 @@ def _parse_observation(content: Any, frame_path: Path) -> dict[str, Any]:
         "shot_scale": _enum_value(
             observation.get("shot_scale"),
             {
-                "extreme_wide", "wide", "medium", "close_up",
-                "extreme_close_up", "aerial", "unknown",
+                "extreme_wide",
+                "wide",
+                "medium",
+                "close_up",
+                "extreme_close_up",
+                "aerial",
+                "unknown",
             },
         ),
         "camera_angle": _enum_value(
@@ -170,29 +214,54 @@ def _parse_observation(content: Any, frame_path: Path) -> dict[str, Any]:
         "composition": _enum_value(
             observation.get("composition"),
             {
-                "centered", "rule_of_thirds", "leading_lines", "symmetrical",
-                "layered_depth", "negative_space", "unknown",
+                "centered",
+                "rule_of_thirds",
+                "leading_lines",
+                "symmetrical",
+                "layered_depth",
+                "negative_space",
+                "unknown",
             },
         ),
         "lighting": _enum_value(
             observation.get("lighting"),
             {
-                "golden_hour", "blue_hour", "daylight", "overcast", "low_light",
-                "artificial", "backlit", "mixed", "unknown",
+                "golden_hour",
+                "blue_hour",
+                "daylight",
+                "overcast",
+                "low_light",
+                "artificial",
+                "backlit",
+                "mixed",
+                "unknown",
             },
         ),
         "mood": _enum_value(
             observation.get("mood"),
             {
-                "serene", "energetic", "dramatic", "romantic", "mysterious",
-                "joyful", "contemplative", "tense", "unknown",
+                "serene",
+                "energetic",
+                "dramatic",
+                "romantic",
+                "mysterious",
+                "joyful",
+                "contemplative",
+                "tense",
+                "unknown",
             },
         ),
         "visual_role": _enum_value(
             observation.get("visual_role"),
             {
-                "establishing", "action", "detail", "reaction", "transition",
-                "portrait", "scenic_breath", "unknown",
+                "establishing",
+                "action",
+                "detail",
+                "reaction",
+                "transition",
+                "portrait",
+                "scenic_breath",
+                "unknown",
             },
         ),
         "setting": _short_text(observation.get("setting")),

@@ -146,8 +146,18 @@ def test_ollama_analyzer_requests_json_schema(monkeypatch, tmp_path: Path) -> No
     assert result["description"] == "A lake beneath mountains."
     assert captured["payload"]["format"]["type"] == "object"
     assert set(captured["payload"]["format"]["required"]) == {
-        "description", "objects", "activities", "confidence", "shot_scale", "camera_angle",
-        "composition", "lighting", "mood", "visual_role", "setting", "primary_subject",
+        "description",
+        "objects",
+        "activities",
+        "confidence",
+        "shot_scale",
+        "camera_angle",
+        "composition",
+        "lighting",
+        "mood",
+        "visual_role",
+        "setting",
+        "primary_subject",
     }
 
 
@@ -246,8 +256,14 @@ def test_ollama_analyzer_limits_structured_output_and_generation_tokens(
     assert schema["properties"]["activities"]["maxItems"] == 4
     assert captured["payload"]["options"]["num_predict"] == 256
     assert captured["payload"]["format"]["properties"]["visual_role"]["enum"] == [
-        "establishing", "action", "detail", "reaction", "transition", "portrait",
-        "scenic_breath", "unknown",
+        "establishing",
+        "action",
+        "detail",
+        "reaction",
+        "transition",
+        "portrait",
+        "scenic_breath",
+        "unknown",
     ]
 
 
@@ -294,7 +310,7 @@ def test_ollama_analyzer_retries_truncated_json_with_shorter_output(
     assert len(requests) == 2
     assert requests[0]["options"]["num_predict"] == 256
     assert requests[1]["options"]["num_predict"] == 192
-    assert "no more than 5 key objects" in requests[1]["messages"][0]["content"]
+    assert "at most 5 objects and 2 activities" in requests[1]["messages"][0]["content"]
 
 
 def test_ollama_analyzer_rejects_too_many_objects(monkeypatch, tmp_path: Path) -> None:
