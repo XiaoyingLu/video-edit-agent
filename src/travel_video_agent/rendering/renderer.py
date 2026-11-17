@@ -351,7 +351,7 @@ def render_project(
     dependencies = [timeline_file]
     if subtitle_file is not None:
         dependencies.append(subtitle_file)
-    register_artifact(root, destination, dependencies=dependencies)
+    register_artifact(root, destination, dependencies=dependencies, verify_content=False)
 
     return RenderReport(
         output_path=str(destination),
