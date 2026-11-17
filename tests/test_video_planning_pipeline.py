@@ -84,7 +84,8 @@ def test_create_video_project_plan_generates_storyboard_and_registers_dependency
         ),
     )
     monkeypatch.setattr(
-        planning_pipeline, "generate_video_plan_content",
+        planning_pipeline,
+        "generate_video_plan_content",
         lambda prompt, brief, model=None: _generated_content(),
     )
 
