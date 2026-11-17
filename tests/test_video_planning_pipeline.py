@@ -12,8 +12,8 @@ from travel_video_agent.editing.planning_generation import (
 )
 from travel_video_agent.editing.planning_schemas import (
     PlannedScene,
-    StoryTreatment,
     StoryboardShot,
+    StoryTreatment,
 )
 
 
@@ -35,9 +35,14 @@ def _generated_content():
                 target_duration_seconds=45,
                 shots=[
                     StoryboardShot(
-                        shot_id="shot-01", scene_id="scene-01", sequence_index=1,
-                        purpose="Reveal the destination", visual_description="A wide mountain panorama at first light.",
-                        shot_scale="extreme_wide", visual_role="establishing", target_duration_seconds=45,
+                        shot_id="shot-01",
+                        scene_id="scene-01",
+                        sequence_index=1,
+                        purpose="Reveal the destination",
+                        visual_description="A wide mountain panorama at first light.",
+                        shot_scale="extreme_wide",
+                        visual_role="establishing",
+                        target_duration_seconds=45,
                     )
                 ],
             ),
@@ -50,9 +55,14 @@ def _generated_content():
                 target_duration_seconds=45,
                 shots=[
                     StoryboardShot(
-                        shot_id="shot-02", scene_id="scene-02", sequence_index=1,
-                        purpose="Show the journey", visual_description="A traveler approaches a turquoise alpine lake.",
-                        shot_scale="wide", visual_role="action", target_duration_seconds=45,
+                        shot_id="shot-02",
+                        scene_id="scene-02",
+                        sequence_index=1,
+                        purpose="Show the journey",
+                        visual_description="A traveler approaches a turquoise alpine lake.",
+                        shot_scale="wide",
+                        visual_role="action",
+                        target_duration_seconds=45,
                     )
                 ],
             ),
@@ -60,7 +70,9 @@ def _generated_content():
     )
 
 
-def test_create_video_project_plan_generates_storyboard_and_registers_dependency(tmp_path, monkeypatch):
+def test_create_video_project_plan_generates_storyboard_and_registers_dependency(
+    tmp_path, monkeypatch
+):
     monkeypatch.setattr(
         planning_pipeline,
         "parse_editing_intent",
