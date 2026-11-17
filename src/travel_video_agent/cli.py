@@ -9,6 +9,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from .artifact_tracking import register_artifact, validate_all_artifacts
 from .editing import (
     IntentParsingError,
     apply_review_decisions,
@@ -41,6 +42,18 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
+
+
+def _track_artifact(
+    folder: Path,
+    artifact: Path,
+    dependencies: tuple[str, ...] = (),
+    config: dict | None = None,
+) -> None:
+    """Register an artifact and whichever optional upstream files are present."""
+    root = folder.expanduser().resolve()
+    existing = [root / item for item in dependencies if (root / item).is_file()]
+    register_artifact(root, artifact, dependencies=existing, config=config)
 
 
 @app.callback()
@@ -83,6 +96,7 @@ def analyze(
     destination.write_text(
         json.dumps(analysis.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
     )
+    _track_artifact(folder, destination)
 
     table = Table(title="Travel Video Analysis")
     table.add_column("Video", style="cyan")
@@ -151,6 +165,9 @@ def understand(
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(
         json.dumps(understanding.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
+    )
+    _track_artifact(
+        folder, destination, config={"model": model, "samples_per_scene": samples_per_scene}
     )
 
     table = Table(title="Video Understanding")
@@ -246,6 +263,11 @@ def transcribe(
     destination.write_text(
         json.dumps(transcription.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
     )
+    _track_artifact(
+        folder,
+        destination,
+        config={"model": model, "device": device, "compute_type": compute_type},
+    )
 
     table = Table(title="Speech Transcription")
     table.add_column("Video", style="cyan")
@@ -332,6 +354,16 @@ def detect_silence(
     destination.write_text(
         json.dumps(report.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
     )
+    _track_artifact(
+        folder,
+        destination,
+        dependencies=(".video-agent/transcription.json",),
+        config={
+            "noise_threshold_db": noise_threshold_db,
+            "min_silence_duration": min_silence_duration,
+            "speech_padding_seconds": speech_padding_seconds,
+        },
+    )
 
     table = Table(title="Speech-aware Silence Analysis")
     table.add_column("Video", style="cyan")
@@ -387,6 +419,11 @@ def propose_edits(
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(
         json.dumps(proposal.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
+    )
+    _track_artifact(
+        folder,
+        destination,
+        dependencies=(".video-agent/silence-analysis.json", ".video-agent/understanding.json"),
     )
 
     table = Table(title="Draft Edit Proposal — Human Review Required")
@@ -466,6 +503,11 @@ def review_edits(
                         console.print("[yellow]Enter a, r, or s.[/yellow]")
         apply_review_decisions(proposal, approve_ids, reject_ids)
         save_edit_proposal(proposal, destination)
+        _track_artifact(
+            folder,
+            destination,
+            dependencies=(".video-agent/silence-analysis.json", ".video-agent/understanding.json"),
+        )
     except (FileNotFoundError, ValueError) as exc:
         console.print(f"[red]Review failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
@@ -524,6 +566,7 @@ def build_timeline(
     destination.write_text(
         json.dumps(timeline.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
     )
+    _track_artifact(folder, destination, dependencies=(".video-agent/edit-proposal.json",))
     table = Table(title="Validated Edit Timeline — No Rendering")
     table.add_column("Video", style="cyan")
     table.add_column("Approved cuts", justify="right")
@@ -581,6 +624,11 @@ def subtitles_command(
         console.print(f"[red]Subtitle generation failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
+    _track_artifact(
+        folder,
+        destination,
+        dependencies=(".video-agent/timeline.json", ".video-agent/transcription.json"),
+    )
     console.print(f"[bold green]Subtitles generated.[/bold green] {cue_count} cue(s).")
     console.print(f"SRT: [green]{destination}[/green]", soft_wrap=True)
     console.print(
@@ -778,6 +826,12 @@ def find_highlights(
     destination.write_text(
         json.dumps(report.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
     )
+    _track_artifact(
+        folder,
+        destination,
+        dependencies=(".video-agent/understanding.json",),
+        config={"samples_per_scene": samples_per_scene},
+    )
     table = Table(title="Visual Highlight Candidates — Human Review Required")
     table.add_column("Rank", justify="right")
     table.add_column("Video", style="cyan")
@@ -964,6 +1018,7 @@ def plan_edit(
         json.dumps(editing_plan.model_dump(mode="json"), indent=2) + "\n",
         encoding="utf-8",
     )
+    _track_artifact(folder, destination, config={"prompt": prompt, "model": model})
     console.print("[bold]Validated Natural-language Editing Plan[/bold]")
     console.print(f"Target duration: {editing_plan.target_duration_seconds:.1f}s")
     console.print(f"Style: {editing_plan.style} | Pacing: {editing_plan.pacing}")
@@ -1013,6 +1068,16 @@ def draft_edit(
     destination.write_text(
         json.dumps(draft.model_dump(mode="json"), indent=2) + "\n",
         encoding="utf-8",
+    )
+    _track_artifact(
+        folder,
+        destination,
+        dependencies=(
+            ".video-agent/editing-plan.json",
+            ".video-agent/highlights.json",
+            ".video-agent/understanding.json",
+            ".video-agent/transcription.json",
+        ),
     )
     table = Table(title="Proposed Footage Sequence — Human Review Required")
     table.add_column("Selected", justify="center")
@@ -1197,6 +1262,38 @@ def review_timeline(
     else:
         console.print("[yellow]Sequence is not approved yet; resolve all pending clips.[/yellow]")
     console.print("[yellow]No renderer timeline was created and no video was rendered.[/yellow]")
+
+
+@app.command("validate-artifacts")
+def validate_artifacts(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder containing generated artifacts.",
+        ),
+    ],
+) -> None:
+    """Check tracked artifacts against source videos and upstream dependencies."""
+    try:
+        stale = validate_all_artifacts(folder)
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[red]Artifact validation failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    if stale:
+        console.print("[red]Stale artifacts detected:[/red]")
+        for item in stale:
+            console.print(f"  • {item}")
+        raise typer.Exit(code=1)
+    console.print("[bold green]No stale tracked artifacts detected.[/bold green]")
+    console.print(
+        "[dim]Legacy artifacts without manifest entries are not checked; regenerate them "
+        "with the current CLI to enable dependency tracking.[/dim]"
+    )
 
 
 if __name__ == "__main__":
