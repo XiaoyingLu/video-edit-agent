@@ -151,7 +151,8 @@ def parse_editing_intent(prompt: str, model: str | None = None) -> EditingPlan:
     finally:
         if not parser.unload_model():
             warnings.warn(
-                f"Could not unload Ollama model '{parser.model}'; it may remain resident in memory.",
+                f"Could not unload Ollama model '{parser.model}'; it may remain "
+                "resident in memory.",
                 RuntimeWarning,
                 stacklevel=2,
             )
