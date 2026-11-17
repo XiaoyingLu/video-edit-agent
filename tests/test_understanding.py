@@ -330,8 +330,9 @@ def test_ollama_analyzer_rejects_too_many_objects(monkeypatch, tmp_path: Path) -
         OllamaVisionAnalyzer().analyze_frame(frame)
 
 
-
-def test_ollama_analyzer_sends_keep_alive_and_can_unload(monkeypatch, tmp_path: Path) -> None:
+def test_ollama_analyzer_sends_keep_alive_and_can_unload(
+    monkeypatch, tmp_path: Path
+) -> None:
     frame = tmp_path / "frame.jpg"
     frame.write_bytes(b"fake-image")
     requests = []
@@ -356,9 +357,7 @@ def test_ollama_analyzer_sends_keep_alive_and_can_unload(monkeypatch, tmp_path: 
         requests.append((request.full_url, json.loads(request.data.decode("utf-8"))))
         return FakeResponse()
 
-    monkeypatch.setattr(
-        "travel_video_agent.understanding.visual_analyzer.urlopen", fake_urlopen
-    )
+    monkeypatch.setattr("travel_video_agent.understanding.visual_analyzer.urlopen", fake_urlopen)
     monkeypatch.setattr(
         "travel_video_agent.understanding.visual_analyzer.ensure_memory_available",
         lambda required_gb, task: None,
@@ -372,7 +371,9 @@ def test_ollama_analyzer_sends_keep_alive_and_can_unload(monkeypatch, tmp_path: 
 
 
 
-def test_vision_memory_preflight_stops_before_ollama_request(monkeypatch, tmp_path: Path) -> None:
+def test_vision_memory_preflight_stops_before_ollama_request(
+    monkeypatch, tmp_path: Path
+) -> None:
     from travel_video_agent.resource_manager import ResourceError
     from travel_video_agent.understanding.visual_analyzer import VisionModelError
 
