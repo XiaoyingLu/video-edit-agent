@@ -26,6 +26,20 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _quick_sha256(path: Path) -> str:
+    """Hash beginning, middle, and end blocks for inexpensive change detection."""
+    size = path.stat().st_size
+    block_size = 1024 * 1024
+    offsets = sorted({0, max(0, size // 2 - block_size // 2), max(0, size - block_size)})
+    digest = hashlib.sha256()
+    digest.update(str(size).encode())
+    with path.open("rb") as stream:
+        for offset in offsets:
+            stream.seek(offset)
+            digest.update(stream.read(block_size))
+    return digest.hexdigest()
+
+
 def _key(root: Path, path: Path) -> str:
     resolved = path.expanduser().resolve()
     try:
@@ -79,11 +93,14 @@ def _source_snapshot(root: Path, previous: dict[str, Any] | None = None) -> dict
         stat = source.stat()
         old = previous.get(key, {})
         unchanged_stat = old.get("size") == stat.st_size and old.get("mtime_ns") == stat.st_mtime_ns
-        digest = old.get("sha256") if unchanged_stat else _sha256(source)
+        quick_digest = _quick_sha256(source)
+        same_content_sample = unchanged_stat and quick_digest == old.get("quick_sha256")
+        digest = old.get("sha256") if same_content_sample else _sha256(source)
         snapshot[key] = {
             "size": stat.st_size,
             "mtime_ns": stat.st_mtime_ns,
-            "sha256": digest or _sha256(source),
+            "quick_sha256": quick_digest,
+            "sha256": digest,
         }
     return snapshot
 
