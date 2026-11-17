@@ -272,7 +272,10 @@ def test_cinematic_timeline_builds_establishing_action_detail_and_scenic_arc(tmp
     timeline = build_draft_timeline(tmp_path)
 
     assert [clip.clip_id for clip in timeline.clips] == [
-        "establishing", "action", "detail", "scenic"
+        "establishing",
+        "action",
+        "detail",
+        "scenic",
     ]
     assert timeline.clips[0].sequence_reason.startswith("Opens with a wide establishing")
     assert "visual-scale contrast" in timeline.clips[2].sequence_reason

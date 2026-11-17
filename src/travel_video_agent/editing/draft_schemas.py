@@ -23,12 +23,25 @@ class DraftClip(BaseModel):
         "extreme_wide", "wide", "medium", "close_up", "extreme_close_up", "aerial", "unknown"
     ] = "unknown"
     visual_role: Literal[
-        "establishing", "action", "detail", "reaction", "transition", "portrait",
-        "scenic_breath", "unknown"
+        "establishing",
+        "action",
+        "detail",
+        "reaction",
+        "transition",
+        "portrait",
+        "scenic_breath",
+        "unknown",
     ] = "unknown"
     mood: Literal[
-        "serene", "energetic", "dramatic", "romantic", "mysterious", "joyful",
-        "contemplative", "tense", "unknown"
+        "serene",
+        "energetic",
+        "dramatic",
+        "romantic",
+        "mysterious",
+        "joyful",
+        "contemplative",
+        "tense",
+        "unknown",
     ] = "unknown"
     setting: str = Field(default="", max_length=100)
     primary_subject: str = Field(default="", max_length=100)

@@ -49,9 +49,7 @@ def _pacing_guidance(
     duration: float, pacing: str, visual_role: str = "unknown"
 ) -> tuple[str, str, float]:
     """Recommend a role-aware shot duration without changing source intervals."""
-    lower, upper = _ROLE_PACING_RANGES[pacing].get(
-        visual_role, _PACING_RANGES[pacing]
-    )
+    lower, upper = _ROLE_PACING_RANGES[pacing].get(visual_role, _PACING_RANGES[pacing])
     target = round((lower + upper) / 2, 2)
     if duration < lower:
         fit = "short"
@@ -77,10 +75,7 @@ def _pacing_guidance(
 
 
 def _has_cinematic_metadata(clips: list) -> bool:
-    return any(
-        clip.visual_role != "unknown" or clip.shot_scale != "unknown"
-        for clip in clips
-    )
+    return any(clip.visual_role != "unknown" or clip.shot_scale != "unknown" for clip in clips)
 
 
 def _cinematic_order(clips: list) -> list:
@@ -107,7 +102,7 @@ def _cinematic_order(clips: list) -> list:
         previous = ordered[-1]
         is_closing = len(ordered) == len(clips) - 1
 
-        def sequence_score(candidate):
+        def sequence_score(candidate, previous=previous, is_closing=is_closing):
             score = candidate.combined_score * 0.35
             role = candidate.visual_role
             previous_role = previous.visual_role
@@ -153,12 +148,11 @@ def _cinematic_order(clips: list) -> list:
                 score -= 12
             if candidate.shot_scale == previous.shot_scale and candidate.shot_scale != "unknown":
                 score -= 8
-            elif (
-                {candidate.shot_scale, previous.shot_scale}
-                & {"wide", "extreme_wide", "aerial"}
-                and {candidate.shot_scale, previous.shot_scale}
-                & {"close_up", "extreme_close_up"}
-            ):
+            elif {candidate.shot_scale, previous.shot_scale} & {
+                "wide",
+                "extreme_wide",
+                "aerial",
+            } and {candidate.shot_scale, previous.shot_scale} & {"close_up", "extreme_close_up"}:
                 score += 7
             return (
                 score,
@@ -176,7 +170,9 @@ def _cinematic_order(clips: list) -> list:
 def _sequence_reason(clip, previous, index: int, count: int) -> str:
     if index == 1:
         if clip.visual_role == "establishing" or clip.shot_scale in {
-            "wide", "extreme_wide", "aerial"
+            "wide",
+            "extreme_wide",
+            "aerial",
         }:
             return "Opens with a wide establishing view to introduce the destination."
         return "Opens with the strongest available shot; no clear establishing shot was identified."
@@ -190,7 +186,6 @@ def _sequence_reason(clip, previous, index: int, count: int) -> str:
     if clip.visual_role != "unknown":
         return f"Adds a {clip.visual_role.replace('_', ' ')} beat to vary the visual story."
     return "Retains ranked footage order because scene-role metadata is uncertain."
-
 
 
 def build_draft_timeline(
@@ -276,9 +271,7 @@ def build_draft_timeline(
                 mood=clip.mood,
                 setting=clip.setting,
                 primary_subject=clip.primary_subject,
-                sequence_reason=_sequence_reason(
-                    clip, previous_clip, index, len(selected)
-                ),
+                sequence_reason=_sequence_reason(clip, previous_clip, index, len(selected)),
                 pacing_target_seconds=pacing_target,
                 transition_in=transition,
                 transition_duration_seconds=round(transition_duration, 3),
