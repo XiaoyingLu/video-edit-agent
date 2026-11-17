@@ -5,7 +5,6 @@ from __future__ import annotations
 import html
 import json
 import math
-import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -241,10 +240,7 @@ def create_hyperframes_project(
     assets_dir.mkdir(parents=True, exist_ok=True)
     if media.exists() or media.is_symlink():
         media.unlink()
-    try:
-        os.link(video_file, media)
-    except OSError:
-        shutil.copy2(video_file, media)
+    shutil.copy2(video_file, media)
 
     composition.write_text(
         _composition_html(
