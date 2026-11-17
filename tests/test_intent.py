@@ -119,7 +119,6 @@ def test_intent_parser_unloads_model(monkeypatch) -> None:
     assert captured["payload"] == {"model": "qwen2.5vl:3b", "keep_alive": 0}
 
 
-
 def test_intent_memory_preflight_rejects_before_parser_can_run(monkeypatch) -> None:
     from travel_video_agent.resource_manager import ResourceError
 
