@@ -172,6 +172,25 @@ Check the project at any time:
 docker compose run --rm video-agent validate-artifacts ./travel-test
 ```
 
+### Generated storage cleanup
+
+Extracted frames are regenerable caches and can consume substantial disk space on long trips. The `clean` command prunes only files under `.video-agent/frames/` and `.video-agent/highlight-frames/`: it first removes files older than seven days, then removes the oldest remaining cache files until the combined cache is at or below 5 GB. Both limits are configurable.
+
+Preview the operation before deleting anything:
+
+```bash
+docker compose run --rm video-agent clean ./travel-test --dry-run
+```
+
+Apply it, optionally preserving frames referenced by the current `understanding.json`:
+
+```bash
+docker compose run --rm video-agent clean ./travel-test --max-age-days 7 --max-cache-gb 5
+docker compose run --rm video-agent clean ./travel-test --keep-artifacts
+```
+
+The cleanup never removes source videos, JSON analysis/review artifacts, the artifact manifest, SRT files, rendered MP4s, or downloaded model weights. `--keep-artifacts` additionally protects frame paths referenced by `understanding.json`. Use `--dry-run` to inspect the candidate count and reclaimed-space estimate first.
+
 The command reports stale artifacts and exits non-zero when regeneration is required. The end-to-end `create-video` workflow and the standalone understanding, transcription, highlight, planning, selection, timeline, and rendering commands register their outputs. Legacy artifacts created before dependency tracking remain readable for compatibility, but are not validated because they have no manifest entry. Regenerate them with the current CLI to gain provenance checks.
 
 Source files are never modified. File size and modification time provide a fast check; a sampled SHA-256 over the beginning, middle, and end detects content changes even when timestamps are preserved, and a full SHA-256 is recomputed when the sample or file metadata changes. The manifest is local project metadata and is covered by the existing `.video-agent/` Git ignore rule.
