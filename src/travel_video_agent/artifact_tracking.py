@@ -68,7 +68,13 @@ def _source_snapshot(root: Path, previous: dict[str, Any] | None = None) -> dict
     """Fingerprint source videos, rehashing only when size or mtime changes."""
     previous = previous or {}
     snapshot: dict[str, dict[str, Any]] = {}
-    for source in sorted(discover_videos(root), key=lambda item: item.as_posix()):
+    artifact_dir = root / ".video-agent"
+    sources = [
+        path
+        for path in discover_videos(root)
+        if not path.is_relative_to(artifact_dir)
+    ]
+    for source in sorted(sources, key=lambda item: item.as_posix()):
         key = _key(root, source)
         stat = source.stat()
         old = previous.get(key, {})
@@ -102,6 +108,9 @@ def register_artifact(
     artifacts = manifest["artifacts"]
     key = _key(root, artifact)
     existing = artifacts.get(key, {})
+    shared_sources = existing.get("sources") or next(
+        (item.get("sources") for item in artifacts.values() if item.get("sources")), {}
+    )
     if dependencies is None:
         dependency_keys = list(existing.get("dependencies", []))
     else:
@@ -122,7 +131,7 @@ def register_artifact(
 
     artifacts[key] = {
         "sha256": _sha256(artifact),
-        "sources": _source_snapshot(root, existing.get("sources")),
+        "sources": _source_snapshot(root, shared_sources),
         "dependencies": dependency_keys,
         "dependency_hashes": dependency_hashes,
         "config": config if config is not None else existing.get("config", {}),
