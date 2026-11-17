@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import math
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 CACHE_DIRECTORIES = (Path(".video-agent/frames"), Path(".video-agent/highlight-frames"))
@@ -79,7 +79,7 @@ def cleanup_generated_storage(
         raise NotADirectoryError(f"Project folder does not exist: {root}")
 
     artifact_root = (root / ".video-agent").resolve()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     cutoff = now - timedelta(days=max_age_days)
     protected = _referenced_frames(root) if keep_artifacts else set()
     candidates: list[tuple[Path, int, float]] = []
@@ -110,7 +110,7 @@ def cleanup_generated_storage(
 
     # Age-based pruning is deterministic and takes priority over the size budget.
     for path, size, modified in sorted(candidates, key=lambda item: (item[2], item[0].as_posix())):
-        modified_at = datetime.fromtimestamp(modified, tz=timezone.utc)
+        modified_at = datetime.fromtimestamp(modified, tz=UTC)
         if modified_at < cutoff:
             selected.append(path)
             selected_bytes += size
