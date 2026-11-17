@@ -42,13 +42,20 @@ def test_create_video_draft_writes_review_artifacts_and_stops_before_render(
     )
     timeline = SimpleNamespace(clips=[object()])
     calls = []
+    selected_models = {}
+    monkeypatch.setenv("OLLAMA_MODEL", "qwen2.5vl:3b")
 
-    monkeypatch.setattr(workflow, "parse_editing_intent", lambda *args, **kwargs: plan)
-    monkeypatch.setattr(
-        workflow,
-        "understand_folder",
-        lambda *args, **kwargs: calls.append("understand") or understanding,
-    )
+    def fake_parse(prompt, model=None):
+        selected_models["intent"] = model
+        return plan
+
+    def fake_understand(*args, **kwargs):
+        selected_models["understanding"] = kwargs.get("model")
+        calls.append("understand")
+        return understanding
+
+    monkeypatch.setattr(workflow, "parse_editing_intent", fake_parse)
+    monkeypatch.setattr(workflow, "understand_folder", fake_understand)
     monkeypatch.setattr(
         workflow,
         "transcribe_folder",
@@ -76,6 +83,7 @@ def test_create_video_draft_writes_review_artifacts_and_stops_before_render(
     assert result[3] is timeline
     assert result[4].is_file()
     assert calls == ["understand", "transcribe", "highlights", "timeline"]
+    assert selected_models == {"intent": "qwen2.5vl:3b", "understanding": "qwen2.5vl:3b"}
     for artifact in (
         "editing-plan.json",
         "understanding.json",
