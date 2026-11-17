@@ -60,9 +60,7 @@ def _load_manifest(root: Path) -> dict[str, Any]:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise StaleArtifactError(f"Could not read artifact manifest {path}: {exc}") from exc
-    if payload.get("version") != MANIFEST_VERSION or not isinstance(
-        payload.get("artifacts"), dict
-    ):
+    if payload.get("version") != MANIFEST_VERSION or not isinstance(payload.get("artifacts"), dict):
         raise StaleArtifactError(
             f"Unsupported or invalid artifact manifest {path}; "
             "move it aside and regenerate project artifacts."
@@ -97,9 +95,7 @@ def _source_snapshot(
         key = _key(root, source)
         stat = source.stat()
         old = previous.get(key, {})
-        unchanged_stat = (
-            old.get("size") == stat.st_size and old.get("mtime_ns") == stat.st_mtime_ns
-        )
+        unchanged_stat = old.get("size") == stat.st_size and old.get("mtime_ns") == stat.st_mtime_ns
         quick_digest = _quick_sha256(source)
         same_content_sample = unchanged_stat and quick_digest == old.get("quick_sha256")
         digest = old.get("sha256") if same_content_sample else _sha256(source)
@@ -139,10 +135,7 @@ def register_artifact(
         dependency_keys = list(existing.get("dependencies", []))
     else:
         dependency_keys = sorted(
-            {
-                _key(root, item if isinstance(item, Path) else root / item)
-                for item in dependencies
-            }
+            {_key(root, item if isinstance(item, Path) else root / item) for item in dependencies}
         )
     dependency_hashes: dict[str, str] = {}
     for dependency in dependency_keys:
@@ -153,9 +146,7 @@ def register_artifact(
             raise FileNotFoundError(f"Artifact dependency is missing: {dependency_path}")
         dependency_hashes[dependency] = _sha256(dependency_path)
 
-    excluded_paths = {
-        Path(item) if Path(item).is_absolute() else root / item for item in artifacts
-    }
+    excluded_paths = {Path(item) if Path(item).is_absolute() else root / item for item in artifacts}
     excluded_paths.add(artifact)
     artifacts[key] = {
         "sha256": _sha256(artifact),
@@ -268,4 +259,3 @@ def validate_all_artifacts(folder: Path) -> list[str]:
         except StaleArtifactError as exc:
             stale.append(f"{key}: {exc}")
     return stale
-
