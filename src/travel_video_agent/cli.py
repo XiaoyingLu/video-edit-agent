@@ -1307,9 +1307,36 @@ def review_timeline(
 
 @app.command("analyze-music")
 def analyze_music_command(
-    folder: Annotated[Path, typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True, help="Project folder for the soundtrack analysis artifact.")],
-    music: Annotated[Path, typer.Option("--music", exists=True, file_okay=True, dir_okay=False, readable=True, help="Explicit soundtrack file to analyze.")],
-    output: Annotated[Path | None, typer.Option("--output", "-o", help="JSON output path (default: <folder>/.video-agent/music-analysis.json).")] = None,
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder for the soundtrack analysis artifact.",
+        ),
+    ],
+    music: Annotated[
+        Path,
+        typer.Option(
+            "--music",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+            help="Explicit soundtrack file to analyze.",
+        ),
+    ],
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help="JSON output path (default: <folder>/.video-agent/music-analysis.json).",
+        ),
+    ] = None,
 ) -> None:
     """Estimate soundtrack tempo, beats, downbeats, and broad energy sections."""
     try:
@@ -1321,7 +1348,9 @@ def analyze_music_command(
     destination = output or folder.resolve() / ".video-agent" / "music-analysis.json"
     destination = destination.expanduser().resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(json.dumps(report.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8")
+    destination.write_text(
+        json.dumps(report.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
+    )
     register_artifact(folder, destination, dependencies=[music.expanduser().resolve()])
 
     table = Table(title="Soundtrack Analysis")
@@ -1330,11 +1359,18 @@ def analyze_music_command(
     table.add_column("Beats", justify="right")
     table.add_column("Downbeats", justify="right")
     table.add_column("Energy sections", justify="right")
-    table.add_row(f"{report.bpm:.1f} BPM" if report.bpm else "Undetected", f"{report.beat_confidence:.2f}", str(len(report.beat_times_seconds)), str(len(report.downbeat_times_seconds)), str(len(report.sections)))
+    table.add_row(
+        f"{report.bpm:.1f} BPM" if report.bpm else "Undetected",
+        f"{report.beat_confidence:.2f}",
+        str(len(report.beat_times_seconds)),
+        str(len(report.downbeat_times_seconds)),
+        str(len(report.sections)),
+    )
     console.print(table)
     console.print(f"Music analysis saved to [green]{destination}[/green]")
     for note in report.notes:
         console.print(f"[dim]• {note}[/dim]")
+
 
 @app.command("validate-artifacts")
 def validate_artifacts(
