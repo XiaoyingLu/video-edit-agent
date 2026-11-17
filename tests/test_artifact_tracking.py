@@ -69,3 +69,19 @@ def test_artifact_tampering_is_detected(tmp_path):
 
     with pytest.raises(StaleArtifactError, match="was modified"):
         validate_artifact(tmp_path, artifact)
+
+
+
+def test_sampled_hash_detects_content_change_with_preserved_stat(tmp_path):
+    source = _write(tmp_path / "trip.mp4", "a" * (3 * 1024 * 1024))
+    artifact = _write(tmp_path / ".video-agent" / "understanding.json", '{"ok": true}')
+    register_artifact(tmp_path, artifact)
+    original_stat = source.stat()
+
+    content = bytearray(source.read_bytes())
+    content[len(content) // 2] = ord("b")
+    source.write_bytes(content)
+    os.utime(source, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
+
+    with pytest.raises(StaleArtifactError, match="Source video"):
+        validate_artifact(tmp_path, artifact)
