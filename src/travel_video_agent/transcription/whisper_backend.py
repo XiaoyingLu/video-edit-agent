@@ -1,6 +1,15 @@
 """Local speech-to-text adapter powered by faster-whisper."""
 
+import gc
 from pathlib import Path
+from typing import Any
+
+from ..resource_manager import (
+    ensure_gpu_memory_available,
+    ensure_memory_available,
+    required_whisper_memory_gb,
+    required_whisper_vram_gb,
+)
 from typing import Any
 
 
@@ -18,6 +27,14 @@ class FasterWhisperTranscriber:
         compute_type: str = "int8",
         download_root: Path | None = None,
     ) -> None:
+        ensure_memory_available(
+            required_whisper_memory_gb(model), f"faster-whisper model '{model}'"
+        )
+        if device.lower() == "cuda":
+            ensure_gpu_memory_available(
+                required_whisper_vram_gb(model), f"faster-whisper model '{model}'"
+            )
+
         try:
             from faster_whisper import WhisperModel
         except ImportError as exc:
@@ -35,6 +52,11 @@ class FasterWhisperTranscriber:
             )
         except Exception as exc:
             raise TranscriptionError(f"Could not load Whisper model '{model}': {exc}") from exc
+
+    def close(self) -> None:
+        """Release CTranslate2 model references and collect freed host/GPU memory."""
+        self._model = None
+        gc.collect()
 
     def transcribe(self, media_path: Path) -> dict[str, Any]:
         """Transcribe speech in a video file and return normalized segment data."""
