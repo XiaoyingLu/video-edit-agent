@@ -85,3 +85,44 @@ def test_sampled_hash_detects_content_change_with_preserved_stat(tmp_path):
 
     with pytest.raises(StaleArtifactError, match="Source video"):
         validate_artifact(tmp_path, artifact)
+
+
+
+def test_downstream_selection_rejects_stale_source_artifacts(tmp_path):
+    from travel_video_agent.editing.draft_pipeline import build_draft_selection
+
+    from tests.test_draft_selection import _write_artifacts
+
+    source = _write(tmp_path / "trip.mp4", "original")
+    _write_artifacts(
+        tmp_path,
+        [
+            {
+                "candidate_id": "candidate-1",
+                "video_path": "trip.mp4",
+                "start_seconds": 0,
+                "end_seconds": 5,
+                "duration_seconds": 5,
+                "score": 90,
+                "signals": {
+                    "motion": 0.5,
+                    "sharpness": 0.9,
+                    "exposure": 0.9,
+                    "saturation": 0.8,
+                },
+                "reasons": [],
+                "scene_summary": "A mountain landscape",
+                "review_required": True,
+            }
+        ],
+    )
+    artifact_dir = tmp_path / ".video-agent"
+    plan = artifact_dir / "editing-plan.json"
+    highlights = artifact_dir / "highlights.json"
+    register_artifact(tmp_path, plan)
+    register_artifact(tmp_path, highlights)
+    source.write_text("modified")
+    os.utime(source, None)
+
+    with pytest.raises(StaleArtifactError, match="Source video"):
+        build_draft_selection(tmp_path)
