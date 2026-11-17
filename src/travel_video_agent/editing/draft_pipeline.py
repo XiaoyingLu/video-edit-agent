@@ -211,7 +211,11 @@ def build_draft_selection(
                 ),
                 primary_subject=(
                     next(
-                        (item.primary_subject for item in scene.observations if item.primary_subject),
+                        (
+                            item.primary_subject
+                            for item in scene.observations
+                            if item.primary_subject
+                        ),
                         "",
                     )
                     if scene
