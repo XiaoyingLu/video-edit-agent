@@ -20,11 +20,15 @@ def create_video_project_plan(
     if not root.is_dir():
         raise FileNotFoundError(f"Project folder does not exist: {root}")
 
-    editing_plan = parse_editing_intent(prompt, model=model)
     artifact_dir = root / ".video-agent"
+    editing_path = artifact_dir / "editing-plan.json"
+    destination = (output_path or artifact_dir / "video-project-plan.json").expanduser().resolve()
+    if destination == editing_path.resolve():
+        raise ValueError("video project plan output cannot overwrite editing-plan.json")
+
+    editing_plan = parse_editing_intent(prompt, model=model)
     artifact_dir.mkdir(parents=True, exist_ok=True)
 
-    editing_path = artifact_dir / "editing-plan.json"
     editing_path.write_text(
         json.dumps(editing_plan.model_dump(mode="json"), indent=2) + "\n",
         encoding="utf-8",
@@ -50,7 +54,6 @@ def create_video_project_plan(
         brief=brief,
         editing_preferences=editing_plan,
     )
-    destination = (output_path or artifact_dir / "video-project-plan.json").expanduser().resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(
         json.dumps(project_plan.model_dump(mode="json"), indent=2) + "\n",
