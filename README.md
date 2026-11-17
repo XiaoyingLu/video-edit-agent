@@ -14,6 +14,19 @@ A local-first Python CLI for editing personal travel footage. Media stays on you
 - Natural-language editing intent parsing into a validated, reviewable plan
 - Local soundtrack tempo, beat/downbeat, and energy-section analysis
 
+## Hierarchical video planning
+
+The `create-plan` command starts a video project with a structured creative brief, separate from the executable editing timeline:
+
+```bash
+docker compose run --rm video-agent create-plan ./travel-test \
+  --prompt "Create a 90-second cinematic Banff travel film focused on mountain scenery and memorable moments"
+```
+
+It writes `.video-agent/video-project-plan.json` and the compatible `.video-agent/editing-plan.json`. The project plan contains a creative brief (goal, duration, style, format, pacing, priorities, and assumptions), a reference to the validated editing preferences, and explicit planning-stage metadata. The project-plan artifact depends on the editing-plan artifact, so changing the upstream intent invalidates the downstream plan.
+
+Planning artifacts are deliberately distinct from `.video-agent/optimized-timeline.json`: a storyboard describes intended scenes and shots before footage is assigned, while the optimized timeline contains concrete source paths and time intervals for rendering. The initial `brief_ready` stage does not fabricate a story or storyboard. Later planning stages will add a narrative treatment, storyboard, footage assignments, and production timeline while preserving explicit human approval. This command does not analyze footage, select clips, modify source media, or render a video.
+
 ## Cinematic scene understanding
 
 The `understand` command analyzes representative frames with the local Ollama vision model and stores both factual descriptions and bounded editorial attributes in `.video-agent/understanding.json`. Each observation includes shot scale, camera angle, composition, lighting, mood, likely editorial role (such as establishing, action, detail, or scenic breath), broad setting, and primary subject. Scene-level story function and dominant mood are aggregated from frame labels.
