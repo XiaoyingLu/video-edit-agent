@@ -12,6 +12,7 @@ from .renderer import (
     RenderReport,
     _run_probe,
     _seconds,
+    _validate_source_stream_metadata,
     _validate_filter_graph,
 )
 
@@ -209,6 +210,7 @@ def render_approved_shot_timeline(
             )
             if video_stream is None:
                 raise RenderError(f"Timeline source has no video stream: {source}")
+            _validate_source_stream_metadata(payload, source)
             duration = float(payload.get("format", {}).get("duration") or 0)
             if duration <= 0:
                 raise RenderError(f"Timeline source has an invalid duration: {source}")
