@@ -116,4 +116,6 @@ def transcribe_folder(
         )
     finally:
         if backend is not None:
-            backend.close()
+            close = getattr(backend, "close", None)
+            if callable(close):
+                close()
