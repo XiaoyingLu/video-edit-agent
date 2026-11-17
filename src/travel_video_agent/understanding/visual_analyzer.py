@@ -120,6 +120,7 @@ class OllamaVisionAnalyzer:
         self.timeout_seconds = timeout_seconds
         self.keep_alive = os.getenv("OLLAMA_KEEP_ALIVE", "5m")
         self._memory_checked = False
+        self._model_used = False
 
     def analyze_frame(self, frame_path: Path) -> dict[str, Any]:
         """Return a normalized observation, retrying once if the model emits invalid JSON."""
@@ -162,6 +163,7 @@ class OllamaVisionAnalyzer:
                 method="POST",
             )
             try:
+                self._model_used = True
                 with urlopen(request, timeout=self.timeout_seconds) as response:
                     result = json.loads(response.read().decode("utf-8"))
             except HTTPError as exc:
@@ -201,6 +203,8 @@ class OllamaVisionAnalyzer:
 
     def unload_model(self) -> bool:
         """Ask Ollama to evict this model from VRAM/RAM after the vision phase."""
+        if not self._model_used:
+            return True
         payload = json.dumps({"model": self.model, "keep_alive": 0}).encode("utf-8")
         request = Request(
             f"{self.base_url}/api/generate",
