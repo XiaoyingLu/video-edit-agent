@@ -4,6 +4,14 @@ from .draft_pipeline import build_draft_selection
 from .draft_schemas import DraftClip, ProjectDraftSelection
 from .intent import IntentParsingError, OllamaIntentParser, parse_editing_intent
 from .intent_schemas import EditingPlan
+from .planning_pipeline import create_video_project_plan
+from .planning_schemas import (
+    CreativeBrief,
+    PlannedScene,
+    StoryboardShot,
+    StoryTreatment,
+    VideoProjectPlan,
+)
 from .pipeline import (
     apply_review_decisions,
     build_edit_proposal,
@@ -21,6 +29,12 @@ from .timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
 
 __all__ = [
     "EditingPlan",
+    "CreativeBrief",
+    "StoryTreatment",
+    "StoryboardShot",
+    "PlannedScene",
+    "VideoProjectPlan",
+    "create_video_project_plan",
     "DraftClip",
     "ProjectDraftSelection",
     "build_draft_selection",
