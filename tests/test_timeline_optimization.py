@@ -214,7 +214,7 @@ def test_cinematic_timeline_builds_establishing_action_detail_and_scenic_arc(tmp
             relevance_score=90,
             combined_score=99,
             visual_role="action",
-            shot_scale="close_up",
+            shot_scale="medium",
             selected=True,
         ),
         DraftClip(
