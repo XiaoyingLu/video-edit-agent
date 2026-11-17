@@ -196,10 +196,9 @@ def validate_artifact(
         else:
             artifact_stat = artifact.stat()
             expected_stat = record.get("artifact_stat", {})
-            artifact_changed = (
-                artifact_stat.st_size != expected_stat.get("size")
-                or artifact_stat.st_mtime_ns != expected_stat.get("mtime_ns")
-            )
+            artifact_changed = artifact_stat.st_size != expected_stat.get(
+                "size"
+            ) or artifact_stat.st_mtime_ns != expected_stat.get("mtime_ns")
         if artifact_changed:
             raise StaleArtifactError(
                 f"Artifact '{key}' was modified after it was generated; regenerate it."
