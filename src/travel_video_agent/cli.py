@@ -18,6 +18,7 @@ from .editing import (
     build_draft_timeline,
     build_edit_proposal,
     build_project_timeline,
+    create_video_project_plan,
     load_draft_timeline,
     load_edit_proposal,
     parse_editing_intent,
@@ -1058,6 +1059,61 @@ def plan_edit(
     console.print(
         "[yellow]This is an intent artifact only. No clips were selected, "
         "no timeline was changed, and no video was rendered.[/yellow]"
+    )
+
+
+
+@app.command("create-plan")
+def create_plan(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder for the video plan.",
+        ),
+    ],
+    prompt: Annotated[
+        str,
+        typer.Option("--prompt", "-p", help="Describe the video you want to plan."),
+    ],
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help="JSON output path (default: <folder>/.video-agent/video-project-plan.json).",
+        ),
+    ] = None,
+    model: Annotated[
+        str | None,
+        typer.Option("--model", help="Ollama model (default: OLLAMA_MODEL or qwen2.5vl:3b)."),
+    ] = None,
+) -> None:
+    """Create a hierarchical creative brief for a future video production."""
+    try:
+        project_plan, destination = create_video_project_plan(
+            folder, prompt, model=model, output_path=output
+        )
+    except (FileNotFoundError, IntentParsingError, ValueError) as exc:
+        console.print(f"[red]Video planning failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    brief = project_plan.brief
+    console.print("[bold green]Video creative brief created.[/bold green]")
+    console.print(f"Target: {brief.target_duration_seconds:.1f}s | {brief.style}")
+    console.print(
+        f"Format: {brief.aspect_ratio} | {brief.resolution} | {brief.pacing} pacing"
+    )
+    console.print(f"Creative priorities: {', '.join(brief.creative_priorities)}")
+    console.print(f"Planning stage: [cyan]{project_plan.planning_stage}[/cyan]")
+    console.print(f"Plan saved to [green]{destination}[/green]")
+    console.print(
+        "[yellow]This creates the creative-brief foundation only. "
+        "It does not invent a storyboard, select footage, change a timeline, or render video.[/yellow]"
     )
 
 
