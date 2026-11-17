@@ -286,7 +286,6 @@ def test_chronological_story_keeps_source_order_despite_scene_roles(tmp_path):
     from travel_video_agent.editing.draft_schemas import DraftClip
 
     _write_inputs(tmp_path, style="vlog", transition="cut")
-    artifact = tmp_path / ".video-agent"
     clips = [
         DraftClip(
             clip_id="later-establishing",
