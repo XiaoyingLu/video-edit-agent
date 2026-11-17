@@ -218,6 +218,7 @@ def render_project(
     )
     if not timeline_file.is_file():
         raise FileNotFoundError(f"Missing {timeline_file}; run 'video-agent build-timeline' first.")
+    validate_artifact(root, timeline_file)
     timeline = ProjectTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root:
         raise RenderError("timeline belongs to a different project folder")
@@ -232,6 +233,8 @@ def render_project(
         raise FileNotFoundError(
             f"Subtitle file does not exist: {subtitle_file}; run 'video-agent subtitles' first."
         )
+    if subtitle_file is not None:
+        validate_artifact(root, subtitle_file)
     if subtitle_file is not None and destination == subtitle_file:
         raise RenderError("render output cannot overwrite the subtitle file")
     if destination == timeline_file:
@@ -343,6 +346,11 @@ def render_project(
     except Exception:
         temporary_path.unlink(missing_ok=True)
         raise
+
+    dependencies = [timeline_file]
+    if subtitle_file is not None:
+        dependencies.append(subtitle_file)
+    register_artifact(root, destination, dependencies=dependencies)
 
     return RenderReport(
         output_path=str(destination),
