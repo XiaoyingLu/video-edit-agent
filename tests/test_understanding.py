@@ -201,7 +201,6 @@ def test_ollama_analyzer_reports_invalid_json_with_response_preview(
         OllamaVisionAnalyzer().analyze_frame(frame)
 
 
-
 def test_ollama_analyzer_limits_structured_output_and_generation_tokens(
     monkeypatch, tmp_path: Path
 ) -> None:
