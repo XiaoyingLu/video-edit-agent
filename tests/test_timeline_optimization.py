@@ -356,4 +356,5 @@ def test_cinematic_timeline_preserves_ranked_order_without_scene_metadata(tmp_pa
 
     assert [clip.clip_id for clip in timeline.clips] == ["later", "earlier"]
     assert all(clip.visual_role == "unknown" for clip in timeline.clips)
-    assert all("metadata is uncertain" in clip.sequence_reason for clip in timeline.clips)
+    assert "strongest available shot" in timeline.clips[0].sequence_reason
+    assert "metadata is uncertain" in timeline.clips[1].sequence_reason
