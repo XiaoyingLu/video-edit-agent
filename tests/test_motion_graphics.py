@@ -26,17 +26,19 @@ def _approved_timeline(root: Path) -> Path:
         "approved_duration_seconds": 5,
         "proposed_clip_count": 1,
         "timeline_approved": True,
-        "clips": [{
-            "clip_id": "clip-1",
-            "sequence_index": 1,
-            "video_path": str(root / "source.mp4"),
-            "source_start_seconds": 0,
-            "source_end_seconds": 5,
-            "duration_seconds": 5,
-            "combined_score": 90,
-            "pacing_note": "A scenic establishing shot.",
-            "decision": "approved",
-        }],
+        "clips": [
+            {
+                "clip_id": "clip-1",
+                "sequence_index": 1,
+                "video_path": str(root / "source.mp4"),
+                "source_start_seconds": 0,
+                "source_end_seconds": 5,
+                "duration_seconds": 5,
+                "combined_score": 90,
+                "pacing_note": "A scenic establishing shot.",
+                "decision": "approved",
+            }
+        ],
     }
     artifact.write_text(json.dumps(payload), encoding="utf-8")
     ProjectDraftTimeline.model_validate(payload)
@@ -49,7 +51,8 @@ def _fake_ffprobe(monkeypatch, has_audio=True):
         if has_audio:
             streams.append({"codec_type": "audio"})
         return subprocess.CompletedProcess(
-            command, 0,
+            command,
+            0,
             stdout=json.dumps({"format": {"duration": "5.0"}, "streams": streams}).encode(),
             stderr=b"",
         )
@@ -58,22 +61,30 @@ def _fake_ffprobe(monkeypatch, has_audio=True):
 
 def test_composition_escapes_user_text_and_preserves_audio():
     html = _composition_html(
-        duration=12, width=1920, height=1080, title="Nova Scotia <Coast>",
-        location="Peggy’s Cove & Halifax", has_audio=True,
+        duration=12,
+        width=1920,
+        height=1080,
+        title="Nova Scotia <Coast>",
+        location="Peggy’s Cove & Halifax",
+        has_audio=True,
     )
     assert "Nova Scotia &lt;Coast&gt;" in html
     assert "Peggy’s Cove &amp; Halifax" in html
     assert 'data-composition-id="main"' in html
     assert 'data-duration="12.000"' in html
-    assert 'window.__timelines.main = timeline' in html
+    assert "window.__timelines.main = timeline" in html
     assert 'data-has-audio="true"' in html
     assert "muted" not in html
 
 
 def test_composition_mutes_video_without_audio():
     html = _composition_html(
-        duration=5, width=1280, height=720, title="A Journey",
-        location=None, has_audio=False,
+        duration=5,
+        width=1280,
+        height=720,
+        title="A Journey",
+        location=None,
+        has_audio=False,
     )
     assert "muted" in html
     assert "location-card" not in html
@@ -85,9 +96,7 @@ def test_generates_hyperframes_project_from_approved_draft(tmp_path, monkeypatch
     video.write_bytes(b"test-video")
     _fake_ffprobe(monkeypatch)
 
-    report = create_hyperframes_project(
-        tmp_path, title="A Coastal Journey", location="Nova Scotia"
-    )
+    report = create_hyperframes_project(tmp_path, title="A Coastal Journey", location="Nova Scotia")
 
     project = Path(report.project_directory)
     assert (project / "index.html").is_file()
@@ -149,9 +158,9 @@ def test_create_motion_project_cli_invokes_generator(tmp_path, monkeypatch):
         "title": "A Journey",
         "location": "Nova Scotia",
     }
-    monkeypatch.setattr(cli, "create_hyperframes_project", lambda *args, **kwargs: type(
-        "Report", (), expected
-    )())
+    monkeypatch.setattr(
+        cli, "create_hyperframes_project", lambda *args, **kwargs: type("Report", (), expected)()
+    )
     result = CliRunner().invoke(
         app,
         [
