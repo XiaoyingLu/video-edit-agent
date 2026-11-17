@@ -78,15 +78,20 @@ def _write_manifest(root: Path, manifest: dict[str, Any]) -> None:
     os.replace(temporary, path)
 
 
-def _source_snapshot(root: Path, previous: dict[str, Any] | None = None) -> dict[str, dict[str, Any]]:
-    """Fingerprint source videos, rehashing only when size or mtime changes."""
+def _source_snapshot(
+    root: Path,
+    previous: dict[str, Any] | None = None,
+    excluded_paths: set[Path] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Fingerprint source videos while excluding generated artifacts."""
     previous = previous or {}
+    excluded = {path.resolve() for path in (excluded_paths or set())}
     snapshot: dict[str, dict[str, Any]] = {}
     artifact_dir = root / ".video-agent"
     sources = [
         path
         for path in discover_videos(root)
-        if not path.is_relative_to(artifact_dir)
+        if not path.is_relative_to(artifact_dir) and path.resolve() not in excluded
     ]
     for source in sorted(sources, key=lambda item: item.as_posix()):
         key = _key(root, source)
@@ -146,9 +151,13 @@ def register_artifact(
             raise FileNotFoundError(f"Artifact dependency is missing: {dependency_path}")
         dependency_hashes[dependency] = _sha256(dependency_path)
 
+    excluded_paths = {
+        Path(item) if Path(item).is_absolute() else root / item for item in artifacts
+    }
+    excluded_paths.add(artifact)
     artifacts[key] = {
         "sha256": _sha256(artifact),
-        "sources": _source_snapshot(root, shared_sources),
+        "sources": _source_snapshot(root, shared_sources, excluded_paths),
         "dependencies": dependency_keys,
         "dependency_hashes": dependency_hashes,
         "config": config if config is not None else existing.get("config", {}),
@@ -187,7 +196,11 @@ def validate_artifact(
                 f"Artifact '{key}' was modified after it was generated; regenerate it."
             )
 
-        current_sources = _source_snapshot(root, record.get("sources"))
+        excluded_paths = {
+            Path(item) if Path(item).is_absolute() else root / item
+            for item in manifest["artifacts"]
+        }
+        current_sources = _source_snapshot(root, record.get("sources"), excluded_paths)
         expected_sources = record.get("sources", {})
         if set(current_sources) != set(expected_sources):
             raise StaleArtifactError(
