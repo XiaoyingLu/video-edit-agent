@@ -83,9 +83,9 @@ class OllamaVideoPlanner:
 
     def __init__(self, model: str | None = None, base_url: str | None = None) -> None:
         self.model = model or os.getenv("OLLAMA_MODEL", "qwen2.5vl:3b")
-        self.base_url = (
-            base_url or os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
-        ).rstrip("/")
+        self.base_url = (base_url or os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")).rstrip(
+            "/"
+        )
         self.keep_alive = os.getenv("OLLAMA_KEEP_ALIVE", "5m")
         try:
             ensure_memory_available(
@@ -157,9 +157,7 @@ class OllamaVideoPlanner:
             detail = exc.read().decode("utf-8", errors="replace")
             raise VideoPlanningError(f"Ollama returned HTTP {exc.code}: {detail}") from exc
         except (URLError, TimeoutError) as exc:
-            raise VideoPlanningError(
-                f"Could not reach Ollama at {self.base_url}: {exc}"
-            ) from exc
+            raise VideoPlanningError(f"Could not reach Ollama at {self.base_url}: {exc}") from exc
         except (
             json.JSONDecodeError,
             UnicodeDecodeError,
