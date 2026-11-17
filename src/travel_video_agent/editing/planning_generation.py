@@ -24,6 +24,23 @@ class VideoPlanningError(RuntimeError):
     """Raised when the model cannot generate a valid narrative plan."""
 
 
+def infer_creative_priorities(prompt: str, existing: list[str]) -> list[str]:
+    """Supplement model-selected priorities with transparent keyword-based signals."""
+    text = prompt.lower()
+    keyword_groups = {
+        "scenic_landscapes": ("mountain", "lake", "landscape", "scenery", "nature", "coast", "waterfall"),
+        "city_highlights": ("city", "street", "downtown", "urban"),
+        "people_and_activities": ("people", "friends", "family", "hiking", "activity", "adventure"),
+        "food_and_culture": ("food", "restaurant", "cuisine", "culture", "market", "festival"),
+        "architecture": ("architecture", "building", "temple", "castle", "museum"),
+    }
+    priorities = list(existing)
+    for priority, keywords in keyword_groups.items():
+        if priority not in priorities and any(keyword in text for keyword in keywords):
+            priorities.append(priority)
+    return priorities
+
+
 def explicit_duration_seconds(prompt: str) -> float | None:
     """Extract an explicitly requested duration so model defaults cannot override it."""
     text = prompt.lower()
