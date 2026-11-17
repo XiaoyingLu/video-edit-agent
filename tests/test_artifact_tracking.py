@@ -86,7 +86,6 @@ def test_sampled_hash_detects_content_change_with_preserved_stat(tmp_path):
         validate_artifact(tmp_path, artifact)
 
 
-
 def test_downstream_selection_rejects_stale_source_artifacts(tmp_path):
     from travel_video_agent.editing.draft_pipeline import build_draft_selection
     from travel_video_agent.editing.intent_schemas import EditingPlan
