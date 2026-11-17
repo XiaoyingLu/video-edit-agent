@@ -97,7 +97,9 @@ def _source_snapshot(
         key = _key(root, source)
         stat = source.stat()
         old = previous.get(key, {})
-        unchanged_stat = old.get("size") == stat.st_size and old.get("mtime_ns") == stat.st_mtime_ns
+        unchanged_stat = (
+            old.get("size") == stat.st_size and old.get("mtime_ns") == stat.st_mtime_ns
+        )
         quick_digest = _quick_sha256(source)
         same_content_sample = unchanged_stat and quick_digest == old.get("quick_sha256")
         digest = old.get("sha256") if same_content_sample else _sha256(source)
@@ -162,7 +164,10 @@ def register_artifact(
         "dependency_hashes": dependency_hashes,
         "config": config if config is not None else existing.get("config", {}),
         "config_hash": hashlib.sha256(
-            json.dumps(config if config is not None else existing.get("config", {}), sort_keys=True).encode()
+            json.dumps(
+                config if config is not None else existing.get("config", {}),
+                sort_keys=True,
+            ).encode()
         ).hexdigest(),
     }
     _write_manifest(root, manifest)
@@ -201,7 +206,7 @@ def validate_artifact(
             for item in manifest["artifacts"]
         }
         current_sources = _source_snapshot(root, record.get("sources"), excluded_paths)
-        expected_sources = record.get("sources", {})
+        expected_sources = record.get("sources") or {}
         if set(current_sources) != set(expected_sources):
             raise StaleArtifactError(
                 f"Source video set changed since '{key}' was generated; "
@@ -264,13 +269,3 @@ def validate_all_artifacts(folder: Path) -> list[str]:
             stale.append(f"{key}: {exc}")
     return stale
 
-
-def record_artifact_dependencies(
-    folder: Path,
-    artifact_path: Path,
-    dependencies: list[str],
-    *,
-    config: dict[str, Any] | None = None,
-) -> None:
-    """Convenience wrapper for artifacts stored beneath the project root."""
-    register_artifact(folder, artifact_path, dependencies=dependencies, config=config)
