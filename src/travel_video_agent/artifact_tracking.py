@@ -114,6 +114,7 @@ def register_artifact(
     *,
     dependencies: list[Path | str] | None = None,
     config: dict[str, Any] | None = None,
+    verify_content: bool = True,
 ) -> None:
     """Record an artifact's source snapshot, direct dependencies, and content hash.
 
@@ -148,8 +149,10 @@ def register_artifact(
 
     excluded_paths = {Path(item) if Path(item).is_absolute() else root / item for item in artifacts}
     excluded_paths.add(artifact)
+    artifact_stat = artifact.stat()
     artifacts[key] = {
-        "sha256": _sha256(artifact),
+        "sha256": _sha256(artifact) if verify_content else None,
+        "artifact_stat": {"size": artifact_stat.st_size, "mtime_ns": artifact_stat.st_mtime_ns},
         "sources": _source_snapshot(root, shared_sources, excluded_paths),
         "dependencies": dependency_keys,
         "dependency_hashes": dependency_hashes,
@@ -187,7 +190,17 @@ def validate_artifact(
         raise StaleArtifactError(f"Artifact dependency cycle detected at {key}.")
     visited.add(key)
     try:
-        if _sha256(artifact) != record.get("sha256"):
+        expected_artifact_hash = record.get("sha256")
+        if expected_artifact_hash is not None:
+            artifact_changed = _sha256(artifact) != expected_artifact_hash
+        else:
+            artifact_stat = artifact.stat()
+            expected_stat = record.get("artifact_stat", {})
+            artifact_changed = (
+                artifact_stat.st_size != expected_stat.get("size")
+                or artifact_stat.st_mtime_ns != expected_stat.get("mtime_ns")
+            )
+        if artifact_changed:
             raise StaleArtifactError(
                 f"Artifact '{key}' was modified after it was generated; regenerate it."
             )
