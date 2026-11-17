@@ -49,3 +49,18 @@ def test_gpu_preflight_rejects_insufficient_vram(monkeypatch):
 def test_gpu_preflight_is_optional_without_nvidia_smi(monkeypatch):
     monkeypatch.setattr(resources, "available_gpu_memory_gb", lambda: None)
     assert resources.ensure_gpu_memory_available(8.0, "Whisper large") is None
+
+
+
+@pytest.mark.parametrize(
+    ("variable", "resolver"),
+    [
+        ("OLLAMA_MIN_MEMORY_GB", resources.required_vision_memory_gb),
+        ("WHISPER_MIN_MEMORY_GB", resources.required_whisper_memory_gb),
+        ("WHISPER_MIN_VRAM_GB", resources.required_whisper_vram_gb),
+    ],
+)
+def test_resource_threshold_rejects_non_finite_values(monkeypatch, variable, resolver):
+    monkeypatch.setenv(variable, "nan")
+    with pytest.raises(resources.ResourceError, match="positive number"):
+        resolver("qwen2.5vl:7b" if variable.startswith("OLLAMA") else "small")
