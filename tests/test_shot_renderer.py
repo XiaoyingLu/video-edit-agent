@@ -193,6 +193,7 @@ def test_cli_help_includes_render_draft():
     assert result.exit_code == 0
     assert "render-draft" in result.output
 
+
 def test_render_draft_cli_dry_run_reports_preflight_without_rendering(tmp_path, monkeypatch):
     calls = {}
 
@@ -200,16 +201,13 @@ def test_render_draft_cli_dry_run_reports_preflight_without_rendering(tmp_path, 
         calls.update(kwargs)
         return None
 
-    monkeypatch.setattr(
-        "travel_video_agent.cli.render_approved_shot_timeline", fake_render
-    )
+    monkeypatch.setattr("travel_video_agent.cli.render_approved_shot_timeline", fake_render)
     result = runner.invoke(app, ["render-draft", str(tmp_path), "--dry-run"])
 
     assert result.exit_code == 0, result.output
     assert calls["dry_run"] is True
     assert "preflight passed" in result.output
     assert "no MP4 was written" in result.output
-
 
 
 def test_approved_duration_does_not_apply_transition_across_rejected_shot(tmp_path):
