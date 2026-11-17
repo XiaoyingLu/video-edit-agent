@@ -369,3 +369,25 @@ def test_ollama_analyzer_sends_keep_alive_and_can_unload(monkeypatch, tmp_path: 
     assert analyzer.unload_model() is True
     assert requests[1][0].endswith("/api/generate")
     assert requests[1][1] == {"model": "qwen2.5vl:3b", "keep_alive": 0}
+
+
+
+def test_vision_memory_preflight_stops_before_ollama_request(monkeypatch, tmp_path: Path) -> None:
+    from travel_video_agent.resource_manager import ResourceError
+    from travel_video_agent.understanding.visual_analyzer import VisionModelError
+
+    frame = tmp_path / "frame.jpg"
+    frame.write_bytes(b"fake-image")
+
+    def reject(required_gb, task):
+        raise ResourceError("Not enough available memory")
+
+    monkeypatch.setattr(
+        "travel_video_agent.understanding.visual_analyzer.ensure_memory_available", reject
+    )
+    monkeypatch.setattr(
+        "travel_video_agent.understanding.visual_analyzer.urlopen",
+        lambda *args, **kwargs: pytest.fail("Ollama must not be called after failed preflight"),
+    )
+    with pytest.raises(VisionModelError, match="Not enough available memory"):
+        OllamaVisionAnalyzer(model="qwen2.5vl:7b").analyze_frame(frame)
