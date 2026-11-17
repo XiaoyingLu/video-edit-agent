@@ -63,9 +63,7 @@ def test_keep_artifacts_protects_understanding_referenced_frames(tmp_path: Path)
     }
     (tmp_path / ".video-agent/understanding.json").write_text(json.dumps(understanding))
 
-    report = cleanup_generated_storage(
-        tmp_path, max_age_days=1, keep_artifacts=True, dry_run=False
-    )
+    report = cleanup_generated_storage(tmp_path, max_age_days=1, keep_artifacts=True, dry_run=False)
 
     assert report.scanned_files == 1
     assert report.candidate_files == 0
@@ -81,9 +79,7 @@ def test_keep_artifacts_protects_understanding_referenced_frames(tmp_path: Path)
         ({"max_cache_gb": float("inf")}, "max_cache_gb"),
     ],
 )
-def test_cleanup_rejects_invalid_limits(
-    tmp_path: Path, kwargs: dict, message: str
-) -> None:
+def test_cleanup_rejects_invalid_limits(tmp_path: Path, kwargs: dict, message: str) -> None:
     with pytest.raises(ValueError, match=message):
         cleanup_generated_storage(tmp_path, **kwargs)
 
