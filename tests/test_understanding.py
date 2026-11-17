@@ -391,7 +391,9 @@ def test_vision_memory_preflight_stops_before_ollama_request(monkeypatch, tmp_pa
         OllamaVisionAnalyzer(model="qwen2.5vl:7b").analyze_frame(frame)
 
 
-def test_vision_analyzer_normalizes_missing_editorial_fields_to_unknown(monkeypatch, tmp_path: Path) -> None:
+def test_vision_analyzer_normalizes_missing_editorial_fields_to_unknown(
+    monkeypatch, tmp_path: Path
+) -> None:
     frame = tmp_path / "frame.jpg"
     frame.write_bytes(b"fake-image")
 
@@ -467,10 +469,18 @@ def test_scene_editorial_labels_use_most_common_known_value() -> None:
     from travel_video_agent.understanding.schemas import FrameObservation
 
     observations = [
-        FrameObservation(timestamp_seconds=1, frame_path="a.jpg", description="a", visual_role="establishing"),
-        FrameObservation(timestamp_seconds=2, frame_path="b.jpg", description="b", visual_role="unknown"),
-        FrameObservation(timestamp_seconds=3, frame_path="c.jpg", description="c", visual_role="establishing"),
-        FrameObservation(timestamp_seconds=4, frame_path="d.jpg", description="d", visual_role="detail"),
+        FrameObservation(
+            timestamp_seconds=1, frame_path="a.jpg", description="a", visual_role="establishing"
+        ),
+        FrameObservation(
+            timestamp_seconds=2, frame_path="b.jpg", description="b", visual_role="unknown"
+        ),
+        FrameObservation(
+            timestamp_seconds=3, frame_path="c.jpg", description="c", visual_role="establishing"
+        ),
+        FrameObservation(
+            timestamp_seconds=4, frame_path="d.jpg", description="d", visual_role="detail"
+        ),
     ]
     assert _dominant_label(observations, "visual_role") == "establishing"
     assert _dominant_label(observations, "mood") == "unknown"
