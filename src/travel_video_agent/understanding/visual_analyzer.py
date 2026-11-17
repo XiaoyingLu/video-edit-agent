@@ -26,7 +26,8 @@ _VISION_RESPONSE_SCHEMA: dict[str, Any] = {
         "shot_scale": {
             "type": "string",
             "enum": [
-                "extreme_wide", "wide", "medium", "close_up", "extreme_close_up", "aerial", "unknown"
+                "extreme_wide", "wide", "medium", "close_up", "extreme_close_up",
+                "aerial", "unknown"
             ],
         },
         "camera_angle": {
