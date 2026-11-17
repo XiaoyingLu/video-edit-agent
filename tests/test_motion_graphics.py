@@ -56,6 +56,7 @@ def _fake_ffprobe(monkeypatch, has_audio=True):
             stdout=json.dumps({"format": {"duration": "5.0"}, "streams": streams}).encode(),
             stderr=b"",
         )
+
     monkeypatch.setattr("travel_video_agent.motion_graphics.pipeline.subprocess.run", run)
 
 
