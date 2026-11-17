@@ -29,6 +29,7 @@ from .highlights import find_highlights_folder
 from .media import MediaToolError, analyze_folder
 from .music import analyze_music
 from .music.pipeline import MusicAnalysisError
+from .motion_graphics import MotionGraphicsError, create_hyperframes_project
 from .rendering import RenderError, render_approved_shot_timeline, render_project
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
@@ -739,6 +740,72 @@ def render(
         subtitle_display_path = subtitle_file or folder.resolve() / ".video-agent" / "subtitles.srt"
         console.print(f"Burned-in subtitles: [green]{subtitle_display_path}[/green]")
     console.print("[yellow]Original source videos were not modified.[/yellow]")
+
+
+@app.command("create-motion-project")
+def create_motion_project(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder containing the approved timeline and rendered draft.",
+        ),
+    ],
+    title: Annotated[
+        str,
+        typer.Option("--title", min_length=1, max_length=120, help="Opening title displayed over the footage."),
+    ],
+    location: Annotated[
+        str | None,
+        typer.Option("--location", max_length=100, help="Optional location label shown as a lower third."),
+    ] = None,
+    timeline: Annotated[
+        Path | None,
+        typer.Option("--timeline", help="Approved timeline JSON (default: .video-agent/optimized-timeline.json)."),
+    ] = None,
+    video: Annotated[
+        Path | None,
+        typer.Option("--video", help="Rendered MP4 (default: .video-agent/rendered-draft.mp4)."),
+    ] = None,
+    output_dir: Annotated[
+        Path | None,
+        typer.Option("--output-dir", help="HyperFrames project directory (default: .video-agent/hyperframes-project)."),
+    ] = None,
+    overwrite: Annotated[
+        bool,
+        typer.Option("--overwrite", help="Replace generated files in an existing HyperFrames project."),
+    ] = False,
+) -> None:
+    """Generate an optional HyperFrames title and location-overlay project."""
+    try:
+        report = create_hyperframes_project(
+            folder,
+            title=title,
+            location=location,
+            timeline_path=timeline,
+            video_path=video,
+            output_dir=output_dir,
+            overwrite=overwrite,
+        )
+    except (FileNotFoundError, FileExistsError, NotADirectoryError, ValueError, MotionGraphicsError) as exc:
+        console.print(f"[red]Motion-graphics project failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    console.print("[bold green]HyperFrames project generated.[/bold green]")
+    console.print(f"Project: [green]{report.project_directory}[/green]")
+    console.print(
+        f"Composition: {report.width}x{report.height}, {report.duration_seconds:.2f}s, "
+        f"{'with audio' if report.has_audio else 'silent video'}"
+    )
+    console.print("Preview and render from the generated project directory:")
+    console.print(f"  cd {report.project_directory}")
+    console.print("  npx hyperframes preview")
+    console.print("  npx hyperframes render --output final-motion-graphics.mp4")
+    console.print("[dim]Requires Node.js 22+, npm, FFmpeg, and network access for the GSAP CDN script.[/dim]")
 
 
 @app.command("render-draft")
