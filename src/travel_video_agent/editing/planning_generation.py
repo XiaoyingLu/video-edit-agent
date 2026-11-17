@@ -114,9 +114,11 @@ class OllamaVideoPlanner:
         schema = GeneratedVideoPlanContent.model_json_schema()
         system_prompt = (
             "You are an experienced travel-film director and storyboard artist. Create a specific, "
-            "coherent production storyboard from the creative brief. Do not merely restate the prompt. "
+            "coherent production storyboard from the creative brief. "
+            "Do not merely restate the prompt. "
             "Include a compelling title, logline, beginning-middle-ending narrative arc, and 3-6 "
-            "distinct scenes. Each scene must contain 2-5 concrete storyboard shots. Describe visible "
+            "distinct scenes. Each scene must contain 2-5 concrete storyboard shots. "
+            "Describe visible "
             "composition and subject, not generic phrases. Include shot scale, editorial role, purpose, "
             "optional concise narration/on-screen text, and useful audio cues. Use only supported enum "
             "values. The sum of all shot durations MUST equal the requested target duration exactly; "
