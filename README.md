@@ -51,7 +51,7 @@ docker compose run --rm video-agent create-motion-project ./travel-test \
 
 This command requires a fully approved `.video-agent/optimized-timeline.json` and an existing `.video-agent/rendered-draft.mp4`. It validates tracked upstream artifacts, probes the rendered video's dimensions, duration, and audio stream, then creates `.video-agent/hyperframes-project/` with:
 - `index.html`: a timed video layer, animated opening title, and optional location lower third
-- `assets/rendered-draft.mp4`: a hard link to the rendered draft when supported, otherwise a copy
+- `assets/rendered-draft.mp4`: an independent copy of the rendered draft
 - `meta.json`: composition dimensions and duration
 
 The composition uses HyperFrames' HTML timing attributes and a seekable, paused GSAP timeline. User-provided title/location text is HTML-escaped. The rendered video's audio is retained when present; silent videos are explicitly muted. Source footage and the FFmpeg-rendered draft are never modified. Existing generated projects are protected unless `--overwrite` is supplied.
