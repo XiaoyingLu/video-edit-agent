@@ -1113,7 +1113,8 @@ def create_plan(
     console.print(f"Plan saved to [green]{destination}[/green]")
     console.print(
         "[yellow]This creates the creative-brief foundation only. "
-        "It does not invent a storyboard, select footage, change a timeline, or render video.[/yellow]"
+        "It does not invent a storyboard, select footage, change a timeline, or render video."
+        "[/yellow]"
     )
 
 
