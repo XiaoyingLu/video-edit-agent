@@ -3,6 +3,7 @@
 import hashlib
 from pathlib import Path
 
+from ..artifact_tracking import validate_artifact
 from ..highlights.schemas import ProjectHighlights
 from ..transcription.schemas import ProjectTranscription
 from ..understanding.schemas import VideoUnderstanding
@@ -118,6 +119,7 @@ def build_draft_selection(
     if editing_plan is None:
         if not plan_file.is_file():
             raise FileNotFoundError(f"Missing {plan_file}; run 'video-agent plan' first.")
+        validate_artifact(root, plan_file)
         editing_plan = EditingPlan.model_validate_json(plan_file.read_text(encoding="utf-8"))
 
     highlights_file = artifact_dir / "highlights.json"
@@ -125,19 +127,24 @@ def build_draft_selection(
         raise FileNotFoundError(
             f"Missing {highlights_file}; run 'video-agent find-highlights' first."
         )
+    validate_artifact(root, highlights_file)
     highlights = ProjectHighlights.model_validate_json(highlights_file.read_text(encoding="utf-8"))
     understanding_file = artifact_dir / "understanding.json"
-    understanding = (
-        VideoUnderstanding.model_validate_json(understanding_file.read_text(encoding="utf-8"))
-        if understanding_file.is_file()
-        else None
-    )
+    if understanding_file.is_file():
+        validate_artifact(root, understanding_file)
+        understanding = VideoUnderstanding.model_validate_json(
+            understanding_file.read_text(encoding="utf-8")
+        )
+    else:
+        understanding = None
     transcription_file = artifact_dir / "transcription.json"
-    transcription = (
-        ProjectTranscription.model_validate_json(transcription_file.read_text(encoding="utf-8"))
-        if transcription_file.is_file()
-        else None
-    )
+    if transcription_file.is_file():
+        validate_artifact(root, transcription_file)
+        transcription = ProjectTranscription.model_validate_json(
+            transcription_file.read_text(encoding="utf-8")
+        )
+    else:
+        transcription = None
 
     scenes_by_video: dict[str, list] = {}
     if understanding is not None:
