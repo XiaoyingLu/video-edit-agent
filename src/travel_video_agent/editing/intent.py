@@ -7,6 +7,8 @@ from urllib.request import Request, urlopen
 
 from pydantic import ValidationError
 
+from ..resource_manager import ResourceError, ensure_memory_available, required_vision_memory_gb
+
 from .intent_schemas import EditingPlan
 
 
@@ -28,6 +30,13 @@ class OllamaIntentParser:
             "/"
         )
         self.timeout_seconds = timeout_seconds
+        self.keep_alive = os.getenv("OLLAMA_KEEP_ALIVE", "5m")
+        try:
+            ensure_memory_available(
+                required_vision_memory_gb(self.model), f"Ollama intent model '{self.model}'"
+            )
+        except ResourceError as exc:
+            raise IntentParsingError(str(exc)) from exc
 
     def parse(self, prompt: str) -> EditingPlan:
         """Ask Ollama for structured intent, then validate it locally."""
@@ -61,6 +70,7 @@ class OllamaIntentParser:
         payload = json.dumps(
             {
                 "model": self.model,
+                "keep_alive": self.keep_alive,
                 "stream": False,
                 "format": schema,
                 "messages": [
@@ -113,6 +123,26 @@ class OllamaIntentParser:
             ) from exc
 
 
+    def unload_model(self) -> bool:
+        """Ask Ollama to evict the intent model before another model phase begins."""
+        payload = json.dumps({"model": self.model, "keep_alive": 0}).encode("utf-8")
+        request = Request(
+            f"{self.base_url}/api/generate",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urlopen(request, timeout=min(self.timeout_seconds, 30)):
+                return True
+        except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError):
+            return False
+
+
 def parse_editing_intent(prompt: str, model: str | None = None) -> EditingPlan:
-    """Parse one natural-language request into a validated plan."""
-    return OllamaIntentParser(model=model).parse(prompt)
+    """Parse one natural-language request, then release the model from memory."""
+    parser = OllamaIntentParser(model=model)
+    try:
+        return parser.parse(prompt)
+    finally:
+        parser.unload_model()
