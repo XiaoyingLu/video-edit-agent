@@ -2,6 +2,7 @@
 
 import json
 import os
+import warnings
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -147,4 +148,9 @@ def parse_editing_intent(prompt: str, model: str | None = None) -> EditingPlan:
     try:
         return parser.parse(prompt)
     finally:
-        parser.unload_model()
+        if not parser.unload_model():
+            warnings.warn(
+                f"Could not unload Ollama model '{parser.model}'; it may remain resident in memory.",
+                ResourceWarning,
+                stacklevel=2,
+            )
