@@ -76,40 +76,44 @@ def transcribe_folder(
     )
 
     transcripts: list[VideoTranscript] = []
-    for path in discover_videos(root):
-        relative_path = relative_media_path(path, root)
-        info = next(item for item in analysis.videos if item.path == relative_path)
-        if not info.has_audio:
+    try:
+        for path in discover_videos(root):
+            relative_path = relative_media_path(path, root)
+            info = next(item for item in analysis.videos if item.path == relative_path)
+            if not info.has_audio:
+                transcripts.append(
+                    VideoTranscript(
+                        path=relative_path,
+                        duration_seconds=info.duration_seconds,
+                        has_audio=False,
+                    )
+                )
+                continue
+
+            assert backend is not None
+            result = backend.transcribe(path)
+            segments = [TranscriptSegment.model_validate(item) for item in result["segments"]]
+            pauses = detect_speech_pauses(segments, info.duration_seconds, min_pause_duration)
             transcripts.append(
                 VideoTranscript(
                     path=relative_path,
                     duration_seconds=info.duration_seconds,
-                    has_audio=False,
+                    has_audio=True,
+                    language=result.get("language"),
+                    language_probability=result.get("language_probability"),
+                    segments=segments,
+                    pauses=pauses,
                 )
             )
-            continue
 
-        assert backend is not None
-        result = backend.transcribe(path)
-        segments = [TranscriptSegment.model_validate(item) for item in result["segments"]]
-        pauses = detect_speech_pauses(segments, info.duration_seconds, min_pause_duration)
-        transcripts.append(
-            VideoTranscript(
-                path=relative_path,
-                duration_seconds=info.duration_seconds,
-                has_audio=True,
-                language=result.get("language"),
-                language_probability=result.get("language_probability"),
-                segments=segments,
-                pauses=pauses,
-            )
+        return ProjectTranscription(
+            project_path=str(root),
+            video_count=analysis.video_count,
+            transcribed_video_count=sum(item.has_audio for item in transcripts),
+            segment_count=sum(len(item.segments) for item in transcripts),
+            model=model,
+            videos=transcripts,
         )
-
-    return ProjectTranscription(
-        project_path=str(root),
-        video_count=analysis.video_count,
-        transcribed_video_count=sum(item.has_audio for item in transcripts),
-        segment_count=sum(len(item.segments) for item in transcripts),
-        model=model,
-        videos=transcripts,
-    )
+    finally:
+        if backend is not None:
+            backend.close()
