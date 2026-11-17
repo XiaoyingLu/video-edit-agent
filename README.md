@@ -16,16 +16,16 @@ A local-first Python CLI for editing personal travel footage. Media stays on you
 
 ## Hierarchical video planning
 
-The `create-plan` command starts a video project with a structured creative brief, separate from the executable editing timeline:
+The `create-plan` command generates a creative brief, narrative treatment, and structured storyboard using the local Ollama model:
 
 ```bash
 docker compose run --rm video-agent create-plan ./travel-test \
   --prompt "Create a 90-second cinematic Banff travel film focused on mountain scenery and memorable moments"
 ```
 
-It writes `.video-agent/video-project-plan.json` and the compatible `.video-agent/editing-plan.json`. The project plan contains a creative brief (goal, duration, style, format, pacing, priorities, and assumptions), a reference to the validated editing preferences, and explicit planning-stage metadata. The project-plan artifact depends on the editing-plan artifact, so changing the upstream intent invalidates the downstream plan.
+It writes `.video-agent/video-project-plan.json` and the compatible `.video-agent/editing-plan.json`. The project plan includes a working title, logline, narrative arc, emotional journey, ordered scenes, and concrete storyboard shots with visual descriptions, shot scale, editorial role, duration, narration/text suggestions, and audio cues. Explicit durations in the user's prompt (for example, `90-second` or `2 minutes`) take precedence over model defaults. Scene and shot durations are normalized and validated against the requested total.
 
-Planning artifacts are deliberately distinct from `.video-agent/optimized-timeline.json`: a storyboard describes intended scenes and shots before footage is assigned, while the optimized timeline contains concrete source paths and time intervals for rendering. The initial `brief_ready` stage does not fabricate a story or storyboard. You can run `create-plan` before importing any source media; it captures creative intent without requiring footage. Later planning stages will add a narrative treatment, storyboard, footage assignments, and production timeline while preserving explicit human approval. This command does not analyze footage, select clips, modify source media, or render a video.
+Storyboard shots describe intended visuals; they are not claims about footage that has been inspected. Footage paths and source intervals remain unassigned until a later matching stage. The project plan is separate from `.video-agent/optimized-timeline.json`, which contains concrete source paths and time intervals for rendering. Planning does not modify source media, approve edits, or render video. The project-plan artifact depends on the editing-plan artifact, so changing upstream intent invalidates the derived plan.
 
 ## Cinematic scene understanding
 
