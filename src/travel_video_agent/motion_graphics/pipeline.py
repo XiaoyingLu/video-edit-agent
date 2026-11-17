@@ -46,8 +46,14 @@ def _inside(root: Path, path: Path, label: str) -> Path:
 
 def _probe_video(path: Path) -> tuple[float, int, int, bool]:
     command = [
-        "ffprobe", "-v", "error", "-show_entries",
-        "format=duration:stream=codec_type,width,height", "-of", "json", str(path),
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration:stream=codec_type,width,height",
+        "-of",
+        "json",
+        str(path),
     ]
     try:
         result = subprocess.run(command, capture_output=True, check=False, timeout=30)
@@ -63,8 +69,10 @@ def _probe_video(path: Path) -> tuple[float, int, int, bool]:
         video = next(stream for stream in streams if stream["codec_type"] == "video")
         width, height = int(video["width"]), int(video["height"])
         has_audio = any(stream.get("codec_type") == "audio" for stream in streams)
-    except (KeyError, StopIteration, TypeError, ValueError, json.JSONDecodeError) as exc:
-        raise MotionGraphicsError("Rendered draft has invalid or incomplete video metadata.") from exc
+    except (KeyError, StopIteration, TypeError, ValueError) as exc:
+        raise MotionGraphicsError(
+            "Rendered draft has invalid or incomplete video metadata."
+        ) from exc
     if not math.isfinite(duration) or duration <= 0 or width <= 0 or height <= 0:
         raise MotionGraphicsError("Rendered draft must have a positive duration and dimensions.")
     return duration, width, height, has_audio
@@ -110,12 +118,21 @@ def _composition_html(
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
     <style>
       * {{ box-sizing: border-box; }}
-      html, body {{ margin: 0; width: {width}px; height: {height}px; overflow: hidden; background: #090b10; }}
+      html, body {{
+        margin: 0; width: {width}px; height: {height}px;
+        overflow: hidden; background: #090b10;
+      }}
       #root {{ position: relative; width: {width}px; height: {height}px; overflow: hidden; }}
-      #draft-video {{ position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }}
+      #draft-video {{
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        object-fit: contain;
+      }}
       .clip {{ position: absolute; inset: 0; pointer-events: none; }}
       .title-shade {{
-        background: linear-gradient(180deg, rgba(5, 8, 14, .48), transparent 35%, transparent 62%, rgba(5, 8, 14, .35));
+        background: linear-gradient(
+          180deg, rgba(5, 8, 14, .48), transparent 35%,
+          transparent 62%, rgba(5, 8, 14, .35)
+        );
         z-index: 2;
       }}
       .title-card {{
@@ -233,7 +250,8 @@ def create_hyperframes_project(
     existing = [path for path in (composition, metadata, media) if path.exists()]
     if existing and not overwrite:
         raise FileExistsError(
-            f"HyperFrames project already exists at {destination}; use --overwrite to replace generated files."
+            f"HyperFrames project already exists at {destination}; "
+            "use --overwrite to replace generated files."
         )
 
     destination.mkdir(parents=True, exist_ok=True)
