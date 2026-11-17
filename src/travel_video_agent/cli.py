@@ -25,7 +25,8 @@ from .editing import (
     save_draft_timeline,
     save_edit_proposal,
 )
-from .editing.planning_generation import VideoPlanningError\nfrom .editing.workflow import create_video_draft
+from .editing.planning_generation import VideoPlanningError
+from .editing.workflow import create_video_draft
 from .highlights import find_highlights_folder
 from .media import MediaToolError, analyze_folder
 from .music import analyze_music
