@@ -19,9 +19,7 @@ def test_filter_graph_preflight_uses_null_muxer_and_short_probe(monkeypatch):
         captured["kwargs"] = kwargs
         return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
 
-    monkeypatch.setattr(
-        "travel_video_agent.rendering.renderer.subprocess.run", fake_run
-    )
+    monkeypatch.setattr("travel_video_agent.rendering.renderer.subprocess.run", fake_run)
     command = [
         "ffmpeg",
         "-hide_banner",
