@@ -90,13 +90,17 @@ def test_sampled_hash_detects_content_change_with_preserved_stat(tmp_path):
 
 def test_downstream_selection_rejects_stale_source_artifacts(tmp_path):
     from travel_video_agent.editing.draft_pipeline import build_draft_selection
-
-    from tests.test_draft_selection import _write_artifacts
+    from travel_video_agent.editing.intent_schemas import EditingPlan
 
     source = _write(tmp_path / "trip.mp4", "original")
-    _write_artifacts(
-        tmp_path,
-        [
+    artifact_dir = tmp_path / ".video-agent"
+    plan = EditingPlan(source_prompt="Make a scenic video", target_duration_seconds=5)
+    plan_path = _write(artifact_dir / "editing-plan.json", plan.model_dump_json())
+    highlights = {
+        "project_path": str(tmp_path.resolve()),
+        "video_count": 1,
+        "candidate_count": 1,
+        "candidates": [
             {
                 "candidate_id": "candidate-1",
                 "video_path": "trip.mp4",
@@ -115,13 +119,13 @@ def test_downstream_selection_rejects_stale_source_artifacts(tmp_path):
                 "review_required": True,
             }
         ],
+    }
+    highlights_path = _write(
+        artifact_dir / "highlights.json", json.dumps(highlights)
     )
-    artifact_dir = tmp_path / ".video-agent"
-    plan = artifact_dir / "editing-plan.json"
-    highlights = artifact_dir / "highlights.json"
-    register_artifact(tmp_path, plan)
-    register_artifact(tmp_path, highlights)
-    source.write_text("modified")
+    register_artifact(tmp_path, plan_path)
+    register_artifact(tmp_path, highlights_path)
+    source.write_text("modified", encoding="utf-8")
     os.utime(source, None)
 
     with pytest.raises(StaleArtifactError, match="Source video"):
