@@ -47,7 +47,7 @@ def _generated_content():
                 title="Into the Landscape",
                 purpose="Move from grand scenery into intimate travel details.",
                 narrative_function="development",
-                target_duration_seconds=30,
+                target_duration_seconds=45,
                 shots=[
                     StoryboardShot(
                         shot_id="shot-02", scene_id="scene-02", sequence_index=1,
