@@ -111,3 +111,11 @@ def test_create_video_project_plan_rejects_output_overwriting_dependency(tmp_pat
 )
 def test_explicit_duration_is_extracted_from_prompt(prompt, expected):
     assert explicit_duration_seconds(prompt) == expected
+
+
+def test_prompt_keywords_add_scenic_priority():
+    priorities = infer_creative_priorities(
+        "Create a cinematic Banff film about mountain scenery and lakes",
+        ["memorable_moments"],
+    )
+    assert priorities == ["memorable_moments", "scenic_landscapes"]
