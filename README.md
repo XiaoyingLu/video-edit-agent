@@ -116,7 +116,9 @@ OLLAMA_MIN_MEMORY_GB=9 WHISPER_MIN_MEMORY_GB=2 WHISPER_MIN_VRAM_GB=2 \
   docker compose run --rm video-agent transcribe ./travel-test --model small
 
 # Change how long Ollama keeps a model resident between requests.
-OLLAMA_KEEP_ALIVE=2m docker compose up -d ollama
+# Put this in your shell or .env file before starting services and running commands.
+export OLLAMA_KEEP_ALIVE=2m
+docker compose up -d ollama
 ```
 
 Ollama's API is also published on loopback port 11434 for optional diagnostics:
