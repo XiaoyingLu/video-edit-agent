@@ -1183,7 +1183,9 @@ def optimize_timeline(
     table.add_column("Source interval")
     table.add_column("Duration", justify="right")
     table.add_column("Transition")
-    table.add_column("Pacing")
+    table.add_column("Role")
+    table.add_column("Scale")
+    table.add_column("Pacing target", justify="right")
     for clip in timeline.clips:
         transition = (
             f"{clip.transition_in} ({clip.transition_duration_seconds:.2f}s)"
@@ -1196,7 +1198,9 @@ def optimize_timeline(
             f"{clip.source_start_seconds:.2f}–{clip.source_end_seconds:.2f}s",
             f"{clip.duration_seconds:.2f}s",
             transition,
-            clip.pacing_fit,
+            clip.visual_role.replace("_", " "),
+            clip.shot_scale.replace("_", " "),
+            f"{clip.pacing_target_seconds:.1f}s ({clip.pacing_fit})",
         )
     console.print(table)
     console.print(
