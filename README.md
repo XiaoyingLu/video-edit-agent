@@ -155,7 +155,7 @@ Check the project at any time:
 docker compose run --rm video-agent validate-artifacts ./travel-test
 ```
 
-The command reports stale artifacts and exits non-zero when regeneration is required. The end-to-end `create-video` workflow and the standalone understanding, transcription, highlight, planning, selection, timeline, and rendering commands register their outputs. Legacy artifacts created before dependency tracking are still readable for compatibility, but are reported as untracked by the validator and should be regenerated to gain provenance checks.
+The command reports stale artifacts and exits non-zero when regeneration is required. The end-to-end `create-video` workflow and the standalone understanding, transcription, highlight, planning, selection, timeline, and rendering commands register their outputs. Legacy artifacts created before dependency tracking remain readable for compatibility, but are not validated because they have no manifest entry. Regenerate them with the current CLI to gain provenance checks.
 
 Source files are never modified. File size and modification time provide a fast check; a sampled SHA-256 over the beginning, middle, and end detects content changes even when timestamps are preserved, and a full SHA-256 is recomputed when the sample or file metadata changes. The manifest is local project metadata and is covered by the existing `.video-agent/` Git ignore rule.
 
