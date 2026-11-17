@@ -60,6 +60,7 @@ To preview and render, use Node.js 22+, npm, and FFmpeg in the generated project
 
 ```bash
 cd ./travel-test/.video-agent/hyperframes-project
+npx hyperframes lint
 npx hyperframes preview
 npx hyperframes render --output final-motion-graphics.mp4
 ```
