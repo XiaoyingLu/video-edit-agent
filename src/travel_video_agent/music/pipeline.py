@@ -20,8 +20,19 @@ class MusicAnalysisError(RuntimeError):
 
 def _decode_audio(path: Path) -> np.ndarray:
     command = [
-        "ffmpeg", "-v", "error", "-i", str(path), "-vn", "-ac", "1",
-        "-ar", str(_SAMPLE_RATE), "-f", "f32le", "pipe:1",
+        "ffmpeg",
+        "-v",
+        "error",
+        "-i",
+        str(path),
+        "-vn",
+        "-ac",
+        "1",
+        "-ar",
+        str(_SAMPLE_RATE),
+        "-f",
+        "f32le",
+        "pipe:1",
     ]
     try:
         result = subprocess.run(command, capture_output=True, check=False, timeout=300)
@@ -69,7 +80,9 @@ def _estimate_tempo(
         return None, 0.0, None
     fft_size = 1 << (2 * len(centered) - 1).bit_length()
     spectrum = np.fft.rfft(centered, n=fft_size)
-    correlations = np.fft.irfft(spectrum * np.conjugate(spectrum), n=fft_size)[: len(centered)]
+    correlations = np.fft.irfft(
+        spectrum * np.conjugate(spectrum), n=fft_size
+    )[: len(centered)]
     candidates = correlations[min_lag : max_lag + 1]
     lag = min_lag + int(np.argmax(candidates))
     baseline = float(np.mean(np.abs(candidates))) + 1e-9
@@ -98,11 +111,10 @@ def _beat_grid(
     for target in np.arange(best_phase, duration, interval):
         left = int(np.searchsorted(times, target - interval * 0.12))
         right = int(np.searchsorted(times, target + interval * 0.12))
-        beat = (
-            float(times[left + int(np.argmax(onset[left:right]))])
-            if right > left
-            else float(target)
-        )
+        if right > left:
+            beat = float(times[left + int(np.argmax(onset[left:right]))])
+        else:
+            beat = float(target)
         if 0 <= beat < duration and (not beats or beat - beats[-1] > interval * 0.5):
             beats.append(round(beat, 3))
     return beats
@@ -120,7 +132,8 @@ def _energy_sections(samples: np.ndarray, duration: float) -> list[MusicSection]
     low, high = np.quantile(positive, [0.33, 0.67])
     sections = []
     for index, energy in enumerate(energies):
-        start, end = float(index * 8), min(duration, float(index * 8 + 8))
+        start = float(index * 8)
+        end = min(duration, float(index * 8 + 8))
         level = "low" if energy <= low else "high" if energy >= high else "medium"
         sections.append(
             MusicSection(
@@ -135,7 +148,8 @@ def _energy_sections(samples: np.ndarray, duration: float) -> list[MusicSection]
 
 def analyze_music(folder: Path, music_path: Path) -> MusicAnalysis:
     """Analyze an explicit soundtrack and suggest beat-aligned edit boundaries."""
-    root, source = folder.expanduser().resolve(), music_path.expanduser().resolve()
+    root = folder.expanduser().resolve()
+    source = music_path.expanduser().resolve()
     if not source.is_file():
         raise FileNotFoundError(f"Soundtrack does not exist: {source}")
     samples = _decode_audio(source)
@@ -145,9 +159,18 @@ def analyze_music(folder: Path, music_path: Path) -> MusicAnalysis:
     beats = _beat_grid(times, onset, interval, duration)
     notes = [
         "Tempo and beat positions are signal-based estimates; inspect them against the music.",
-        "Downbeats assume four-beat grouping and may not match unusual meters or syncopated tracks.",
-        "Energy sections describe relative loudness, not semantic labels such as a chorus or drop.",
-        "Use beats as optional cut anchors; preserve natural shot length and editorial breathing room.",
+        (
+            "Downbeats assume four-beat grouping and may not match unusual meters "
+            "or syncopated tracks."
+        ),
+        (
+            "Energy sections describe relative loudness, not semantic labels such as "
+            "a chorus or drop."
+        ),
+        (
+            "Use beats as optional cut anchors; preserve natural shot length and "
+            "editorial breathing room."
+        ),
     ]
     if bpm is None:
         notes.append("No stable tempo was detected; use the energy map and manual cut placement.")
