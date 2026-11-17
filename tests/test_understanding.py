@@ -199,3 +199,122 @@ def test_ollama_analyzer_reports_invalid_json_with_response_preview(
 
     with pytest.raises(VisionModelError, match="Response preview"):
         OllamaVisionAnalyzer().analyze_frame(frame)
+
+
+
+def test_ollama_analyzer_limits_structured_output_and_generation_tokens(
+    monkeypatch, tmp_path: Path
+) -> None:
+    frame = tmp_path / "frame.jpg"
+    frame.write_bytes(b"fake-image")
+    captured = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self):
+            content = {
+                "description": "A person prepares coffee.",
+                "objects": ["person", "coffee machine"],
+                "activities": ["preparing coffee"],
+                "confidence": 0.9,
+            }
+            return json.dumps({"message": {"content": json.dumps(content)}}).encode()
+
+    def fake_urlopen(request, timeout):
+        captured["payload"] = json.loads(request.data.decode("utf-8"))
+        return FakeResponse()
+
+    monkeypatch.setattr("travel_video_agent.understanding.visual_analyzer.urlopen", fake_urlopen)
+    OllamaVisionAnalyzer(model="qwen2.5vl:3b").analyze_frame(frame)
+
+    schema = captured["payload"]["format"]
+    assert schema["properties"]["description"]["maxLength"] == 200
+    assert schema["properties"]["objects"]["maxItems"] == 8
+    assert schema["properties"]["activities"]["maxItems"] == 4
+    assert captured["payload"]["options"]["num_predict"] == 256
+
+
+def test_ollama_analyzer_retries_truncated_json_with_shorter_output(
+    monkeypatch, tmp_path: Path
+) -> None:
+    frame = tmp_path / "frame.jpg"
+    frame.write_bytes(b"fake-image")
+    requests = []
+
+    class FakeResponse:
+        def __init__(self, content):
+            self.content = content
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self):
+            return json.dumps({"message": {"content": self.content}}).encode()
+
+    def fake_urlopen(request, timeout):
+        payload = json.loads(request.data.decode("utf-8"))
+        requests.append(payload)
+        if len(requests) == 1:
+            return FakeResponse('{"description":"A person at a coffee machine","objects":["person"')
+        return FakeResponse(
+            json.dumps(
+                {
+                    "description": "A person prepares coffee.",
+                    "objects": ["person", "coffee machine"],
+                    "activities": ["preparing coffee"],
+                    "confidence": 0.9,
+                }
+            )
+        )
+
+    monkeypatch.setattr("travel_video_agent.understanding.visual_analyzer.urlopen", fake_urlopen)
+    result = OllamaVisionAnalyzer(model="qwen2.5vl:3b").analyze_frame(frame)
+
+    assert result["description"] == "A person prepares coffee."
+    assert len(requests) == 2
+    assert requests[0]["options"]["num_predict"] == 256
+    assert requests[1]["options"]["num_predict"] == 192
+    assert "no more than 5 key objects" in requests[1]["messages"][0]["content"]
+
+
+def test_ollama_analyzer_rejects_too_many_objects(monkeypatch, tmp_path: Path) -> None:
+    import pytest
+
+    from travel_video_agent.understanding.visual_analyzer import VisionModelError
+
+    frame = tmp_path / "frame.jpg"
+    frame.write_bytes(b"fake-image")
+    content = json.dumps(
+        {
+            "description": "A busy counter.",
+            "objects": [f"object {index}" for index in range(9)],
+            "activities": [],
+            "confidence": 0.8,
+        }
+    )
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self):
+            return json.dumps({"message": {"content": content}}).encode()
+
+    monkeypatch.setattr(
+        "travel_video_agent.understanding.visual_analyzer.urlopen",
+        lambda request, timeout: FakeResponse(),
+    )
+
+    with pytest.raises(VisionModelError, match="after one short-output retry"):
+        OllamaVisionAnalyzer().analyze_frame(frame)
