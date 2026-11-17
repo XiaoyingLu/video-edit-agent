@@ -147,3 +147,18 @@ def test_whisper_backend_close_releases_model_reference(monkeypatch) -> None:
 
     assert backend._model is None
     assert collected == [True]
+
+
+
+def test_whisper_memory_preflight_rejects_before_loading_backend(monkeypatch) -> None:
+    from travel_video_agent.resource_manager import ResourceError
+    from travel_video_agent.transcription.whisper_backend import TranscriptionError
+
+    def reject(required_gb, task):
+        raise ResourceError("Not enough available memory")
+
+    monkeypatch.setattr(
+        "travel_video_agent.transcription.whisper_backend.ensure_memory_available", reject
+    )
+    with pytest.raises(TranscriptionError, match="Not enough available memory"):
+        FasterWhisperTranscriber(model="small")
