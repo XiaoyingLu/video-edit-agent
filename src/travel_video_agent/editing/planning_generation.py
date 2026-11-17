@@ -125,6 +125,8 @@ def generate_video_plan_content(prompt: str, brief: dict, model: str | None = No
     durations = [round(shot.target_duration_seconds * factor, 2) for _, shot in all_shots]
     if durations:
         durations[-1] = round(target - sum(durations[:-1]), 2)
+    if any(duration <= 0 or duration > 60 for duration in durations):
+        raise VideoPlanningError("Generated storyboard cannot fit the requested duration within shot limits.")
     cursor = 0
     for scene in content.scenes:
         shots = []
