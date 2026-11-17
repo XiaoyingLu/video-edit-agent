@@ -51,6 +51,19 @@ class OllamaVideoPlanner:
         except ResourceError as exc:
             raise VideoPlanningError(str(exc)) from exc
 
+    def unload_model(self) -> None:
+        """Best-effort model eviction after planning."""
+        payload = json.dumps({"model": self.model, "keep_alive": 0}).encode("utf-8")
+        request = Request(
+            f"{self.base_url}/api/generate", data=payload,
+            headers={"Content-Type": "application/json"}, method="POST",
+        )
+        try:
+            with urlopen(request, timeout=30):
+                return
+        except (HTTPError, URLError, TimeoutError, OSError):
+            return
+
     def generate(self, prompt: str, brief: dict) -> GeneratedVideoPlanContent:
         schema = GeneratedVideoPlanContent.model_json_schema()
         system_prompt = (
@@ -97,7 +110,11 @@ class OllamaVideoPlanner:
 
 def generate_video_plan_content(prompt: str, brief: dict, model: str | None = None) -> GeneratedVideoPlanContent:
     """Generate structured story content; normalize durations to the validated brief."""
-    content = OllamaVideoPlanner(model=model).generate(prompt, brief)
+    planner = OllamaVideoPlanner(model=model)
+    try:
+        content = planner.generate(prompt, brief)
+    finally:
+        planner.unload_model()
     total = sum(shot.target_duration_seconds for scene in content.scenes for shot in scene.shots)
     if total <= 0:
         raise VideoPlanningError("Generated storyboard has no positive shot duration.")
