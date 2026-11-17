@@ -144,7 +144,7 @@ def available_gpu_memory_gb() -> float | None:
             timeout=5,
         )
         values = [float(line.strip()) / 1024 for line in result.stdout.splitlines() if line.strip()]
-        return min(values) if values else None
+        return values[0] if values else None
     except (OSError, ValueError, subprocess.SubprocessError):
         return None
 
