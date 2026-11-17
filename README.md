@@ -13,6 +13,7 @@ A local-first Python CLI for editing personal travel footage. Media stays on you
 - Explainable visual highlight candidate detection and ranking
 - Natural-language editing intent parsing into a validated, reviewable plan
 - Local soundtrack tempo, beat/downbeat, and energy-section analysis
+- Optional HyperFrames motion-graphics composition for animated titles and location lower thirds
 
 ## Cinematic scene understanding
 
@@ -37,6 +38,34 @@ docker compose run --rm video-agent analyze-music ./travel-test --music ./travel
 The command decodes audio locally with FFmpeg, computes a spectral-flux onset envelope, estimates tempo with FFT-based autocorrelation, builds a beat grid, and summarizes relative RMS energy in eight-second sections. It writes `.video-agent/music-analysis.json` with estimated BPM, beat and four-beat downbeat timestamps, energy sections, and candidate cut anchors. The soundtrack is recorded as a direct artifact dependency, so replacing the music invalidates the analysis.
 
 This is an advisory analysis stage, not automatic synchronization: beat estimates can be ambiguous for ambient, rubato, syncopated, or rhythmically sparse music. Four-beat downbeats are a practical default rather than inferred time-signature detection. Use beat anchors selectively and preserve natural shot duration; no clip is trimmed, approved, or rendered by this command.
+
+## Motion graphics with HyperFrames
+
+The FFmpeg renderer remains responsible for assembling approved footage and audio. When you want animated typography, generate a separate HyperFrames composition over that verified draft:
+
+```bash
+docker compose run --rm video-agent create-motion-project ./travel-test \
+  --title "A Journey Through the Canadian Rockies" \
+  --location "Banff National Park"
+```
+
+This command requires a fully approved `.video-agent/optimized-timeline.json` and an existing `.video-agent/rendered-draft.mp4`. It validates tracked upstream artifacts, probes the rendered video's dimensions, duration, and audio stream, then creates `.video-agent/hyperframes-project/` with:
+- `index.html`: a timed video layer, animated opening title, and optional location lower third
+- `assets/rendered-draft.mp4`: an independent copy of the rendered draft
+- `meta.json`: composition dimensions and duration
+
+The composition uses HyperFrames' HTML timing attributes and a seekable, paused GSAP timeline. User-provided title/location text is HTML-escaped. The rendered video's audio is retained when present; silent videos are explicitly muted. Source footage and the FFmpeg-rendered draft are never modified. Existing generated projects are protected unless `--overwrite` is supplied.
+
+To preview and render, use Node.js 22+, npm, and FFmpeg in the generated project directory:
+
+```bash
+cd ./travel-test/.video-agent/hyperframes-project
+npx hyperframes lint
+npx hyperframes preview
+npx hyperframes render --output final-motion-graphics.mp4
+```
+
+HyperFrames is an optional composition stage, not a replacement for the Python/FFmpeg renderer. This first integration deliberately generates an editable HyperFrames project instead of silently introducing Node.js into the Python Docker image. The GSAP script is loaded from jsDelivr, so preview/render needs network access unless you replace it with a locally bundled GSAP build.
 
 ## Requirements
 
