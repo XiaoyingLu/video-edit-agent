@@ -201,7 +201,6 @@ class OllamaVisionAnalyzer:
 
         raise VisionModelError(f"The vision model could not analyze {frame_path}.")
 
-
     def unload_model(self) -> bool:
         """Ask Ollama to evict this model from VRAM/RAM after the vision phase."""
         if not self._model_used:
