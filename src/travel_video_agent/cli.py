@@ -52,6 +52,8 @@ def _track_artifact(
 ) -> None:
     """Register an artifact and whichever optional upstream files are present."""
     root = folder.expanduser().resolve()
+    if not artifact.is_file():
+        return
     existing = [root / item for item in dependencies if (root / item).is_file()]
     register_artifact(root, artifact, dependencies=existing, config=config)
 
