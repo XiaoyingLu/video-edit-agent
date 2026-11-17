@@ -145,6 +145,20 @@ ruff check .
 ruff format --check .
 ```
 
+## Artifact provenance and stale-cache protection
+
+The CLI records generated artifacts in `.video-agent/artifact-manifest.json`. Each tracked artifact stores its SHA-256, the source-video inventory and sampled content fingerprints, direct upstream dependencies, and relevant generation settings. Dependency checks recurse upstream, so a changed source video or modified upstream JSON artifact invalidates downstream results before they are reused or rendered.
+
+Check the project at any time:
+
+```bash
+docker compose run --rm video-agent validate-artifacts ./travel-test
+```
+
+The command reports stale artifacts and exits non-zero when regeneration is required. The end-to-end `create-video` workflow and the standalone understanding, transcription, highlight, planning, selection, timeline, and rendering commands register their outputs. Legacy artifacts created before dependency tracking are still readable for compatibility, but are reported as untracked by the validator and should be regenerated to gain provenance checks.
+
+Source files are never modified. File size and modification time provide a fast check; a sampled SHA-256 over the beginning, middle, and end detects content changes even when timestamps are preserved, and a full SHA-256 is recomputed when the sample or file metadata changes. The manifest is local project metadata and is covered by the existing `.video-agent/` Git ignore rule.
+
 ## Safety and privacy
 
 - Original media is read-only from this application. Rendering writes to a separate output file and never uses a source path as its destination.
