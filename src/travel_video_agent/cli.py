@@ -27,9 +27,9 @@ from .editing import (
 from .editing.workflow import create_video_draft
 from .highlights import find_highlights_folder
 from .media import MediaToolError, analyze_folder
+from .motion_graphics import MotionGraphicsError, create_hyperframes_project
 from .music import analyze_music
 from .music.pipeline import MusicAnalysisError
-from .motion_graphics import MotionGraphicsError, create_hyperframes_project
 from .rendering import RenderError, render_approved_shot_timeline, render_project
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
@@ -757,15 +757,27 @@ def create_motion_project(
     ],
     title: Annotated[
         str,
-        typer.Option("--title", min_length=1, max_length=120, help="Opening title displayed over the footage."),
+        typer.Option(
+            "--title",
+            min_length=1,
+            max_length=120,
+            help="Opening title displayed over the footage.",
+        ),
     ],
     location: Annotated[
         str | None,
-        typer.Option("--location", max_length=100, help="Optional location label shown as a lower third."),
+        typer.Option(
+            "--location",
+            max_length=100,
+            help="Optional location label shown as a lower third.",
+        ),
     ] = None,
     timeline: Annotated[
         Path | None,
-        typer.Option("--timeline", help="Approved timeline JSON (default: .video-agent/optimized-timeline.json)."),
+        typer.Option(
+            "--timeline",
+            help="Approved timeline JSON (default: .video-agent/optimized-timeline.json).",
+        ),
     ] = None,
     video: Annotated[
         Path | None,
@@ -773,11 +785,17 @@ def create_motion_project(
     ] = None,
     output_dir: Annotated[
         Path | None,
-        typer.Option("--output-dir", help="HyperFrames project directory (default: .video-agent/hyperframes-project)."),
+        typer.Option(
+            "--output-dir",
+            help="HyperFrames project directory (default: .video-agent/hyperframes-project).",
+        ),
     ] = None,
     overwrite: Annotated[
         bool,
-        typer.Option("--overwrite", help="Replace generated files in an existing HyperFrames project."),
+        typer.Option(
+            "--overwrite",
+            help="Replace generated files in an existing HyperFrames project.",
+        ),
     ] = False,
 ) -> None:
     """Generate an optional HyperFrames title and location-overlay project."""
@@ -791,7 +809,13 @@ def create_motion_project(
             output_dir=output_dir,
             overwrite=overwrite,
         )
-    except (FileNotFoundError, FileExistsError, NotADirectoryError, ValueError, MotionGraphicsError) as exc:
+    except (
+        FileNotFoundError,
+        FileExistsError,
+        NotADirectoryError,
+        ValueError,
+        MotionGraphicsError,
+    ) as exc:
         console.print(f"[red]Motion-graphics project failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
@@ -805,7 +829,9 @@ def create_motion_project(
     console.print(f"  cd {report.project_directory}")
     console.print("  npx hyperframes preview")
     console.print("  npx hyperframes render --output final-motion-graphics.mp4")
-    console.print("[dim]Requires Node.js 22+, npm, FFmpeg, and network access for the GSAP CDN script.[/dim]")
+    console.print(
+        "[dim]Requires Node.js 22+, npm, FFmpeg, and network access for the GSAP CDN script.[/dim]"
+    )
 
 
 @app.command("render-draft")
