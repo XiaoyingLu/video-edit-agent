@@ -30,6 +30,7 @@ class OllamaIntentParser:
         )
         self.timeout_seconds = timeout_seconds
         self.keep_alive = os.getenv("OLLAMA_KEEP_ALIVE", "5m")
+        self._model_used = False
         try:
             ensure_memory_available(
                 required_vision_memory_gb(self.model), f"Ollama intent model '{self.model}'"
@@ -86,6 +87,7 @@ class OllamaIntentParser:
             method="POST",
         )
         try:
+            self._model_used = True
             with urlopen(request, timeout=self.timeout_seconds) as response:
                 result = json.loads(response.read().decode("utf-8"))
             content = result["message"]["content"]
@@ -123,6 +125,8 @@ class OllamaIntentParser:
 
     def unload_model(self) -> bool:
         """Ask Ollama to evict the intent model before another model phase begins."""
+        if not self._model_used:
+            return True
         payload = json.dumps({"model": self.model, "keep_alive": 0}).encode("utf-8")
         request = Request(
             f"{self.base_url}/api/generate",
