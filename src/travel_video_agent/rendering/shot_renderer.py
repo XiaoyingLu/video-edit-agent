@@ -300,7 +300,7 @@ def render_approved_shot_timeline(
         temporary_path.unlink(missing_ok=True)
         raise
 
-    register_artifact(root, destination, dependencies=[timeline_file])
+    register_artifact(root, destination, dependencies=[timeline_file], verify_content=False)
 
     return RenderReport(
         output_path=str(destination),
