@@ -144,7 +144,21 @@ class VideoProjectPlan(BaseModel):
             self.story_treatment is not None or self.scenes
         ):
             raise ValueError("brief_ready plans cannot contain story or storyboard content")
+        if self.planning_stage in {
+            "story_ready", "storyboard_ready", "footage_mapped", "production_ready"
+        } and self.story_treatment is None:
+            raise ValueError("story stages require a story treatment")
         if self.planning_stage in {"storyboard_ready", "footage_mapped", "production_ready"}:
-            if self.story_treatment is None or not self.scenes:
-                raise ValueError("storyboard stages require a story treatment and scenes")
+            if not self.scenes:
+                raise ValueError("storyboard stages require at least one scene")
+        if self.planning_stage == "story_ready" and self.scenes:
+            raise ValueError("story_ready plans cannot contain storyboard scenes")
+        if self.planning_stage in {"footage_mapped", "production_ready"}:
+            shots = [shot for scene in self.scenes for shot in scene.shots]
+            if not shots or any(shot.assignment_status == "unassigned" for shot in shots):
+                raise ValueError("footage-mapped stages require every shot to have an assignment")
+        if self.planning_stage == "production_ready":
+            shots = [shot for scene in self.scenes for shot in scene.shots]
+            if not self.approved or any(shot.assignment_status != "approved" for shot in shots):
+                raise ValueError("production-ready plans require approved footage assignments")
         return self
