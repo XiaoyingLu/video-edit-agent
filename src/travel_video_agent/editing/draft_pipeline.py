@@ -1,6 +1,7 @@
 """Deterministic context-aware shot selection for a natural-language edit plan."""
 
 import hashlib
+from collections import Counter
 from pathlib import Path
 
 from ..artifact_tracking import validate_artifact
@@ -67,6 +68,15 @@ def _scene_for_candidate(candidate, scenes):
             - max(candidate.start_seconds, scene.start_seconds)
         ),
     )
+
+
+def _dominant_observation_value(scene, field: str) -> str:
+    """Choose the most frequent known frame label, preserving first-seen ties."""
+    if scene is None:
+        return "unknown"
+    values = [getattr(item, field) for item in scene.observations]
+    counts = Counter(value for value in values if value != "unknown")
+    return counts.most_common(1)[0][0] if counts else "unknown"
 
 
 def _transcript_excerpt(video, start: float, end: float) -> str | None:
@@ -188,6 +198,29 @@ def build_draft_selection(
                 combined_score=combined,
                 scene_summary=summary,
                 transcript_excerpt=excerpt,
+                shot_scale=_dominant_observation_value(scene, "shot_scale"),
+                visual_role=scene.story_function if scene else "unknown",
+                mood=scene.dominant_mood if scene else "unknown",
+                setting=(
+                    next(
+                        (item.setting for item in scene.observations if item.setting),
+                        "",
+                    )
+                    if scene
+                    else ""
+                ),
+                primary_subject=(
+                    next(
+                        (
+                            item.primary_subject
+                            for item in scene.observations
+                            if item.primary_subject
+                        ),
+                        "",
+                    )
+                    if scene
+                    else ""
+                ),
                 reasons=reasons,
             )
         )

@@ -113,3 +113,77 @@ def test_draft_selection_never_exceeds_target_duration(tmp_path):
     draft = build_draft_selection(tmp_path, plan)
     assert draft.selected_duration_seconds == 10
     assert draft.clips[0].source_end_seconds == 10
+
+
+def test_draft_selection_carries_cinematic_scene_metadata(tmp_path):
+    import hashlib
+
+    video_path = "clip-a.mp4"
+    video_key = hashlib.sha256(video_path.encode("utf-8")).hexdigest()[:12]
+    candidates = [
+        {
+            "candidate_id": "scene-1",
+            "video_path": video_path,
+            "start_seconds": 0,
+            "end_seconds": 5,
+            "duration_seconds": 5,
+            "score": 85,
+            "signals": {"motion": 0.2, "sharpness": 0.8, "exposure": 0.8, "saturation": 0.5},
+            "reasons": [],
+            "scene_summary": "A wide mountain lake at sunrise",
+            "review_required": True,
+        }
+    ]
+    scenes = [
+        {
+            "scene_id": f"{video_key}-scene-0001",
+            "start_seconds": 0,
+            "end_seconds": 5,
+            "summary": "A wide mountain lake at sunrise",
+            "story_function": "establishing",
+            "dominant_mood": "serene",
+            "observations": [
+                {
+                    "timestamp_seconds": 1,
+                    "frame_path": "frame-1.jpg",
+                    "description": "A wide mountain lake.",
+                    "objects": ["lake", "mountain"],
+                    "activities": [],
+                    "confidence": 0.9,
+                    "shot_scale": "wide",
+                    "visual_role": "establishing",
+                    "mood": "serene",
+                    "setting": "alpine lake",
+                    "primary_subject": "mountain lake",
+                },
+                {
+                    "timestamp_seconds": 3,
+                    "frame_path": "frame-2.jpg",
+                    "description": "Sunrise over the lake.",
+                    "objects": ["lake", "sun"],
+                    "activities": [],
+                    "confidence": 0.9,
+                    "shot_scale": "unknown",
+                    "visual_role": "establishing",
+                    "mood": "serene",
+                    "setting": "alpine lake",
+                    "primary_subject": "mountain lake",
+                },
+            ],
+        }
+    ]
+    _write_artifacts(tmp_path, candidates, scenes=scenes)
+    plan = EditingPlan(
+        source_prompt="Create a scenic travel video",
+        target_duration_seconds=5,
+        priorities=["scenic_landscapes"],
+    )
+
+    draft = build_draft_selection(tmp_path, plan)
+
+    clip = draft.clips[0]
+    assert clip.shot_scale == "wide"
+    assert clip.visual_role == "establishing"
+    assert clip.mood == "serene"
+    assert clip.setting == "alpine lake"
+    assert clip.primary_subject == "mountain lake"

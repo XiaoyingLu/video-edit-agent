@@ -19,6 +19,32 @@ class DraftClip(BaseModel):
     combined_score: float = Field(ge=0, le=100)
     scene_summary: str | None = None
     transcript_excerpt: str | None = None
+    shot_scale: Literal[
+        "extreme_wide", "wide", "medium", "close_up", "extreme_close_up", "aerial", "unknown"
+    ] = "unknown"
+    visual_role: Literal[
+        "establishing",
+        "action",
+        "detail",
+        "reaction",
+        "transition",
+        "portrait",
+        "scenic_breath",
+        "unknown",
+    ] = "unknown"
+    mood: Literal[
+        "serene",
+        "energetic",
+        "dramatic",
+        "romantic",
+        "mysterious",
+        "joyful",
+        "contemplative",
+        "tense",
+        "unknown",
+    ] = "unknown"
+    setting: str = Field(default="", max_length=100)
+    primary_subject: str = Field(default="", max_length=100)
     reasons: list[str] = Field(default_factory=list)
     selected: bool = False
     decision: Literal["pending", "approved", "rejected"] = "pending"

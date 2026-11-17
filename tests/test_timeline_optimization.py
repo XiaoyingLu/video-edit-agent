@@ -187,3 +187,178 @@ def test_cli_help_includes_timeline_commands():
     assert result.exit_code == 0
     assert "optimize-timeline" in result.output
     assert "review-timeline" in result.output
+
+
+def test_cinematic_timeline_builds_establishing_action_detail_and_scenic_arc(tmp_path):
+    from travel_video_agent.editing.draft_schemas import DraftClip
+
+    _write_inputs(tmp_path, style="highlight_reel", transition="cut")
+    artifact = tmp_path / ".video-agent"
+    plan = EditingPlan(
+        source_prompt="Create a cinematic travel film",
+        target_duration_seconds=24,
+        style="cinematic",
+        pacing="moderate",
+        priorities=["scenic_landscapes"],
+        transitions={"default": "cut", "duration_seconds": 0},
+    )
+    (artifact / "editing-plan.json").write_text(plan.model_dump_json(), encoding="utf-8")
+    clips = [
+        DraftClip(
+            clip_id="action",
+            video_path="trip.mp4",
+            source_start_seconds=0,
+            source_end_seconds=4,
+            duration_seconds=4,
+            highlight_score=99,
+            relevance_score=90,
+            combined_score=99,
+            visual_role="action",
+            shot_scale="medium",
+            selected=True,
+        ),
+        DraftClip(
+            clip_id="establishing",
+            video_path="trip.mp4",
+            source_start_seconds=4,
+            source_end_seconds=10,
+            duration_seconds=6,
+            highlight_score=70,
+            relevance_score=70,
+            combined_score=70,
+            visual_role="establishing",
+            shot_scale="wide",
+            selected=True,
+        ),
+        DraftClip(
+            clip_id="detail",
+            video_path="trip.mp4",
+            source_start_seconds=10,
+            source_end_seconds=13,
+            duration_seconds=3,
+            highlight_score=90,
+            relevance_score=90,
+            combined_score=90,
+            visual_role="detail",
+            shot_scale="close_up",
+            selected=True,
+        ),
+        DraftClip(
+            clip_id="scenic",
+            video_path="trip.mp4",
+            source_start_seconds=13,
+            source_end_seconds=19,
+            duration_seconds=6,
+            highlight_score=65,
+            relevance_score=65,
+            combined_score=65,
+            visual_role="scenic_breath",
+            shot_scale="wide",
+            mood="serene",
+            selected=True,
+        ),
+    ]
+    selection = ProjectDraftSelection(
+        project_path=str(tmp_path.resolve()),
+        source_artifacts=[".video-agent/editing-plan.json"],
+        target_duration_seconds=24,
+        selected_duration_seconds=19,
+        selected_clip_count=4,
+        candidates_considered=4,
+        clips=clips,
+    )
+    (artifact / "draft-selection.json").write_text(selection.model_dump_json(), encoding="utf-8")
+
+    timeline = build_draft_timeline(tmp_path)
+
+    assert [clip.clip_id for clip in timeline.clips] == [
+        "establishing",
+        "action",
+        "detail",
+        "scenic",
+    ]
+    assert timeline.clips[0].sequence_reason.startswith("Opens with a wide establishing")
+    assert "visual-scale contrast" in timeline.clips[2].sequence_reason
+    assert timeline.clips[-1].sequence_reason.startswith("Closes on a scenic")
+    assert timeline.clips[1].pacing_target_seconds == 3.0
+    assert timeline.clips[-1].pacing_target_seconds == 4.5
+    assert timeline.clips[-1].visual_role == "scenic_breath"
+
+
+def test_chronological_story_keeps_source_order_despite_scene_roles(tmp_path):
+    from travel_video_agent.editing.draft_schemas import DraftClip
+
+    _write_inputs(tmp_path, style="vlog", transition="cut")
+    artifact = tmp_path / ".video-agent"
+    clips = [
+        DraftClip(
+            clip_id="later-establishing",
+            video_path="trip.mp4",
+            source_start_seconds=8,
+            source_end_seconds=12,
+            duration_seconds=4,
+            highlight_score=90,
+            relevance_score=90,
+            combined_score=90,
+            visual_role="establishing",
+            selected=True,
+        ),
+        DraftClip(
+            clip_id="earlier-action",
+            video_path="trip.mp4",
+            source_start_seconds=1,
+            source_end_seconds=5,
+            duration_seconds=4,
+            highlight_score=80,
+            relevance_score=80,
+            combined_score=80,
+            visual_role="action",
+            selected=True,
+        ),
+    ]
+    selection = ProjectDraftSelection(
+        project_path=str(tmp_path.resolve()),
+        source_artifacts=[".video-agent/editing-plan.json"],
+        target_duration_seconds=12,
+        selected_duration_seconds=8,
+        selected_clip_count=2,
+        candidates_considered=2,
+        clips=clips,
+    )
+    (artifact / "draft-selection.json").write_text(selection.model_dump_json(), encoding="utf-8")
+
+    timeline = build_draft_timeline(tmp_path)
+
+    assert [clip.clip_id for clip in timeline.clips] == ["earlier-action", "later-establishing"]
+
+
+def test_role_aware_pacing_uses_different_targets_for_action_and_scenic_shots():
+    from travel_video_agent.editing.timeline_pipeline import _pacing_guidance
+
+    action = _pacing_guidance(3.0, "moderate", "action")
+    scenic = _pacing_guidance(4.5, "moderate", "scenic_breath")
+
+    assert action[0] == "within"
+    assert scenic[0] == "within"
+    assert action[2] == 3.0
+    assert scenic[2] == 4.5
+
+
+def test_cinematic_timeline_preserves_ranked_order_without_scene_metadata(tmp_path):
+    _write_inputs(tmp_path, style="highlight_reel", transition="cut")
+    artifact = tmp_path / ".video-agent"
+    plan = EditingPlan(
+        source_prompt="Create a cinematic travel video",
+        target_duration_seconds=12,
+        style="cinematic",
+        priorities=["memorable_moments"],
+        transitions={"default": "cut", "duration_seconds": 0},
+    )
+    (artifact / "editing-plan.json").write_text(plan.model_dump_json(), encoding="utf-8")
+
+    timeline = build_draft_timeline(tmp_path)
+
+    assert [clip.clip_id for clip in timeline.clips] == ["later", "earlier"]
+    assert all(clip.visual_role == "unknown" for clip in timeline.clips)
+    assert "strongest available shot" in timeline.clips[0].sequence_reason
+    assert "metadata is uncertain" in timeline.clips[1].sequence_reason

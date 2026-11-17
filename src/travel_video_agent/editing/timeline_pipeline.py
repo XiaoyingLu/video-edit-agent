@@ -14,20 +14,178 @@ _PACING_RANGES = {
     "fast": (1.0, 3.5),
 }
 
+_ROLE_PACING_RANGES = {
+    "slow": {
+        "establishing": (5.0, 8.0),
+        "scenic_breath": (5.0, 8.0),
+        "action": (3.0, 5.0),
+        "detail": (3.0, 5.0),
+        "reaction": (3.0, 5.0),
+        "portrait": (4.0, 6.0),
+        "transition": (2.0, 4.0),
+    },
+    "moderate": {
+        "establishing": (3.5, 5.5),
+        "scenic_breath": (3.5, 5.5),
+        "action": (2.0, 4.0),
+        "detail": (2.0, 3.5),
+        "reaction": (2.5, 4.0),
+        "portrait": (2.5, 4.0),
+        "transition": (1.5, 3.0),
+    },
+    "fast": {
+        "establishing": (2.5, 4.0),
+        "scenic_breath": (2.5, 4.0),
+        "action": (1.0, 2.5),
+        "detail": (1.0, 2.0),
+        "reaction": (1.5, 2.5),
+        "portrait": (1.5, 2.5),
+        "transition": (1.0, 2.0),
+    },
+}
 
-def _pacing_guidance(duration: float, pacing: str) -> tuple[str, str]:
-    lower, upper = _PACING_RANGES[pacing]
+
+def _pacing_guidance(
+    duration: float, pacing: str, visual_role: str = "unknown"
+) -> tuple[str, str, float]:
+    """Recommend a role-aware shot duration without changing source intervals."""
+    lower, upper = _ROLE_PACING_RANGES[pacing].get(visual_role, _PACING_RANGES[pacing])
+    target = round((lower + upper) / 2, 2)
     if duration < lower:
-        return (
-            "short",
-            f"Short for {pacing} pacing; consider whether this shot needs more breathing room.",
+        fit = "short"
+        note = (
+            f"{visual_role.replace('_', ' ').title()} shot is {duration:.1f}s; "
+            f"the {pacing} pacing target is about {target:.1f}s "
+            f"({lower:g}–{upper:g}s). Extend only if the source moment supports it."
         )
-    if duration > upper:
-        return (
-            "long",
-            f"Long for {pacing} pacing; consider trimming if the visual moment feels static.",
+    elif duration > upper:
+        fit = "long"
+        note = (
+            f"{visual_role.replace('_', ' ').title()} shot is {duration:.1f}s; "
+            f"the {pacing} pacing target is about {target:.1f}s "
+            f"({lower:g}–{upper:g}s). Consider trimming during review."
         )
-    return "within", f"Within the suggested {pacing} pacing range ({lower:g}–{upper:g}s)."
+    else:
+        fit = "within"
+        note = (
+            f"{visual_role.replace('_', ' ').title()} shot fits the {pacing} pacing "
+            f"range ({lower:g}–{upper:g}s; target about {target:.1f}s)."
+        )
+    return fit, note, target
+
+
+def _has_cinematic_metadata(clips: list) -> bool:
+    return any(clip.visual_role != "unknown" or clip.shot_scale != "unknown" for clip in clips)
+
+
+def _cinematic_order(clips: list) -> list:
+    """Build a deterministic visual arc using editorial roles and shot-scale contrast."""
+    if len(clips) < 2 or not _has_cinematic_metadata(clips):
+        return clips
+
+    remaining = list(clips)
+    opening = max(
+        remaining,
+        key=lambda clip: (
+            clip.combined_score * 0.35
+            + (30 if clip.visual_role == "establishing" else 0)
+            + (18 if clip.shot_scale == "aerial" else 0)
+            + (14 if clip.shot_scale in {"wide", "extreme_wide"} else 0),
+            clip.video_path,
+            -clip.source_start_seconds,
+        ),
+    )
+    ordered = [opening]
+    remaining.remove(opening)
+
+    while remaining:
+        previous = ordered[-1]
+        is_closing = len(ordered) == len(clips) - 1
+
+        def sequence_score(candidate, previous=previous, is_closing=is_closing):
+            score = candidate.combined_score * 0.35
+            role = candidate.visual_role
+            previous_role = previous.visual_role
+
+            if is_closing:
+                score += {
+                    "scenic_breath": 28,
+                    "establishing": 20,
+                    "portrait": 12,
+                    "transition": -8,
+                }.get(role, 0)
+            elif previous_role == "establishing":
+                score += {
+                    "action": 24,
+                    "portrait": 14,
+                    "detail": 10,
+                    "scenic_breath": 6,
+                }.get(role, 0)
+            elif previous_role == "action":
+                score += {
+                    "detail": 18,
+                    "reaction": 16,
+                    "scenic_breath": 8,
+                    "establishing": 6,
+                }.get(role, 0)
+            elif previous_role == "detail":
+                score += {
+                    "action": 18,
+                    "establishing": 12,
+                    "scenic_breath": 8,
+                }.get(role, 0)
+            elif previous_role == "scenic_breath":
+                score += {"action": 18, "detail": 10, "portrait": 8}.get(role, 0)
+            else:
+                score += {
+                    "establishing": 10,
+                    "action": 12,
+                    "detail": 8,
+                    "scenic_breath": 6,
+                }.get(role, 0)
+
+            if role == previous_role and role != "unknown":
+                score -= 12
+            if candidate.shot_scale == previous.shot_scale and candidate.shot_scale != "unknown":
+                score -= 8
+            elif {candidate.shot_scale, previous.shot_scale} & {
+                "wide",
+                "extreme_wide",
+                "aerial",
+            } and {candidate.shot_scale, previous.shot_scale} & {"close_up", "extreme_close_up"}:
+                score += 7
+            return (
+                score,
+                candidate.combined_score,
+                candidate.video_path,
+                -candidate.source_start_seconds,
+            )
+
+        next_clip = max(remaining, key=sequence_score)
+        ordered.append(next_clip)
+        remaining.remove(next_clip)
+    return ordered
+
+
+def _sequence_reason(clip, previous, index: int, count: int) -> str:
+    if index == 1:
+        if clip.visual_role == "establishing" or clip.shot_scale in {
+            "wide",
+            "extreme_wide",
+            "aerial",
+        }:
+            return "Opens with a wide establishing view to introduce the destination."
+        return "Opens with the strongest available shot; no clear establishing shot was identified."
+    if index == count and clip.visual_role in {"scenic_breath", "establishing"}:
+        return "Closes on a scenic breathing shot to give the sequence a visual landing."
+    if previous and clip.shot_scale != "unknown" and clip.shot_scale != previous.shot_scale:
+        return (
+            f"Adds visual-scale contrast after a {previous.shot_scale.replace('_', ' ')} "
+            f"shot with a {clip.shot_scale.replace('_', ' ')} composition."
+        )
+    if clip.visual_role != "unknown":
+        return f"Adds a {clip.visual_role.replace('_', ' ')} beat to vary the visual story."
+    return "Retains ranked footage order because scene-role metadata is uncertain."
 
 
 def build_draft_timeline(
@@ -65,7 +223,7 @@ def build_draft_timeline(
     if "chronological_story" in plan.priorities or plan.style in {"vlog", "documentary"}:
         selected.sort(key=lambda clip: (clip.video_path, clip.source_start_seconds))
     else:
-        # The draft selection is already ranked by its deterministic relevance score.
+        # Start from the relevance ranking, then apply a metadata-aware visual arc.
         selected.sort(
             key=lambda clip: (
                 -clip.combined_score,
@@ -73,6 +231,8 @@ def build_draft_timeline(
                 clip.source_start_seconds,
             )
         )
+        if plan.style in {"cinematic", "social_media"}:
+            selected = _cinematic_order(selected)
 
     timeline_clips: list[DraftTimelineClip] = []
     previous_duration: float | None = None
@@ -91,7 +251,10 @@ def build_draft_timeline(
                 transition = "cut"
                 transition_duration = 0.0
 
-        pacing_fit, pacing_note = _pacing_guidance(clip.duration_seconds, plan.pacing)
+        pacing_fit, pacing_note, pacing_target = _pacing_guidance(
+            clip.duration_seconds, plan.pacing, clip.visual_role
+        )
+        previous_clip = timeline_clips[-1] if timeline_clips else None
         timeline_clips.append(
             DraftTimelineClip(
                 clip_id=clip.clip_id,
@@ -103,6 +266,13 @@ def build_draft_timeline(
                 combined_score=clip.combined_score,
                 scene_summary=clip.scene_summary,
                 transcript_excerpt=clip.transcript_excerpt,
+                shot_scale=clip.shot_scale,
+                visual_role=clip.visual_role,
+                mood=clip.mood,
+                setting=clip.setting,
+                primary_subject=clip.primary_subject,
+                sequence_reason=_sequence_reason(clip, previous_clip, index, len(selected)),
+                pacing_target_seconds=pacing_target,
                 transition_in=transition,
                 transition_duration_seconds=round(transition_duration, 3),
                 pacing_fit=pacing_fit,
