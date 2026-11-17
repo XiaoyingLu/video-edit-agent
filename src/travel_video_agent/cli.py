@@ -1256,6 +1256,12 @@ def review_timeline(
                 )
                 if clip.scene_summary:
                     console.print(f"Scene: {clip.scene_summary}")
+                console.print(f"Sequence rationale: {clip.sequence_reason}")
+                if clip.visual_role != "unknown" or clip.shot_scale != "unknown":
+                    console.print(
+                        f"Editorial role: {clip.visual_role.replace('_', ' ')} | "
+                        f"Shot scale: {clip.shot_scale.replace('_', ' ')}"
+                    )
                 console.print(clip.pacing_note)
                 if clip.transition_in != "cut":
                     console.print(
