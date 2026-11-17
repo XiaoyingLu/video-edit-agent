@@ -188,6 +188,25 @@ def build_draft_selection(
                 combined_score=combined,
                 scene_summary=summary,
                 transcript_excerpt=excerpt,
+                shot_scale=scene.observations[0].shot_scale if scene and scene.observations else "unknown",
+                visual_role=scene.story_function if scene else "unknown",
+                mood=scene.dominant_mood if scene else "unknown",
+                setting=(
+                    next(
+                        (item.setting for item in scene.observations if item.setting),
+                        "",
+                    )
+                    if scene
+                    else ""
+                ),
+                primary_subject=(
+                    next(
+                        (item.primary_subject for item in scene.observations if item.primary_subject),
+                        "",
+                    )
+                    if scene
+                    else ""
+                ),
                 reasons=reasons,
             )
         )
