@@ -330,9 +330,7 @@ def test_ollama_analyzer_rejects_too_many_objects(monkeypatch, tmp_path: Path) -
         OllamaVisionAnalyzer().analyze_frame(frame)
 
 
-def test_ollama_analyzer_sends_keep_alive_and_can_unload(
-    monkeypatch, tmp_path: Path
-) -> None:
+def test_ollama_analyzer_sends_keep_alive_and_can_unload(monkeypatch, tmp_path: Path) -> None:
     frame = tmp_path / "frame.jpg"
     frame.write_bytes(b"fake-image")
     requests = []
@@ -370,9 +368,7 @@ def test_ollama_analyzer_sends_keep_alive_and_can_unload(
     assert requests[1][1] == {"model": "qwen2.5vl:3b", "keep_alive": 0}
 
 
-def test_vision_memory_preflight_stops_before_ollama_request(
-    monkeypatch, tmp_path: Path
-) -> None:
+def test_vision_memory_preflight_stops_before_ollama_request(monkeypatch, tmp_path: Path) -> None:
     from travel_video_agent.resource_manager import ResourceError
     from travel_video_agent.understanding.visual_analyzer import VisionModelError
 
