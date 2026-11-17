@@ -118,9 +118,7 @@ def cleanup_generated_storage(
     remaining = total_bytes - selected_bytes
     if remaining > max_bytes:
         selected_set = set(selected)
-        for path, size, _ in sorted(
-            candidates, key=lambda item: (item[2], item[0].as_posix())
-        ):
+        for path, size, _ in sorted(candidates, key=lambda item: (item[2], item[0].as_posix())):
             if path in selected_set:
                 continue
             if remaining <= max_bytes:
