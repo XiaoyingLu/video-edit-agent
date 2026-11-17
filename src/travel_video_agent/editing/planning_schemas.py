@@ -174,7 +174,9 @@ class VideoProjectPlan(BaseModel):
                 shot.target_duration_seconds for scene in self.scenes for shot in scene.shots
             )
             if abs(storyboard_duration - self.brief.target_duration_seconds) > 0.05:
-                raise ValueError("storyboard duration must equal the creative brief target duration")
+                raise ValueError(
+                    "storyboard duration must equal the creative brief target duration"
+                )
         if self.planning_stage == "production_ready":
             shots = [shot for scene in self.scenes for shot in scene.shots]
             if not self.approved or any(shot.assignment_status != "approved" for shot in shots):
