@@ -88,9 +88,10 @@ class OllamaIntentParser:
             method="POST",
         )
         try:
-            self._model_used = True
             with urlopen(request, timeout=self.timeout_seconds) as response:
-                result = json.loads(response.read().decode("utf-8"))
+                raw_response = response.read()
+                self._model_used = True
+                result = json.loads(raw_response.decode("utf-8"))
             content = result["message"]["content"]
             parsed = json.loads(content)
         except HTTPError as exc:
