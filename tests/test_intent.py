@@ -103,7 +103,6 @@ def test_ollama_intent_parser_rejects_empty_prompt() -> None:
         OllamaIntentParser().parse("   ")
 
 
-
 def test_intent_parser_unloads_model(monkeypatch) -> None:
     captured = {}
 
@@ -127,8 +126,6 @@ def test_intent_memory_preflight_rejects_before_parser_can_run(monkeypatch) -> N
     def reject(required_gb, task):
         raise ResourceError("Not enough available memory")
 
-    monkeypatch.setattr(
-        "travel_video_agent.editing.intent.ensure_memory_available", reject
-    )
+    monkeypatch.setattr("travel_video_agent.editing.intent.ensure_memory_available", reject)
     with pytest.raises(IntentParsingError, match="Not enough available memory"):
         OllamaIntentParser(model="qwen2.5vl:7b")
