@@ -19,8 +19,10 @@ class MusicAnalysisError(RuntimeError):
 
 
 def _decode_audio(path: Path) -> np.ndarray:
-    command = ["ffmpeg", "-v", "error", "-i", str(path), "-vn", "-ac", "1",
-               "-ar", str(_SAMPLE_RATE), "-f", "f32le", "pipe:1"]
+    command = [
+        "ffmpeg", "-v", "error", "-i", str(path), "-vn", "-ac", "1",
+        "-ar", str(_SAMPLE_RATE), "-f", "f32le", "pipe:1",
+    ]
     try:
         result = subprocess.run(command, capture_output=True, check=False, timeout=300)
     except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
@@ -54,7 +56,9 @@ def _onset_envelope(samples: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     return times, envelope
 
 
-def _estimate_tempo(times: np.ndarray, onset: np.ndarray) -> tuple[float | None, float, float | None]:
+def _estimate_tempo(
+    times: np.ndarray, onset: np.ndarray
+) -> tuple[float | None, float, float | None]:
     centered = onset - onset.mean()
     if np.linalg.norm(centered) < 1e-8:
         return None, 0.0, None
@@ -77,7 +81,9 @@ def _estimate_tempo(times: np.ndarray, onset: np.ndarray) -> tuple[float | None,
     return round(float(bpm), 2), confidence, interval
 
 
-def _beat_grid(times: np.ndarray, onset: np.ndarray, interval: float | None, duration: float) -> list[float]:
+def _beat_grid(
+    times: np.ndarray, onset: np.ndarray, interval: float | None, duration: float
+) -> list[float]:
     if interval is None:
         return []
     candidates = np.arange(0, min(interval, float(times[-1])), max(0.01, interval / 32))
@@ -92,7 +98,11 @@ def _beat_grid(times: np.ndarray, onset: np.ndarray, interval: float | None, dur
     for target in np.arange(best_phase, duration, interval):
         left = int(np.searchsorted(times, target - interval * 0.12))
         right = int(np.searchsorted(times, target + interval * 0.12))
-        beat = float(times[left + int(np.argmax(onset[left:right]))]) if right > left else float(target)
+        beat = (
+            float(times[left + int(np.argmax(onset[left:right]))])
+            if right > left
+            else float(target)
+        )
         if 0 <= beat < duration and (not beats or beat - beats[-1] > interval * 0.5):
             beats.append(round(beat, 3))
     return beats
@@ -112,7 +122,14 @@ def _energy_sections(samples: np.ndarray, duration: float) -> list[MusicSection]
     for index, energy in enumerate(energies):
         start, end = float(index * 8), min(duration, float(index * 8 + 8))
         level = "low" if energy <= low else "high" if energy >= high else "medium"
-        sections.append(MusicSection(start_seconds=start, end_seconds=end, energy=level, energy_rms=round(energy, 5)))
+        sections.append(
+            MusicSection(
+                start_seconds=start,
+                end_seconds=end,
+                energy=level,
+                energy_rms=round(energy, 5),
+            )
+        )
     return sections
 
 
@@ -135,9 +152,16 @@ def analyze_music(folder: Path, music_path: Path) -> MusicAnalysis:
     if bpm is None:
         notes.append("No stable tempo was detected; use the energy map and manual cut placement.")
     return MusicAnalysis(
-        project_path=str(root), music_path=str(source), duration_seconds=round(duration, 3),
-        sample_rate=_SAMPLE_RATE, bpm=bpm, beat_confidence=round(confidence, 3),
+        project_path=str(root),
+        music_path=str(source),
+        duration_seconds=round(duration, 3),
+        sample_rate=_SAMPLE_RATE,
+        bpm=bpm,
+        beat_confidence=round(confidence, 3),
         beat_interval_seconds=round(interval, 4) if interval else None,
-        beat_times_seconds=beats, downbeat_times_seconds=beats[::4],
-        sections=_energy_sections(samples, duration), suggested_cut_points_seconds=beats, notes=notes,
+        beat_times_seconds=beats,
+        downbeat_times_seconds=beats[::4],
+        sections=_energy_sections(samples, duration),
+        suggested_cut_points_seconds=beats,
+        notes=notes,
     )
