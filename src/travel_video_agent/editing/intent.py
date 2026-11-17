@@ -8,7 +8,6 @@ from urllib.request import Request, urlopen
 from pydantic import ValidationError
 
 from ..resource_manager import ResourceError, ensure_memory_available, required_vision_memory_gb
-
 from .intent_schemas import EditingPlan
 
 
