@@ -12,8 +12,8 @@ from .renderer import (
     RenderReport,
     _run_probe,
     _seconds,
-    _validate_source_stream_metadata,
     _validate_filter_graph,
+    _validate_source_stream_metadata,
 )
 
 
