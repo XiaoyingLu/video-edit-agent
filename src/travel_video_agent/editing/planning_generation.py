@@ -28,9 +28,9 @@ def infer_creative_priorities(prompt: str, existing: list[str]) -> list[str]:
     """Supplement model-selected priorities with transparent keyword-based signals."""
     text = prompt.lower()
     keyword_groups = {
-        "scenic_landscapes": ("mountain", "lake", "landscape", "scenery", "nature", "coast", "waterfall"),
+        "scenic_landscapes": (\n            "mountain", "lake", "landscape", "scenery", "nature", "coast", "waterfall"\n        ),
         "city_highlights": ("city", "street", "downtown", "urban"),
-        "people_and_activities": ("people", "friends", "family", "hiking", "activity", "adventure"),
+        "people_and_activities": (\n            "people", "friends", "family", "hiking", "activity", "adventure"\n        ),
         "food_and_culture": ("food", "restaurant", "cuisine", "culture", "market", "festival"),
         "architecture": ("architecture", "building", "temple", "castle", "museum"),
     }
