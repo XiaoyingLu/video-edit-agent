@@ -24,7 +24,7 @@ def test_cleanup_dry_run_reports_without_deleting(tmp_path: Path) -> None:
 
     assert report.scanned_files == 1
     assert report.candidate_files == 1
-    assert report.removed_files == 1
+    assert report.removed_files == 0
     assert report.dry_run is True
     assert frame.exists()
 
@@ -77,6 +77,8 @@ def test_keep_artifacts_protects_understanding_referenced_frames(tmp_path: Path)
     [
         ({"max_age_days": -1}, "max_age_days"),
         ({"max_cache_gb": 0}, "max_cache_gb"),
+        ({"max_age_days": float("nan")}, "max_age_days"),
+        ({"max_cache_gb": float("inf")}, "max_cache_gb"),
     ],
 )
 def test_cleanup_rejects_invalid_limits(
