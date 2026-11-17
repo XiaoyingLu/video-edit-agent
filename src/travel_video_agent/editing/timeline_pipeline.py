@@ -160,6 +160,13 @@ def save_draft_timeline(timeline: ProjectDraftTimeline, destination: Path) -> No
         json.dumps(timeline.model_dump(mode="json"), indent=2) + "\n",
         encoding="utf-8",
     )
+    if (destination.parent / "artifact-manifest.json").is_file():
+        root = Path(timeline.project_path).expanduser().resolve()
+        dependencies = [
+            Path(value) if Path(value).is_absolute() else root / value
+            for value in (timeline.source_selection, timeline.source_editing_plan)
+        ]
+        register_artifact(root, destination, dependencies=dependencies)
 
 
 def apply_timeline_review(
