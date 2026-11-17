@@ -51,7 +51,6 @@ def test_gpu_preflight_is_optional_without_nvidia_smi(monkeypatch):
     assert resources.ensure_gpu_memory_available(8.0, "Whisper large") is None
 
 
-
 @pytest.mark.parametrize(
     ("variable", "resolver"),
     [
