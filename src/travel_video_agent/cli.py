@@ -27,6 +27,8 @@ from .editing import (
 from .editing.workflow import create_video_draft
 from .highlights import find_highlights_folder
 from .media import MediaToolError, analyze_folder
+from .music import analyze_music
+from .music.pipeline import MusicAnalysisError
 from .rendering import RenderError, render_approved_shot_timeline, render_project
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
@@ -1302,6 +1304,37 @@ def review_timeline(
         console.print("[yellow]Sequence is not approved yet; resolve all pending clips.[/yellow]")
     console.print("[yellow]No renderer timeline was created and no video was rendered.[/yellow]")
 
+
+@app.command("analyze-music")
+def analyze_music_command(
+    folder: Annotated[Path, typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True, help="Project folder for the soundtrack analysis artifact.")],
+    music: Annotated[Path, typer.Option("--music", exists=True, file_okay=True, dir_okay=False, readable=True, help="Explicit soundtrack file to analyze.")],
+    output: Annotated[Path | None, typer.Option("--output", "-o", help="JSON output path (default: <folder>/.video-agent/music-analysis.json).")] = None,
+) -> None:
+    """Estimate soundtrack tempo, beats, downbeats, and broad energy sections."""
+    try:
+        report = analyze_music(folder, music)
+    except (FileNotFoundError, ValueError, MusicAnalysisError) as exc:
+        console.print(f"[red]Music analysis failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    destination = output or folder.resolve() / ".video-agent" / "music-analysis.json"
+    destination = destination.expanduser().resolve()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(json.dumps(report.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8")
+    register_artifact(folder, destination, dependencies=[music.expanduser().resolve()])
+
+    table = Table(title="Soundtrack Analysis")
+    table.add_column("Tempo", justify="right")
+    table.add_column("Beat confidence", justify="right")
+    table.add_column("Beats", justify="right")
+    table.add_column("Downbeats", justify="right")
+    table.add_column("Energy sections", justify="right")
+    table.add_row(f"{report.bpm:.1f} BPM" if report.bpm else "Undetected", f"{report.beat_confidence:.2f}", str(len(report.beat_times_seconds)), str(len(report.downbeat_times_seconds)), str(len(report.sections)))
+    console.print(table)
+    console.print(f"Music analysis saved to [green]{destination}[/green]")
+    for note in report.notes:
+        console.print(f"[dim]• {note}[/dim]")
 
 @app.command("validate-artifacts")
 def validate_artifacts(
