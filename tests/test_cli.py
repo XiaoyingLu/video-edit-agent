@@ -107,6 +107,7 @@ def test_cli_help_is_available() -> None:
     assert "plan" in result.output
     assert "draft-edit" in result.output
     assert "create-video" in result.output
+    assert "create-plan" in result.output
     assert "validate-artifacts" in result.output
 
 
@@ -415,3 +416,51 @@ def test_draft_edit_command_writes_selection_json(tmp_path: Path, monkeypatch) -
     assert result.exit_code == 0, result.output
     assert json.loads(output.read_text(encoding="utf-8")) == expected.model_dump(mode="json")
     assert "No existing timeline was changed" in result.output
+
+
+
+def test_create_plan_command_writes_hierarchical_brief(tmp_path: Path, monkeypatch) -> None:
+    from travel_video_agent import cli
+    from travel_video_agent.editing.planning_pipeline import create_video_project_plan
+    from travel_video_agent.editing.planning_schemas import VideoProjectPlan
+
+    expected = VideoProjectPlan(
+        project_path=str(tmp_path.resolve()),
+        brief={
+            "source_prompt": "Create a 90-second cinematic travel film",
+            "target_duration_seconds": 90,
+            "style": "cinematic",
+            "aspect_ratio": "16:9",
+            "resolution": "1080p",
+            "pacing": "moderate",
+            "creative_priorities": ["scenic_landscapes"],
+        },
+        editing_preferences={
+            "source_prompt": "Create a 90-second cinematic travel film",
+            "target_duration_seconds": 90,
+            "style": "cinematic",
+            "priorities": ["scenic_landscapes"],
+        },
+    )
+    destination = tmp_path / ".video-agent" / "video-project-plan.json"
+
+    def fake_create(folder, prompt, *, model=None, output_path=None):
+        assert prompt == "Create a 90-second cinematic travel film"
+        return expected, destination
+
+    monkeypatch.setattr(cli, "create_video_project_plan", fake_create)
+    result = runner.invoke(
+        app,
+        [
+            "create-plan",
+            str(tmp_path),
+            "--prompt",
+            "Create a 90-second cinematic travel film",
+            "--model",
+            "qwen2.5vl:3b",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "creative brief created" in result.output
+    assert "brief_ready" in result.output
