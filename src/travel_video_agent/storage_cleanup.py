@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-import shutil
+import math
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -34,8 +34,14 @@ def _referenced_frames(root: Path) -> set[Path]:
         return set()
 
     referenced: set[Path] = set()
-    for scene in payload.get("scenes", []):
-        for observation in scene.get("observations", []):
+    if not isinstance(payload, dict) or not isinstance(payload.get("scenes"), list):
+        return set()
+    for scene in payload["scenes"]:
+        if not isinstance(scene, dict) or not isinstance(scene.get("observations"), list):
+            continue
+        for observation in scene["observations"]:
+            if not isinstance(observation, dict):
+                continue
             frame_path = observation.get("frame_path")
             if not isinstance(frame_path, str):
                 continue
@@ -63,9 +69,9 @@ def cleanup_generated_storage(
     candidates. When keep_artifacts is enabled, frames referenced by understanding.json
     are protected as well.
     """
-    if max_age_days < 0:
+    if not math.isfinite(max_age_days) or max_age_days < 0:
         raise ValueError("max_age_days must be zero or greater")
-    if max_cache_gb <= 0:
+    if not math.isfinite(max_cache_gb) or max_cache_gb <= 0:
         raise ValueError("max_cache_gb must be greater than zero")
 
     root = folder.expanduser().resolve()
@@ -145,9 +151,6 @@ def cleanup_generated_storage(
                     cache_dir.rmdir()
                 except OSError:
                     pass
-    else:
-        removed_files = len(selected)
-
     return CleanupReport(
         scanned_files=scanned_files,
         candidate_files=len(selected),
