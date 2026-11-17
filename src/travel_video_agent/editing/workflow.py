@@ -67,7 +67,10 @@ def create_video_draft(
         root,
         "understanding.json",
         understanding,
-        config={\n            "model": getattr(understanding, "model", vision_model),\n            "samples_per_scene": samples_per_scene,\n        },
+        config={
+            "model": getattr(understanding, "model", vision_model),
+            "samples_per_scene": samples_per_scene,
+        },
     )
 
     transcription = transcribe_folder(root, model=whisper_model)
