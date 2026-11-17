@@ -193,6 +193,24 @@ def test_cli_help_includes_render_draft():
     assert result.exit_code == 0
     assert "render-draft" in result.output
 
+def test_render_draft_cli_dry_run_reports_preflight_without_rendering(tmp_path, monkeypatch):
+    calls = {}
+
+    def fake_render(*args, **kwargs):
+        calls.update(kwargs)
+        return None
+
+    monkeypatch.setattr(
+        "travel_video_agent.cli.render_approved_shot_timeline", fake_render
+    )
+    result = runner.invoke(app, ["render-draft", str(tmp_path), "--dry-run"])
+
+    assert result.exit_code == 0, result.output
+    assert calls["dry_run"] is True
+    assert "preflight passed" in result.output
+    assert "no MP4 was written" in result.output
+
+
 
 def test_approved_duration_does_not_apply_transition_across_rejected_shot(tmp_path):
     clips = [
@@ -328,8 +346,12 @@ def test_render_approved_shot_timeline_with_real_ffmpeg(tmp_path):
     )
     (artifact / "optimized-timeline.json").write_text(timeline.model_dump_json(), encoding="utf-8")
 
-    report = render_approved_shot_timeline(tmp_path)
+    preflight = render_approved_shot_timeline(tmp_path, dry_run=True)
     output = artifact / "rendered-draft.mp4"
+    assert preflight is None
+    assert not output.exists()
+
+    report = render_approved_shot_timeline(tmp_path)
     assert output.is_file()
     assert report.video_codec == "h264"
     assert report.audio_codec == "aac"
