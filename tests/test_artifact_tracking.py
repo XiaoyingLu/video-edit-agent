@@ -71,7 +71,6 @@ def test_artifact_tampering_is_detected(tmp_path):
         validate_artifact(tmp_path, artifact)
 
 
-
 def test_sampled_hash_detects_content_change_with_preserved_stat(tmp_path):
     source = _write(tmp_path / "trip.mp4", "a" * (3 * 1024 * 1024))
     artifact = _write(tmp_path / ".video-agent" / "understanding.json", '{"ok": true}')
@@ -120,9 +119,7 @@ def test_downstream_selection_rejects_stale_source_artifacts(tmp_path):
             }
         ],
     }
-    highlights_path = _write(
-        artifact_dir / "highlights.json", json.dumps(highlights)
-    )
+    highlights_path = _write(artifact_dir / "highlights.json", json.dumps(highlights))
     register_artifact(tmp_path, plan_path)
     register_artifact(tmp_path, highlights_path)
     source.write_text("modified", encoding="utf-8")
