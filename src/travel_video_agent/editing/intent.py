@@ -121,7 +121,6 @@ class OllamaIntentParser:
                 f"The model response did not satisfy the editing-plan schema: {exc}"
             ) from exc
 
-
     def unload_model(self) -> bool:
         """Ask Ollama to evict the intent model before another model phase begins."""
         payload = json.dumps({"model": self.model, "keep_alive": 0}).encode("utf-8")
