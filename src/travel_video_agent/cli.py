@@ -1105,9 +1105,7 @@ def create_plan(
     brief = project_plan.brief
     console.print("[bold green]Video creative brief created.[/bold green]")
     console.print(f"Target: {brief.target_duration_seconds:.1f}s | {brief.style}")
-    console.print(
-        f"Format: {brief.aspect_ratio} | {brief.resolution} | {brief.pacing} pacing"
-    )
+    console.print(f"Format: {brief.aspect_ratio} | {brief.resolution} | {brief.pacing} pacing")
     console.print(f"Creative priorities: {', '.join(brief.creative_priorities)}")
     console.print(f"Planning stage: [cyan]{project_plan.planning_stage}[/cyan]")
     console.print(f"Plan saved to [green]{destination}[/green]")
