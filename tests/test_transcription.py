@@ -139,7 +139,6 @@ def test_detect_speech_pauses_reports_long_gaps_only() -> None:
     ]
 
 
-
 def test_whisper_backend_close_releases_model_reference(monkeypatch) -> None:
     backend = FasterWhisperTranscriber.__new__(FasterWhisperTranscriber)
     backend._model = object()
@@ -153,7 +152,6 @@ def test_whisper_backend_close_releases_model_reference(monkeypatch) -> None:
 
     assert backend._model is None
     assert collected == [True]
-
 
 
 def test_whisper_memory_preflight_rejects_before_loading_backend(monkeypatch) -> None:
