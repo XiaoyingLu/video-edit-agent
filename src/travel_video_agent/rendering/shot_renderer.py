@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from ..artifact_tracking import register_artifact, validate_artifact
 from ..editing.timeline_schemas import ProjectDraftTimeline
 from .renderer import RenderError, RenderReport, _run_probe, _seconds
 
@@ -151,6 +152,7 @@ def render_approved_shot_timeline(
         raise FileNotFoundError(
             f"Missing {timeline_file}; run 'video-agent optimize-timeline' first."
         )
+    validate_artifact(root, timeline_file)
     timeline = ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root:
         raise RenderError("optimized timeline belongs to a different project folder")
@@ -297,6 +299,8 @@ def render_approved_shot_timeline(
     except Exception:
         temporary_path.unlink(missing_ok=True)
         raise
+
+    register_artifact(root, destination, dependencies=[timeline_file])
 
     return RenderReport(
         output_path=str(destination),
