@@ -150,6 +150,14 @@ def test_ollama_analyzer_requests_json_schema(monkeypatch, tmp_path: Path) -> No
         "objects",
         "activities",
         "confidence",
+        "shot_scale",
+        "camera_angle",
+        "composition",
+        "lighting",
+        "mood",
+        "visual_role",
+        "setting",
+        "primary_subject",
     }
 
 
@@ -247,6 +255,16 @@ def test_ollama_analyzer_limits_structured_output_and_generation_tokens(
     assert schema["properties"]["objects"]["maxItems"] == 8
     assert schema["properties"]["activities"]["maxItems"] == 4
     assert captured["payload"]["options"]["num_predict"] == 256
+    assert captured["payload"]["format"]["properties"]["visual_role"]["enum"] == [
+        "establishing",
+        "action",
+        "detail",
+        "reaction",
+        "transition",
+        "portrait",
+        "scenic_breath",
+        "unknown",
+    ]
 
 
 def test_ollama_analyzer_retries_truncated_json_with_shorter_output(
@@ -292,7 +310,7 @@ def test_ollama_analyzer_retries_truncated_json_with_shorter_output(
     assert len(requests) == 2
     assert requests[0]["options"]["num_predict"] == 256
     assert requests[1]["options"]["num_predict"] == 192
-    assert "no more than 5 key objects" in requests[1]["messages"][0]["content"]
+    assert "at most 5 objects and 2 activities" in requests[1]["messages"][0]["content"]
 
 
 def test_ollama_analyzer_rejects_too_many_objects(monkeypatch, tmp_path: Path) -> None:
@@ -387,3 +405,98 @@ def test_vision_memory_preflight_stops_before_ollama_request(monkeypatch, tmp_pa
     )
     with pytest.raises(VisionModelError, match="Not enough available memory"):
         OllamaVisionAnalyzer(model="qwen2.5vl:7b").analyze_frame(frame)
+
+
+def test_vision_analyzer_normalizes_missing_editorial_fields_to_unknown(
+    monkeypatch, tmp_path: Path
+) -> None:
+    frame = tmp_path / "frame.jpg"
+    frame.write_bytes(b"fake-image")
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self):
+            content = {
+                "description": "A lake beneath mountains.",
+                "objects": ["lake", "mountains"],
+                "activities": [],
+                "confidence": 0.9,
+            }
+            return json.dumps({"message": {"content": json.dumps(content)}}).encode()
+
+    monkeypatch.setattr(
+        "travel_video_agent.understanding.visual_analyzer.urlopen",
+        lambda request, timeout: FakeResponse(),
+    )
+    result = OllamaVisionAnalyzer().analyze_frame(frame)
+    assert result["shot_scale"] == "unknown"
+    assert result["visual_role"] == "unknown"
+    assert result["setting"] == ""
+    assert result["primary_subject"] == ""
+
+
+def test_vision_analyzer_returns_cinematic_attributes(monkeypatch, tmp_path: Path) -> None:
+    frame = tmp_path / "frame.jpg"
+    frame.write_bytes(b"fake-image")
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self):
+            content = {
+                "description": "A wide coastal landscape at sunset.",
+                "objects": ["ocean", "cliffs"],
+                "activities": [],
+                "confidence": 0.95,
+                "shot_scale": "wide",
+                "camera_angle": "eye_level",
+                "composition": "leading_lines",
+                "lighting": "golden_hour",
+                "mood": "serene",
+                "visual_role": "establishing",
+                "setting": "rocky coastline",
+                "primary_subject": "ocean and cliffs",
+            }
+            return json.dumps({"message": {"content": json.dumps(content)}}).encode()
+
+    monkeypatch.setattr(
+        "travel_video_agent.understanding.visual_analyzer.urlopen",
+        lambda request, timeout: FakeResponse(),
+    )
+    result = OllamaVisionAnalyzer().analyze_frame(frame)
+    assert result["shot_scale"] == "wide"
+    assert result["composition"] == "leading_lines"
+    assert result["lighting"] == "golden_hour"
+    assert result["visual_role"] == "establishing"
+    assert result["setting"] == "rocky coastline"
+
+
+def test_scene_editorial_labels_use_most_common_known_value() -> None:
+    from travel_video_agent.understanding.pipeline import _dominant_label
+    from travel_video_agent.understanding.schemas import FrameObservation
+
+    observations = [
+        FrameObservation(
+            timestamp_seconds=1, frame_path="a.jpg", description="a", visual_role="establishing"
+        ),
+        FrameObservation(
+            timestamp_seconds=2, frame_path="b.jpg", description="b", visual_role="unknown"
+        ),
+        FrameObservation(
+            timestamp_seconds=3, frame_path="c.jpg", description="c", visual_role="establishing"
+        ),
+        FrameObservation(
+            timestamp_seconds=4, frame_path="d.jpg", description="d", visual_role="detail"
+        ),
+    ]
+    assert _dominant_label(observations, "visual_role") == "establishing"
+    assert _dominant_label(observations, "mood") == "unknown"

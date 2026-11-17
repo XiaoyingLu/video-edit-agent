@@ -23,10 +23,104 @@ _VISION_RESPONSE_SCHEMA: dict[str, Any] = {
         "objects": {"type": "array", "items": {"type": "string"}, "maxItems": 8},
         "activities": {"type": "array", "items": {"type": "string"}, "maxItems": 4},
         "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "shot_scale": {
+            "type": "string",
+            "enum": [
+                "extreme_wide",
+                "wide",
+                "medium",
+                "close_up",
+                "extreme_close_up",
+                "aerial",
+                "unknown",
+            ],
+        },
+        "camera_angle": {
+            "type": "string",
+            "enum": ["eye_level", "low_angle", "high_angle", "birds_eye", "worms_eye", "unknown"],
+        },
+        "composition": {
+            "type": "string",
+            "enum": [
+                "centered",
+                "rule_of_thirds",
+                "leading_lines",
+                "symmetrical",
+                "layered_depth",
+                "negative_space",
+                "unknown",
+            ],
+        },
+        "lighting": {
+            "type": "string",
+            "enum": [
+                "golden_hour",
+                "blue_hour",
+                "daylight",
+                "overcast",
+                "low_light",
+                "artificial",
+                "backlit",
+                "mixed",
+                "unknown",
+            ],
+        },
+        "mood": {
+            "type": "string",
+            "enum": [
+                "serene",
+                "energetic",
+                "dramatic",
+                "romantic",
+                "mysterious",
+                "joyful",
+                "contemplative",
+                "tense",
+                "unknown",
+            ],
+        },
+        "visual_role": {
+            "type": "string",
+            "enum": [
+                "establishing",
+                "action",
+                "detail",
+                "reaction",
+                "transition",
+                "portrait",
+                "scenic_breath",
+                "unknown",
+            ],
+        },
+        "setting": {"type": "string", "maxLength": 100},
+        "primary_subject": {"type": "string", "maxLength": 100},
     },
-    "required": ["description", "objects", "activities", "confidence"],
+    "required": [
+        "description",
+        "objects",
+        "activities",
+        "confidence",
+        "shot_scale",
+        "camera_angle",
+        "composition",
+        "lighting",
+        "mood",
+        "visual_role",
+        "setting",
+        "primary_subject",
+    ],
     "additionalProperties": False,
 }
+
+
+def _enum_value(value: Any, allowed: set[str]) -> str:
+    """Normalize optional editorial labels; unknown values never leak into artifacts."""
+    return value if isinstance(value, str) and value in allowed else "unknown"
+
+
+def _short_text(value: Any) -> str:
+    """Keep optional scene labels bounded and safe for downstream prompts/UI."""
+    return value.strip()[:100] if isinstance(value, str) else ""
 
 
 def _parse_observation(content: Any, frame_path: Path) -> dict[str, Any]:
@@ -101,6 +195,77 @@ def _parse_observation(content: Any, frame_path: Path) -> dict[str, Any]:
         "objects": objects,
         "activities": activities,
         "confidence": float(confidence),
+        "shot_scale": _enum_value(
+            observation.get("shot_scale"),
+            {
+                "extreme_wide",
+                "wide",
+                "medium",
+                "close_up",
+                "extreme_close_up",
+                "aerial",
+                "unknown",
+            },
+        ),
+        "camera_angle": _enum_value(
+            observation.get("camera_angle"),
+            {"eye_level", "low_angle", "high_angle", "birds_eye", "worms_eye", "unknown"},
+        ),
+        "composition": _enum_value(
+            observation.get("composition"),
+            {
+                "centered",
+                "rule_of_thirds",
+                "leading_lines",
+                "symmetrical",
+                "layered_depth",
+                "negative_space",
+                "unknown",
+            },
+        ),
+        "lighting": _enum_value(
+            observation.get("lighting"),
+            {
+                "golden_hour",
+                "blue_hour",
+                "daylight",
+                "overcast",
+                "low_light",
+                "artificial",
+                "backlit",
+                "mixed",
+                "unknown",
+            },
+        ),
+        "mood": _enum_value(
+            observation.get("mood"),
+            {
+                "serene",
+                "energetic",
+                "dramatic",
+                "romantic",
+                "mysterious",
+                "joyful",
+                "contemplative",
+                "tense",
+                "unknown",
+            },
+        ),
+        "visual_role": _enum_value(
+            observation.get("visual_role"),
+            {
+                "establishing",
+                "action",
+                "detail",
+                "reaction",
+                "transition",
+                "portrait",
+                "scenic_breath",
+                "unknown",
+            },
+        ),
+        "setting": _short_text(observation.get("setting")),
+        "primary_subject": _short_text(observation.get("primary_subject")),
     }
 
 
@@ -134,14 +299,20 @@ class OllamaVisionAnalyzer:
             self._memory_checked = True
         image = base64.b64encode(frame_path.read_bytes()).decode("ascii")
         prompts = (
-            "Analyze this travel-video frame. Return one JSON object matching the supplied "
-            "schema. Be concise: description must be one short factual sentence (200 characters "
-            "or fewer); list at most 8 important visible objects and at most 4 directly visible "
-            "activities. Do not enumerate minor details or repeat similar objects. Do not guess "
-            "locations, identities, or events. Use empty arrays when appropriate.",
-            "Return a very concise JSON object matching the schema. Include one short factual "
-            "description, no more than 5 key objects, no more than 2 visible activities, and "
-            "confidence from 0 to 1. Do not add explanations or extra details.",
+            "Analyze this travel-video frame as a professional travel-film editor. Return one JSON "
+            "object matching the supplied schema. Describe only visible evidence; never invent a "
+            "specific location, identity, event, or camera movement. Be concise: description must "
+            "be one short factual sentence (200 characters or fewer); list at most 8 important "
+            "objects and 4 visible activities. Classify shot scale, camera angle, composition, "
+            "lighting, mood, and likely editorial role (establishing/action/detail/reaction/"
+            "transition/portrait/scenic_breath). Use unknown when uncertain. Infer setting and "
+            "primary subject only at a broad visual level. A single still frame cannot reliably "
+            "prove camera movement, so do not infer it. Avoid generic praise and subjective "
+            "quality claims.",
+            "Return concise factual JSON matching the schema. Include one short description, at "
+            "most 5 objects and 2 activities. Classify shot scale, angle, composition, lighting, "
+            "mood, editorial role, broad setting, and primary subject. Use unknown whenever "
+            "uncertain; do not guess location or camera movement.",
         )
         previous_error: VisionModelError | None = None
 

@@ -1,5 +1,7 @@
 """Structured, timestamped outputs from video understanding."""
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -13,6 +15,55 @@ class FrameObservation(BaseModel):
     objects: list[str] = Field(default_factory=list)
     activities: list[str] = Field(default_factory=list)
     confidence: float = Field(default=0.5, ge=0, le=1)
+    shot_scale: Literal[
+        "extreme_wide", "wide", "medium", "close_up", "extreme_close_up", "aerial", "unknown"
+    ] = "unknown"
+    camera_angle: Literal[
+        "eye_level", "low_angle", "high_angle", "birds_eye", "worms_eye", "unknown"
+    ] = "unknown"
+    composition: Literal[
+        "centered",
+        "rule_of_thirds",
+        "leading_lines",
+        "symmetrical",
+        "layered_depth",
+        "negative_space",
+        "unknown",
+    ] = "unknown"
+    lighting: Literal[
+        "golden_hour",
+        "blue_hour",
+        "daylight",
+        "overcast",
+        "low_light",
+        "artificial",
+        "backlit",
+        "mixed",
+        "unknown",
+    ] = "unknown"
+    mood: Literal[
+        "serene",
+        "energetic",
+        "dramatic",
+        "romantic",
+        "mysterious",
+        "joyful",
+        "contemplative",
+        "tense",
+        "unknown",
+    ] = "unknown"
+    visual_role: Literal[
+        "establishing",
+        "action",
+        "detail",
+        "reaction",
+        "transition",
+        "portrait",
+        "scenic_breath",
+        "unknown",
+    ] = "unknown"
+    setting: str = Field(default="", max_length=100)
+    primary_subject: str = Field(default="", max_length=100)
 
 
 class VideoScene(BaseModel):
@@ -23,6 +74,27 @@ class VideoScene(BaseModel):
     start_seconds: float = Field(ge=0)
     end_seconds: float = Field(gt=0)
     summary: str
+    story_function: Literal[
+        "establishing",
+        "action",
+        "detail",
+        "reaction",
+        "transition",
+        "portrait",
+        "scenic_breath",
+        "unknown",
+    ] = "unknown"
+    dominant_mood: Literal[
+        "serene",
+        "energetic",
+        "dramatic",
+        "romantic",
+        "mysterious",
+        "joyful",
+        "contemplative",
+        "tense",
+        "unknown",
+    ] = "unknown"
     observations: list[FrameObservation] = Field(default_factory=list)
 
 

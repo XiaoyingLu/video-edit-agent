@@ -2,6 +2,7 @@
 
 import hashlib
 import warnings
+from collections import Counter
 from pathlib import Path
 
 from ..media import analyze_folder, discover_videos
@@ -11,11 +12,20 @@ from .schemas import FrameObservation, VideoScene, VideoUnderstanding
 from .visual_analyzer import OllamaVisionAnalyzer
 
 
+def _dominant_label(observations: list[FrameObservation], field: str) -> str:
+    """Return the most common non-unknown editorial label, preserving first-seen ties."""
+    labels = [getattr(item, field) for item in observations]
+    counts = Counter(label for label in labels if label != "unknown")
+    return counts.most_common(1)[0][0] if counts else "unknown"
+
+
 def _scene_summary(observations: list[FrameObservation]) -> str:
+    """Combine concise frame descriptions with grounded editorial context."""
     descriptions = [item.description for item in observations]
-    return (
-        " ".join(descriptions) if descriptions else "No representative frames could be extracted."
-    )
+    if not descriptions:
+        return "No representative frames could be extracted."
+    unique_descriptions = list(dict.fromkeys(descriptions))
+    return " ".join(unique_descriptions)
 
 
 def understand_folder(
@@ -57,6 +67,8 @@ def understand_folder(
                         start_seconds=start,
                         end_seconds=end,
                         summary=_scene_summary(observations),
+                        story_function=_dominant_label(observations, "visual_role"),
+                        dominant_mood=_dominant_label(observations, "mood"),
                         observations=observations,
                     )
                 )

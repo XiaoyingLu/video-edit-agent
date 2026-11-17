@@ -6,12 +6,18 @@ A local-first Python CLI for editing personal travel footage. Media stays on you
 
 - Folder scanning and media metadata extraction
 - Scene detection and representative-frame sampling
-- Local vision-model descriptions for each detected scene
+- Local vision-model scene understanding with typed shot scale, camera angle, composition, lighting, mood, editorial role, broad setting, and primary subject labels
 - Local speech transcription with timestamped segments and long-gap metadata
 - Human review of proposed cuts and validated retained-segment timeline
 - Timeline-aligned SRT subtitles and optional burned-in subtitles
 - Explainable visual highlight candidate detection and ranking
 - Natural-language editing intent parsing into a validated, reviewable plan
+
+## Cinematic scene understanding
+
+The `understand` command analyzes representative frames with the local Ollama vision model and stores both factual descriptions and bounded editorial attributes in `.video-agent/understanding.json`. Each observation includes shot scale, camera angle, composition, lighting, mood, likely editorial role (such as establishing, action, detail, or scenic breath), broad setting, and primary subject. Scene-level story function and dominant mood are aggregated from frame labels.
+
+These are model-assisted visual classifications, not ground truth. The prompt explicitly avoids guessing precise locations or inferring camera movement from a still frame; uncertain classifications are recorded as `unknown`. New fields have defaults so older understanding artifacts remain readable. The attributes are intended to improve later sequence planning and human review; they do not automatically change clip selection or rendering in this step.
 
 ## Requirements
 
