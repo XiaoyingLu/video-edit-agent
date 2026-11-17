@@ -421,7 +421,6 @@ def test_draft_edit_command_writes_selection_json(tmp_path: Path, monkeypatch) -
 
 def test_create_plan_command_writes_hierarchical_brief(tmp_path: Path, monkeypatch) -> None:
     from travel_video_agent import cli
-    from travel_video_agent.editing.planning_pipeline import create_video_project_plan
     from travel_video_agent.editing.planning_schemas import VideoProjectPlan
 
     expected = VideoProjectPlan(
