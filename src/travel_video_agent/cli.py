@@ -25,7 +25,7 @@ from .editing import (
     save_draft_timeline,
     save_edit_proposal,
 )
-from .editing.workflow import create_video_draft
+from .editing.planning_generation import VideoPlanningError\nfrom .editing.workflow import create_video_draft
 from .highlights import find_highlights_folder
 from .media import MediaToolError, analyze_folder
 from .music import analyze_music
@@ -1092,17 +1092,17 @@ def create_plan(
         typer.Option("--model", help="Ollama model (default: OLLAMA_MODEL or qwen2.5vl:3b)."),
     ] = None,
 ) -> None:
-    """Create a hierarchical creative brief for a future video production."""
+    """Generate a creative brief, story treatment, and storyboard."""
     try:
         project_plan, destination = create_video_project_plan(
             folder, prompt, model=model, output_path=output
         )
-    except (FileNotFoundError, IntentParsingError, ValueError) as exc:
+    except (FileNotFoundError, IntentParsingError, VideoPlanningError, ValueError) as exc:
         console.print(f"[red]Video planning failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
     brief = project_plan.brief
-    console.print("[bold green]Video creative brief created.[/bold green]")
+    console.print("[bold green]Video story and storyboard plan created.[/bold green]")
     console.print(f"Target: {brief.target_duration_seconds:.1f}s | {brief.style}")
     console.print(f"Format: {brief.aspect_ratio} | {brief.resolution} | {brief.pacing} pacing")
     console.print(f"Creative priorities: {', '.join(brief.creative_priorities)}")
