@@ -5,7 +5,11 @@ from pathlib import Path
 
 from ..artifact_tracking import register_artifact
 from .intent import parse_editing_intent
-from .planning_generation import (\n    explicit_duration_seconds,\n    generate_video_plan_content,\n    infer_creative_priorities,\n)
+from .planning_generation import (
+    explicit_duration_seconds,
+    generate_video_plan_content,
+    infer_creative_priorities,
+)
 from .planning_schemas import CreativeBrief, VideoProjectPlan
 
 
