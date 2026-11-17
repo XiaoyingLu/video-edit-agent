@@ -41,7 +41,7 @@ def _run_probe(executable: str, path: Path, timeout: float = 60) -> dict[str, An
         "-v",
         "error",
         "-show_entries",
-        "format=duration:stream=codec_type,codec_name,width,height",
+        "format=duration:stream=codec_type,codec_name,width,height,sample_rate,channels,pix_fmt,avg_frame_rate",
         "-of",
         "json",
         str(path),
@@ -58,6 +58,41 @@ def _run_probe(executable: str, path: Path, timeout: float = 60) -> dict[str, An
         return json.loads(result.stdout)
     except json.JSONDecodeError as exc:
         raise RenderError(f"ffprobe returned invalid JSON for {path}") from exc
+
+
+
+def _validate_filter_graph(command: list[str], timeout: float = 120) -> None:
+    """Run the exact filter graph briefly to catch parser and stream-negotiation errors."""
+    try:
+        encoder_index = command.index("-c:v")
+    except ValueError as exc:
+        raise RenderError("could not locate encoder options in generated FFmpeg command") from exc
+    validation_command = [
+        command[0],
+        "-hide_banner",
+        "-nostdin",
+        "-v",
+        "error",
+        *command[1:encoder_index],
+        "-t",
+        "0.5",
+        "-f",
+        "null",
+        "-",
+    ]
+    try:
+        result = subprocess.run(
+            validation_command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RenderError("FFmpeg filter-graph preflight exceeded its timeout") from exc
+    if result.returncode != 0:
+        detail = result.stderr.strip()[-4000:] or "unknown FFmpeg filter-graph error"
+        raise RenderError(f"FFmpeg filter-graph preflight failed: {detail}")
 
 
 def _probe_source(
@@ -198,7 +233,8 @@ def render_project(
     subtitle_path: Path | None = None,
     subtitle_font_size: int = 28,
     subtitle_position: str = "bottom",
-) -> RenderReport:
+    dry_run: bool = False,
+) -> RenderReport | None:
     """Render the approved retained intervals into one MP4 and verify the result.
 
     All source paths are constrained to the project root. Rendering uses a temporary
@@ -240,7 +276,8 @@ def render_project(
         raise RenderError("render output cannot overwrite the subtitle file")
     if destination == timeline_file:
         raise RenderError("render output cannot overwrite the timeline artifact")
-    destination.parent.mkdir(parents=True, exist_ok=True)
+    if not dry_run:
+        destination.parent.mkdir(parents=True, exist_ok=True)
 
     if not timeline.videos:
         raise RenderError("timeline contains no source videos")
@@ -255,7 +292,7 @@ def render_project(
     source_paths = {entry[0] for entry in source_entries}
     if destination in source_paths:
         raise RenderError("render output cannot overwrite a source video")
-    if destination.exists() and not overwrite:
+    if destination.exists() and not overwrite and not dry_run:
         raise FileExistsError(
             f"Render output already exists: {destination}; pass --overwrite to replace it."
         )
@@ -287,11 +324,13 @@ def render_project(
     frame_rate = 30.0
 
     expected_duration = sum(end - start for _, start, end, _ in segments)
-    temporary_file = tempfile.NamedTemporaryFile(
-        prefix=".video-agent-render-", suffix=".mp4", dir=destination.parent, delete=False
-    )
-    temporary_path = Path(temporary_file.name)
-    temporary_file.close()
+    temporary_path = destination
+    if not dry_run:
+        temporary_file = tempfile.NamedTemporaryFile(
+            prefix=".video-agent-render-", suffix=".mp4", dir=destination.parent, delete=False
+        )
+        temporary_path = Path(temporary_file.name)
+        temporary_file.close()
     try:
         command = _build_ffmpeg_command(
             ffmpeg,
@@ -305,6 +344,9 @@ def render_project(
             subtitle_font_size=subtitle_font_size,
             subtitle_position=subtitle_position,
         )
+        if dry_run:
+            _validate_filter_graph(command, timeout=min(timeout_seconds, 120))
+            return None
         try:
             result = subprocess.run(
                 command,
@@ -345,7 +387,8 @@ def render_project(
 
         temporary_path.replace(destination)
     except Exception:
-        temporary_path.unlink(missing_ok=True)
+        if not dry_run:
+            temporary_path.unlink(missing_ok=True)
         raise
 
     dependencies = [timeline_file]
