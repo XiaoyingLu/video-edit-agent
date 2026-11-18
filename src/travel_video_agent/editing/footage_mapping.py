@@ -57,6 +57,15 @@ def _tokens(value: str) -> set[str]:
 
 def _scene_text(scene) -> str:
     parts = [scene.summary]
+    if scene.dynamics is not None:
+        parts.extend(
+            [
+                scene.dynamics.temporal_summary,
+                *scene.dynamics.action_progression,
+                scene.dynamics.subject_motion.replace("_", " "),
+                scene.dynamics.camera_motion.replace("_", " "),
+            ]
+        )
     for observation in scene.observations:
         parts.extend(
             [
