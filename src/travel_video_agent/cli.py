@@ -795,10 +795,8 @@ def init_title_overlays(
     ).expanduser().resolve()
     destination = (output or root / ".video-agent" / "title-overlays.json").expanduser().resolve()
     try:
+        _, timeline_file = load_draft_timeline(root, timeline)
         timeline_relative = timeline_file.relative_to(root)
-        if not timeline_file.is_file():
-            raise FileNotFoundError(f"Missing optimized timeline: {timeline_file}")
-        ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
         if destination.exists():
             raise FileExistsError(f"Title overlay file already exists: {destination}")
         document = TitleOverlayDocument(
