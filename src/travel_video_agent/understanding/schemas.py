@@ -111,6 +111,7 @@ class VideoScene(BaseModel):
         "unknown",
     ] = "unknown"
     observations: list[FrameObservation] = Field(default_factory=list)
+    dynamics: SceneDynamics | None = None
 
 
 class VideoUnderstanding(BaseModel):
