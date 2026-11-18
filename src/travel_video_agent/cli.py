@@ -721,6 +721,13 @@ def render(
         str,
         typer.Option("--subtitle-position", help="Subtitle position: bottom, center, or top."),
     ] = "bottom",
+    subtitle_style: Annotated[
+        str,
+        typer.Option(
+            "--subtitle-style",
+            help="Subtitle appearance: classic, cinematic, boxed, or minimal.",
+        ),
+    ] = "classic",
     dry_run: Annotated[
         bool,
         typer.Option(
@@ -744,6 +751,7 @@ def render(
             ),
             subtitle_font_size=subtitle_font_size,
             subtitle_position=subtitle_position,
+            subtitle_style=subtitle_style,
             dry_run=dry_run,
         )
     except (FileNotFoundError, FileExistsError, ValueError, RenderError) as exc:
