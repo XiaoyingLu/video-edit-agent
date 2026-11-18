@@ -70,8 +70,8 @@ def build_draft_revision_suggestions(
         raise NotADirectoryError(f"Project folder does not exist: {root}")
     critique_file = (critique_path or root / ".video-agent" / "draft-critique.json")
     timeline_file = (timeline_path or root / ".video-agent" / "optimized-timeline.json")
-    critique_file = (root / critique_file).resolve() if not critique_file.is_absolute() else critique_file.resolve()
-    timeline_file = (root / timeline_file).resolve() if not timeline_file.is_absolute() else timeline_file.resolve()
+    critique_file = (\n        (root / critique_file).resolve()\n        if not critique_file.is_absolute()\n        else critique_file.resolve()\n    )
+    timeline_file = (\n        (root / timeline_file).resolve()\n        if not timeline_file.is_absolute()\n        else timeline_file.resolve()\n    )
     for path, label in ((critique_file, "critique report"), (timeline_file, "timeline")):
         try:
             path.relative_to(root)
@@ -80,7 +80,7 @@ def build_draft_revision_suggestions(
         if not path.is_file():
             raise FileNotFoundError(f"Missing {label}: {path}")
         if not validate_artifact(root, path):
-            raise RevisionSuggestionError(f"{label} is not current; regenerate it before continuing")
+            raise RevisionSuggestionError(\n                f"{label} is not current; regenerate it before continuing"\n            )
 
     try:
         critique = json.loads(critique_file.read_text(encoding="utf-8"))
@@ -94,7 +94,7 @@ def build_draft_revision_suggestions(
     timeline = ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root:
         raise RevisionSuggestionError("Timeline belongs to a different project folder")
-    if not timeline.timeline_approved or any(clip.decision != "approved" for clip in timeline.clips):
+    if not timeline.timeline_approved or any(\n        clip.decision != "approved" for clip in timeline.clips\n    ):
         raise RevisionSuggestionError("The source timeline must be fully reviewed and approved")
     clips = {clip.clip_id: clip for clip in timeline.clips}
     suggestions: list[RevisionSuggestion] = []
@@ -129,7 +129,7 @@ def build_draft_revision_suggestions(
                 current_duration_seconds=clip.duration_seconds,
                 summary=f"Storyboard match is {match} for shot {clip.clip_id}.",
                 evidence=evidence or "The semantic review did not provide supporting detail.",
-                recommendation=suggestion or "Inspect the shot against its storyboard intent and consider a different footage assignment.",
+                recommendation=(\n                    suggestion\n                    or "Inspect the shot against its storyboard intent and consider a different footage assignment."\n                ),
             )
         )
 
@@ -158,9 +158,10 @@ def build_draft_revision_suggestions(
                 ),
                 recommendation=(
                     f"Review whether this shot should be {direction}. The current revision "
-                    "tool supports safe trims only; do not extend beyond the reviewed source interval."
+                    "tool supports safe trims only; do not extend beyond the reviewed "
+                    "source interval."
                     if direction == "shorter"
-                    else "Review whether the shot should remain as-is or use a different, longer source selection. No interval extension is proposed."
+                    else (\n                        "Review whether the shot should remain as-is or use a different, "\n                        "longer source selection. No interval extension is proposed."\n                    )
                 ),
             )
         )
@@ -186,7 +187,7 @@ def save_draft_revision_suggestions(
     try:
         output.relative_to(root)
     except ValueError as exc:
-        raise RevisionSuggestionError("Suggestion output must be inside the project folder") from exc
+        raise RevisionSuggestionError(\n            "Suggestion output must be inside the project folder"\n        ) from exc
     if output in {root / report.source_critique, root / report.source_timeline}:
         raise RevisionSuggestionError("Suggestion output cannot overwrite an input artifact")
     if output.exists():
