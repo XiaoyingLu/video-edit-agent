@@ -235,11 +235,15 @@ def compare_timeline_files(
     timelines: list[tuple[Path, ProjectDraftTimeline]] = []
     for path, label in ((before_path, "before"), (after_path, "after")):
         candidate = path.expanduser()
-        resolved = (root / candidate).resolve() if not candidate.is_absolute() else candidate.resolve()
+        resolved = (
+            (root / candidate).resolve() if not candidate.is_absolute() else candidate.resolve()
+        )
         try:
             resolved.relative_to(root)
         except ValueError as exc:
-            raise TimelineRevisionError(f"{label} timeline must be inside the project folder") from exc
+            raise TimelineRevisionError(
+                f"{label} timeline must be inside the project folder"
+            ) from exc
         if not resolved.is_file():
             raise FileNotFoundError(f"Missing {label} timeline: {resolved}")
         timeline = ProjectDraftTimeline.model_validate_json(resolved.read_text(encoding="utf-8"))
