@@ -480,9 +480,7 @@ def test_create_plan_command_writes_hierarchical_brief(tmp_path: Path, monkeypat
     )
     destination = tmp_path / ".video-agent" / "video-project-plan.json"
 
-    def fake_create(
-        folder, prompt, *, model=None, output_path=None, music_analysis_path=None
-    ):
+    def fake_create(folder, prompt, *, model=None, output_path=None, music_analysis_path=None):
         assert prompt == "Create a 90-second cinematic travel film"
         assert music_analysis_path is None
         return expected, destination
