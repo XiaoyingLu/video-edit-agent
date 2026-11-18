@@ -206,3 +206,89 @@ def test_revised_timeline_recalculates_proposed_duration_and_validates(
         == 7.5
     )
     assert result.timeline.timeline_approved is False
+
+
+def test_review_creates_revision_001_without_overwriting_original_timeline(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    key, _ = _inputs(tmp_path)
+    original = (tmp_path / ".video-agent" / "optimized-timeline.json").read_bytes()
+    _probe(monkeypatch)
+
+    result = apply_music_sync_review(tmp_path, accept_ids={key}, reject_ids=set())
+
+    revision = tmp_path / result.revision_path
+    assert revision.name == "revision-001.json"
+    assert revision.is_file()
+    assert (tmp_path / ".video-agent" / "optimized-timeline.json").read_bytes() == original
+
+
+def test_second_review_creates_revision_002_and_preserves_revision_001(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    key, _ = _inputs(tmp_path)
+    _probe(monkeypatch)
+    first = apply_music_sync_review(tmp_path, accept_ids={key}, reject_ids=set())
+    first_bytes = (tmp_path / first.revision_path).read_bytes()
+
+    second = apply_music_sync_review(tmp_path, accept_ids=set(), reject_ids={key})
+
+    assert second.revision_path.endswith("revision-002.json")
+    assert (tmp_path / first.revision_path).read_bytes() == first_bytes
+
+
+def test_review_record_persists_all_decision_states(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    key, _ = _inputs(tmp_path, ranges=[(1, 5), (5, 6), (6, 10)])
+    _probe(monkeypatch)
+    result = apply_music_sync_review(
+        tmp_path, accept_ids={key, "shot-002->shot-003"}, reject_ids=set()
+    )
+
+    review = tmp_path / result.revision_path.replace(".json", ".review.json")
+    assert [item["status"] for item in json.loads(review.read_text())["decisions"]] == [
+        "infeasible",
+        "accepted",
+    ]
+
+
+def test_revision_is_registered_with_timeline_and_suggestion_dependencies(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    key, _ = _inputs(tmp_path)
+    _probe(monkeypatch)
+    result = apply_music_sync_review(tmp_path, accept_ids={key}, reject_ids=set())
+    manifest = json.loads((tmp_path / ".video-agent" / "artifact-manifest.json").read_text())
+
+    assert manifest["artifacts"][result.revision_path]["dependencies"] == [
+        ".video-agent/music-sync-suggestions.json",
+        ".video-agent/optimized-timeline.json",
+    ]
+
+
+def test_stale_suggestions_are_rejected_without_creating_revision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    key, _ = _inputs(tmp_path)
+    suggestions = tmp_path / ".video-agent" / "music-sync-suggestions.json"
+    suggestions.write_text(suggestions.read_text() + " ")
+    _probe(monkeypatch)
+
+    with pytest.raises(ValueError):
+        apply_music_sync_review(tmp_path, accept_ids={key}, reject_ids=set())
+
+    assert not (tmp_path / ".video-agent" / "music-sync-revisions").exists()
+
+
+def test_missing_source_video_fails_without_creating_revision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    key, _ = _inputs(tmp_path)
+    (tmp_path / "source.mp4").unlink()
+    _probe(monkeypatch)
+
+    with pytest.raises(ValueError):
+        apply_music_sync_review(tmp_path, accept_ids={key}, reject_ids=set())
+
+    assert not (tmp_path / ".video-agent" / "music-sync-revisions").exists()

@@ -1,11 +1,13 @@
 """Human-reviewed, non-destructive soundtrack timing refinement."""
 
+import json
+import os
 from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..artifact_tracking import validate_artifact
+from ..artifact_tracking import register_artifact, validate_artifact
 from ..editing.timeline_schemas import ProjectDraftTimeline
 from ..media import probe_video
 from .sync import MusicSyncError, MusicSyncSuggestions
@@ -161,10 +163,26 @@ def apply_music_sync_review(
         }
     )
     revised = ProjectDraftTimeline.model_validate(revised.model_dump())
-    return MusicSyncReviewResult(
+    revision_directory = root / ".video-agent" / "music-sync-revisions"
+    revision_directory.mkdir(parents=True, exist_ok=True)
+    revision_number = 1
+    while (revision_directory / f"revision-{revision_number:03}.json").exists():
+        revision_number += 1
+    revision_file = revision_directory / f"revision-{revision_number:03}.json"
+    review_file = revision_file.with_suffix(".review.json")
+    result = MusicSyncReviewResult(
         source_timeline_path=timeline_file.relative_to(root).as_posix(),
         suggestions_path=suggestions_file.relative_to(root).as_posix(),
-        revision_path=".video-agent/music-sync-revisions/revision-pending.json",
+        revision_path=revision_file.relative_to(root).as_posix(),
         decisions=decisions,
         timeline=revised,
     )
+    for destination, payload in (
+        (revision_file, revised.model_dump(mode="json")),
+        (review_file, result.model_dump(mode="json")),
+    ):
+        temporary = destination.with_suffix(destination.suffix + ".tmp")
+        temporary.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        os.replace(temporary, destination)
+    register_artifact(root, revision_file, dependencies=[timeline_file, suggestions_file])
+    return result
