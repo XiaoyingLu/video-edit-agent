@@ -175,6 +175,7 @@ def test_cli_help_includes_propose_edits() -> None:
     assert "review-edits" in result.output
     assert "build-timeline" in result.output
     assert "render" in result.output
+    assert "--subtitle-style" in result.output
     assert "subtitles" in result.output
 
 
