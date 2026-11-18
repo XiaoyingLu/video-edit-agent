@@ -104,6 +104,18 @@ docker compose run --rm video-agent render-draft ./travel-test \
 Review each clip interactively, or explicitly approve/reject every clip ID shown by the timeline review output. Review decisions are saved to the revision file; rendering remains a separate explicit step and is never started by `review-music-sync`.
 
 
+## Rendered-draft critique
+
+After rendering and reviewing a draft, inspect it against the creative brief and approved shot timeline:
+
+```bash
+docker compose run --rm video-agent critique-draft ./travel-test
+```
+
+The command writes `.video-agent/draft-critique.json`. It verifies rendered duration and aspect ratio against the brief, compares output duration with the approved timeline, reports shots already marked outside their pacing targets, samples up to 24 evenly spaced frames for objective luminance/clipping/sharpness measurements, and checks audio-stream presence, average/peak volume, and sustained quiet intervals. Use `--samples` to change the frame sample count, or `--video`, `--timeline`, and `--plan` to select project-local inputs.
+
+Findings include the measurements that triggered them. Frame metrics are technical signals, not aesthetic scores: dark scenic footage, intentional silence, and soft-focus shots may all be deliberate creative choices. Review the evidence in context rather than treating a threshold as an automatic defect. The report is registered as depending on the rendered MP4, approved timeline, and creative plan, so changes to those inputs invalidate it. This first critique pass is deterministic and technical; it does not modify the timeline or rendered video, and it does not yet make semantic judgments about story quality.
+
 ## Requirements
 
 - Docker Engine and Docker Compose
