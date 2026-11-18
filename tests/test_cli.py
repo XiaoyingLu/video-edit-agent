@@ -585,7 +585,13 @@ def test_review_music_sync_command_help() -> None:
     result = runner.invoke(app, ["review-music-sync", "--help"])
     assert result.exit_code == 0, result.output
     help_text = " ".join(click.unstyle(result.output).split())
-    for option in ("--accept", "--reject", "--timeline", "--suggestions", "--minimum-clip-duration"):
+    for option in (
+        "--accept",
+        "--reject",
+        "--timeline",
+        "--suggestions",
+        "--minimum-clip-duration",
+    ):
         assert option in help_text
 
 
