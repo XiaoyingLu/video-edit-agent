@@ -9,11 +9,11 @@ from travel_video_agent.editing.revision_review import (
     RevisionSuggestionReviewError,
     review_draft_revision_suggestions,
 )
-from travel_video_agent.editing.revisions import TimelineIntervalEdit
 from travel_video_agent.editing.revision_suggestions import (
     build_draft_revision_suggestions,
     save_draft_revision_suggestions,
 )
+from travel_video_agent.editing.revisions import TimelineIntervalEdit
 from travel_video_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
 
 
