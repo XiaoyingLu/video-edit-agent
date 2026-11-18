@@ -246,6 +246,11 @@ def suggest_storyboard_footage(
                         temporal_summary=(
                             source_scene.dynamics.temporal_summary if source_scene.dynamics else ""
                         ),
+                        action_progression=(
+                            source_scene.dynamics.action_progression
+                            if source_scene.dynamics
+                            else []
+                        ),
                         dynamics_confidence=(
                             source_scene.dynamics.confidence if source_scene.dynamics else 0.0
                         ),
