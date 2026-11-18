@@ -1236,7 +1236,7 @@ def compare_drafts(
 
     json_path.parent.mkdir(parents=True, exist_ok=True)
     json_path.write_text(
-        json.dumps(report.model_dump(mode="json"), indent=2) + "\\n",
+        json.dumps(report.model_dump(mode="json"), indent=2),
         encoding="utf-8",
     )
     html_path.write_text(render_comparison_html(report), encoding="utf-8")
