@@ -594,6 +594,7 @@ def _music_sync_cli_inputs(tmp_path: Path) -> tuple[Path, Path]:
     suggestions.write_text(report.model_dump_json(), encoding="utf-8")
     return timeline, suggestions
 
+
 def test_review_music_sync_command_help() -> None:
     result = runner.invoke(app, ["review-music-sync", "--help"])
     assert result.exit_code == 0, result.output
@@ -691,9 +692,7 @@ def test_review_music_sync_command_interactively_prompts_for_each_pending_bounda
             suggestions_path=".video-agent/music-sync-suggestions.json",
             revision_path=".video-agent/music-sync-revisions/revision-001.json",
             decisions=[
-                MusicSyncReviewDecision(
-                    boundary_id="shot-001->shot-002", status="accepted"
-                )
+                MusicSyncReviewDecision(boundary_id="shot-001->shot-002", status="accepted")
             ],
         )
 
