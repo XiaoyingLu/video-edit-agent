@@ -235,9 +235,7 @@ def build_draft_timeline(
         if music_file in {selection_file, plan_file}:
             raise ValueError("music analysis cannot overwrite or alias another input artifact")
         validate_artifact(root, music_file)
-        music_analysis = MusicAnalysis.model_validate_json(
-            music_file.read_text(encoding="utf-8")
-        )
+        music_analysis = MusicAnalysis.model_validate_json(music_file.read_text(encoding="utf-8"))
         if Path(music_analysis.project_path).resolve() != root:
             raise ValueError("music analysis belongs to a different project folder")
         try:
