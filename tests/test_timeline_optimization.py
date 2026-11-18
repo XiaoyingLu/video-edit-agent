@@ -398,7 +398,8 @@ def test_music_analysis_guides_pacing_without_changing_source_intervals(tmp_path
     assert "breathing room" in timeline.clips[0].music_pacing_note
     assert "tighter shot" in timeline.clips[1].music_pacing_note
     assert [(clip.source_start_seconds, clip.source_end_seconds) for clip in timeline.clips] == [
-        (1, 5), (8, 12)
+        (1, 5),
+        (8, 12),
     ]
 
 
