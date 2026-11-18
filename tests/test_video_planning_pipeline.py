@@ -9,6 +9,7 @@ from travel_video_agent.editing.planning_generation import (
     GeneratedVideoPlanContent,
     explicit_duration_seconds,
     infer_creative_priorities,
+    normalize_storyboard_ids,
 )
 from travel_video_agent.editing.planning_schemas import (
     PlannedScene,
@@ -137,3 +138,27 @@ def test_prompt_keywords_add_scenic_priority():
         ["memorable_moments"],
     )
     assert priorities == ["memorable_moments", "scenic_landscapes"]
+
+
+def test_normalize_storyboard_ids_repairs_duplicate_model_ids():
+    content = _generated_content()
+    duplicate_scene = content.scenes[1].model_copy(
+        update={
+            "scene_id": content.scenes[0].scene_id,
+            "sequence_index": 1,
+            "shots": [
+                content.scenes[1].shots[0].model_copy(
+                    update={"shot_id": content.scenes[0].shots[0].shot_id}
+                )
+            ],
+        }
+    )
+    normalized = normalize_storyboard_ids(
+        content.model_copy(update={"scenes": [content.scenes[0], duplicate_scene]})
+    )
+
+    assert [scene.scene_id for scene in normalized.scenes] == ["scene-01", "scene-02"]
+    assert [scene.sequence_index for scene in normalized.scenes] == [1, 2]
+    shots = [shot for scene in normalized.scenes for shot in scene.shots]
+    assert [shot.shot_id for shot in shots] == ["shot-001", "shot-002"]
+    assert [shot.scene_id for shot in shots] == ["scene-01", "scene-02"]
