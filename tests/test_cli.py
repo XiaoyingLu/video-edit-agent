@@ -623,7 +623,7 @@ def test_review_music_sync_command_accepts_and_persists_selected_boundary(
     assert captured["accept_ids"] == {"shot-001->shot-002"}
     assert captured["reject_ids"] == set()
     assert "review-timeline" in result.output
-    assert "No video was rendered" in result.output
+    assert "no video was rendered" in result.output
 
 
 def test_review_music_sync_command_rejects_overlapping_accept_and_reject_ids(
