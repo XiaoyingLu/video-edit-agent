@@ -893,8 +893,6 @@ def find_highlights(
     table.add_column("Video", style="cyan")
     table.add_column("Time")
     table.add_column("Score", justify="right")
-    table.add_column("Semantic", justify="right")
-    table.add_column("Lexical", justify="right")
     table.add_column("Scene")
     for rank, candidate in enumerate(report.candidates, start=1):
         table.add_row(
@@ -1237,6 +1235,8 @@ def suggest_footage(
     table.add_column("Candidate footage")
     table.add_column("Source interval")
     table.add_column("Score", justify="right")
+    table.add_column("Semantic", justify="right")
+    table.add_column("Lexical", justify="right")
     for item in report.suggestions:
         if not item.candidates:
             table.add_row(item.shot_id, "No analyzed scene candidates", "—", "—", "—", "—")
