@@ -555,7 +555,8 @@ def test_draft_timeline_carries_motion_metadata_and_continuity_notes(tmp_path):
         (4, 8),
     ]
 
-\n\n\ndef test_narrative_transition_prefers_distinct_action_beats_for_same_subject():
+
+def test_narrative_transition_prefers_distinct_action_beats_for_same_subject():
     from travel_video_agent.editing.timeline_pipeline import (
         _narrative_transition_score,
         _sequence_reason,

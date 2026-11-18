@@ -129,7 +129,9 @@ def _progression_terms(clip) -> set[str]:
         "while",
         "with",
     }
-    return {word for word in re.findall(r"[a-z0-9]+", text) if len(word) > 2 and word not in ignored}
+    return {
+        word for word in re.findall(r"[a-z0-9]+", text) if len(word) > 2 and word not in ignored
+    }
 
 
 def _has_distinct_action_beat(previous, candidate) -> bool:

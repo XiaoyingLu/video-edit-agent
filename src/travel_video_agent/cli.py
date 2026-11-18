@@ -1683,9 +1683,7 @@ def review_timeline(
                 if clip.temporal_summary:
                     console.print(f"Temporal action: {clip.temporal_summary}")
                 if clip.action_progression:
-                    console.print(
-                        "Action progression: " + " → ".join(clip.action_progression)
-                    )
+                    console.print("Action progression: " + " → ".join(clip.action_progression))
                 if clip.subject_motion != "unknown" or clip.camera_motion != "unknown":
                     console.print(
                         f"Motion: subject {clip.subject_motion.replace('_', ' ')} | "
