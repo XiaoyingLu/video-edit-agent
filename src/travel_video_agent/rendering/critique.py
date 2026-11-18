@@ -214,11 +214,7 @@ def _semantic_targets(
     sample_limit: int,
 ) -> list[tuple[float, object, object | None]]:
     """Choose evenly distributed clip midpoints and match clips to storyboard shots."""
-    shots = {
-        shot.shot_id: shot
-        for scene in plan.scenes
-        for shot in scene.shots
-    }
+    shots = {shot.shot_id: shot for scene in plan.scenes for shot in scene.shots}
     targets: list[tuple[float, object, object | None]] = []
     cursor = 0.0
     previous_index: int | None = None
@@ -435,9 +431,7 @@ def critique_rendered_draft(
     semantic_model = None
     semantic_reviews: list[SemanticFrameReview] = []
     if semantic:
-        approved_clips_for_review = [
-            clip for clip in timeline.clips if clip.decision == "approved"
-        ]
+        approved_clips_for_review = [clip for clip in timeline.clips if clip.decision == "approved"]
         semantic_model, semantic_reviews = _review_semantic_frames(
             ffmpeg,
             video,
