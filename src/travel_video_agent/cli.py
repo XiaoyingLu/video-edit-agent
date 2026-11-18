@@ -1526,6 +1526,10 @@ def optimize_timeline(
         Path | None,
         typer.Option("--plan", help="Editing plan JSON path."),
     ] = None,
+    music_analysis: Annotated[
+        Path | None,
+        typer.Option("--music-analysis", help="Optional soundtrack energy analysis JSON path."),
+    ] = None,
     output: Annotated[
         Path | None,
         typer.Option(
@@ -1537,7 +1541,7 @@ def optimize_timeline(
 ) -> None:
     """Order selected shots and propose pacing and transitions for human review."""
     try:
-        timeline = build_draft_timeline(folder, selection_path=selection, plan_path=plan)
+        timeline = build_draft_timeline(\n            folder, selection_path=selection, plan_path=plan, music_analysis_path=music_analysis\n        )
     except (FileNotFoundError, ValueError) as exc:
         console.print(f"[red]Timeline optimization failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
@@ -1555,6 +1559,7 @@ def optimize_timeline(
     table.add_column("Role")
     table.add_column("Scale")
     table.add_column("Pacing target", justify="right")
+    table.add_column("Music energy")
     for clip in timeline.clips:
         transition = (
             f"{clip.transition_in} ({clip.transition_duration_seconds:.2f}s)"
@@ -1570,13 +1575,14 @@ def optimize_timeline(
             clip.visual_role.replace("_", " "),
             clip.shot_scale.replace("_", " "),
             f"{clip.pacing_target_seconds:.1f}s ({clip.pacing_fit})",
+            clip.music_energy,
         )
     console.print(table)
     console.print(
         f"Proposed {timeline.proposed_duration_seconds:.1f}s across "
         f"{timeline.proposed_clip_count} clip(s); target {timeline.target_duration_seconds:.1f}s."
     )
-    console.print(f"Optimized timeline saved to [green]{destination}[/green]")
+    if timeline.source_music_analysis:\n        console.print(f"Music-aware pacing source: {timeline.source_music_analysis}")\n    console.print(f"Optimized timeline saved to [green]{destination}[/green]")
     console.print(
         "[yellow]Review every clip with review-timeline. This is not the renderer's "
         "timeline.json; no source media was changed and no video was rendered.[/yellow]"
