@@ -8,7 +8,6 @@ from pathlib import Path
 from ..artifact_tracking import register_artifact, validate_artifact
 from ..editing.planning_schemas import VideoProjectPlan
 from ..editing.timeline_schemas import ProjectDraftTimeline
-from .title_overlays import TitleOverlay
 from .renderer import (
     RenderError,
     RenderReport,
@@ -17,6 +16,7 @@ from .renderer import (
     _validate_filter_graph,
     _validate_source_stream_metadata,
 )
+from .title_overlays import TitleOverlay
 
 
 def _safe_source(root: Path, relative_path: str) -> Path:
@@ -181,7 +181,7 @@ def _build_shot_render_command(
         filters.append(
             f"[{video_label}]drawtext=text='{escaped_text}':expansion=none:"
             f"font='DejaVu Sans':fontsize={font_size}:fontcolor=white:"
-            f"x=(w-text_w)/2:y={y_position}:alpha='{alpha}':{box_options}:"
+            f"x=(w-text_w)/2:y='{y_position}':alpha='{alpha}':{box_options}:"
             f"enable='between(t,{_seconds(overlay.start_seconds)},{_seconds(overlay.end_seconds)})'"
             f"[{next_label}]"
         )
