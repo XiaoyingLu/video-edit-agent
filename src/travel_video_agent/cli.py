@@ -1582,7 +1582,9 @@ def optimize_timeline(
         f"Proposed {timeline.proposed_duration_seconds:.1f}s across "
         f"{timeline.proposed_clip_count} clip(s); target {timeline.target_duration_seconds:.1f}s."
     )
-    if timeline.source_music_analysis:\n        console.print(f"Music-aware pacing source: {timeline.source_music_analysis}")\n    console.print(f"Optimized timeline saved to [green]{destination}[/green]")
+    if timeline.source_music_analysis:
+        console.print(f"Music-aware pacing source: {timeline.source_music_analysis}")
+    console.print(f"Optimized timeline saved to [green]{destination}[/green]")
     console.print(
         "[yellow]Review every clip with review-timeline. This is not the renderer's "
         "timeline.json; no source media was changed and no video was rendered.[/yellow]"
