@@ -2470,6 +2470,9 @@ def review_timeline(
             reject_ids = {
                 clip_id for clip_id, decision in exported.decisions.items() if decision == "rejected"
             }
+            for clip in timeline.clips:
+                if exported.decisions[clip.clip_id] == "pending":
+                    clip.decision = "pending"
         elif approve is None and reject is None:
             for clip in timeline.clips:
                 if clip.decision != "pending":
