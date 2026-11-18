@@ -29,15 +29,15 @@ from .editing.embeddings import EmbeddingModelError
 from .editing.footage_mapping import suggest_storyboard_footage
 from .editing.footage_review import review_storyboard_footage
 from .editing.planning_generation import VideoPlanningError
-from .editing.storyboard_production import (
-    approve_storyboard,
-    build_storyboard_timeline,
-    save_storyboard_timeline,
-)
 from .editing.revisions import (
     TimelineIntervalEdit,
     compare_timeline_files,
     create_timeline_revision,
+)
+from .editing.storyboard_production import (
+    approve_storyboard,
+    build_storyboard_timeline,
+    save_storyboard_timeline,
 )
 from .editing.storyboard_review import generate_storyboard_review
 from .editing.timeline_schemas import ProjectDraftTimeline
