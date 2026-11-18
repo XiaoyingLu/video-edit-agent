@@ -1,7 +1,9 @@
 from pathlib import Path
 
 import pytest
+from typer.testing import CliRunner
 
+from travel_video_agent.cli import app
 from travel_video_agent.editing.revision_preview import render_timeline_revision_preview
 from travel_video_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
 from travel_video_agent.rendering.renderer import RenderReport
@@ -167,3 +169,27 @@ def test_revision_preview_refuses_existing_output(tmp_path, monkeypatch):
 
     assert preview.read_bytes() == b"keep"
     assert calls == []
+
+
+
+def test_revision_preview_cli_renders_and_reports_manifest(tmp_path, monkeypatch):
+    revision = _approved_revision(tmp_path)
+    _mock_renderer(monkeypatch)
+    runner = CliRunner()
+
+    result = runner.invoke(
+        app,
+        [
+            "render-revision-preview",
+            str(tmp_path),
+            "--timeline",
+            str(revision),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Approved revision preview rendered" in result.output
+    assert "Preview manifest:" in result.output
+    assert (
+        tmp_path / ".video-agent" / "revision-previews" / "revision-001.preview.json"
+    ).is_file()
