@@ -5,11 +5,13 @@ import warnings
 from collections import Counter
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from ..media import analyze_folder, discover_videos
 from .frame_sampler import extract_representative_frames
 from .scene_detection import detect_scenes
 from .schemas import FrameObservation, SceneDynamics, VideoScene, VideoUnderstanding
-from .visual_analyzer import OllamaVisionAnalyzer
+from .visual_analyzer import OllamaVisionAnalyzer, VisionModelError
 
 
 def _dominant_label(observations: list[FrameObservation], field: str) -> str:
@@ -65,7 +67,7 @@ def understand_folder(
                 if len(frames) >= 2:
                     try:
                         dynamics = SceneDynamics.model_validate(analyzer.analyze_scene(frames))
-                    except Exception as exc:
+                    except (VisionModelError, ValidationError) as exc:
                         warnings.warn(
                             f"Temporal analysis failed for scene {video_key}-scene-{scene_index:04d}: {exc}",
                             RuntimeWarning,
