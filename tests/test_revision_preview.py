@@ -171,7 +171,6 @@ def test_revision_preview_refuses_existing_output(tmp_path, monkeypatch):
     assert calls == []
 
 
-
 def test_revision_preview_cli_renders_and_reports_manifest(tmp_path, monkeypatch):
     revision = _approved_revision(tmp_path)
     _mock_renderer(monkeypatch)
