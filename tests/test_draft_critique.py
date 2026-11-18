@@ -86,7 +86,7 @@ def _write_inputs(root: Path, *, target_duration: float = 10) -> tuple[Path, Pat
     plan_path.write_text(plan.model_dump_json(), encoding="utf-8")
 
     clip = DraftTimelineClip(
-        clip_id="clip-1",
+        clip_id="shot-1",
         sequence_index=1,
         video_path="source.mp4",
         source_start_seconds=0,
@@ -174,6 +174,102 @@ def test_critique_compares_render_to_brief_and_approved_timeline(tmp_path, monke
         "render",
         "audio",
     }
+
+
+def test_semantic_critique_compares_rendered_frames_to_storyboard(tmp_path, monkeypatch):
+    _write_inputs(tmp_path)
+    monkeypatch.setattr("travel_video_agent.rendering.critique.validate_artifact", lambda *_: False)
+    monkeypatch.setattr("travel_video_agent.rendering.critique.shutil.which", lambda name: name)
+    probe = {
+        "format": {"duration": "10"},
+        "streams": [
+            {
+                "codec_type": "video",
+                "codec_name": "h264",
+                "width": 1920,
+                "height": 1080,
+                "avg_frame_rate": "30/1",
+            }
+        ],
+    }
+
+    def fake_run(command, **kwargs):
+        if command[0] == "ffprobe":
+            return subprocess.CompletedProcess(command, 0, json.dumps(probe), "")
+        Path(command[-1]).write_bytes(b"frame")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr("travel_video_agent.rendering.critique._run", fake_run)
+    monkeypatch.setattr(
+        "travel_video_agent.rendering.critique._sample_frames",
+        lambda *_: [_frame(5)],
+    )
+
+    class FakeAnalyzer:
+        def __init__(self, model):
+            self.model = model
+            self.comparison = None
+            self.unloaded = False
+
+        def compare_frame_to_storyboard(self, frame_path, **kwargs):
+            assert frame_path.is_file()
+            self.comparison = kwargs
+            return {
+                "match": "mismatch",
+                "score": 0.2,
+                "confidence": 0.9,
+                "evidence": "The frame shows a close-up of food, not a mountain landscape.",
+                "suggestion": "Review the footage assignment for this shot.",
+            }
+
+        def unload_model(self):
+            self.unloaded = True
+            return True
+
+    analyzers = []
+
+    def analyzer_factory(*args, **kwargs):
+        analyzer = FakeAnalyzer(*args, **kwargs)
+        analyzers.append(analyzer)
+        return analyzer
+
+    monkeypatch.setattr(
+        "travel_video_agent.understanding.visual_analyzer.OllamaVisionAnalyzer",
+        analyzer_factory,
+    )
+
+    report = critique_rendered_draft(
+        tmp_path,
+        semantic=True,
+        semantic_samples=1,
+        vision_model="qwen2.5vl:3b",
+    )
+
+    assert report.semantic_model == "qwen2.5vl:3b"
+    assert len(report.semantic_reviews) == 1
+    assert report.semantic_reviews[0].shot_id == "shot-1"
+    assert report.semantic_reviews[0].match == "mismatch"
+    assert any(f.category == "story" and f.severity == "warning" for f in report.findings)
+    assert analyzers[0].comparison["purpose"] == "Establish the destination"
+    assert analyzers[0].comparison["visual_description"] == "A wide view of the mountains"
+    assert analyzers[0].unloaded is True
+
+
+def test_semantic_sample_limit_supports_single_frame(tmp_path):
+    _, timeline_path, plan_path = _write_inputs(tmp_path)
+    timeline = ProjectDraftTimeline.model_validate_json(timeline_path.read_text())
+    plan = VideoProjectPlan.model_validate_json(plan_path.read_text())
+
+    from travel_video_agent.rendering.critique import _semantic_targets
+
+    targets = _semantic_targets(
+        timeline.clips * 3,
+        plan,
+        rendered_duration=30,
+        sample_limit=1,
+    )
+
+    assert len(targets) == 1
 
 
 def test_critique_reports_missing_audio_and_dark_frames(tmp_path, monkeypatch):
@@ -295,3 +391,5 @@ def test_critique_cli_help_documents_sample_limit():
     help_text = Text.from_ansi(result.output).plain
     assert "--samples" in help_text
     assert "--timeline" in help_text
+    assert "--semantic" in help_text
+    assert "--semantic-samples" in help_text
