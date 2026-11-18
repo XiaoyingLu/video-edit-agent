@@ -114,7 +114,15 @@ docker compose run --rm video-agent critique-draft ./travel-test
 
 The command writes `.video-agent/draft-critique.json`. It verifies rendered duration and aspect ratio against the brief, compares output duration with the approved timeline, reports shots already marked outside their pacing targets, samples up to 24 evenly spaced frames for objective luminance/clipping/sharpness measurements, and checks audio-stream presence, average/peak volume, and sustained quiet intervals. Use `--samples` to change the frame sample count, or `--video`, `--timeline`, and `--plan` to select project-local inputs.
 
-Findings include the measurements that triggered them. Frame metrics are technical signals, not aesthetic scores: dark scenic footage, intentional silence, and soft-focus shots may all be deliberate creative choices. Review the evidence in context rather than treating a threshold as an automatic defect. The report is registered as depending on the rendered MP4, approved timeline, and creative plan, so changes to those inputs invalidate it. This first critique pass is deterministic and technical; it does not modify the timeline or rendered video, and it does not yet make semantic judgments about story quality.
+For a deeper, optional story check, run:
+
+```bash
+docker compose run --rm video-agent critique-draft ./travel-test --semantic --semantic-samples 8
+```
+
+Semantic critique uses the configured local Ollama vision model (`OLLAMA_MODEL`, or `--vision-model`) to compare representative rendered shot midpoints with their storyboard purpose, visual description, intended subject, role, and shot scale. It samples at most 12 approved clips, stores each match/partial/mismatch/uncertain assessment with confidence and visual evidence, and adds review findings for confident partial matches or mismatches. This requires the vision model to be available and adds inference time; the default technical-only command does not load a vision model. The assessment is advisory and does not reorder, trim, approve, or render anything.
+
+Findings include the measurements that triggered them. Frame metrics are technical signals, not aesthetic scores: dark scenic footage, intentional silence, and soft-focus shots may all be deliberate creative choices. Review the evidence in context rather than treating a threshold as an automatic defect. The report is registered as depending on the rendered MP4, approved timeline, and creative plan, so changes to those inputs invalidate it. The technical checks are deterministic. Optional semantic checks use the local vision model and are explicitly confidence-scored. Neither mode modifies the timeline or rendered video.
 
 ## Requirements
 
