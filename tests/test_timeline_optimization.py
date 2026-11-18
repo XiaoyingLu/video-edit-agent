@@ -368,23 +368,10 @@ def test_cinematic_timeline_preserves_ranked_order_without_scene_metadata(tmp_pa
 
 
 def test_music_analysis_guides_pacing_without_changing_source_intervals(tmp_path):
-    import json
-
-    from travel_video_agent.editing.draft_schemas import DraftClip
     from travel_video_agent.music.schemas import MusicAnalysis, MusicSection
 
     _write_inputs(tmp_path, style="vlog", transition="cut")
     artifact = tmp_path / ".video-agent"
-    selection = ProjectDraftSelection.model_validate_json(
-        (artifact / "draft-selection.json").read_text(encoding="utf-8")
-    )
-    selection.clips[0].source_start_seconds = 0
-    selection.clips[0].source_end_seconds = 4
-    selection.clips[0].duration_seconds = 4
-    selection.clips[1].source_start_seconds = 4
-    selection.clips[1].source_end_seconds = 8
-    selection.clips[1].duration_seconds = 4
-    (artifact / "draft-selection.json").write_text(selection.model_dump_json(), encoding="utf-8")
     soundtrack = tmp_path / "score.mp3"
     soundtrack.write_bytes(b"test soundtrack")
     analysis = MusicAnalysis(
