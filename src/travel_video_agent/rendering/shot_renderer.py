@@ -381,7 +381,13 @@ def render_approved_shot_timeline(
         temporary_file.close()
     try:
         command = _build_shot_render_command(
-            ffmpeg, clip_inputs, temporary_path, width, height, fit_mode=fit_mode
+            ffmpeg,
+            clip_inputs,
+            temporary_path,
+            width,
+            height,
+            fit_mode=fit_mode,
+            title_overlays=approved_titles,
         )
         if dry_run:
             _validate_filter_graph(command, timeout=min(timeout_seconds, 120))
