@@ -117,7 +117,7 @@ def save_title_overlays(
         raise ValueError("title overlay output must be inside the project folder") from exc
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(
-        json.dumps(document.model_dump(mode="json"), indent=2) + "\\n", encoding="utf-8"
+        json.dumps(document.model_dump(mode="json"), indent=2) + chr(10), encoding="utf-8"
     )
     timeline = Path(document.source_timeline)
     if not timeline.is_absolute():
