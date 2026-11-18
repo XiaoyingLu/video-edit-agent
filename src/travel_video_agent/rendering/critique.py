@@ -344,11 +344,7 @@ def critique_rendered_draft(
             )
         )
 
-    pacing_outliers = [
-        clip
-        for clip in approved_clips
-        if clip.pacing_fit in {"short", "long"}
-    ]
+    pacing_outliers = [clip for clip in approved_clips if clip.pacing_fit in {"short", "long"}]
     if pacing_outliers:
         findings.append(
             CritiqueFinding(
@@ -394,9 +390,7 @@ def critique_rendered_draft(
                 severity="info",
                 category="audio",
                 message="Long quiet intervals were detected in the rendered soundtrack.",
-                evidence=", ".join(
-                    f"{start:.1f}–{end:.1f}s" for start, end in long_silences[:6]
-                ),
+                evidence=", ".join(f"{start:.1f}–{end:.1f}s" for start, end in long_silences[:6]),
             )
         )
 
