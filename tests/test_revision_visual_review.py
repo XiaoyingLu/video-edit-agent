@@ -116,7 +116,7 @@ def test_visual_review_pairs_midpoint_source_frames_and_is_read_only(tmp_path, m
     assert frame.before_frame_data_uri.startswith("data:image/jpeg;base64,")
     assert frame.after_frame_data_uri.startswith("data:image/jpeg;base64,")
     assert report.duration_delta_seconds < 0
-    assert "not rendered playback" in render_timeline_revision_review_html(report)
+    assert "not a rendered playback comparison" in render_timeline_revision_review_html(report)
     original = ProjectDraftTimeline.model_validate_json(source.read_text())
     revised = ProjectDraftTimeline.model_validate_json(revision.read_text())
     assert original.timeline_approved is True
