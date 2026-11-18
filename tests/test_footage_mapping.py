@@ -16,6 +16,7 @@ from travel_video_agent.editing.planning_schemas import (
 )
 from travel_video_agent.understanding.schemas import (
     FrameObservation,
+    SceneDynamics,
     VideoScene,
     VideoUnderstanding,
 )
@@ -223,10 +224,10 @@ def test_suggest_storyboard_footage_rejects_invalid_embedding_batch(tmp_path):
 
 
 
-def test_scene_text_includes_temporal_action_and_camera_evidence():
+def test_scene_text_includes_temporal_action_and_camera_evidence(tmp_path):
     from travel_video_agent.editing.footage_mapping import _scene_text
 
-    scene = _understanding(Path("/tmp")).scenes[0]
+    scene = _understanding(tmp_path).scenes[0]
     text = _scene_text(scene).lower()
     assert "hiker approaches the viewpoint" in text
     assert "approaching" in text
