@@ -229,9 +229,7 @@ def compare_rendered_drafts(
                     normalized_position=position,
                     before=before_metrics,
                     after=after_metrics,
-                    mean_luma_delta=round(
-                        after_metrics.mean_luma - before_metrics.mean_luma, 3
-                    ),
+                    mean_luma_delta=round(after_metrics.mean_luma - before_metrics.mean_luma, 3),
                     dark_pixel_ratio_delta=round(
                         after_metrics.dark_pixel_ratio - before_metrics.dark_pixel_ratio, 4
                     ),
