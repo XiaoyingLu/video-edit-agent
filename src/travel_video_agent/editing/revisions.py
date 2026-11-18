@@ -158,17 +158,22 @@ def create_timeline_revision(
                 f"Revised shot is {clip.duration_seconds:.1f}s against a "
                 f"{clip.pacing_target_seconds:.1f}s pacing target; review the new timing."
             )
-        if clip.transition_in != "cut":
-            clip.transition_duration_seconds = round(
-                min(clip.transition_duration_seconds, clip.duration_seconds * 0.25), 3
-            )
-            if clip.transition_duration_seconds <= 0:
-                clip.transition_in = "cut"
-                clip.transition_duration_seconds = 0
-
     if revised_clips:
         revised_clips[0].transition_in = "cut"
         revised_clips[0].transition_duration_seconds = 0
+    for index, clip in enumerate(revised_clips[1:], start=1):
+        if clip.transition_in == "cut":
+            continue
+        overlap_limit = min(
+            clip.duration_seconds * 0.25,
+            revised_clips[index - 1].duration_seconds * 0.25,
+        )
+        clip.transition_duration_seconds = round(
+            min(clip.transition_duration_seconds, overlap_limit), 3
+        )
+        if clip.transition_duration_seconds <= 0:
+            clip.transition_in = "cut"
+            clip.transition_duration_seconds = 0
 
     revised_duration = round(
         sum(clip.duration_seconds for clip in revised_clips)
