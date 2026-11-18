@@ -3,6 +3,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import click
 import pytest
 from typer.testing import CliRunner
 
@@ -266,7 +267,9 @@ def test_cli_help_includes_render_draft():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "render-draft" in result.output
-    assert "--fit-mode" in runner.invoke(app, ["render-draft", "--help"]).output
+    result = runner.invoke(app, ["render-draft", "--help"])
+    assert result.exit_code == 0
+    assert "--fit-mode" in click.unstyle(result.output)
 
 
 def test_render_draft_cli_dry_run_reports_preflight_without_rendering(tmp_path, monkeypatch):
