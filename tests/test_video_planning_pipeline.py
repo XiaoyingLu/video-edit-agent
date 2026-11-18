@@ -3,7 +3,7 @@ import json
 import pytest
 
 from travel_video_agent.artifact_tracking import StaleArtifactError, validate_artifact
-from travel_video_agent.editing import planning_pipeline
+from travel_video_agent.editing import planning_generation, planning_pipeline
 from travel_video_agent.editing.intent_schemas import EditingPlan
 from travel_video_agent.editing.planning_generation import (
     GeneratedVideoPlanContent,
@@ -162,3 +162,34 @@ def test_normalize_storyboard_ids_repairs_duplicate_model_ids():
     shots = [shot for scene in normalized.scenes for shot in scene.shots]
     assert [shot.shot_id for shot in shots] == ["shot-001", "shot-002"]
     assert [shot.scene_id for shot in shots] == ["scene-01", "scene-02"]
+
+
+
+def test_planner_discards_partial_model_footage_assignments(monkeypatch):
+    generated = _generated_content().model_dump(mode="json")
+    first_shot = generated["scenes"][0]["shots"][0]
+    first_shot["footage_start_seconds"] = 12.5
+    first_shot["footage_path"] = "invented.mp4"
+    first_shot["assignment_status"] = "suggested"
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps({"message": {"content": json.dumps(generated)}}).encode()
+
+    monkeypatch.setattr(planning_generation, "ensure_memory_available", lambda *args: None)
+    monkeypatch.setattr(planning_generation, "urlopen", lambda *args, **kwargs: FakeResponse())
+    planner = planning_generation.OllamaVideoPlanner(model="qwen2.5:1.5b")
+
+    result = planner.generate("Create a cinematic travel film", {"target_duration_seconds": 90})
+
+    shot = result.scenes[0].shots[0]
+    assert shot.footage_path is None
+    assert shot.footage_start_seconds is None
+    assert shot.footage_end_seconds is None
+    assert shot.assignment_status == "unassigned"
