@@ -11,8 +11,8 @@ from travel_video_agent.editing.intent_schemas import EditingPlan
 from travel_video_agent.editing.planning_schemas import (
     CreativeBrief,
     PlannedScene,
-    StoryTreatment,
     StoryboardShot,
+    StoryTreatment,
     VideoProjectPlan,
 )
 from travel_video_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
