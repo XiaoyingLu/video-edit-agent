@@ -1297,6 +1297,7 @@ def review_revision_suggestions(
         known_ids = {str(item["suggestion_id"]) for item in items}
         accepted = set(accept or [])
         rejected = set(reject or [])
+        interactive_edits = []
         if not accepted and not rejected:
             for item in items:
                 console.print(
@@ -1319,18 +1320,36 @@ def review_revision_suggestions(
                 if (
                     item["suggestion_id"] in accepted
                     and item["action"] == "review_timing"
-                    and item.get("recommendation", "").find("should be shorter") >= 0
+                    and "should be shorter" in item.get("recommendation", "")
                 ):
                     console.print(
-                        "Enter an exact source interval within the current clip, or press Enter "
-                        "to accept the review recommendation without creating a trim."
+                        f"Current source interval: "
+                        f"{item['current_source_start_seconds']:.3f}–"
+                        f"{item['current_source_end_seconds']:.3f}s"
                     )
+                    raw_interval = console.input(
+                        "New source interval start:end (Enter to skip the trim): "
+                    ).strip()
+                    if raw_interval:
+                        bounds = raw_interval.split(":")
+                        if len(bounds) != 2:
+                            raise RevisionSuggestionReviewError(
+                                "Enter the trim as start:end, using seconds."
+                            )
+                        interactive_edits.append(
+                            TimelineIntervalEdit(
+                                clip_id=item["clip_id"],
+                                source_start_seconds=float(bounds[0]),
+                                source_end_seconds=float(bounds[1]),
+                            )
+                        )
         if (accepted | rejected) - known_ids:
             raise RevisionSuggestionReviewError(
                 f"Unknown suggestion ID: {sorted((accepted | rejected) - known_ids)[0]}"
             )
 
         edits = []
+        edits.extend(interactive_edits)
         for raw in set_interval or []:
             parts = raw.split(":")
             if len(parts) != 3:
