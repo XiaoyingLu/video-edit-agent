@@ -181,7 +181,7 @@ def test_cli_help_includes_propose_edits() -> None:
 def test_render_help_includes_subtitle_style() -> None:
     result = runner.invoke(app, ["render", "--help"])
     assert result.exit_code == 0
-    assert "--subtitle-style" in result.output
+    assert "--subtitle-style" in click.unstyle(result.output)
 
 
 def test_review_and_build_timeline_commands(tmp_path: Path) -> None:
