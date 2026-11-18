@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import click
 import pytest
 from typer.testing import CliRunner
 
@@ -503,5 +504,6 @@ def test_create_plan_command_writes_hierarchical_brief(tmp_path: Path, monkeypat
 def test_suggest_footage_command_help():
     result = runner.invoke(app, ["suggest-footage", "--help"])
     assert result.exit_code == 0
-    assert "--max-candidates" in result.stdout
-    assert "never assign footage automatically" in result.stdout
+    help_text = " ".join(click.unstyle(result.stdout).split())
+    assert "--max-candidates" in help_text
+    assert "never assign footage automatically" in help_text
