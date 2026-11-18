@@ -29,6 +29,7 @@ from .editing.embeddings import EmbeddingModelError
 from .editing.footage_mapping import suggest_storyboard_footage
 from .editing.footage_review import review_storyboard_footage
 from .editing.planning_generation import VideoPlanningError
+from .editing.revision_preview import render_timeline_revision_preview
 from .editing.revision_review import (
     RevisionSuggestionReviewError,
     review_draft_revision_suggestions,
@@ -955,6 +956,93 @@ def review_titles(
         )
     console.print(table)
     console.print(f"Title overlay review saved to [green]{destination}[/green]")
+
+
+@app.command("render-revision-preview")
+def render_revision_preview(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder containing an approved timeline revision and source videos.",
+        ),
+    ],
+    timeline: Annotated[
+        Path,
+        typer.Option(
+            "--timeline",
+            help="Approved timeline revision under .video-agent/timeline-revisions/.",
+        ),
+    ],
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help="Separate MP4 output path under .video-agent/revision-previews/ by default.",
+        ),
+    ] = None,
+    timeout_seconds: Annotated[
+        float,
+        typer.Option("--timeout", min=1, help="Maximum render time in seconds."),
+    ] = 3600,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run",
+            help="Validate inputs and FFmpeg graph without writing a preview.",
+        ),
+    ] = False,
+    fit_mode: Annotated[
+        str,
+        typer.Option(
+            "--fit-mode",
+            help="Source framing: crop to fill or pad to preserve the full frame.",
+        ),
+    ] = "crop",
+    title_overlays: Annotated[
+        Path | None,
+        typer.Option("--title-overlays", help="Optional reviewed title overlay JSON artifact."),
+    ] = None,
+) -> None:
+    """Render an approved timeline revision to a separate, traceable preview MP4."""
+    try:
+        report, manifest = render_timeline_revision_preview(
+            folder,
+            timeline_path=timeline,
+            output_path=output,
+            timeout_seconds=timeout_seconds,
+            dry_run=dry_run,
+            fit_mode=fit_mode,
+            title_overlay_path=title_overlays,
+        )
+    except (
+        FileNotFoundError,
+        FileExistsError,
+        OSError,
+        ValueError,
+        RenderError,
+    ) as exc:
+        console.print(f"[red]Revision preview failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    if dry_run:
+        console.print("[bold green]Revision preview preflight passed.[/bold green]")
+        console.print("Inputs and FFmpeg graph were validated; no MP4 was written.")
+        return
+    console.print("[bold green]Approved revision preview rendered and verified.[/bold green]")
+    console.print(f"Preview: [green]{report.output_path}[/green]")
+    console.print(f"Duration: {report.actual_duration_seconds:.2f}s")
+    console.print(
+        f"Format: {report.width}x{report.height}, "
+        f"{report.video_codec.upper()} video + {report.audio_codec.upper()} audio"
+    )
+    console.print(f"Preview manifest: [green]{manifest}[/green]")
+    console.print("[yellow]Original timeline and source media were not modified.[/yellow]")
 
 
 @app.command("render-draft")

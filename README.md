@@ -585,3 +585,21 @@ representative midpoint frame from the original source interval with one from th
 interval and shows both source ranges. It does not render the timeline or modify either
 timeline or any source media. These are source-frame samples, not a substitute for watching
 the full revised sequence and checking transition context.
+
+
+For a dedicated revision-preview workflow, render an approved revision to a separate, non-overwriting output:
+
+```bash
+docker compose run --rm video-agent render-revision-preview ./travel-test \
+  --timeline ./.video-agent/timeline-revisions/revision-001.json
+```
+
+The command requires the revision to be fully approved with `review-timeline`. It writes
+`.video-agent/revision-previews/revision-001.mp4` and a matching
+`revision-001.preview.json` manifest containing the source timeline, output path, duration,
+resolution, codecs, and shot count. Use `--dry-run` to validate the FFmpeg graph without
+writing a preview, or `--output` to choose another project-local MP4 path. Existing preview
+files and manifests are never overwritten. The preview and manifest are tracked against the
+approved revision; the original timeline and source media remain unchanged.
+
+Compare the new preview with the earlier render using `compare-drafts` as described above.
