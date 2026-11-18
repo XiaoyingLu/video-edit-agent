@@ -151,6 +151,52 @@ def _seconds(value: float) -> str:
     return f"{value:.6f}"
 
 
+def _subtitle_force_style(
+    style_name: str, font_size: int, position: str, width: int, height: int
+) -> str:
+    """Build a fixed ASS subtitle preset with margins scaled to output dimensions."""
+    if style_name not in {"classic", "cinematic", "boxed", "minimal"}:
+        raise ValueError("subtitle_style must be classic, cinematic, boxed, or minimal")
+    if position not in {"bottom", "center", "top"}:
+        raise ValueError("subtitle_position must be bottom, center, or top")
+    if not 12 <= font_size <= 72:
+        raise ValueError("subtitle_font_size must be between 12 and 72")
+    if width < 2 or height < 2:
+        raise ValueError("subtitle output dimensions must be at least 2 pixels")
+
+    alignment = {"bottom": 2, "center": 5, "top": 8}[position]
+    if style_name == "classic":
+        return (
+            f"FontName=DejaVu Sans,FontSize={font_size},"
+            f"PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,"
+            f"BorderStyle=1,Outline=2,Shadow=1,Alignment={alignment},MarginV=48"
+        )
+
+    responsive_size = max(12, min(72, round(font_size * height / 1080)))
+    if style_name == "cinematic":
+        margin = max(32, round(height * 0.06))
+        appearance = (
+            "PrimaryColour=&H00FFFFFF,OutlineColour=&H00101010,"
+            "BorderStyle=1,Outline=3,Shadow=1,Bold=1"
+        )
+    elif style_name == "boxed":
+        margin = max(32, round(height * 0.06))
+        appearance = (
+            "PrimaryColour=&H00FFFFFF,OutlineColour=&H80000000,"
+            "BackColour=&H80000000,BorderStyle=3,Outline=12,Shadow=0"
+        )
+    else:
+        margin = max(24, round(height * 0.05))
+        appearance = (
+            "PrimaryColour=&H00FFFFFF,OutlineColour=&H66000000,"
+            "BorderStyle=1,Outline=1,Shadow=1,Bold=0"
+        )
+    return (
+        f"FontName=DejaVu Sans,FontSize={responsive_size},"
+        f"{appearance},Alignment={alignment},MarginV={margin}"
+    )
+
+
 def _build_ffmpeg_command(
     ffmpeg: str,
     sources: list[tuple[Path, dict[str, Any], float]],
@@ -162,6 +208,7 @@ def _build_ffmpeg_command(
     subtitle_path: Path | None = None,
     subtitle_font_size: int = 28,
     subtitle_position: str = "bottom",
+    subtitle_style: str = "classic",
 ) -> list[str]:
     command = [ffmpeg, "-hide_banner", "-nostdin", "-y"]
     for source_index, _, _ in sources:
@@ -203,15 +250,8 @@ def _build_ffmpeg_command(
             .replace(":", "\\:")
             .replace("'", "\\'")
         )
-        alignment, margin = {
-            "bottom": (2, 48),
-            "center": (5, 0),
-            "top": (8, 48),
-        }[subtitle_position]
-        style = (
-            f"FontName=DejaVu Sans,FontSize={subtitle_font_size},"
-            f"PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,"
-            f"BorderStyle=1,Outline=2,Shadow=1,Alignment={alignment},MarginV={margin}"
+        style = _subtitle_force_style(
+            subtitle_style, subtitle_font_size, subtitle_position, width, height
         )
         filters.append(
             f"[outv]subtitles=filename='{escaped_path}':force_style='{style}'[subtitled]"
@@ -255,6 +295,7 @@ def render_project(
     subtitle_path: Path | None = None,
     subtitle_font_size: int = 28,
     subtitle_position: str = "bottom",
+    subtitle_style: str = "classic",
     dry_run: bool = False,
 ) -> RenderReport | None:
     """Render the approved retained intervals into one MP4 and verify the result.
@@ -268,6 +309,8 @@ def render_project(
         raise ValueError("subtitle_font_size must be between 12 and 72")
     if subtitle_position not in {"bottom", "center", "top"}:
         raise ValueError("subtitle_position must be bottom, center, or top")
+    if subtitle_style not in {"classic", "cinematic", "boxed", "minimal"}:
+        raise ValueError("subtitle_style must be classic, cinematic, boxed, or minimal")
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise FileNotFoundError(f"Project folder does not exist: {root}")
@@ -365,6 +408,7 @@ def render_project(
             subtitle_path=subtitle_file,
             subtitle_font_size=subtitle_font_size,
             subtitle_position=subtitle_position,
+            subtitle_style=subtitle_style,
         )
         if dry_run:
             _validate_filter_graph(command, timeout=min(timeout_seconds, 120))
