@@ -235,6 +235,10 @@ def build_draft_timeline(
         )
         if Path(music_analysis.project_path).resolve() != root:
             raise ValueError("music analysis belongs to a different project folder")
+        try:
+            music_file.relative_to(root)
+        except ValueError as exc:
+            raise ValueError("music analysis must be inside the project folder") from exc
         soundtrack = Path(music_analysis.music_path)
         if not soundtrack.is_absolute():
             soundtrack = root / soundtrack
@@ -297,8 +301,9 @@ def build_draft_timeline(
                 music_section_end = section.end_seconds
                 multiplier = {"low": 1.15, "medium": 1.0, "high": 0.8}[section.energy]
                 pacing_target = round(min(10.0, max(1.0, pacing_target * multiplier)), 2)
-                pacing_fit, pacing_note, _ = _pacing_guidance(
-                    clip.duration_seconds, plan.pacing, clip.visual_role
+                pacing_note = (
+                    f"{pacing_note} Music energy adjusts the advisory target "
+                    f"to about {pacing_target:.1f}s."
                 )
                 music_pacing_note = {
                     "low": "Quieter music section: consider allowing this shot more breathing room.",
