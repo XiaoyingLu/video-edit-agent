@@ -791,8 +791,8 @@ def init_title_overlays(
     """Create an editable title overlay review template for the optimized timeline."""
     root = folder.expanduser().resolve()
     timeline_file = (
-        timeline or root / ".video-agent" / "optimized-timeline.json"
-    ).expanduser().resolve()
+        (timeline or root / ".video-agent" / "optimized-timeline.json").expanduser().resolve()
+    )
     destination = (output or root / ".video-agent" / "title-overlays.json").expanduser().resolve()
     try:
         _, timeline_file = load_draft_timeline(root, timeline)
@@ -827,15 +827,11 @@ def review_titles(
     ] = None,
     approve: Annotated[
         list[str] | None,
-        typer.Option(
-            "--approve", help="Title overlay ID to approve; repeat for multiple IDs."
-        ),
+        typer.Option("--approve", help="Title overlay ID to approve; repeat for multiple IDs."),
     ] = None,
     reject: Annotated[
         list[str] | None,
-        typer.Option(
-            "--reject", help="Title overlay ID to reject; repeat for multiple IDs."
-        ),
+        typer.Option("--reject", help="Title overlay ID to reject; repeat for multiple IDs."),
     ] = None,
 ) -> None:
     """Review title suggestions; only approved overlays are burned into the render."""
