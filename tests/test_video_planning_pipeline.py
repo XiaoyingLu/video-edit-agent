@@ -299,3 +299,19 @@ def test_scene_music_annotation_uses_largest_overlap_and_marks_uncovered():
     assert annotated[0].music_section_start_seconds == 20
     assert annotated[1].music_energy == "unknown"
     assert annotated[1].music_section_start_seconds is None
+
+
+
+def test_create_video_project_plan_cannot_overwrite_music_analysis(tmp_path):
+    artifact_dir = tmp_path / ".video-agent"
+    artifact_dir.mkdir()
+    analysis_path = artifact_dir / "music-analysis.json"
+    analysis_path.write_text("{}", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="cannot overwrite music-analysis.json"):
+        planning_pipeline.create_video_project_plan(
+            tmp_path,
+            "Create a cinematic travel film",
+            output_path=analysis_path,
+            music_analysis_path=analysis_path,
+        )
