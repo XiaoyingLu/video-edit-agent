@@ -248,7 +248,9 @@ def build_draft_timeline(
         if not soundtrack.is_absolute():
             soundtrack = root / soundtrack
         if not soundtrack.is_file():
-            raise FileNotFoundError(f"Soundtrack referenced by music analysis is missing: {soundtrack}")
+            raise FileNotFoundError(
+                f"Soundtrack referenced by music analysis is missing: {soundtrack}"
+            )
     if Path(selection.project_path).resolve() != root:
         raise ValueError("draft selection belongs to a different project folder")
 
@@ -316,12 +318,21 @@ def build_draft_timeline(
                     clip.duration_seconds, plan.pacing, clip.visual_role, multiplier
                 )
                 music_pacing_note = {
-                    "low": "Quieter music section: consider allowing this shot more breathing room.",
-                    "medium": "Moderate-energy music section: retain the role-aware pacing target.",
-                    "high": "Higher-energy music section: consider a tighter shot if the footage supports it.",
+                    "low": (
+                        "Quieter music section: consider allowing this shot more breathing room."
+                    ),
+                    "medium": (
+                        "Moderate-energy music section: retain the role-aware pacing target."
+                    ),
+                    "high": (
+                        "Higher-energy music section: consider a tighter shot if the footage "
+                        "supports it."
+                    ),
                 }[section.energy]
             else:
-                music_pacing_note = "No analyzed energy section covers this point in the soundtrack."
+                music_pacing_note = (
+                    "No analyzed energy section covers this point in the soundtrack."
+                )
         previous_clip = timeline_clips[-1] if timeline_clips else None
         timeline_clips.append(
             DraftTimelineClip(
