@@ -144,9 +144,7 @@ def _annotate_scenes_with_music(
         scene_end = scene_start + scene.target_duration_seconds
         overlaps = []
         for section in ordered_sections:
-            overlap = min(scene_end, section.end_seconds) - max(
-                scene_start, section.start_seconds
-            )
+            overlap = min(scene_end, section.end_seconds) - max(scene_start, section.start_seconds)
             if overlap > 0:
                 overlaps.append((overlap, section))
         if overlaps:
@@ -154,10 +152,7 @@ def _annotate_scenes_with_music(
                 overlaps,
                 key=lambda item: (item[0], -item[1].start_seconds),
             )
-            note = (
-                f"Dominant {dominant.energy}-energy section overlaps "
-                f"{overlap:.1f}s of this scene."
-            )
+            note = f"Dominant {dominant.energy}-energy section overlaps {overlap:.1f}s of this scene."
             annotated.append(
                 scene.model_copy(
                     update={
