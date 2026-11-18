@@ -34,13 +34,13 @@ from .editing.storyboard_production import (
     build_storyboard_timeline,
     save_storyboard_timeline,
 )
-from .editing.storyboard_review import generate_storyboard_review
-from .editing.timeline_schemas import ProjectDraftTimeline
 from .editing.revisions import (
     TimelineIntervalEdit,
     compare_timeline_files,
     create_timeline_revision,
 )
+from .editing.storyboard_review import generate_storyboard_review
+from .editing.timeline_schemas import ProjectDraftTimeline
 from .editing.workflow import create_video_draft
 from .highlights import find_highlights_folder
 from .media import MediaToolError, analyze_folder
@@ -2118,7 +2118,8 @@ def revise_timeline(
     console.print(f"Revision saved to [green]{folder.resolve() / result.revision_path}[/green]")
     console.print(
         "[yellow]Only changed shots are pending. Review this revision with "
-        "review-timeline before rendering; the original timeline and source media are unchanged.[/yellow]"
+        "review-timeline before rendering; the original timeline and source media "
+        "are unchanged.[/yellow]"
     )
 
 
