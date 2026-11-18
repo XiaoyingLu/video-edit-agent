@@ -34,6 +34,7 @@ from .editing.storyboard_production import (
     save_storyboard_timeline,
 )
 from .editing.storyboard_review import generate_storyboard_review
+from .editing.timeline_schemas import ProjectDraftTimeline
 from .editing.workflow import create_video_draft
 from .highlights import find_highlights_folder
 from .media import MediaToolError, analyze_folder
@@ -1882,10 +1883,10 @@ def review_music_sync(
         report = MusicSyncSuggestions.model_validate_json(
             suggestions_file.read_text(encoding="utf-8")
         )
-        timeline_data = json.loads(timeline_file.read_text(encoding="utf-8"))
-        clips = {
-            clip["clip_id"]: clip for clip in timeline_data.get("clips", [])
-        }
+        timeline_model = ProjectDraftTimeline.model_validate_json(
+            timeline_file.read_text(encoding="utf-8")
+        )
+        clips = {clip.clip_id: clip for clip in timeline_model.clips}
         known_ids = {
             f"{item.previous_clip_id}->{item.next_clip_id}" for item in report.boundaries
         }
@@ -1909,14 +1910,12 @@ def review_music_sync(
                     f"Adjustment: {item.adjustment_seconds:+.3f}s"
                 )
                 console.print(
-                    f"Outgoing source: {previous.get('video_path', '—')} "
-                    f"{previous.get('source_start_seconds', 0):.2f}–"
-                    f"{previous.get('source_end_seconds', 0):.2f}s"
+                    f"Outgoing source: {previous.video_path} "
+                    f"{previous.source_start_seconds:.2f}–{previous.source_end_seconds:.2f}s"
                 )
                 console.print(
-                    f"Incoming source: {following.get('video_path', '—')} "
-                    f"{following.get('source_start_seconds', 0):.2f}–"
-                    f"{following.get('source_end_seconds', 0):.2f}s"
+                    f"Incoming source: {following.video_path} "
+                    f"{following.source_start_seconds:.2f}–{following.source_end_seconds:.2f}s"
                 )
                 while True:
                     choice = (
