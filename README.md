@@ -151,7 +151,7 @@ docker compose run --rm video-agent plan ./travel-test --prompt "Create a 60-sec
 docker compose run --rm video-agent draft-edit ./travel-test
 docker compose run --rm video-agent optimize-timeline ./travel-test
 # Optionally incorporate broad soundtrack energy sections:
-docker compose run --rm video-agent optimize-timeline ./travel-test --music-analysis ./.video-agent/music-analysis.json
+docker compose run --rm video-agent optimize-timeline ./travel-test --music-analysis ./travel-test/.video-agent/music-analysis.json
 docker compose run --rm -it video-agent review-timeline ./travel-test
 docker compose run --rm video-agent subtitles ./travel-test
 docker compose run --rm video-agent render ./travel-test --burn-subtitles --subtitle-font-size 28 --subtitle-position bottom
