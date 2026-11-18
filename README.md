@@ -603,3 +603,27 @@ files and manifests are never overwritten. The preview and manifest are tracked 
 approved revision; the original timeline and source media remain unchanged.
 
 Compare the new preview with the earlier render using `compare-drafts` as described above.
+
+
+## Revision iteration reports
+
+After reviewing and rendering a timeline revision, create a single index that connects the evidence from the full iteration:
+
+```bash
+docker compose run --rm video-agent report-revision-cycle ./travel-test \
+  --critique ./.video-agent/draft-critique.json \
+  --suggestions ./.video-agent/draft-revision-suggestions.json \
+  --original-timeline ./.video-agent/optimized-timeline.json \
+  --revised-timeline ./.video-agent/timeline-revisions/revision-001.json \
+  --preview-manifest ./.video-agent/revision-previews/revision-001.preview.json \
+  --comparison ./.video-agent/draft-comparison.json \
+  --timeline-review ./.video-agent/timeline-revision-review/review.json
+```
+
+The command writes a JSON index and a self-contained HTML report under
+`.video-agent/revision-cycles/`. It validates that every supplied artifact is project-local,
+tracked, and current, then links to the original critique, suggestions, timelines, preview
+manifest, and rendered comparison. The source-frame timeline review is optional. The report
+does not infer approval, change media, or replace the detailed evidence reports; it provides a
+traceable entry point for reviewing one iteration. Re-run with a different `--output` base
+for subsequent cycles; existing reports are never overwritten.
