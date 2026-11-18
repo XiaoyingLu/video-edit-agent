@@ -10,18 +10,52 @@ from travel_video_agent.editing.revisions import (
     compare_timeline_files,
     create_timeline_revision,
 )
-from travel_video_agent.editing.timeline_pipeline import apply_timeline_review, build_draft_timeline
-
-from tests.test_timeline_optimization import _write_inputs
+from travel_video_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
 
 runner = CliRunner()
 
 
 def _approved_timeline(root):
-    _write_inputs(root)
-    timeline = build_draft_timeline(root)
-    timeline = apply_timeline_review(timeline, {"earlier", "later"}, set())
-    source = root / ".video-agent" / "optimized-timeline.json"
+    artifact = root / ".video-agent"
+    artifact.mkdir(parents=True, exist_ok=True)
+    clips = [
+        DraftTimelineClip(
+            clip_id="earlier",
+            sequence_index=1,
+            video_path="trip.mp4",
+            source_start_seconds=1,
+            source_end_seconds=5,
+            duration_seconds=4,
+            combined_score=90,
+            pacing_note="Fits the pacing target.",
+            decision="approved",
+        ),
+        DraftTimelineClip(
+            clip_id="later",
+            sequence_index=2,
+            video_path="trip.mp4",
+            source_start_seconds=8,
+            source_end_seconds=12,
+            duration_seconds=4,
+            combined_score=85,
+            transition_in="crossfade",
+            transition_duration_seconds=0.8,
+            pacing_note="Fits the pacing target.",
+            decision="approved",
+        ),
+    ]
+    timeline = ProjectDraftTimeline(
+        project_path=str(root.resolve()),
+        style="vlog",
+        pacing="moderate",
+        target_duration_seconds=12,
+        proposed_duration_seconds=7.2,
+        approved_duration_seconds=7.2,
+        proposed_clip_count=2,
+        clips=clips,
+        timeline_approved=True,
+    )
+    source = artifact / "optimized-timeline.json"
     source.write_text(timeline.model_dump_json(), encoding="utf-8")
     return source, timeline
 
