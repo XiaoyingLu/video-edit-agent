@@ -1090,7 +1090,9 @@ def create_plan(
     ] = None,
     model: Annotated[
         str | None,
-        typer.Option("--model", help="Ollama model (default: OLLAMA_MODEL or qwen2.5vl:3b)."),
+        typer.Option(
+            "--model", help="Planning model (default: VIDEO_PLANNER_MODEL or qwen2.5:1.5b)."
+        ),
     ] = None,
 ) -> None:
     """Generate a creative brief, story treatment, and storyboard."""

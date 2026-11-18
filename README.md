@@ -16,7 +16,7 @@ A local-first Python CLI for editing personal travel footage. Media stays on you
 
 ## Hierarchical video planning
 
-The `create-plan` command generates a creative brief, narrative treatment, and structured storyboard using the local Ollama model:
+The `create-plan` command generates a creative brief, narrative treatment, and structured storyboard using a dedicated lightweight text model. By default it uses `qwen2.5:1.5b`, independently of the multimodal vision model configured by `OLLAMA_MODEL`:
 
 ```bash
 docker compose run --rm video-agent create-plan ./travel-test \
@@ -25,7 +25,7 @@ docker compose run --rm video-agent create-plan ./travel-test \
 
 It writes `.video-agent/video-project-plan.json` and the compatible `.video-agent/editing-plan.json`. The project plan includes a working title, logline, narrative arc, emotional journey, ordered scenes, and concrete storyboard shots with visual descriptions, shot scale, editorial role, duration, narration/text suggestions, and audio cues. Explicit durations in the user's prompt (for example, `90-second` or `2 minutes`) take precedence over model defaults. Scene and shot durations are normalized and validated against the requested total.
 
-Storyboard shots describe intended visuals; they are not claims about footage that has been inspected. Footage paths and source intervals remain unassigned until a later matching stage. The project plan is separate from `.video-agent/optimized-timeline.json`, which contains concrete source paths and time intervals for rendering. Planning does not modify source media, approve edits, or render video. The project-plan artifact depends on the editing-plan artifact, so changing upstream intent invalidates the derived plan.
+Storyboard shots describe intended visuals; they are not claims about footage that has been inspected. Footage paths and source intervals remain unassigned until a later matching stage. The project plan is separate from `.video-agent/optimized-timeline.json`, which contains concrete source paths and time intervals for rendering. Planning does not modify source media, approve edits, or render video. The project-plan artifact depends on the editing-plan artifact, so changing upstream intent invalidates the derived plan. The planning workflow uses the same text model for intent parsing and storyboard generation, evicting it between stages to avoid holding multiple models in memory. Configure it with `VIDEO_PLANNER_MODEL` or override it per command with `create-plan --model`. `VIDEO_PLANNER_MIN_MEMORY_GB` adjusts only the planner's memory preflight; `OLLAMA_MIN_MEMORY_GB` remains available for the general Ollama/vision workflow.
 
 ## Cinematic scene understanding
 
@@ -70,10 +70,11 @@ Download the vision model into the Ollama container (one-time download; model we
 
 ```bash
 docker compose exec ollama ollama pull qwen2.5vl:3b
+docker compose exec ollama ollama pull qwen2.5:1.5b
 docker compose exec ollama ollama list
 ```
 
-For the first Codespaces test, use the lighter 3B model. On a machine with more available memory, pull `qwen2.5vl:7b` and run with `OLLAMA_MODEL=qwen2.5vl:7b`.
+For the first Codespaces test, use `qwen2.5vl:3b` for vision and `qwen2.5:1.5b` for planning. On a machine with more available memory, pull `qwen2.5vl:7b` and run vision analysis with `OLLAMA_MODEL=qwen2.5vl:7b`. Planning remains on its separate text model unless `VIDEO_PLANNER_MODEL` is changed.
 
 ### Run the CLI
 

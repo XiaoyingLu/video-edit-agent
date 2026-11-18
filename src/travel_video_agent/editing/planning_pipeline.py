@@ -1,6 +1,7 @@
 """Creation and persistence of hierarchical video project plans."""
 
 import json
+import os
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact
@@ -31,7 +32,12 @@ def create_video_project_plan(
     if destination == editing_path.resolve():
         raise ValueError("video project plan output cannot overwrite editing-plan.json")
 
-    editing_plan = parse_editing_intent(prompt, model=model)
+    planner_model = model or os.getenv("VIDEO_PLANNER_MODEL", "qwen2.5:1.5b")
+    editing_plan = parse_editing_intent(
+        prompt,
+        model=planner_model,
+        memory_override_env="VIDEO_PLANNER_MIN_MEMORY_GB",
+    )
     explicit_duration = explicit_duration_seconds(prompt)
     updates = {"priorities": infer_creative_priorities(prompt, editing_plan.priorities)}
     if explicit_duration is not None:
@@ -50,7 +56,9 @@ def create_video_project_plan(
         creative_priorities=editing_plan.priorities,
         assumptions=editing_plan.assumptions,
     )
-    generated = generate_video_plan_content(prompt, brief.model_dump(mode="json"), model=model)
+    generated = generate_video_plan_content(
+        prompt, brief.model_dump(mode="json"), model=planner_model
+    )
     project_plan = VideoProjectPlan(
         project_path=str(root),
         brief=brief,
@@ -65,7 +73,7 @@ def create_video_project_plan(
         json.dumps(editing_plan.model_dump(mode="json"), indent=2) + "\n",
         encoding="utf-8",
     )
-    register_artifact(root, editing_path, config={"prompt": prompt, "model": model})
+    register_artifact(root, editing_path, config={"prompt": prompt, "planner_model": planner_model})
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(

@@ -8,7 +8,7 @@ from urllib.request import Request, urlopen
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from ..resource_manager import ResourceError, ensure_memory_available, required_vision_memory_gb
+from ..resource_manager import ResourceError, ensure_memory_available, required_ollama_memory_gb
 from .planning_schemas import PlannedScene, StoryTreatment
 
 
@@ -82,14 +82,14 @@ class OllamaVideoPlanner:
     """Generate a narrative treatment and storyboard using Ollama structured output."""
 
     def __init__(self, model: str | None = None, base_url: str | None = None) -> None:
-        self.model = model or os.getenv("OLLAMA_MODEL", "qwen2.5vl:3b")
+        self.model = model or os.getenv("VIDEO_PLANNER_MODEL", "qwen2.5:1.5b")
         self.base_url = (base_url or os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")).rstrip(
             "/"
         )
         self.keep_alive = os.getenv("OLLAMA_KEEP_ALIVE", "5m")
         try:
             ensure_memory_available(
-                required_vision_memory_gb(self.model),
+                required_ollama_memory_gb(self.model, "VIDEO_PLANNER_MIN_MEMORY_GB"),
                 f"Ollama planning model '{self.model}'",
             )
         except ResourceError as exc:
@@ -123,7 +123,10 @@ class OllamaVideoPlanner:
             "Use only supported enum values. The sum of all shot durations MUST equal the "
             "requested target duration exactly; each scene duration must equal the sum of "
             "its shot durations. Do not assign source footage or claim real footage has been "
-            "inspected. Make choices grounded in the user's brief; flag uncertain details "
+            "inspected. For every storyboard shot, leave footage_path, "
+            "footage_start_seconds, and footage_end_seconds unset, and set "
+            "assignment_status to unassigned. Make choices grounded in the user's brief; "
+            "flag uncertain details "
             "as assumptions rather than inventing personal trip events."
         )
         payload = json.dumps(
@@ -152,6 +155,14 @@ class OllamaVideoPlanner:
             with urlopen(request, timeout=300) as response:
                 result = json.loads(response.read().decode("utf-8"))
             parsed = json.loads(result["message"]["content"])
+            # Creative storyboards must never carry partial or speculative footage mappings.
+            # Strip assignment fields before validation; footage mapping is a later stage.
+            for scene in parsed.get("scenes", []):
+                for shot in scene.get("shots", []):
+                    shot.pop("footage_path", None)
+                    shot.pop("footage_start_seconds", None)
+                    shot.pop("footage_end_seconds", None)
+                    shot.pop("assignment_status", None)
             return GeneratedVideoPlanContent.model_validate(parsed)
         except HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")
@@ -170,6 +181,36 @@ class OllamaVideoPlanner:
             ) from exc
 
 
+def normalize_storyboard_ids(content: GeneratedVideoPlanContent) -> GeneratedVideoPlanContent:
+    """Replace model-generated identifiers with deterministic, globally unique IDs."""
+    normalized_scenes = []
+    shot_number = 0
+    for scene_number, scene in enumerate(content.scenes, start=1):
+        scene_id = f"scene-{scene_number:02d}"
+        shots = []
+        for shot_number_in_scene, shot in enumerate(scene.shots, start=1):
+            shot_number += 1
+            shots.append(
+                shot.model_copy(
+                    update={
+                        "shot_id": f"shot-{shot_number:03d}",
+                        "scene_id": scene_id,
+                        "sequence_index": shot_number_in_scene,
+                    }
+                )
+            )
+        normalized_scenes.append(
+            scene.model_copy(
+                update={
+                    "scene_id": scene_id,
+                    "sequence_index": scene_number,
+                    "shots": shots,
+                }
+            )
+        )
+    return content.model_copy(update={"scenes": normalized_scenes})
+
+
 def generate_video_plan_content(
     prompt: str, brief: dict, model: str | None = None
 ) -> GeneratedVideoPlanContent:
@@ -180,6 +221,7 @@ def generate_video_plan_content(
     finally:
         planner.unload_model()
 
+    content = normalize_storyboard_ids(content)
     all_shots = [shot for scene in content.scenes for shot in scene.shots]
     total = sum(shot.target_duration_seconds for shot in all_shots)
     if total <= 0:

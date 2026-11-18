@@ -8,7 +8,11 @@ from urllib.request import Request, urlopen
 
 from pydantic import ValidationError
 
-from ..resource_manager import ResourceError, ensure_memory_available, required_vision_memory_gb
+from ..resource_manager import (
+    ResourceError,
+    ensure_memory_available,
+    required_ollama_memory_gb,
+)
 from .intent_schemas import EditingPlan
 
 
@@ -24,6 +28,7 @@ class OllamaIntentParser:
         model: str | None = None,
         base_url: str | None = None,
         timeout_seconds: int = 180,
+        memory_override_env: str = "OLLAMA_MIN_MEMORY_GB",
     ) -> None:
         self.model = model or os.getenv("OLLAMA_MODEL", "qwen2.5vl:3b")
         self.base_url = (base_url or os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")).rstrip(
@@ -34,7 +39,8 @@ class OllamaIntentParser:
         self._model_used = False
         try:
             ensure_memory_available(
-                required_vision_memory_gb(self.model), f"Ollama intent model '{self.model}'"
+                required_ollama_memory_gb(self.model, memory_override_env),
+                f"Ollama intent model '{self.model}',",
             )
         except ResourceError as exc:
             raise IntentParsingError(str(exc)) from exc
@@ -143,9 +149,14 @@ class OllamaIntentParser:
             return False
 
 
-def parse_editing_intent(prompt: str, model: str | None = None) -> EditingPlan:
+def parse_editing_intent(
+    prompt: str,
+    model: str | None = None,
+    *,
+    memory_override_env: str = "OLLAMA_MIN_MEMORY_GB",
+) -> EditingPlan:
     """Parse one natural-language request, then release the model from memory."""
-    parser = OllamaIntentParser(model=model)
+    parser = OllamaIntentParser(model=model, memory_override_env=memory_override_env)
     try:
         return parser.parse(prompt)
     finally:
