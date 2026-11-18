@@ -84,7 +84,8 @@ def _run(command: list[str], *, timeout: float = 120) -> subprocess.CompletedPro
 
 
 def _safe_project_file(root: Path, path: Path, label: str) -> Path:
-    resolved = path.expanduser().resolve()
+    candidate = path.expanduser()
+    resolved = (root / candidate).resolve() if not candidate.is_absolute() else candidate.resolve()
     try:
         resolved.relative_to(root)
     except ValueError as exc:
