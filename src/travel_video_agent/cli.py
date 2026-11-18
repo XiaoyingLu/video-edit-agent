@@ -45,6 +45,7 @@ from .music.refinement import apply_music_sync_review
 from .music.sync import MusicSyncSuggestions, save_music_sync_suggestions, suggest_music_sync
 from .rendering import RenderError, render_approved_shot_timeline, render_project
 from .rendering.title_overlays import (
+    TitleOverlayDocument,
     load_title_overlays,
     review_title_overlays,
     save_title_overlays,
@@ -768,6 +769,45 @@ def render(
         subtitle_display_path = subtitle_file or folder.resolve() / ".video-agent" / "subtitles.srt"
         console.print(f"Burned-in subtitles: [green]{subtitle_display_path}[/green]")
     console.print("[yellow]Original source videos were not modified.[/yellow]")
+
+
+@app.command("init-title-overlays")
+def init_title_overlays(
+    folder: Annotated[
+        Path,
+        typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True),
+    ],
+    timeline: Annotated[
+        Path | None,
+        typer.Option("--timeline", help="Approved/reviewed optimized timeline JSON."),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", help="Output JSON path (default: .video-agent/title-overlays.json)."),
+    ] = None,
+) -> None:
+    """Create an editable title overlay review template for the optimized timeline."""
+    root = folder.expanduser().resolve()
+    timeline_file = (timeline or root / ".video-agent" / "optimized-timeline.json").expanduser().resolve()
+    destination = (output or root / ".video-agent" / "title-overlays.json").expanduser().resolve()
+    try:
+        timeline_relative = timeline_file.relative_to(root)
+        if not timeline_file.is_file():
+            raise FileNotFoundError(f"Missing optimized timeline: {timeline_file}")
+        ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
+        if destination.exists():
+            raise FileExistsError(f"Title overlay file already exists: {destination}")
+        document = TitleOverlayDocument(
+            project_path=str(root),
+            source_timeline=str(timeline_relative),
+            overlays=[],
+        )
+        save_title_overlays(root, document, destination)
+    except (FileNotFoundError, FileExistsError, ValueError) as exc:
+        console.print(f"[red]Could not initialize title overlays:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    console.print(f"Title overlay template created at [green]{destination}[/green]")
+    console.print("Add overlay entries to the JSON, then review them with review-title-overlays.")
 
 
 @app.command("review-title-overlays")
