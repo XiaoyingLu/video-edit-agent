@@ -139,7 +139,6 @@ def save_title_overlays(
     register_artifact(root, destination, dependencies=upstream)
 
 
-
 def suggest_narrative_title_sequences(
     folder: Path,
     *,
