@@ -539,3 +539,16 @@ Available styles are:
 - `minimal`: a lighter outline and shadow for a restrained look.
 
 For non-classic presets, font size and vertical margin scale with output height, so portrait exports receive larger captions and proportionate bottom clearance. `--subtitle-font-size` remains the 1080p reference size (12–72); `--subtitle-position` supports bottom, center, or top. Subtitle cue timestamps and text are unchanged by presentation styling. The renderer uses only built-in presets and does not accept arbitrary ASS/FFmpeg style strings.
+
+
+### Critique-driven shot revision suggestions
+
+After generating a rendered-draft critique, turn its confident semantic concerns and approved-timeline pacing outliers into a shot-level review list:
+
+```bash
+docker compose run --rm video-agent suggest-revisions ./travel-test --minimum-confidence 0.55
+```
+
+The command writes `.video-agent/draft-revision-suggestions.json`. Semantic mismatches and partial matches are mapped to their existing storyboard/timeline shot IDs only when confidence meets the threshold. Pacing outliers are surfaced from the approved timeline. Each suggestion includes its evidence, affected shot, current source interval, and a bounded review action.
+
+These are review prompts, not generated edits. The tool does not invent trim timestamps, extend source handles, replace footage, reorder shots, approve a timeline, or render a video. Use the existing `revise-timeline --set-interval` workflow only after choosing an exact, safe trim yourself; footage reassignment remains a separate storyboard review workflow. The suggestion artifact tracks both the critique report and source timeline, so stale upstream inputs must be regenerated.
