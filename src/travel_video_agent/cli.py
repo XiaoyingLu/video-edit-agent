@@ -1068,8 +1068,8 @@ def critique_draft(
         raise typer.Exit(code=1) from exc
 
     destination = (
-        output or folder.resolve() / ".video-agent" / "draft-critique.json"
-    ).expanduser().resolve()
+        (output or folder.resolve() / ".video-agent" / "draft-critique.json").expanduser().resolve()
+    )
     root = folder.expanduser().resolve()
     try:
         destination.relative_to(root)
