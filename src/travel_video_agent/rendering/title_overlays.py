@@ -168,14 +168,14 @@ def suggest_narrative_title_sequences(
     """Create review-only opening and closing titles from the creative story treatment."""
     root = folder.expanduser().resolve()
     timeline_file = (
-        timeline_path or root / ".video-agent" / "optimized-timeline.json"
-    ).expanduser().resolve()
+        (timeline_path or root / ".video-agent" / "optimized-timeline.json").expanduser().resolve()
+    )
     plan_file = (
-        plan_path or root / ".video-agent" / "video-project-plan.json"
-    ).expanduser().resolve()
+        (plan_path or root / ".video-agent" / "video-project-plan.json").expanduser().resolve()
+    )
     destination = (
-        output_path or root / ".video-agent" / "title-overlays.json"
-    ).expanduser().resolve()
+        (output_path or root / ".video-agent" / "title-overlays.json").expanduser().resolve()
+    )
 
     for artifact, label in (
         (timeline_file, "optimized timeline"),
@@ -194,9 +194,7 @@ def suggest_narrative_title_sequences(
             f"Title overlay file already exists: {destination}; review or choose another output."
         )
 
-    timeline = ProjectDraftTimeline.model_validate_json(
-        timeline_file.read_text(encoding="utf-8")
-    )
+    timeline = ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
     plan = VideoProjectPlan.model_validate_json(plan_file.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root or Path(plan.project_path).resolve() != root:
         raise ValueError("title sequence inputs belong to a different project folder")
@@ -214,8 +212,7 @@ def suggest_narrative_title_sequences(
     duration -= sum(
         clip.transition_duration_seconds
         for previous, clip in zip(approved, approved[1:], strict=False)
-        if clip.sequence_index == previous.sequence_index + 1
-        and clip.transition_in != "cut"
+        if clip.sequence_index == previous.sequence_index + 1 and clip.transition_in != "cut"
     )
     if duration < 1.5:
         raise ValueError(
@@ -280,7 +277,5 @@ def suggest_narrative_title_sequences(
             ),
         ],
     )
-    save_title_overlays(
-        root, document, destination, dependencies=[plan_file]
-    )
+    save_title_overlays(root, document, destination)
     return document, destination
