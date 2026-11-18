@@ -63,6 +63,14 @@ The command decodes audio locally with FFmpeg, computes a spectral-flux onset en
 
 This is an advisory analysis stage, not automatic synchronization: beat estimates can be ambiguous for ambient, rubato, syncopated, or rhythmically sparse music. Four-beat downbeats are a practical default rather than inferred time-signature detection. Use beat anchors selectively and preserve natural shot duration; no clip is trimmed, approved, or rendered by this command.
 
+After creating and reviewing a shot timeline, compare its transition points with the soundtrack's beat grid:
+
+```bash
+docker compose run --rm video-agent suggest-music-sync ./travel-test --tolerance 0.18
+```
+
+The command writes `.video-agent/music-sync-suggestions.json`. It compares hard-cut boundaries and crossfade midpoints with the nearest beat and downbeat, and recommends an anchor only when it is within the configured tolerance and the beat detector has sufficient confidence. The report is review-only: it does not alter clip durations, source intervals, transitions, approvals, or rendered media. The report tracks both the timeline and music analysis as dependencies.
+
 ## Requirements
 
 - Docker Engine and Docker Compose
@@ -268,7 +276,7 @@ Source files are never modified. File size and modification time provide a fast 
 8. Context-aware clip selection (implemented)
 9. Cinematic scene metadata, role-aware shot sequencing, adaptive pacing targets, transition proposals, and human review (implemented)
 10. Render approved shot timelines with FFmpeg transitions and output verification (implemented; Docker validation pending)
-11. Music-aware soundtrack tempo, beat/downbeat, and energy-section analysis (implemented as review guidance; automatic beat synchronization remains a future step)
+11. Music-aware soundtrack tempo, beat/downbeat, and energy-section analysis, plus review-only suggestions for aligning timeline transition points to nearby musical anchors
 
 
 ### Compile the approved storyboard into a production timeline
