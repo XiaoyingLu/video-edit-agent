@@ -189,6 +189,9 @@ def test_cli_help_includes_timeline_commands():
     assert "review-timeline" in result.output
     assert "approve-storyboard" in result.output
     assert "build-storyboard-timeline" in result.output
+    optimize_help = runner.invoke(app, ["optimize-timeline", "--help"])
+    assert optimize_help.exit_code == 0
+    assert "--music-analysis" in optimize_help.output
 
 
 def test_cinematic_timeline_builds_establishing_action_detail_and_scenic_arc(tmp_path):
