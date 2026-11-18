@@ -16,6 +16,7 @@ from .renderer import (
     _validate_filter_graph,
     _validate_source_stream_metadata,
 )
+from .title_overlays import TitleOverlay
 
 
 def _safe_source(root: Path, relative_path: str) -> Path:
@@ -52,6 +53,14 @@ def _resolve_output_dimensions(
     return short_side, short_side
 
 
+def _escape_drawtext(value: str) -> str:
+    """Escape user text for a quoted FFmpeg filter value with expansion disabled."""
+    escaped = value.replace("\\", "\\\\")
+    for character in (":", "'", ",", ";", "[", "]"):
+        escaped = escaped.replace(character, "\\" + character)
+    return escaped
+
+
 def _build_shot_render_command(
     ffmpeg: str,
     clips: list[tuple[Path, float, float, bool, str, float]],
@@ -60,6 +69,7 @@ def _build_shot_render_command(
     height: int,
     frame_rate: float = 30.0,
     fit_mode: str = "crop",
+    title_overlays: list[TitleOverlay] | None = None,
 ) -> list[str]:
     """Build a filter graph that preserves shot order and applies approved transitions."""
     if fit_mode not in {"crop", "pad"}:
@@ -135,7 +145,51 @@ def _build_shot_render_command(
         current_video = output_video
         current_audio = output_audio
 
-    filters.append(f"[{current_video}]format=yuv420p[vfinal]")
+    video_label = current_video
+    for index, overlay in enumerate(title_overlays or []):
+        if overlay.decision != "approved":
+            continue
+        escaped_text = _escape_drawtext(overlay.text)
+        font_size = max(32, min(96, int(width * 0.045)))
+        if overlay.style == "minimal":
+            font_size = max(28, int(width * 0.035))
+            box_options = "box=0"
+        elif overlay.style == "bold":
+            font_size = max(40, min(112, int(width * 0.055)))
+            box_options = "box=1:boxcolor=black@0.62:boxborderw=22"
+        else:
+            box_options = "box=1:boxcolor=black@0.42:boxborderw=18"
+        base_y = {"top": "h*0.12", "center": "(h-text_h)/2", "bottom": "h-text_h-h*0.12"}[
+            overlay.placement
+        ]
+        alpha = "1"
+        y_position = base_y
+        if overlay.animation == "fade":
+            fade_seconds = min(0.45, (overlay.end_seconds - overlay.start_seconds) / 2)
+            fade_in_end = overlay.start_seconds + fade_seconds
+            fade_out_start = overlay.end_seconds - fade_seconds
+            alpha = (
+                f"if(lt(t,{_seconds(fade_in_end)}),"
+                f"(t-{_seconds(overlay.start_seconds)})/{_seconds(fade_seconds)},"
+                f"if(gt(t,{_seconds(fade_out_start)}),"
+                f"({_seconds(overlay.end_seconds)}-t)/{_seconds(fade_seconds)},1))"
+            )
+        elif overlay.animation == "slide_up":
+            y_position = (
+                f"if(lt(t,{_seconds(overlay.start_seconds + 0.45)}),"
+                f"({base_y})+80*({_seconds(overlay.start_seconds + 0.45)}-t)/0.45,"
+                f"({base_y}))"
+            )
+        next_label = f"vtitle{index}"
+        filters.append(
+            f"[{video_label}]drawtext=text='{escaped_text}':expansion=none:"
+            f"font='DejaVu Sans':fontsize={font_size}:fontcolor=white:"
+            f"x=(w-text_w)/2:y='{y_position}':alpha='{alpha}':{box_options}:"
+            f"enable='between(t,{_seconds(overlay.start_seconds)},{_seconds(overlay.end_seconds)})'"
+            f"[{next_label}]"
+        )
+        video_label = next_label
+    filters.append(f"[{video_label}]format=yuv420p[vfinal]")
     filters.append(f"[{current_audio}]aresample=48000[audiofinal]")
     command.extend(
         [
@@ -174,6 +228,7 @@ def render_approved_shot_timeline(
     timeout_seconds: float = 3600,
     dry_run: bool = False,
     fit_mode: str = "crop",
+    title_overlay_path: Path | None = None,
 ) -> RenderReport | None:
     """Render only approved shots after every proposed shot has a decision."""
     if timeout_seconds <= 0:
@@ -197,6 +252,18 @@ def render_approved_shot_timeline(
         raise RenderError("optimized timeline belongs to a different project folder")
     if timeline.rendering_performed:
         raise RenderError("optimized timeline must be a review artifact, not a render report")
+    title_document = None
+    title_file = None
+    if title_overlay_path is not None:
+        from .title_overlays import load_title_overlays
+
+        title_document, title_file = load_title_overlays(root, title_overlay_path)
+        if Path(title_document.source_timeline).resolve() != timeline_file:
+            source_timeline = Path(title_document.source_timeline)
+            if not source_timeline.is_absolute():
+                source_timeline = root / source_timeline
+            if source_timeline.resolve() != timeline_file:
+                raise RenderError("title overlays reference a different optimized timeline")
     if not timeline.timeline_approved:
         raise RenderError(
             "shot timeline has not been fully approved; run 'video-agent review-timeline'"
@@ -212,7 +279,11 @@ def render_approved_shot_timeline(
     )
     if destination.suffix.lower() != ".mp4":
         raise RenderError("render output must use the .mp4 extension")
-    if destination in {timeline_file, root / ".video-agent" / "optimized-timeline.json"}:
+    if destination in {
+        timeline_file,
+        root / ".video-agent" / "optimized-timeline.json",
+        title_file,
+    }:
         raise RenderError("render output cannot overwrite the optimized timeline")
     if not dry_run:
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -295,6 +366,16 @@ def render_approved_shot_timeline(
     )
     if expected_duration <= 0:
         raise RenderError("approved shot sequence has no positive output duration")
+    approved_titles = [
+        item
+        for item in (title_document.overlays if title_document is not None else [])
+        if item.decision == "approved"
+    ]
+    for title in approved_titles:
+        if title.end_seconds > expected_duration + 0.01:
+            raise RenderError(
+                f"title overlay {title.overlay_id} exceeds rendered timeline duration"
+            )
     temporary_path = destination
     if not dry_run:
         temporary_file = tempfile.NamedTemporaryFile(
@@ -304,7 +385,13 @@ def render_approved_shot_timeline(
         temporary_file.close()
     try:
         command = _build_shot_render_command(
-            ffmpeg, clip_inputs, temporary_path, width, height, fit_mode=fit_mode
+            ffmpeg,
+            clip_inputs,
+            temporary_path,
+            width,
+            height,
+            fit_mode=fit_mode,
+            title_overlays=approved_titles,
         )
         if dry_run:
             _validate_filter_graph(command, timeout=min(timeout_seconds, 120))
@@ -358,6 +445,8 @@ def render_approved_shot_timeline(
         raise
 
     dependencies = [timeline_file]
+    if title_file is not None:
+        dependencies.append(title_file)
     plan_file = root / ".video-agent" / "video-project-plan.json"
     if plan_file.is_file():
         dependencies.append(plan_file)
