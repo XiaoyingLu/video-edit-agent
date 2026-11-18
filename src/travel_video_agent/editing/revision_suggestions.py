@@ -143,7 +143,9 @@ def build_draft_revision_suggestions(
                 evidence=evidence or "The semantic review did not provide supporting detail.",
                 recommendation=(
                     suggestion
-                    or "Inspect the shot against its storyboard intent and consider a different footage assignment."
+                    or (\n                        "Inspect the shot against its storyboard intent and consider a "
+                        "different footage assignment."
+                    )
                 ),
             )
         )
