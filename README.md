@@ -271,6 +271,16 @@ Source files are never modified. File size and modification time provide a fast 
 11. Music-aware soundtrack tempo, beat/downbeat, and energy-section analysis (implemented as review guidance; automatic beat synchronization remains a future step)
 
 
+### Visual storyboard review
+
+After creating the storyboard and analyzing source footage, generate a local HTML review page:
+
+```bash
+docker compose run --rm video-agent review-storyboard ./travel-test
+```
+
+Open `.video-agent/storyboard.html` in a browser. The page groups shots by narrative scene and shows each shot's purpose, visual description, target duration, assigned source interval, editorial role, and a representative analyzed frame when one is available. It is a read-only review artifact: it does not approve the creative plan, change footage assignments, or render a video. Re-run it after changing the plan or footage mappings.
+
 ### Review storyboard footage matches
 
 After generating a creative storyboard and analyzing the source videos, rank candidate scenes:
