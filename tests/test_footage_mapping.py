@@ -252,6 +252,7 @@ def test_footage_candidates_include_temporal_and_composition_evidence(tmp_path):
     candidate = report.suggestions[0].candidates[0]
 
     assert candidate.temporal_summary == "A hiker walks toward the mountain viewpoint."
+    assert candidate.action_progression == ["The hiker approaches the viewpoint"]
     assert candidate.dynamics_confidence == 0.9
     assert candidate.subject_motion == "approaching"
     assert candidate.camera_motion == "static"
