@@ -16,6 +16,7 @@ from travel_video_agent.editing.planning_schemas import (
 )
 from travel_video_agent.understanding.schemas import (
     FrameObservation,
+    SceneDynamics,
     VideoScene,
     VideoUnderstanding,
 )
@@ -86,6 +87,13 @@ def _understanding(root):
                 end_seconds=12,
                 summary="Wide mountain panorama beside a turquoise alpine lake.",
                 story_function="establishing",
+                dynamics=SceneDynamics(
+                    temporal_summary="A hiker walks toward the mountain viewpoint.",
+                    action_progression=["Hiker approaches the viewpoint"],
+                    subject_motion="approaching",
+                    camera_motion="static",
+                    confidence=0.9,
+                ),
                 observations=[
                     FrameObservation(
                         timestamp_seconds=2,
@@ -213,3 +221,13 @@ def test_suggest_storyboard_footage_rejects_invalid_embedding_batch(tmp_path):
             embedding_model="test-embedding-model",
             embedder=lambda texts, model: [],
         )
+
+
+def test_scene_text_includes_temporal_action_and_camera_evidence(tmp_path):
+    from travel_video_agent.editing.footage_mapping import _scene_text
+
+    scene = _understanding(tmp_path).scenes[0]
+    text = _scene_text(scene).lower()
+    assert "hiker approaches the viewpoint" in text
+    assert "approaching" in text
+    assert "static" in text

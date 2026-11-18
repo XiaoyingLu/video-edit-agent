@@ -197,13 +197,20 @@ def understand(
     table.add_column("Start", justify="right")
     table.add_column("End", justify="right")
     table.add_column("Frames", justify="right")
+    table.add_column("Subject motion")
+    table.add_column("Camera motion")
+    table.add_column("Temporal summary")
     table.add_column("Summary")
     for scene in understanding.scenes:
+        dynamics = scene.dynamics
         table.add_row(
             scene.scene_id,
             f"{scene.start_seconds:.2f}s",
             f"{scene.end_seconds:.2f}s",
             str(len(scene.observations)),
+            dynamics.subject_motion if dynamics else "—",
+            dynamics.camera_motion if dynamics else "—",
+            dynamics.temporal_summary if dynamics else "—",
             scene.summary,
         )
     console.print(table)
