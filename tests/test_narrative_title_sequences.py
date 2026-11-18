@@ -79,7 +79,7 @@ def _write_inputs(root: Path, *, approved=True, include_story=True):
         ),
         editing_preferences=EditingPlan(source_prompt="Create a cinematic mountain travel film."),
         story_treatment=treatment,
-        planning_stage="story_ready",
+        planning_stage="story_ready" if include_story else "brief_ready",
     )
     plan_path = artifact_dir / "video-project-plan.json"
     plan_path.write_text(plan.model_dump_json(), encoding="utf-8")
