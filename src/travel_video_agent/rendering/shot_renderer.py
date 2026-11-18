@@ -165,11 +165,14 @@ def _build_shot_render_command(
         alpha = "1"
         y_position = base_y
         if overlay.animation == "fade":
+            fade_seconds = min(0.45, (overlay.end_seconds - overlay.start_seconds) / 2)
+            fade_in_end = overlay.start_seconds + fade_seconds
+            fade_out_start = overlay.end_seconds - fade_seconds
             alpha = (
-                f"if(lt(t,{_seconds(overlay.start_seconds + 0.45)}),"
-                f"(t-{_seconds(overlay.start_seconds)})/0.45,"
-                f"if(gt(t,{_seconds(overlay.end_seconds - 0.45)}),"
-                f"({_seconds(overlay.end_seconds)}-t)/0.45,1))"
+                f"if(lt(t,{_seconds(fade_in_end)}),"
+                f"(t-{_seconds(overlay.start_seconds)})/{_seconds(fade_seconds)},"
+                f"if(gt(t,{_seconds(fade_out_start)}),"
+                f"({_seconds(overlay.end_seconds)}-t)/{_seconds(fade_seconds)},1))"
             )
         elif overlay.animation == "slide_up":
             y_position = (
