@@ -159,7 +159,10 @@ def suggest_narrative_title_sequences(
         output_path or root / ".video-agent" / "title-overlays.json"
     ).expanduser().resolve()
 
-    for artifact, label in ((timeline_file, "optimized timeline"), (plan_file, "video project plan")):
+    for artifact, label in (
+        (timeline_file, "optimized timeline"),
+        (plan_file, "video project plan"),
+    ):
         if not artifact.is_file():
             raise FileNotFoundError(f"Missing {label}: {artifact}")
         try:
@@ -180,7 +183,9 @@ def suggest_narrative_title_sequences(
     if Path(timeline.project_path).resolve() != root or Path(plan.project_path).resolve() != root:
         raise ValueError("title sequence inputs belong to a different project folder")
     if not timeline.timeline_approved:
-        raise ValueError("the optimized timeline must be approved before suggesting title sequences")
+        raise ValueError(
+            "the optimized timeline must be approved before suggesting title sequences"
+        )
     if plan.story_treatment is None:
         raise ValueError("the video project plan must contain a story treatment")
     approved = [clip for clip in timeline.clips if clip.decision == "approved"]
@@ -195,13 +200,17 @@ def suggest_narrative_title_sequences(
         and clip.transition_in != "cut"
     )
     if duration < 1.5:
-        raise ValueError("the approved timeline is too short for opening and closing title sequences")
+        raise ValueError(
+            "the approved timeline is too short for opening and closing title sequences"
+        )
 
     sequence_duration = max(0.75, min(4.0, duration * 0.22))
     opening_end = sequence_duration
     closing_start = duration - sequence_duration
     if closing_start < opening_end:
-        raise ValueError("the approved timeline is too short for separate opening and closing sequences")
+        raise ValueError(
+            "the approved timeline is too short for separate opening and closing sequences"
+        )
 
     treatment = plan.story_treatment
     opening_subtitle = treatment.logline.strip()
