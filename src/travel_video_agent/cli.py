@@ -58,6 +58,9 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
+_MUSIC_ANALYSIS_OPTION = typer.Option(
+    None, "--music-analysis", help="Optional soundtrack energy analysis JSON path."
+)
 
 
 def _track_artifact(
@@ -1526,9 +1529,7 @@ def optimize_timeline(
         Path | None,
         typer.Option("--plan", help="Editing plan JSON path."),
     ] = None,
-    music_analysis: Path | None = typer.Option(
-        None, "--music-analysis", help="Optional soundtrack energy analysis JSON path."
-    ),
+    music_analysis: Path | None = _MUSIC_ANALYSIS_OPTION,
     output: Annotated[
         Path | None,
         typer.Option(
