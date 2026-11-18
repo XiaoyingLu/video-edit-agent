@@ -419,3 +419,39 @@ def test_music_analysis_rejects_foreign_project(tmp_path):
     )
     with pytest.raises(ValueError, match="different project"):
         build_draft_timeline(tmp_path, music_analysis_path=analysis_path)
+
+
+
+def test_optimize_timeline_cannot_overwrite_music_analysis(tmp_path):
+    from travel_video_agent.music.schemas import MusicAnalysis
+
+    _write_inputs(tmp_path)
+    soundtrack = tmp_path / "score.mp3"
+    soundtrack.write_bytes(b"test soundtrack")
+    analysis_path = tmp_path / ".video-agent" / "music-analysis.json"
+    analysis_path.write_text(
+        MusicAnalysis(
+            project_path=str(tmp_path.resolve()),
+            music_path=str(soundtrack),
+            duration_seconds=20,
+            sample_rate=22050,
+            beat_confidence=0.2,
+        ).model_dump_json(),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "optimize-timeline",
+            str(tmp_path),
+            "--music-analysis",
+            str(analysis_path),
+            "--output",
+            str(analysis_path),
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "cannot overwrite" in result.output
+    assert MusicAnalysis.model_validate_json(analysis_path.read_text(encoding="utf-8"))
