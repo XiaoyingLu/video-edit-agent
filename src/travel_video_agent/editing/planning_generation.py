@@ -170,6 +170,36 @@ class OllamaVideoPlanner:
             ) from exc
 
 
+def normalize_storyboard_ids(content: GeneratedVideoPlanContent) -> GeneratedVideoPlanContent:
+    """Replace model-generated identifiers with deterministic, globally unique IDs."""
+    normalized_scenes = []
+    shot_number = 0
+    for scene_number, scene in enumerate(content.scenes, start=1):
+        scene_id = f"scene-{scene_number:02d}"
+        shots = []
+        for shot_number_in_scene, shot in enumerate(scene.shots, start=1):
+            shot_number += 1
+            shots.append(
+                shot.model_copy(
+                    update={
+                        "shot_id": f"shot-{shot_number:03d}",
+                        "scene_id": scene_id,
+                        "sequence_index": shot_number_in_scene,
+                    }
+                )
+            )
+        normalized_scenes.append(
+            scene.model_copy(
+                update={
+                    "scene_id": scene_id,
+                    "sequence_index": scene_number,
+                    "shots": shots,
+                }
+            )
+        )
+    return content.model_copy(update={"scenes": normalized_scenes})
+
+
 def generate_video_plan_content(
     prompt: str, brief: dict, model: str | None = None
 ) -> GeneratedVideoPlanContent:
@@ -180,6 +210,7 @@ def generate_video_plan_content(
     finally:
         planner.unload_model()
 
+    content = normalize_storyboard_ids(content)
     all_shots = [shot for scene in content.scenes for shot in scene.shots]
     total = sum(shot.target_duration_seconds for shot in all_shots)
     if total <= 0:
