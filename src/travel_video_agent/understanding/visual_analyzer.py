@@ -412,22 +412,36 @@ class OllamaVisionAnalyzer:
                 "subject_motion": {
                     "type": "string",
                     "enum": [
-                        "approaching", "receding", "crossing", "stationary",
-                        "interacting", "mixed", "unknown",
+                        "approaching",
+                        "receding",
+                        "crossing",
+                        "stationary",
+                        "interacting",
+                        "mixed",
+                        "unknown",
                     ],
                 },
                 "camera_motion": {
                     "type": "string",
                     "enum": [
-                        "static", "pan", "tilt", "zoom", "tracking",
-                        "handheld", "mixed", "unknown",
+                        "static",
+                        "pan",
+                        "tilt",
+                        "zoom",
+                        "tracking",
+                        "handheld",
+                        "mixed",
+                        "unknown",
                     ],
                 },
                 "confidence": {"type": "number", "minimum": 0, "maximum": 1},
             },
             "required": [
-                "temporal_summary", "action_progression", "subject_motion",
-                "camera_motion", "confidence",
+                "temporal_summary",
+                "action_progression",
+                "subject_motion",
+                "camera_motion",
+                "confidence",
             ],
             "additionalProperties": False,
         }
@@ -470,7 +484,9 @@ class OllamaVisionAnalyzer:
                 f"Could not reach Ollama at {self.base_url} for temporal scene analysis."
             ) from exc
         except (json.JSONDecodeError, UnicodeDecodeError, KeyError, TypeError) as exc:
-            raise VisionModelError("Ollama returned invalid temporal scene analysis JSON.") from exc
+            raise VisionModelError(
+                "Ollama returned invalid temporal scene analysis JSON."
+            ) from exc
 
         if not isinstance(dynamics, dict):
             raise VisionModelError("Temporal scene analysis must be a JSON object.")
@@ -495,15 +511,26 @@ class OllamaVisionAnalyzer:
             "subject_motion": _enum_value(
                 dynamics.get("subject_motion"),
                 {
-                    "approaching", "receding", "crossing", "stationary",
-                    "interacting", "mixed", "unknown",
+                    "approaching",
+                    "receding",
+                    "crossing",
+                    "stationary",
+                    "interacting",
+                    "mixed",
+                    "unknown",
                 },
             ),
             "camera_motion": _enum_value(
                 dynamics.get("camera_motion"),
                 {
-                    "static", "pan", "tilt", "zoom", "tracking",
-                    "handheld", "mixed", "unknown",
+                    "static",
+                    "pan",
+                    "tilt",
+                    "zoom",
+                    "tracking",
+                    "handheld",
+                    "mixed",
+                    "unknown",
                 },
             ),
             "confidence": float(confidence),
