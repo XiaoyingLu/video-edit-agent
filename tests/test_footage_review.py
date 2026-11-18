@@ -79,6 +79,13 @@ def _artifacts(root):
                 start_seconds=0,
                 end_seconds=8,
                 summary="A mountain lake surrounded by peaks.",
+                dynamics={
+                    "temporal_summary": "A hiker approaches the lake viewpoint.",
+                    "action_progression": ["A hiker approaches the viewpoint"],
+                    "subject_motion": "approaching",
+                    "camera_motion": "tracking",
+                    "confidence": 0.9,
+                },
                 observations=[
                     FrameObservation(
                         timestamp_seconds=3,
@@ -86,6 +93,8 @@ def _artifacts(root):
                         description="A wide mountain lake surrounded by peaks.",
                         shot_scale="wide",
                         visual_role="establishing",
+                        composition="leading_lines",
+                        primary_subject="mountain lake",
                     )
                 ],
             )
@@ -114,6 +123,12 @@ def test_review_footage_applies_only_explicit_selection_and_advances_stage(tmp_p
     assert shot.assignment_status == "approved"
     assert shot.footage_path == "clip.mp4"
     assert (shot.footage_start_seconds, shot.footage_end_seconds) == (0, 8)
+    assert shot.temporal_summary == "A hiker approaches the lake viewpoint."
+    assert shot.dynamics_confidence == 0.9
+    assert shot.subject_motion == "approaching"
+    assert shot.camera_motion == "tracking"
+    assert shot.composition == "leading_lines"
+    assert shot.primary_subject == "mountain lake"
     assert plan.approved is False
 
 

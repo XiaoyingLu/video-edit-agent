@@ -45,6 +45,19 @@ class DraftTimelineClip(BaseModel):
     ] = "unknown"
     setting: str = Field(default="", max_length=100)
     primary_subject: str = Field(default="", max_length=100)
+    temporal_summary: str = Field(default="", max_length=300)
+    dynamics_confidence: float = Field(default=0, ge=0, le=1)
+    subject_motion: Literal[
+        "approaching", "receding", "crossing", "stationary", "interacting", "mixed", "unknown"
+    ] = "unknown"
+    camera_motion: Literal[
+        "static", "pan", "tilt", "zoom", "tracking", "handheld", "mixed", "unknown"
+    ] = "unknown"
+    composition: Literal[
+        "centered", "rule_of_thirds", "leading_lines", "symmetrical", "layered_depth",
+        "negative_space", "unknown"
+    ] = "unknown"
+    continuity_note: str = "No previous shot is available for a continuity comparison."
     sequence_reason: str = "Ranked by source score; no scene-role metadata available."
     pacing_target_seconds: float = Field(default=3.5, gt=0, le=12)
     transition_in: Literal["cut", "crossfade", "dissolve"] = "cut"

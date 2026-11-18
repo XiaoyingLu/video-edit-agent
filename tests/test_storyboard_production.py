@@ -25,6 +25,12 @@ def _write_plan(root: Path, *, mapped: bool = True) -> Path:
             "visual_description": "A wide mountain lake at sunrise",
             "shot_scale": "wide",
             "visual_role": "establishing",
+            "primary_subject": "mountain lake",
+            "temporal_summary": "The camera tracks a hiker toward the lake.",
+            "dynamics_confidence": 0.9,
+            "subject_motion": "approaching",
+            "camera_motion": "tracking",
+            "composition": "leading_lines",
             "target_duration_seconds": 4,
             "footage_path": "travel.mp4" if mapped else None,
             "footage_start_seconds": 0 if mapped else None,
@@ -117,6 +123,12 @@ def test_approve_and_compile_storyboard_preserves_order_and_trims(tmp_path: Path
         12,
     )
     assert timeline.clips[0].transition_in == "cut"
+    assert timeline.clips[0].primary_subject == "mountain lake"
+    assert timeline.clips[0].subject_motion == "approaching"
+    assert timeline.clips[0].dynamics_confidence == 0.9
+    assert timeline.clips[0].camera_motion == "tracking"
+    assert timeline.clips[0].composition == "leading_lines"
+    assert "Opening shot" in timeline.clips[0].continuity_note
     assert timeline.clips[1].transition_in == "crossfade"
     assert timeline.clips[1].transition_duration_seconds == 0.5
     assert timeline.proposed_duration_seconds == 5.5

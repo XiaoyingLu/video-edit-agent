@@ -79,6 +79,16 @@ def _scene_text(scene) -> str:
     return " ".join(parts)
 
 
+def _dominant_composition(scene) -> str:
+    """Return the most frequent known frame composition, preserving first-seen ties."""
+    counts = {}
+    for observation in scene.observations:
+        value = observation.composition
+        if value != "unknown":
+            counts[value] = counts.get(value, 0) + 1
+    return max(counts, key=counts.get) if counts else "unknown"
+
+
 def _candidate_score(
     shot, scene, semantic_similarity: float | None = None
 ) -> tuple[float, list[str], float]:
@@ -225,6 +235,33 @@ def suggest_storyboard_footage(
                         semantic_similarity=semantic_similarity,
                         match_method="hybrid" if semantic_similarity is not None else "lexical",
                         scene_summary=source_scene.summary,
+                        primary_subject=next(
+                            (
+                                item.primary_subject
+                                for item in source_scene.observations
+                                if item.primary_subject
+                            ),
+                            "",
+                        ),
+                        temporal_summary=(
+                            source_scene.dynamics.temporal_summary
+                            if source_scene.dynamics
+                            else ""
+                        ),
+                        dynamics_confidence=(
+                            source_scene.dynamics.confidence if source_scene.dynamics else 0.0
+                        ),
+                        subject_motion=(
+                            source_scene.dynamics.subject_motion
+                            if source_scene.dynamics
+                            else "unknown"
+                        ),
+                        camera_motion=(
+                            source_scene.dynamics.camera_motion
+                            if source_scene.dynamics
+                            else "unknown"
+                        ),
+                        composition=_dominant_composition(source_scene),
                         reasons=reasons,
                     )
                 )

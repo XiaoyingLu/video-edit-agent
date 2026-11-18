@@ -19,6 +19,19 @@ class FootageMatchCandidate(BaseModel):
     semantic_similarity: float | None = Field(default=None, ge=0, le=1)
     match_method: Literal["lexical", "hybrid"] = "lexical"
     scene_summary: str
+    primary_subject: str = Field(default="", max_length=100)
+    temporal_summary: str = Field(default="", max_length=300)
+    dynamics_confidence: float = Field(default=0, ge=0, le=1)
+    subject_motion: Literal[
+        "approaching", "receding", "crossing", "stationary", "interacting", "mixed", "unknown"
+    ] = "unknown"
+    camera_motion: Literal[
+        "static", "pan", "tilt", "zoom", "tracking", "handheld", "mixed", "unknown"
+    ] = "unknown"
+    composition: Literal[
+        "centered", "rule_of_thirds", "leading_lines", "symmetrical", "layered_depth",
+        "negative_space", "unknown"
+    ] = "unknown"
     reasons: list[str] = Field(default_factory=list)
 
 

@@ -128,6 +128,7 @@ def _understanding(root):
     )
 
 
+
 def test_suggest_storyboard_footage_ranks_matching_scene_and_does_not_assign(tmp_path):
     (tmp_path / "clip.mp4").write_bytes(b"test video placeholder")
     artifact_dir = tmp_path / ".video-agent"
@@ -157,9 +158,11 @@ def test_suggest_storyboard_footage_ranks_matching_scene_and_does_not_assign(tmp
     assert report.assignments_performed is False
 
 
+
 def test_suggest_storyboard_footage_rejects_invalid_candidate_limit(tmp_path):
     with pytest.raises(ValueError, match="between 1 and 10"):
         suggest_storyboard_footage(tmp_path, max_candidates_per_shot=0)
+
 
 
 def test_suggest_storyboard_footage_uses_hybrid_semantic_ranking(tmp_path):
@@ -200,6 +203,7 @@ def test_suggest_storyboard_footage_uses_hybrid_semantic_ranking(tmp_path):
     assert report.assignments_performed is False
 
 
+
 def test_suggest_storyboard_footage_rejects_invalid_embedding_batch(tmp_path):
     (tmp_path / "clip.mp4").write_bytes(b"test video placeholder")
     artifact_dir = tmp_path / ".video-agent"
@@ -223,6 +227,7 @@ def test_suggest_storyboard_footage_rejects_invalid_embedding_batch(tmp_path):
         )
 
 
+
 def test_scene_text_includes_temporal_action_and_camera_evidence(tmp_path):
     from travel_video_agent.editing.footage_mapping import _scene_text
 
@@ -231,3 +236,28 @@ def test_scene_text_includes_temporal_action_and_camera_evidence(tmp_path):
     assert "hiker approaches the viewpoint" in text
     assert "approaching" in text
     assert "static" in text
+
+
+def test_footage_candidates_include_temporal_and_composition_evidence(tmp_path):
+    (tmp_path / "clip.mp4").write_bytes(b"test video placeholder")
+    artifact_dir = tmp_path / ".video-agent"
+    artifact_dir.mkdir()
+    plan_path = artifact_dir / "video-project-plan.json"
+    understanding_path = artifact_dir / "understanding.json"
+    plan_path.write_text(
+        json.dumps(_project_plan(tmp_path).model_dump(mode="json")), encoding="utf-8"
+    )
+    understanding_path.write_text(
+        json.dumps(_understanding(tmp_path).model_dump(mode="json")), encoding="utf-8"
+    )
+    register_artifact(tmp_path, plan_path)
+    register_artifact(tmp_path, understanding_path)
+
+    report = suggest_storyboard_footage(tmp_path)
+    candidate = report.suggestions[0].candidates[0]
+
+    assert candidate.temporal_summary == "A hiker walks toward the mountain viewpoint."
+    assert candidate.dynamics_confidence == 0.9
+    assert candidate.subject_motion == "approaching"
+    assert candidate.camera_motion == "static"
+    assert candidate.primary_subject == "mountain lake"
