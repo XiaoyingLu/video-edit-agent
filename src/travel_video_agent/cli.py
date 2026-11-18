@@ -1,5 +1,6 @@
 """Command-line interface."""
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -2457,6 +2458,9 @@ def review_timeline(
             exported = load_timeline_visual_review_decisions(decisions_file)
             if Path(exported.timeline_path) != destination.relative_to(folder.expanduser().resolve()):
                 raise ValueError("Decision file targets a different timeline; regenerate the visual review")
+            current_hash = hashlib.sha256(destination.read_bytes()).hexdigest()
+            if exported.timeline_sha256 != current_hash:
+                raise ValueError("Timeline changed after visual review; regenerate the review page")
             known_ids = {clip.clip_id for clip in timeline.clips}
             if set(exported.decisions) != known_ids:
                 raise ValueError("Decision file must contain exactly one decision for every timeline clip")
