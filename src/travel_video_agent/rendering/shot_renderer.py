@@ -8,6 +8,7 @@ from pathlib import Path
 from ..artifact_tracking import register_artifact, validate_artifact
 from ..editing.planning_schemas import VideoProjectPlan
 from ..editing.timeline_schemas import ProjectDraftTimeline
+from .title_overlays import TitleOverlay
 from .renderer import (
     RenderError,
     RenderReport,
@@ -68,7 +69,7 @@ def _build_shot_render_command(
     height: int,
     frame_rate: float = 30.0,
     fit_mode: str = "crop",
-    title_overlays: list | None = None,
+    title_overlays: list[TitleOverlay] | None = None,
 ) -> list[str]:
     """Build a filter graph that preserves shot order and applies approved transitions."""
     if fit_mode not in {"crop", "pad"}:
