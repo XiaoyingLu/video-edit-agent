@@ -60,9 +60,7 @@ def _approved_timeline(root: Path) -> Path:
 
 
 def _patch_tools(monkeypatch):
-    monkeypatch.setattr(
-        "travel_video_agent.editing.revisions.validate_artifact", lambda *_: True
-    )
+    monkeypatch.setattr("travel_video_agent.editing.revisions.validate_artifact", lambda *_: True)
     monkeypatch.setattr(
         "travel_video_agent.editing.revisions.register_artifact",
         lambda *_args, **_kwargs: None,
@@ -80,9 +78,7 @@ def _patch_tools(monkeypatch):
         Path(command[-1]).write_bytes(b"fake jpeg")
         return SimpleNamespace(returncode=0, stderr="")
 
-    monkeypatch.setattr(
-        "travel_video_agent.editing.revision_visual_review._run", fake_run
-    )
+    monkeypatch.setattr("travel_video_agent.editing.revision_visual_review._run", fake_run)
 
 
 def _revision(root, monkeypatch):
