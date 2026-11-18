@@ -103,7 +103,9 @@ def required_vision_memory_gb(model: str) -> float:
     return _VISION_MEMORY_GB.get(match.group(1), 8.0) if match else 8.0
 
 
-def required_ollama_memory_gb(model: str, override_env: str = "OLLAMA_MIN_MEMORY_GB") -> float:
+def required_ollama_memory_gb(
+    model: str, override_env: str = "OLLAMA_MIN_MEMORY_GB"
+) -> float:
     """Estimate RAM for text or vision Ollama models with a caller-specific override."""
     override = os.getenv(override_env)
     if override:
@@ -118,8 +120,17 @@ def required_ollama_memory_gb(model: str, override_env: str = "OLLAMA_MIN_MEMORY
     normalized = model.lower()
     if "vl" in normalized or "vision" in normalized:
         return required_vision_memory_gb(model)
-    match = re.search(r"(?<![0-9.])(0.5|1.5|3|7|14|32)b(?:$|[-_:])", normalized)
-    estimates = {"0.5": 1.5, "1.5": 2.5, "3": 4.0, "7": 8.0, "14": 16.0, "32": 36.0}
+    match = re.search(
+        r"(?<![0-9.])(0.5|1.5|3|7|14|32)b(?:$|[-_:])", normalized
+    )
+    estimates = {
+        "0.5": 1.5,
+        "1.5": 2.5,
+        "3": 4.0,
+        "7": 8.0,
+        "14": 16.0,
+        "32": 36.0,
+    }
     return estimates.get(match.group(1), 6.0) if match else 6.0
 
 
