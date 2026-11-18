@@ -39,7 +39,7 @@ from .highlights import find_highlights_folder
 from .media import MediaToolError, analyze_folder
 from .music import analyze_music
 from .music.pipeline import MusicAnalysisError
-from .music.sync import MusicSyncError, save_music_sync_suggestions, suggest_music_sync
+from .music.sync import save_music_sync_suggestions, suggest_music_sync
 from .rendering import RenderError, render_approved_shot_timeline, render_project
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
@@ -1759,8 +1759,10 @@ def suggest_music_sync_command(
         raise typer.Exit(code=1) from exc
 
     destination = (
-        output or folder.resolve() / ".video-agent" / "music-sync-suggestions.json"
-    ).expanduser().resolve()
+        (output or folder.resolve() / ".video-agent" / "music-sync-suggestions.json")
+        .expanduser()
+        .resolve()
+    )
     try:
         destination.relative_to(folder.expanduser().resolve())
     except ValueError as exc:
@@ -1769,7 +1771,9 @@ def suggest_music_sync_command(
     timeline_file = folder.resolve() / report.timeline_path
     analysis_file = folder.resolve() / report.music_analysis_path
     if destination in {timeline_file, analysis_file, Path(report.music_path).resolve()}:
-        console.print("[red]Music sync output cannot overwrite an input artifact or soundtrack.[/red]")
+        console.print(
+            "[red]Music sync output cannot overwrite an input artifact or soundtrack.[/red]"
+        )
         raise typer.Exit(code=1)
     save_music_sync_suggestions(report, destination)
     register_artifact(
@@ -1800,8 +1804,7 @@ def suggest_music_sync_command(
                 else "—"
             ),
             (
-                f"{boundary.recommended_anchor}: "
-                f"{boundary.recommended_boundary_seconds:.2f}s"
+                f"{boundary.recommended_anchor}: {boundary.recommended_boundary_seconds:.2f}s"
                 if boundary.recommended_boundary_seconds is not None
                 else "No change"
             ),
