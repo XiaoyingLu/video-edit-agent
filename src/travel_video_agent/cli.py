@@ -1526,10 +1526,9 @@ def optimize_timeline(
         Path | None,
         typer.Option("--plan", help="Editing plan JSON path."),
     ] = None,
-    music_analysis: Annotated[
-        Path | None,
-        typer.Option("--music-analysis", help="Optional soundtrack energy analysis JSON path."),
-    ] = None,
+    music_analysis: Path | None = typer.Option(
+        None, "--music-analysis", help="Optional soundtrack energy analysis JSON path."
+    ),
     output: Annotated[
         Path | None,
         typer.Option(
