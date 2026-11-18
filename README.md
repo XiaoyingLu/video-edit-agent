@@ -269,3 +269,22 @@ Source files are never modified. File size and modification time provide a fast 
 9. Cinematic scene metadata, role-aware shot sequencing, adaptive pacing targets, transition proposals, and human review (implemented)
 10. Render approved shot timelines with FFmpeg transitions and output verification (implemented; Docker validation pending)
 11. Music-aware soundtrack tempo, beat/downbeat, and energy-section analysis (implemented as review guidance; automatic beat synchronization remains a future step)
+
+
+### Review storyboard footage matches
+
+After generating a creative storyboard and analyzing the source videos, rank candidate scenes:
+
+```bash
+docker compose run --rm video-agent suggest-footage ./travel-test
+```
+
+Inspect `.video-agent/footage-suggestions.json`, then explicitly approve candidate numbers per shot (candidate numbers are 1-based):
+
+```bash
+docker compose run --rm video-agent review-footage ./travel-test \
+  --select shot-001=1 \
+  --select shot-002=2
+```
+
+Repeat `--select SHOT_ID=CANDIDATE_NUMBER` for each shot. Use `--reject SHOT_ID` to clear an earlier assignment. Unselected shots remain unassigned. The project advances to `footage_mapped` only when every storyboard shot has an explicitly approved source interval. This stage does not approve the overall creative plan, alter source media, or render a video.
