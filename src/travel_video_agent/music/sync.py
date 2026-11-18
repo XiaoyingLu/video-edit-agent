@@ -132,7 +132,11 @@ def suggest_music_sync(
                 candidates.append((abs(beat_delta), "beat", beat, beat_delta))
             if downbeat_delta is not None and abs(downbeat_delta) <= tolerance_seconds:
                 candidates.append((abs(downbeat_delta), "downbeat", downbeat, downbeat_delta))
-            recommendation = min(candidates, default=None, key=lambda item: (item[0], item[1]))
+            recommendation = min(
+                candidates,
+                default=None,
+                key=lambda item: (item[0], 0 if item[1] == "downbeat" else 1),
+            )
             if recommendation is not None and music.beat_confidence >= 0.1:
                 _, anchor, recommended_time, adjustment = recommendation
                 aligned_count += 1
@@ -192,6 +196,6 @@ def save_music_sync_suggestions(
     """Write the report as a standalone JSON artifact."""
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(
-        json.dumps(suggestions.model_dump(mode="json"), indent=2) + "\\n",
+        json.dumps(suggestions.model_dump(mode="json"), indent=2) + "\n",
         encoding="utf-8",
     )
