@@ -25,6 +25,7 @@ from .editing import (
     save_draft_timeline,
     save_edit_proposal,
 )
+from .editing.footage_mapping import suggest_storyboard_footage
 from .editing.planning_generation import VideoPlanningError
 from .editing.workflow import create_video_draft
 from .highlights import find_highlights_folder
@@ -1117,6 +1118,94 @@ def create_plan(
     console.print(
         "[yellow]Storyboard shots are creative proposals only; no source footage was "
         "assigned and no video was rendered.[/yellow]"
+    )
+
+
+@app.command("suggest-footage")
+def suggest_footage(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder containing a storyboard and analyzed source footage.",
+        ),
+    ],
+    plan: Annotated[
+        Path | None,
+        typer.Option("--plan", help="Video project plan JSON path."),
+    ] = None,
+    understanding: Annotated[
+        Path | None,
+        typer.Option("--understanding", help="Video understanding JSON path."),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Footage suggestions JSON output path."),
+    ] = None,
+    max_candidates: Annotated[
+        int,
+        typer.Option(
+            "--max-candidates",
+            min=1,
+            max=10,
+            help="Candidates to show per storyboard shot.",
+        ),
+    ] = 3,
+) -> None:
+    """Rank analyzed source scenes for storyboard shots; never assign footage automatically."""
+    try:
+        report = suggest_storyboard_footage(
+            folder,
+            plan_path=plan,
+            understanding_path=understanding,
+            max_candidates_per_shot=max_candidates,
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[red]Footage suggestion failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    destination = output or folder.resolve() / ".video-agent" / "footage-suggestions.json"
+    destination = destination.expanduser().resolve()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(
+        json.dumps(report.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
+    )
+    _track_artifact(
+        folder,
+        destination,
+        dependencies=(report.source_plan, report.source_understanding),
+        config={"max_candidates_per_shot": max_candidates},
+    )
+
+    table = Table(title="Storyboard Footage Suggestions — Human Review Required")
+    table.add_column("Shot", style="cyan")
+    table.add_column("Candidate footage")
+    table.add_column("Source interval")
+    table.add_column("Score", justify="right")
+    for item in report.suggestions:
+        if not item.candidates:
+            table.add_row(item.shot_id, "No analyzed scene candidates", "—", "—")
+            continue
+        for index, candidate in enumerate(item.candidates, start=1):
+            table.add_row(
+                item.shot_id if index == 1 else "",
+                candidate.video_path,
+                f"{candidate.source_start_seconds:.2f}–{candidate.source_end_seconds:.2f}s",
+                f"{candidate.score:.1f}",
+            )
+    console.print(table)
+    console.print(
+        f"Suggested {report.candidate_count} candidate(s) for "
+        f"{report.matched_shot_count}/{len(report.suggestions)} storyboard shot(s)."
+    )
+    console.print(f"Suggestions saved to [green]{destination}[/green]")
+    console.print(
+        "[yellow]Candidates are ranked suggestions only. No footage was assigned, "
+        "approved, trimmed, or rendered.[/yellow]"
     )
 
 

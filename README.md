@@ -27,6 +27,18 @@ It writes `.video-agent/video-project-plan.json` and the compatible `.video-agen
 
 Storyboard shots describe intended visuals; they are not claims about footage that has been inspected. Footage paths and source intervals remain unassigned until a later matching stage. The project plan is separate from `.video-agent/optimized-timeline.json`, which contains concrete source paths and time intervals for rendering. Planning does not modify source media, approve edits, or render video. The project-plan artifact depends on the editing-plan artifact, so changing upstream intent invalidates the derived plan. The planning workflow uses the same text model for intent parsing and storyboard generation, evicting it between stages to avoid holding multiple models in memory. Configure it with `VIDEO_PLANNER_MODEL` or override it per command with `create-plan --model`. `VIDEO_PLANNER_MIN_MEMORY_GB` adjusts only the planner's memory preflight; `OLLAMA_MIN_MEMORY_GB` remains available for the general Ollama/vision workflow.
 
+### Storyboard-to-footage suggestions
+
+After generating a storyboard and running `understand`, use `suggest-footage` to rank analyzed source scenes for each planned shot:
+
+```bash
+docker compose run --rm video-agent suggest-footage ./travel-test
+```
+
+The command writes `.video-agent/footage-suggestions.json`. It compares each shot's purpose and visual description with observed scene descriptions, subjects, objects, activities, shot scale, and editorial role. Each shot receives up to three ranked candidates with source video, source interval, an explainable score, and matching reasons. Use `--max-candidates` to change the number of candidates.
+
+This is a deterministic first-pass matcher, not semantic embedding search or an automatic edit. Candidates remain suggestions: the command does not assign footage to storyboard shots, approve mappings, trim clips, or render video. The report is tracked against both the storyboard and video-understanding artifacts, so changed upstream inputs make the suggestions stale.
+
 ## Cinematic scene understanding
 
 The `understand` command analyzes representative frames with the local Ollama vision model and stores both factual descriptions and bounded editorial attributes in `.video-agent/understanding.json`. Each observation includes shot scale, camera angle, composition, lighting, mood, likely editorial role (such as establishing, action, detail, or scenic breath), broad setting, and primary subject. Scene-level story function and dominant mood are aggregated from frame labels.
