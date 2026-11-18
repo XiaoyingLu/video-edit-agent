@@ -554,3 +554,60 @@ def test_draft_timeline_carries_motion_metadata_and_continuity_notes(tmp_path):
         (0, 4),
         (4, 8),
     ]
+
+\n\n\ndef test_narrative_transition_prefers_distinct_action_beats_for_same_subject():
+    from travel_video_agent.editing.timeline_pipeline import (
+        _narrative_transition_score,
+        _sequence_reason,
+    )
+
+    previous = DraftClip(
+        clip_id="arrival",
+        video_path="trip.mp4",
+        source_start_seconds=0,
+        source_end_seconds=4,
+        duration_seconds=4,
+        highlight_score=80,
+        relevance_score=80,
+        combined_score=80,
+        primary_subject="hiker",
+        setting="mountain trail",
+        temporal_summary="A hiker arrives at the trailhead.",
+        action_progression=["The hiker arrives at the trailhead"],
+    )
+    next_beat = previous.model_copy(
+        update={
+            "clip_id": "climb",
+            "temporal_summary": "The hiker climbs a steep rocky path.",
+            "action_progression": ["The hiker climbs the rocky path"],
+        }
+    )
+    repeated_beat = previous.model_copy(update={"clip_id": "repeat"})
+
+    assert _narrative_transition_score(previous, next_beat) > 0
+    assert _narrative_transition_score(previous, repeated_beat) < 0
+    assert "distinct action beat" in _sequence_reason(next_beat, previous, 2, 3)
+
+
+def test_narrative_transition_does_not_invent_links_without_subject_evidence():
+    from travel_video_agent.editing.timeline_pipeline import _narrative_transition_score
+
+    previous = DraftClip(
+        clip_id="one",
+        video_path="trip.mp4",
+        source_start_seconds=0,
+        source_end_seconds=4,
+        duration_seconds=4,
+        highlight_score=80,
+        relevance_score=80,
+        combined_score=80,
+        temporal_summary="A hiker walks through the forest.",
+    )
+    candidate = previous.model_copy(
+        update={
+            "clip_id": "two",
+            "primary_subject": "cyclist",
+            "temporal_summary": "A cyclist rides along the coast.",
+        }
+    )
+    assert _narrative_transition_score(previous, candidate) == 0
