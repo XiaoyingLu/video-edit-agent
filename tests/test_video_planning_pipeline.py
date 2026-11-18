@@ -76,7 +76,7 @@ def test_create_video_project_plan_generates_storyboard_and_registers_dependency
     monkeypatch.setattr(
         planning_pipeline,
         "parse_editing_intent",
-        lambda prompt, model=None: EditingPlan(
+        lambda prompt, model=None, memory_override_env=None: EditingPlan(
             source_prompt=prompt,
             target_duration_seconds=60,
             style="cinematic",
