@@ -1229,9 +1229,7 @@ def compare_drafts(
         console.print("[red]Comparison output cannot overwrite either input video.[/red]")
         raise typer.Exit(code=1)
     if json_path.exists() or html_path.exists():
-        console.print(
-            "[red]Comparison output already exists; choose another --output path.[/red]"
-        )
+        console.print("[red]Comparison output already exists; choose another --output path.[/red]")
         raise typer.Exit(code=1)
 
     json_path.parent.mkdir(parents=True, exist_ok=True)
