@@ -72,8 +72,7 @@ def _build_shot_render_command(
     for index, (_, start, end, has_audio, _, _) in enumerate(clips):
         duration = end - start
         fit_filters = (
-            f"scale=w={width}:h={height}:force_original_aspect_ratio=increase,"
-            f"crop={width}:{height}"
+            f"scale=w={width}:h={height}:force_original_aspect_ratio=increase,crop={width}:{height}"
             if fit_mode == "crop"
             else f"scale=w={width}:h={height}:force_original_aspect_ratio=decrease,"
             f"pad=width={width}:height={height}:x=(ow-iw)/2:y=(oh-ih)/2"

@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from travel_video_agent.cli import app
 from travel_video_agent.artifact_tracking import register_artifact
+from travel_video_agent.cli import app
 from travel_video_agent.editing.timeline_schemas import (
     DraftTimelineClip,
     ProjectDraftTimeline,
