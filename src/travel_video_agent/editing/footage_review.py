@@ -78,6 +78,7 @@ def review_storyboard_footage(
         shot.footage_end_seconds = candidate.source_end_seconds
         shot.primary_subject = candidate.primary_subject
         shot.temporal_summary = candidate.temporal_summary
+        shot.action_progression = candidate.action_progression
         shot.dynamics_confidence = candidate.dynamics_confidence
         shot.subject_motion = candidate.subject_motion
         shot.camera_motion = candidate.camera_motion
@@ -91,6 +92,7 @@ def review_storyboard_footage(
         shot.footage_end_seconds = None
         shot.primary_subject = ""
         shot.temporal_summary = ""
+        shot.action_progression = []
         shot.dynamics_confidence = 0.0
         shot.subject_motion = "unknown"
         shot.camera_motion = "unknown"
