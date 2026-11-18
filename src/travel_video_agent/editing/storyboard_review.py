@@ -61,7 +61,6 @@ def generate_storyboard_review(
         relative = video.relative_to(root).as_posix()
         video_keys[hashlib.sha256(relative.encode("utf-8")).hexdigest()[:12]] = relative
 
-    scene_by_id = {scene.scene_id: scene for scene in understanding.scenes}
     observations_by_video = {}
     for scene in understanding.scenes:
         key = scene.scene_id.split("-scene-", maxsplit=1)[0]
