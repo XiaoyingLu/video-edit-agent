@@ -29,10 +29,7 @@ from .editing.embeddings import EmbeddingModelError
 from .editing.footage_mapping import suggest_storyboard_footage
 from .editing.footage_review import review_storyboard_footage
 from .editing.planning_generation import VideoPlanningError
-from .editing.revision_preview import (
-    RevisionPreviewError,
-    render_timeline_revision_preview,
-)
+from .editing.revision_preview import render_timeline_revision_preview
 from .editing.revision_review import (
     RevisionSuggestionReviewError,
     review_draft_revision_suggestions,
