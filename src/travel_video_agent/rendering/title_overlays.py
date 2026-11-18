@@ -45,6 +45,7 @@ class TitleOverlayDocument(BaseModel):
     schema_version: Literal["1.0"] = "1.0"
     project_path: str
     source_timeline: str
+    source_plan: str | None = None
     overlays: list[TitleOverlay] = Field(default_factory=list)
     review_required: Literal[True] = True
 
@@ -88,6 +89,19 @@ def load_title_overlays(
         raise FileNotFoundError(f"Title overlay source timeline is missing: {timeline}")
     validate_artifact(root, timeline)
     ProjectDraftTimeline.model_validate_json(timeline.read_text(encoding="utf-8"))
+    if document.source_plan is not None:
+        plan = Path(document.source_plan)
+        if not plan.is_absolute():
+            plan = root / plan
+        plan = plan.resolve()
+        try:
+            plan.relative_to(root)
+        except ValueError as exc:
+            raise ValueError("title overlay source plan must be inside the project folder") from exc
+        if not plan.is_file():
+            raise FileNotFoundError(f"Title overlay source plan is missing: {plan}")
+        validate_artifact(root, plan)
+        VideoProjectPlan.model_validate_json(plan.read_text(encoding="utf-8"))
     return document, destination
 
 
@@ -136,6 +150,11 @@ def save_title_overlays(
     if not timeline.is_absolute():
         timeline = root / timeline
     upstream = [timeline, *(dependencies or [])]
+    if document.source_plan is not None:
+        plan = Path(document.source_plan)
+        if not plan.is_absolute():
+            plan = root / plan
+        upstream.append(plan.resolve())
     register_artifact(root, destination, dependencies=upstream)
 
 
@@ -224,6 +243,7 @@ def suggest_narrative_title_sequences(
     document = TitleOverlayDocument(
         project_path=str(root),
         source_timeline=str(timeline_file.relative_to(root)),
+        source_plan=str(plan_file.relative_to(root)),
         overlays=[
             TitleOverlay(
                 overlay_id="opening-title",
