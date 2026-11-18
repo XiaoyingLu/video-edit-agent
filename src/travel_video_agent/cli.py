@@ -30,6 +30,11 @@ from .editing.footage_mapping import suggest_storyboard_footage
 from .editing.footage_review import review_storyboard_footage
 from .editing.planning_generation import VideoPlanningError
 from .editing.revision_preview import render_timeline_revision_preview
+from .editing.revision_cycle import (
+    RevisionCycleError,
+    build_revision_cycle_report,
+    save_revision_cycle_report,
+)
 from .editing.revision_review import (
     RevisionSuggestionReviewError,
     review_draft_revision_suggestions,
@@ -3074,3 +3079,77 @@ def clean(
 
 if __name__ == "__main__":
     app()
+
+
+
+@app.command("report-revision-cycle")
+def report_revision_cycle(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder containing the revision-cycle artifacts.",
+        ),
+    ],
+    critique: Annotated[Path, typer.Option("--critique", help="Rendered-draft critique JSON.")],
+    suggestions: Annotated[Path, typer.Option("--suggestions", help="Shot-level suggestions JSON.")],
+    original_timeline: Annotated[
+        Path, typer.Option("--original-timeline", help="Original approved timeline JSON.")
+    ],
+    revised_timeline: Annotated[
+        Path, typer.Option("--revised-timeline", help="Revised timeline JSON.")
+    ],
+    preview_manifest: Annotated[
+        Path, typer.Option("--preview-manifest", help="Approved revision preview manifest JSON.")
+    ],
+    comparison: Annotated[
+        Path, typer.Option("--comparison", help="Rendered before/after comparison JSON.")
+    ],
+    timeline_review: Annotated[
+        Path | None, typer.Option("--timeline-review", help="Optional source-frame review JSON.")
+    ] = None,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Output base path for JSON and HTML.")
+    ] = None,
+) -> None:
+    """Create a traceable index of one critique-to-render revision iteration."""
+    try:
+        report = build_revision_cycle_report(
+            folder,
+            critique_path=critique,
+            suggestions_path=suggestions,
+            original_timeline_path=original_timeline,
+            revised_timeline_path=revised_timeline,
+            preview_manifest_path=preview_manifest,
+            comparison_path=comparison,
+            timeline_review_path=timeline_review,
+        )
+        json_file, html_file = save_revision_cycle_report(folder, report, output_path=output)
+    except (
+        FileNotFoundError,
+        NotADirectoryError,
+        FileExistsError,
+        OSError,
+        ValueError,
+        RevisionCycleError,
+    ) as exc:
+        console.print(f"[red]Revision-cycle report failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    table = Table(title="Revision Iteration — Artifact Trace")
+    table.add_column("Stage")
+    table.add_column("Artifact")
+    table.add_column("Summary")
+    for item in report.artifacts:
+        table.add_row(item.role, item.path, item.summary)
+    console.print(table)
+    console.print(f"HTML report: [green]{html_file}[/green]")
+    console.print(f"JSON report: [green]{json_file}[/green]")
+    console.print(
+        "[yellow]This report links evidence; it does not approve edits or modify timelines, "
+        "source media, or rendered videos.[/yellow]"
+    )
