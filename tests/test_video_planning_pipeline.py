@@ -171,6 +171,9 @@ def test_normalize_storyboard_ids_repairs_duplicate_model_ids():
 
 def test_planner_discards_partial_model_footage_assignments(monkeypatch):
     generated = _generated_content().model_dump(mode="json")
+    generated["scenes"][0]["music_energy"] = "high"
+    generated["scenes"][0]["music_section_start_seconds"] = 0
+    generated["scenes"][0]["music_section_end_seconds"] = 45
     first_shot = generated["scenes"][0]["shots"][0]
     first_shot["footage_start_seconds"] = 12.5
     first_shot["footage_path"] = "invented.mp4"
@@ -197,6 +200,8 @@ def test_planner_discards_partial_model_footage_assignments(monkeypatch):
     assert shot.footage_start_seconds is None
     assert shot.footage_end_seconds is None
     assert shot.assignment_status == "unassigned"
+    assert result.scenes[0].music_energy == "unknown"
+    assert result.scenes[0].music_section_start_seconds is None
 
 
 def test_create_video_project_plan_uses_music_sections_and_tracks_dependency(
