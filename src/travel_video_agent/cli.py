@@ -2444,7 +2444,10 @@ def review_timeline(
     ] = None,
     decisions_file: Annotated[
         Path | None,
-        typer.Option("--decisions-file", help="JSON decisions exported from review-timeline-visual."),
+        typer.Option(
+            "--decisions-file",
+            help="JSON decisions exported from review-timeline-visual.",
+        ),
     ] = None,
 ) -> None:
     """Approve or reject proposed shots; skipped clips remain pending."""
@@ -2456,7 +2459,8 @@ def review_timeline(
             if approve is not None or reject is not None:
                 raise ValueError("--decisions-file cannot be combined with --approve or --reject")
             exported = load_timeline_visual_review_decisions(decisions_file)
-            if Path(exported.timeline_path) != destination.relative_to(folder.expanduser().resolve()):
+            expected_timeline_path = destination.relative_to(folder.expanduser().resolve())
+            if Path(exported.timeline_path) != expected_timeline_path:
                 raise ValueError(
                     "Decision file targets a different timeline; regenerate the visual review"
                 )
@@ -2469,10 +2473,14 @@ def review_timeline(
                     "Decision file must contain exactly one decision for every timeline clip"
                 )
             approve_ids = {
-                clip_id for clip_id, decision in exported.decisions.items() if decision == "approved"
+                clip_id
+                for clip_id, decision in exported.decisions.items()
+                if decision == "approved"
             }
             reject_ids = {
-                clip_id for clip_id, decision in exported.decisions.items() if decision == "rejected"
+                clip_id
+                for clip_id, decision in exported.decisions.items()
+                if decision == "rejected"
             }
             for clip in timeline.clips:
                 if exported.decisions[clip.clip_id] == "pending":
