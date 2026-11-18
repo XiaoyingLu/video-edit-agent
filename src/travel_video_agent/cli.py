@@ -39,7 +39,8 @@ from .highlights import find_highlights_folder
 from .media import MediaToolError, analyze_folder
 from .music import analyze_music
 from .music.pipeline import MusicAnalysisError
-from .music.sync import save_music_sync_suggestions, suggest_music_sync
+from .music.refinement import apply_music_sync_review
+from .music.sync import MusicSyncSuggestions, save_music_sync_suggestions, suggest_music_sync
 from .rendering import RenderError, render_approved_shot_timeline, render_project
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
@@ -1833,6 +1834,131 @@ def suggest_music_sync_command(
     console.print(
         "[yellow]This is a review-only report. Timeline timing and source intervals "
         "were not changed.[/yellow]"
+    )
+
+
+@app.command("review-music-sync")
+def review_music_sync(
+    folder: Annotated[
+        Path,
+        typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True),
+    ],
+    accept: Annotated[
+        list[str] | None,
+        typer.Option("--accept", help="Accept a boundary ID; repeat for multiple IDs."),
+    ] = None,
+    reject: Annotated[
+        list[str] | None,
+        typer.Option("--reject", help="Reject a boundary ID; repeat for multiple IDs."),
+    ] = None,
+    timeline: Annotated[
+        Path | None, typer.Option("--timeline", help="Shot timeline JSON path.")
+    ] = None,
+    suggestions: Annotated[
+        Path | None, typer.Option("--suggestions", help="Music sync suggestions JSON path.")
+    ] = None,
+    minimum_clip_duration: Annotated[
+        float,
+        typer.Option(
+            "--minimum-clip-duration",
+            min=0.001,
+            help="Minimum resulting source clip duration in seconds (default: 1.0).",
+        ),
+    ] = 1.0,
+) -> None:
+    """Review beat-alignment suggestions and save a separate, unapproved timeline revision."""
+    root = folder.expanduser().resolve()
+    timeline_file = (timeline or root / ".video-agent" / "optimized-timeline.json").resolve()
+    suggestions_file = (
+        suggestions or root / ".video-agent" / "music-sync-suggestions.json"
+    ).resolve()
+    accept_ids = set(accept or [])
+    reject_ids = set(reject or [])
+    if accept_ids & reject_ids:
+        console.print("[red]A boundary cannot be both accepted and rejected.[/red]")
+        raise typer.Exit(code=1)
+
+    try:
+        report = MusicSyncSuggestions.model_validate_json(
+            suggestions_file.read_text(encoding="utf-8")
+        )
+        timeline_data = json.loads(timeline_file.read_text(encoding="utf-8"))
+        clips = {
+            clip["clip_id"]: clip for clip in timeline_data.get("clips", [])
+        }
+        known_ids = {
+            f"{item.previous_clip_id}->{item.next_clip_id}" for item in report.boundaries
+        }
+        unknown = (accept_ids | reject_ids) - known_ids
+        if unknown:
+            raise ValueError(f"unknown music sync boundary: {sorted(unknown)[0]}")
+
+        if accept is None and reject is None:
+            for item in report.boundaries:
+                if item.adjustment_seconds is None:
+                    continue
+                boundary_id = f"{item.previous_clip_id}->{item.next_clip_id}"
+                previous = clips.get(item.previous_clip_id, {})
+                following = clips.get(item.next_clip_id, {})
+                console.print(
+                    f"\\n[bold cyan]{boundary_id}[/bold cyan] — {item.transition}"
+                )
+                console.print(
+                    f"Current boundary: {item.boundary_seconds:.3f}s | "
+                    f"Suggested: {item.recommended_boundary_seconds:.3f}s | "
+                    f"Adjustment: {item.adjustment_seconds:+.3f}s"
+                )
+                console.print(
+                    f"Outgoing source: {previous.get('video_path', '—')} "
+                    f"{previous.get('source_start_seconds', 0):.2f}–"
+                    f"{previous.get('source_end_seconds', 0):.2f}s"
+                )
+                console.print(
+                    f"Incoming source: {following.get('video_path', '—')} "
+                    f"{following.get('source_start_seconds', 0):.2f}–"
+                    f"{following.get('source_end_seconds', 0):.2f}s"
+                )
+                while True:
+                    choice = (
+                        console.input("Decision [a]ccept / [r]eject / [s]kip: ")
+                        .strip()
+                        .lower()
+                    )
+                    if choice in {"a", "accept"}:
+                        accept_ids.add(boundary_id)
+                        break
+                    if choice in {"r", "reject"}:
+                        reject_ids.add(boundary_id)
+                        break
+                    if choice in {"s", "skip", ""}:
+                        break
+                    console.print("[yellow]Enter a, r, or s.[/yellow]")
+
+        result = apply_music_sync_review(
+            folder,
+            suggestions_path=suggestions,
+            timeline_path=timeline,
+            accept_ids=accept_ids,
+            reject_ids=reject_ids,
+            minimum_clip_duration_seconds=minimum_clip_duration,
+        )
+    except (FileNotFoundError, ValueError, OSError) as exc:
+        console.print(f"[red]Music sync review failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    table = Table(title="Music Sync Review Decisions")
+    table.add_column("Boundary")
+    table.add_column("Decision")
+    table.add_column("Reason")
+    for decision in result.decisions:
+        table.add_row(decision.boundary_id, decision.status, decision.reason or "—")
+    console.print(table)
+    revision = root / result.revision_path
+    console.print(f"Revision saved to [green]{revision}[/green]")
+    console.print(
+        "[yellow]The revision is not approved. Run review-timeline with "
+        "--timeline to approve it before rendering. No video was rendered and "
+        "source media/original timeline were not modified.[/yellow]"
     )
 
 
