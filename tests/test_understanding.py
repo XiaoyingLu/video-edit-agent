@@ -500,3 +500,107 @@ def test_scene_editorial_labels_use_most_common_known_value() -> None:
     ]
     assert _dominant_label(observations, "visual_role") == "establishing"
     assert _dominant_label(observations, "mood") == "unknown"
+
+
+
+def test_temporal_analyzer_uses_ordered_frames_and_validates_dynamics(monkeypatch, tmp_path):
+    from travel_video_agent.understanding.visual_analyzer import OllamaVisionAnalyzer
+
+    frames = []
+    for index in range(3):
+        frame = tmp_path / f"frame-{index}.jpg"
+        frame.write_bytes(b"image")
+        frames.append((float(index * 2), frame))
+    captured = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self):
+            result = {
+                "temporal_summary": "A hiker walks toward the mountain viewpoint.",
+                "action_progression": ["Hiker enters the frame", "Hiker approaches the viewpoint"],
+                "subject_motion": "approaching",
+                "camera_motion": "static",
+                "confidence": 0.88,
+            }
+            return json.dumps({"message": {"content": json.dumps(result)}}).encode()
+
+    def fake_urlopen(request, timeout):
+        captured["payload"] = json.loads(request.data.decode("utf-8"))
+        return FakeResponse()
+
+    monkeypatch.setattr(
+        "travel_video_agent.understanding.visual_analyzer.urlopen", fake_urlopen
+    )
+    analyzer = OllamaVisionAnalyzer(model="qwen2.5vl:3b")
+    result = analyzer.analyze_scene(frames)
+
+    assert result["subject_motion"] == "approaching"
+    assert result["camera_motion"] == "static"
+    assert result["confidence"] == pytest.approx(0.88)
+    message = captured["payload"]["messages"][0]
+    assert len(message["images"]) == 3
+    assert "0.00s, 2.00s, 4.00s" in message["content"]
+    assert captured["payload"]["options"]["temperature"] == 0
+
+
+def test_temporal_analyzer_returns_unknown_for_single_frame(tmp_path):
+    frame = tmp_path / "frame.jpg"
+    frame.write_bytes(b"image")
+    result = OllamaVisionAnalyzer().analyze_scene([(1.0, frame)])
+    assert result["camera_motion"] == "unknown"
+    assert result["subject_motion"] == "unknown"
+    assert result["confidence"] == 0
+
+
+def test_understanding_pipeline_attaches_temporal_scene_dynamics(monkeypatch, tmp_path):
+    from travel_video_agent.understanding import pipeline
+
+    video = tmp_path / "clip.mp4"
+    video.touch()
+    info = type("Info", (), {"path": "clip.mp4", "duration_seconds": 5.0})()
+    analysis = type("Analysis", (), {"video_count": 1, "videos": [info]})()
+    monkeypatch.setattr(pipeline, "analyze_folder", lambda root: analysis)
+    monkeypatch.setattr(pipeline, "detect_scenes", lambda *args: [(0.0, 5.0)])
+    frames = []
+    for index, timestamp in enumerate((1.0, 4.0)):
+        frame = tmp_path / f"frame-{index}.jpg"
+        frame.write_bytes(b"fake")
+        frames.append((timestamp, frame))
+    monkeypatch.setattr(
+        pipeline, "extract_representative_frames", lambda *args, **kwargs: frames
+    )
+    monkeypatch.setattr(pipeline.OllamaVisionAnalyzer, "unload_model", lambda self: True)
+    monkeypatch.setattr(
+        pipeline.OllamaVisionAnalyzer,
+        "analyze_frame",
+        lambda self, path: {
+            "description": "A hiker on a mountain trail.",
+            "objects": ["hiker", "trail"],
+            "activities": ["walking"],
+            "confidence": 0.8,
+        },
+    )
+    monkeypatch.setattr(
+        pipeline.OllamaVisionAnalyzer,
+        "analyze_scene",
+        lambda self, scene_frames: {
+            "temporal_summary": "The hiker walks uphill and moves farther into the landscape.",
+            "action_progression": ["Hiker walks uphill", "Hiker recedes into the distance"],
+            "subject_motion": "receding",
+            "camera_motion": "static",
+            "confidence": 0.9,
+        },
+    )
+
+    result = understand_folder(tmp_path)
+    dynamics = result.scenes[0].dynamics
+    assert dynamics is not None
+    assert dynamics.subject_motion == "receding"
+    assert dynamics.camera_motion == "static"
+    assert dynamics.action_progression[0] == "Hiker walks uphill"
