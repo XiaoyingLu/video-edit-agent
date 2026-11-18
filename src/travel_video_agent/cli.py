@@ -29,7 +29,12 @@ from .editing.embeddings import EmbeddingModelError
 from .editing.footage_mapping import suggest_storyboard_footage
 from .editing.footage_review import review_storyboard_footage
 from .editing.planning_generation import VideoPlanningError
-from .editing.revision_suggestions import (\n    RevisionSuggestionError,\n    build_draft_revision_suggestions,\n    save_draft_revision_suggestions,\n)\nfrom .editing.revisions import (
+from .editing.revision_suggestions import (
+    RevisionSuggestionError,
+    build_draft_revision_suggestions,
+    save_draft_revision_suggestions,
+)
+from .editing.revisions import (
     TimelineIntervalEdit,
     compare_timeline_files,
     create_timeline_revision,
