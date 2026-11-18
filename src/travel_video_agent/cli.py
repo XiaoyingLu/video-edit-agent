@@ -1111,11 +1111,22 @@ def create_plan(
             "--model", help="Planning model (default: VIDEO_PLANNER_MODEL or qwen2.5:1.5b)."
         ),
     ] = None,
+    music_analysis: Annotated[
+        Path | None,
+        typer.Option(
+            "--music-analysis",
+            help="Optional music-analysis JSON from analyze-music.",
+        ),
+    ] = None,
 ) -> None:
     """Generate a creative brief, story treatment, and storyboard."""
     try:
         project_plan, destination = create_video_project_plan(
-            folder, prompt, model=model, output_path=output
+            folder,
+            prompt,
+            model=model,
+            output_path=output,
+            music_analysis_path=music_analysis,
         )
     except (FileNotFoundError, IntentParsingError, VideoPlanningError, ValueError) as exc:
         console.print(f"[red]Video planning failed:[/red] {exc}")
@@ -1129,11 +1140,16 @@ def create_plan(
     console.print(f"Working title: [bold]{project_plan.story_treatment.working_title}[/bold]")
     shot_count = sum(len(scene.shots) for scene in project_plan.scenes)
     console.print(f"Scenes: {len(project_plan.scenes)} | Storyboard shots: {shot_count}")
+    if project_plan.source_music_analysis:
+        energy_summary = ", ".join(
+            f"{scene.title}: {scene.music_energy}" for scene in project_plan.scenes
+        )
+        console.print(f"Soundtrack energy: {energy_summary}")
     console.print(f"Planning stage: [cyan]{project_plan.planning_stage}[/cyan]")
     console.print(f"Plan saved to [green]{destination}[/green]")
     console.print(
-        "[yellow]Storyboard shots are creative proposals only; no source footage was "
-        "assigned and no video was rendered.[/yellow]"
+        "[yellow]Storyboard shots are creative proposals only; music energy is advisory, "
+        "no source footage was assigned, and no video was rendered.[/yellow]"
     )
 
 
