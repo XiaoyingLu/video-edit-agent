@@ -43,6 +43,7 @@ def test_title_overlay_review_requires_known_explicit_decisions():
     )
     reviewed = review_title_overlays(document, {"opening"}, set())
     assert reviewed.overlays[0].decision == "approved"
+    assert document.overlays[0].decision == "pending"
     rejected = review_title_overlays(reviewed, set(), {"opening"})
     assert rejected.overlays[0].decision == "rejected"
     with pytest.raises(ValueError, match="unknown title overlay"):
@@ -102,4 +103,4 @@ def test_renderer_supports_slide_up_and_minimal_title_preset(tmp_path: Path):
     graph = command[command.index("-filter_complex") + 1]
     assert "box=0" in graph
     assert "if(lt(t,0.450000)" in graph
-    assert "y=if(" in graph
+    assert "y='if(" in graph
