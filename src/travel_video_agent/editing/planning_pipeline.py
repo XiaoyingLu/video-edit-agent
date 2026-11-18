@@ -50,6 +50,8 @@ def create_video_project_plan(
         music_analysis = MusicAnalysis.model_validate_json(
             music_analysis_file.read_text(encoding="utf-8")
         )
+        if destination == music_analysis_file:
+            raise ValueError("video project plan output cannot overwrite music-analysis.json")
         if Path(music_analysis.project_path).expanduser().resolve() != root:
             raise ValueError("music analysis belongs to a different project folder")
         if not Path(music_analysis.music_path).expanduser().is_file():
