@@ -189,6 +189,4 @@ def test_revision_preview_cli_renders_and_reports_manifest(tmp_path, monkeypatch
     assert result.exit_code == 0, result.output
     assert "Approved revision preview rendered" in result.output
     assert "Preview manifest:" in result.output
-    assert (
-        tmp_path / ".video-agent" / "revision-previews" / "revision-001.preview.json"
-    ).is_file()
+    assert (tmp_path / ".video-agent" / "revision-previews" / "revision-001.preview.json").is_file()

@@ -70,21 +70,15 @@ def render_timeline_revision_preview(
     if not validate_artifact(root, timeline_file):
         raise RevisionPreviewError("timeline revision is stale; regenerate it before rendering")
 
-    timeline = ProjectDraftTimeline.model_validate_json(
-        timeline_file.read_text(encoding="utf-8")
-    )
+    timeline = ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root:
         raise RevisionPreviewError("timeline revision belongs to a different project folder")
-    if not timeline.timeline_approved or any(
-        clip.decision == "pending" for clip in timeline.clips
-    ):
+    if not timeline.timeline_approved or any(clip.decision == "pending" for clip in timeline.clips):
         raise RevisionPreviewError(
             "timeline revision is not fully approved; run 'video-agent review-timeline' first"
         )
 
-    default_output = (
-        root / ".video-agent" / "revision-previews" / f"{timeline_file.stem}.mp4"
-    )
+    default_output = root / ".video-agent" / "revision-previews" / f"{timeline_file.stem}.mp4"
     destination = (output_path or default_output).expanduser()
     destination = (
         (root / destination).resolve() if not destination.is_absolute() else destination.resolve()
