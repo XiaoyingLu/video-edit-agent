@@ -62,6 +62,12 @@ from .editing.storyboard_production import (
 )
 from .editing.storyboard_review import generate_storyboard_review
 from .editing.timeline_schemas import ProjectDraftTimeline
+from .editing.timeline_visual_review import (
+    TimelineVisualReviewError,
+    build_timeline_visual_review,
+    load_timeline_visual_review_decisions,
+    save_timeline_visual_review,
+)
 from .editing.workflow import create_video_draft
 from .highlights import find_highlights_folder
 from .media import MediaToolError, analyze_folder
@@ -2435,13 +2441,32 @@ def review_timeline(
         Path | None,
         typer.Option("--timeline", help="Path to an optimized timeline JSON file."),
     ] = None,
+    decisions_file: Annotated[
+        Path | None,
+        typer.Option("--decisions-file", help="JSON decisions exported from review-timeline-visual."),
+    ] = None,
 ) -> None:
     """Approve or reject proposed shots; skipped clips remain pending."""
     try:
         timeline, destination = load_draft_timeline(folder, timeline_path)
         approve_ids = set(approve or [])
         reject_ids = set(reject or [])
-        if approve is None and reject is None:
+        if decisions_file is not None:
+            if approve is not None or reject is not None:
+                raise ValueError("--decisions-file cannot be combined with --approve or --reject")
+            exported = load_timeline_visual_review_decisions(decisions_file)
+            if Path(exported.timeline_path) != destination.relative_to(folder.expanduser().resolve()):
+                raise ValueError("Decision file targets a different timeline; regenerate the visual review")
+            known_ids = {clip.clip_id for clip in timeline.clips}
+            if set(exported.decisions) != known_ids:
+                raise ValueError("Decision file must contain exactly one decision for every timeline clip")
+            approve_ids = {
+                clip_id for clip_id, decision in exported.decisions.items() if decision == "approved"
+            }
+            reject_ids = {
+                clip_id for clip_id, decision in exported.decisions.items() if decision == "rejected"
+            }
+        elif approve is None and reject is None:
             for clip in timeline.clips:
                 if clip.decision != "pending":
                     continue
@@ -2511,6 +2536,50 @@ def review_timeline(
     else:
         console.print("[yellow]Sequence is not approved yet; resolve all pending clips.[/yellow]")
     console.print("[yellow]No renderer timeline was created and no video was rendered.[/yellow]")
+
+
+@app.command("review-timeline-visual")
+def review_timeline_visual(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder containing an optimized shot timeline and source videos.",
+        ),
+    ],
+    timeline: Annotated[
+        Path | None,
+        typer.Option("--timeline", help="Timeline JSON path; defaults to optimized-timeline.json."),
+    ] = None,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Output base path for JSON and HTML.")
+    ] = None,
+) -> None:
+    """Create an offline browser review page for proposed timeline shots."""
+    try:
+        report = build_timeline_visual_review(folder, timeline_path=timeline)
+        json_file, html_file = save_timeline_visual_review(folder, report, output_path=output)
+    except (
+        FileNotFoundError,
+        NotADirectoryError,
+        FileExistsError,
+        OSError,
+        ValueError,
+        TimelineVisualReviewError,
+    ) as exc:
+        console.print(f"[red]Visual timeline review failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    console.print(f"Review page: [green]{html_file}[/green]")
+    console.print(f"Review metadata: [green]{json_file}[/green]")
+    console.print(
+        "[yellow]Open the HTML file in a browser, export decisions, then apply them with "
+        "review-timeline --decisions-file. No decisions are applied by this command.[/yellow]"
+    )
 
 
 @app.command("revise-timeline")
