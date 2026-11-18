@@ -43,7 +43,13 @@ from .music import analyze_music
 from .music.pipeline import MusicAnalysisError
 from .music.refinement import apply_music_sync_review
 from .music.sync import MusicSyncSuggestions, save_music_sync_suggestions, suggest_music_sync
-from .rendering import RenderError, render_approved_shot_timeline, render_project
+from .rendering import (
+    DraftCritiqueError,
+    RenderError,
+    critique_rendered_draft,
+    render_approved_shot_timeline,
+    render_project,
+)
 from .rendering.title_overlays import (
     TitleOverlayDocument,
     load_title_overlays,
@@ -1012,6 +1018,104 @@ def render_draft(
         f"{report.video_codec.upper()} video + {report.audio_codec.upper()} audio"
     )
     console.print("[yellow]Original source videos were not modified.[/yellow]")
+
+
+@app.command("critique-draft")
+def critique_draft(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder containing the rendered draft and creative artifacts.",
+        ),
+    ],
+    video: Annotated[
+        Path | None, typer.Option("--video", help="Rendered MP4 path (default: rendered-draft.mp4).")
+    ] = None,
+    timeline: Annotated[
+        Path | None, typer.Option("--timeline", help="Approved timeline JSON path.")
+    ] = None,
+    plan: Annotated[
+        Path | None, typer.Option("--plan", help="Creative project plan JSON path.")
+    ] = None,
+    samples: Annotated[
+        int,
+        typer.Option("--samples", min=1, max=24, help="Number of evenly spaced frames to inspect."),
+    ] = 8,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="JSON report path (default: .video-agent/draft-critique.json)."),
+    ] = None,
+) -> None:
+    """Inspect a rendered draft against the creative brief and approved timeline."""
+    try:
+        report = critique_rendered_draft(
+            folder,
+            video_path=video,
+            timeline_path=timeline,
+            plan_path=plan,
+            sample_count=samples,
+        )
+    except (FileNotFoundError, NotADirectoryError, ValueError, OSError, DraftCritiqueError) as exc:
+        console.print(f"[red]Draft critique failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    destination = (
+        output or folder.resolve() / ".video-agent" / "draft-critique.json"
+    ).expanduser().resolve()
+    root = folder.expanduser().resolve()
+    try:
+        destination.relative_to(root)
+    except ValueError as exc:
+        console.print("[red]Critique report output must be inside the project folder.[/red]")
+        raise typer.Exit(code=1) from exc
+    if destination in {
+        root / report.rendered_video,
+        root / report.source_timeline,
+        root / report.source_plan,
+    }:
+        console.print("[red]Critique report cannot overwrite an input artifact.[/red]")
+        raise typer.Exit(code=1)
+    if destination.exists():
+        console.print(
+            f"[red]Critique report already exists: {destination}; choose another --output path.[/red]"
+        )
+        raise typer.Exit(code=1)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(
+        json.dumps(report.model_dump(mode="json"), indent=2) + "\\n", encoding="utf-8"
+    )
+    register_artifact(
+        root,
+        destination,
+        dependencies=[
+            root / report.rendered_video,
+            root / report.source_timeline,
+            root / report.source_plan,
+        ],
+        config={"sample_count": samples},
+    )
+
+    table = Table(title="Rendered Draft Critique — Review Required")
+    table.add_column("Severity")
+    table.add_column("Category")
+    table.add_column("Observation")
+    for finding in report.findings:
+        table.add_row(finding.severity, finding.category, finding.message)
+    console.print(table)
+    console.print(
+        f"Inspected {report.duration_seconds:.2f}s at {report.width}x{report.height}; "
+        f"{len(report.frames)} frames sampled."
+    )
+    console.print(f"Report saved to [green]{destination}[/green]")
+    console.print(
+        "[yellow]Findings are evidence-based review prompts, not aesthetic judgments. "
+        "No timeline, rendered video, or source media was modified.[/yellow]"
+    )
 
 
 @app.command("find-highlights")
