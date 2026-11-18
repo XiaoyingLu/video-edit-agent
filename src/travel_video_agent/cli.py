@@ -1277,6 +1277,122 @@ def compare_drafts(
     )
 
 
+@app.command("compare-drafts")
+def compare_drafts(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder containing both rendered MP4 drafts.",
+        ),
+    ],
+    before: Annotated[
+        Path, typer.Option("--before", help="Earlier rendered MP4, relative to the project folder.")
+    ],
+    after: Annotated[
+        Path, typer.Option("--after", help="Revised rendered MP4, relative to the project folder.")
+    ],
+    samples: Annotated[
+        int,
+        typer.Option("--samples", min=1, max=16, help="Number of paired frame samples."),
+    ] = 8,
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help="Output base path (default: .video-agent/draft-comparison); .json and .html are added.",
+        ),
+    ] = None,
+) -> None:
+    """Create a read-only side-by-side comparison of two rendered drafts."""
+    try:
+        report = compare_rendered_drafts(
+            folder,
+            before_video=before,
+            after_video=after,
+            sample_count=samples,
+        )
+    except (
+        FileNotFoundError,
+        NotADirectoryError,
+        ValueError,
+        OSError,
+        DraftComparisonError,
+    ) as exc:
+        console.print(f"[red]Draft comparison failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    root = folder.expanduser().resolve()
+    base = (output or root / ".video-agent" / "draft-comparison").expanduser()
+    if not base.is_absolute():
+        base = root / base
+    base = base.resolve()
+    try:
+        base.relative_to(root)
+    except ValueError as exc:
+        console.print("[red]Comparison output must be inside the project folder.[/red]")
+        raise typer.Exit(code=1) from exc
+
+    json_path = base.with_suffix(".json")
+    html_path = base.with_suffix(".html")
+    input_paths = {root / report.before.path, root / report.after.path}
+    if json_path in input_paths or html_path in input_paths:
+        console.print("[red]Comparison output cannot overwrite either input video.[/red]")
+        raise typer.Exit(code=1)
+    if json_path.exists() or html_path.exists():
+        console.print(
+            "[red]Comparison output already exists; choose another --output path.[/red]"
+        )
+        raise typer.Exit(code=1)
+
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    json_path.write_text(
+        json.dumps(report.model_dump(mode="json"), indent=2) + "\\n",
+        encoding="utf-8",
+    )
+    html_path.write_text(render_comparison_html(report), encoding="utf-8")
+    dependencies = [root / report.before.path, root / report.after.path]
+    register_artifact(root, json_path, dependencies=dependencies, config={"samples": samples})
+    register_artifact(root, html_path, dependencies=dependencies, config={"samples": samples})
+
+    table = Table(title="Rendered Draft Comparison — Human Review")
+    table.add_column("Metric")
+    table.add_column("Before")
+    table.add_column("After")
+    table.add_row(
+        "Duration",
+        f"{report.before.duration_seconds:.2f}s",
+        f"{report.after.duration_seconds:.2f}s",
+    )
+    table.add_row(
+        "Resolution",
+        f"{report.before.width}×{report.before.height}",
+        f"{report.after.width}×{report.after.height}",
+    )
+    table.add_row(
+        "Audio mean",
+        f"{report.before.audio.mean_volume_db:.2f} dB"
+        if report.before.audio.mean_volume_db is not None
+        else "unavailable",
+        f"{report.after.audio.mean_volume_db:.2f} dB"
+        if report.after.audio.mean_volume_db is not None
+        else "unavailable",
+    )
+    console.print(table)
+    console.print(f"Side-by-side review: [green]{html_path}[/green]")
+    console.print(f"Metrics report: [green]{json_path}[/green]")
+    console.print(
+        "[yellow]Samples use matched normalized playback positions. Metrics are evidence, "
+        "not aesthetic scores; inspect and listen to both complete drafts before deciding. "
+        "No source videos or timelines were modified.[/yellow]"
+    )
+
+
 @app.command("find-highlights")
 def find_highlights(
     folder: Annotated[
