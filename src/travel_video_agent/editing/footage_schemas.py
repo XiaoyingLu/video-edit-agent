@@ -1,5 +1,7 @@
 """Review-only footage suggestions for creative storyboard shots."""
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -15,7 +17,7 @@ class FootageMatchCandidate(BaseModel):
     score: float = Field(ge=0, le=100)
     lexical_score: float = Field(default=0, ge=0, le=100)
     semantic_similarity: float | None = Field(default=None, ge=0, le=1)
-    match_method: str = "lexical"
+    match_method: Literal["lexical", "hybrid"] = "lexical"
     scene_summary: str
     reasons: list[str] = Field(default_factory=list)
 
@@ -45,6 +47,6 @@ class ProjectFootageSuggestions(BaseModel):
     candidate_count: int = Field(ge=0)
     matched_shot_count: int = Field(ge=0)
     embedding_model: str | None = None
-    matching_method: str = "lexical"
+    matching_method: Literal["lexical", "hybrid"] = "lexical"
     review_required: bool = True
     assignments_performed: bool = False
