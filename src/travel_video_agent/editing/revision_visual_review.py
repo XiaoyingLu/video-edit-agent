@@ -128,9 +128,7 @@ def build_timeline_revision_visual_review(
     after_clips = {clip.clip_id: clip for clip in after.clips}
     ffmpeg = shutil.which("ffmpeg") if comparison.changes else None
     if comparison.changes and ffmpeg is None:
-        raise TimelineRevisionVisualReviewError(
-            "ffmpeg must be installed and available on PATH"
-        )
+        raise TimelineRevisionVisualReviewError("ffmpeg must be installed and available on PATH")
 
     frames: list[RevisionFramePair] = []
     with tempfile.TemporaryDirectory(prefix="video-agent-revision-review-") as temporary:
@@ -218,7 +216,7 @@ figcaption {{ font-size:.9rem; margin:.5rem 0; overflow-wrap:anywhere; }}
 {report.before_duration_seconds:.2f}s → {report.after_duration_seconds:.2f}s ({delta})</p>
 <p>Each pair shows the midpoint of the source interval used before and after the revision.
 This is a source-frame inspection aid, not a rendered playback comparison.</p></header>
-{''.join(sections)}
+{"".join(sections)}
 <div class="note">Review the full shot context and transitions before approving the revised
 timeline. This report does not approve, modify, or render either timeline.</div>
 </body></html>"""
