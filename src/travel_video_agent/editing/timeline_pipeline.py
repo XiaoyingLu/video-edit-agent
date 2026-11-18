@@ -288,14 +288,21 @@ def build_draft_timeline(
         music_section_end = None
         music_pacing_note = "No soundtrack energy guidance was supplied."
         if music_analysis is not None:
-            section = next(
+            timeline_start = max(0.0, elapsed_seconds - transition_duration)
+            timeline_end = timeline_start + clip.duration_seconds
+            section_overlaps = [
                 (
-                    item for item in music_analysis.sections
-                    if item.start_seconds <= elapsed_seconds < item.end_seconds
-                ),
-                None,
-            )
-            if section is not None:
+                    max(
+                        0.0,
+                        min(timeline_end, item.end_seconds)
+                        - max(timeline_start, item.start_seconds),
+                    ),
+                    item,
+                )
+                for item in music_analysis.sections
+            ]
+            overlap, section = max(section_overlaps, key=lambda item: item[0], default=(0.0, None))
+            if section is not None and overlap > 0:
                 music_energy = section.energy
                 music_section_start = section.start_seconds
                 music_section_end = section.end_seconds
@@ -343,7 +350,7 @@ def build_draft_timeline(
             )
         )
         previous_duration = clip.duration_seconds
-        elapsed_seconds += max(0.0, clip.duration_seconds - transition_duration)
+        elapsed_seconds += clip.duration_seconds
 
     duration = sum(clip.duration_seconds for clip in timeline_clips) - sum(
         clip.transition_duration_seconds for clip in timeline_clips[1:]
