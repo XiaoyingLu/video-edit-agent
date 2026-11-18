@@ -202,9 +202,7 @@ def test_critique_reports_missing_audio_and_dark_frames(tmp_path, monkeypatch):
         bright_pixel_ratio=0,
         sharpness_variance=2,
     )
-    monkeypatch.setattr(
-        "travel_video_agent.rendering.critique._sample_frames", lambda *_: [dark]
-    )
+    monkeypatch.setattr("travel_video_agent.rendering.critique._sample_frames", lambda *_: [dark])
 
     report = critique_rendered_draft(tmp_path, sample_count=1)
 
