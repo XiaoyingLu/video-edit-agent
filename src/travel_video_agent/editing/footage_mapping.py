@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 
 from ..artifact_tracking import validate_artifact
+from ..media import discover_videos
 from ..understanding.schemas import VideoUnderstanding
 from .planning_schemas import VideoProjectPlan
 from .footage_schemas import (
@@ -100,8 +101,8 @@ def suggest_storyboard_footage(
     plan = VideoProjectPlan.model_validate_json(plan_file.read_text(encoding="utf-8"))
     if Path(plan.project_path).resolve() != root:
         raise ValueError("video project plan belongs to a different project folder")
-    if plan.planning_stage not in {"storyboard_ready", "footage_mapped", "production_ready"}:
-        raise ValueError("video project plan must contain a generated storyboard")
+    if plan.planning_stage != "storyboard_ready":
+        raise ValueError("footage suggestions require a storyboard_ready plan")
 
     understanding = VideoUnderstanding.model_validate_json(
         understanding_file.read_text(encoding="utf-8")
@@ -109,9 +110,7 @@ def suggest_storyboard_footage(
     video_paths = {
         hashlib.sha256(path.relative_to(root).as_posix().encode("utf-8")).hexdigest()[:12]:
         path.relative_to(root).as_posix()
-        for path in root.rglob("*")
-        if path.is_file() and path.suffix.lower() in {".mp4", ".mov", ".m4v", ".avi", ".mkv", ".webm"}
-        and not path.is_relative_to(artifact_dir)
+        for path in discover_videos(root)
     }
 
     scenes = []
