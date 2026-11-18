@@ -27,8 +27,8 @@ from .editing import (
 )
 from .editing.footage_mapping import suggest_storyboard_footage
 from .editing.footage_review import review_storyboard_footage
-from .editing.storyboard_review import generate_storyboard_review
 from .editing.planning_generation import VideoPlanningError
+from .editing.storyboard_review import generate_storyboard_review
 from .editing.workflow import create_video_draft
 from .highlights import find_highlights_folder
 from .media import MediaToolError, analyze_folder
@@ -1221,9 +1221,7 @@ def review_storyboard(
     understanding: Annotated[
         Path | None, typer.Option("--understanding", help="Video understanding JSON path.")
     ] = None,
-    output: Annotated[
-        Path | None, typer.Option("--output", "-o", help="HTML output path.")
-    ] = None,
+    output: Annotated[Path | None, typer.Option("--output", "-o", help="HTML output path.")] = None,
 ) -> None:
     """Generate a local, read-only HTML storyboard with representative footage frames."""
     try:

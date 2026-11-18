@@ -57,9 +57,7 @@ def _artifacts(root: Path) -> None:
         scenes=[],
         model="qwen2.5vl:3b",
     )
-    (artifact_dir / "video-project-plan.json").write_text(
-        plan.model_dump_json(), encoding="utf-8"
-    )
+    (artifact_dir / "video-project-plan.json").write_text(plan.model_dump_json(), encoding="utf-8")
     (artifact_dir / "understanding.json").write_text(
         understanding.model_dump_json(), encoding="utf-8"
     )
