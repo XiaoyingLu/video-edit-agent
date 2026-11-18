@@ -1862,7 +1862,6 @@ def review_music_sync(
         float,
         typer.Option(
             "--minimum-clip-duration",
-            min=0.001,
             help="Minimum resulting source clip duration in seconds (default: 1.0).",
         ),
     ] = 1.0,
