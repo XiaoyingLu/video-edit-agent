@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
 from ..rendering.critique import DraftCritiqueError, _run
-from .revisions import TimelineRevisionError, compare_timeline_files
+from .revisions import compare_timeline_files
 from .timeline_schemas import ProjectDraftTimeline
 
 
