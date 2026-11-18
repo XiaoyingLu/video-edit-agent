@@ -112,9 +112,7 @@ def review_draft_revision_suggestions(
         raise RevisionSuggestionReviewError(
             "Source timeline is missing or stale; regenerate suggestions before review"
         )
-    timeline = ProjectDraftTimeline.model_validate_json(
-        timeline_file.read_text(encoding="utf-8")
-    )
+    timeline = ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
     if Path(suggestion_document.project_path).resolve() != root:
         raise RevisionSuggestionReviewError("Suggestions belong to a different project folder")
     if Path(timeline.project_path).resolve() != root:
@@ -122,9 +120,7 @@ def review_draft_revision_suggestions(
     if not timeline.timeline_approved or any(
         clip.decision != "approved" for clip in timeline.clips
     ):
-        raise RevisionSuggestionReviewError(
-            "Only a fully approved source timeline can be reviewed"
-        )
+        raise RevisionSuggestionReviewError("Only a fully approved source timeline can be reviewed")
 
     clip_map = {clip.clip_id: clip for clip in timeline.clips}
     for item in suggestions:
