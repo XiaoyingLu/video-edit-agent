@@ -43,7 +43,6 @@ def _write_artifacts(root, candidates, scenes=None, transcript=None):
         (artifact / "transcription.json").write_text(json.dumps(transcript), encoding="utf-8")
 
 
-
 def test_draft_selection_ranks_by_visual_score_and_scene_relevance(tmp_path):
     video_path = "clip-a.mp4"
     candidates = [
@@ -89,11 +88,9 @@ def test_draft_selection_ranks_by_visual_score_and_scene_relevance(tmp_path):
     assert draft.clips[1].source_end_seconds == 3
 
 
-
 def test_draft_selection_requires_highlight_artifact(tmp_path):
     with pytest.raises(FileNotFoundError, match="highlights.json"):
         build_draft_selection(tmp_path, EditingPlan(source_prompt="Make a video"))
-
 
 
 def test_draft_selection_never_exceeds_target_duration(tmp_path):
@@ -116,7 +113,6 @@ def test_draft_selection_never_exceeds_target_duration(tmp_path):
     draft = build_draft_selection(tmp_path, plan)
     assert draft.selected_duration_seconds == 10
     assert draft.clips[0].source_end_seconds == 10
-
 
 
 def test_draft_selection_carries_cinematic_scene_metadata(tmp_path):

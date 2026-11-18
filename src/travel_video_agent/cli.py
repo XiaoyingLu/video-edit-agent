@@ -1618,10 +1618,7 @@ def optimize_timeline(
             transition,
             clip.visual_role.replace("_", " "),
             clip.shot_scale.replace("_", " "),
-            (
-                f"{clip.subject_motion.replace('_', ' ')} / "
-                f"{clip.camera_motion.replace('_', ' ')}"
-            ),
+            (f"{clip.subject_motion.replace('_', ' ')} / {clip.camera_motion.replace('_', ' ')}"),
             clip.composition.replace("_", " "),
             f"{clip.pacing_target_seconds:.1f}s ({clip.pacing_fit})",
             clip.music_energy,

@@ -128,7 +128,6 @@ def _understanding(root):
     )
 
 
-
 def test_suggest_storyboard_footage_ranks_matching_scene_and_does_not_assign(tmp_path):
     (tmp_path / "clip.mp4").write_bytes(b"test video placeholder")
     artifact_dir = tmp_path / ".video-agent"
@@ -158,11 +157,9 @@ def test_suggest_storyboard_footage_ranks_matching_scene_and_does_not_assign(tmp
     assert report.assignments_performed is False
 
 
-
 def test_suggest_storyboard_footage_rejects_invalid_candidate_limit(tmp_path):
     with pytest.raises(ValueError, match="between 1 and 10"):
         suggest_storyboard_footage(tmp_path, max_candidates_per_shot=0)
-
 
 
 def test_suggest_storyboard_footage_uses_hybrid_semantic_ranking(tmp_path):
@@ -203,7 +200,6 @@ def test_suggest_storyboard_footage_uses_hybrid_semantic_ranking(tmp_path):
     assert report.assignments_performed is False
 
 
-
 def test_suggest_storyboard_footage_rejects_invalid_embedding_batch(tmp_path):
     (tmp_path / "clip.mp4").write_bytes(b"test video placeholder")
     artifact_dir = tmp_path / ".video-agent"
@@ -225,7 +221,6 @@ def test_suggest_storyboard_footage_rejects_invalid_embedding_batch(tmp_path):
             embedding_model="test-embedding-model",
             embedder=lambda texts, model: [],
         )
-
 
 
 def test_scene_text_includes_temporal_action_and_camera_evidence(tmp_path):

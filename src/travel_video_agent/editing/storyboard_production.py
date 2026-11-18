@@ -149,9 +149,7 @@ def build_storyboard_timeline(
                     subject_motion=shot.subject_motion,
                     camera_motion=shot.camera_motion,
                     composition=shot.composition,
-                    continuity_note=_continuity_guidance(
-                        shot, clips[-1] if clips else None
-                    ),
+                    continuity_note=_continuity_guidance(shot, clips[-1] if clips else None),
                     shot_scale=shot.shot_scale,
                     visual_role=shot.visual_role,
                     sequence_reason=f"Storyboard order: {scene.title} — {shot.purpose}",

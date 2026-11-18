@@ -84,8 +84,13 @@ class StoryboardShot(BaseModel):
         "static", "pan", "tilt", "zoom", "tracking", "handheld", "mixed", "unknown"
     ] = "unknown"
     composition: Literal[
-        "centered", "rule_of_thirds", "leading_lines", "symmetrical", "layered_depth",
-        "negative_space", "unknown"
+        "centered",
+        "rule_of_thirds",
+        "leading_lines",
+        "symmetrical",
+        "layered_depth",
+        "negative_space",
+        "unknown",
     ] = "unknown"
     footage_path: str | None = None
     footage_start_seconds: float | None = Field(default=None, ge=0)

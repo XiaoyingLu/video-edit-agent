@@ -54,8 +54,13 @@ class DraftTimelineClip(BaseModel):
         "static", "pan", "tilt", "zoom", "tracking", "handheld", "mixed", "unknown"
     ] = "unknown"
     composition: Literal[
-        "centered", "rule_of_thirds", "leading_lines", "symmetrical", "layered_depth",
-        "negative_space", "unknown"
+        "centered",
+        "rule_of_thirds",
+        "leading_lines",
+        "symmetrical",
+        "layered_depth",
+        "negative_space",
+        "unknown",
     ] = "unknown"
     continuity_note: str = "No previous shot is available for a continuity comparison."
     sequence_reason: str = "Ranked by source score; no scene-role metadata available."

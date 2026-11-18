@@ -71,7 +71,6 @@ def _write_inputs(root, style="vlog", transition="crossfade"):
     (artifact / "draft-selection.json").write_text(selection.model_dump_json(), encoding="utf-8")
 
 
-
 def test_build_draft_timeline_orders_chronologically_and_proposes_transitions(tmp_path):
     _write_inputs(tmp_path)
     timeline = build_draft_timeline(tmp_path)
@@ -89,12 +88,10 @@ def test_build_draft_timeline_orders_chronologically_and_proposes_transitions(tm
     assert timeline.rendering_performed is False
 
 
-
 def test_highlight_reel_preserves_ranked_order(tmp_path):
     _write_inputs(tmp_path, style="highlight_reel", transition="cut")
     timeline = build_draft_timeline(tmp_path)
     assert [clip.clip_id for clip in timeline.clips] == ["later", "earlier"]
-
 
 
 def test_timeline_review_requires_all_clips_decided(tmp_path):
@@ -111,7 +108,6 @@ def test_timeline_review_requires_all_clips_decided(tmp_path):
     assert [clip.decision for clip in approved.clips] == ["approved", "rejected"]
 
 
-
 def test_timeline_review_rejects_unknown_or_conflicting_ids(tmp_path):
     _write_inputs(tmp_path)
     timeline = build_draft_timeline(tmp_path)
@@ -120,7 +116,6 @@ def test_timeline_review_rejects_unknown_or_conflicting_ids(tmp_path):
         apply_timeline_review(timeline, {"earlier"}, {"earlier"})
     with pytest.raises(ValueError, match="unknown"):
         apply_timeline_review(timeline, {"missing"}, set())
-
 
 
 def test_timeline_schema_rejects_non_cut_transition_on_first_clip():
@@ -150,11 +145,9 @@ def test_timeline_schema_rejects_non_cut_transition_on_first_clip():
         )
 
 
-
 def test_build_draft_timeline_requires_selection_and_plan(tmp_path):
     with pytest.raises(FileNotFoundError, match="draft-selection.json"):
         build_draft_timeline(tmp_path)
-
 
 
 def test_timeline_review_requires_at_least_one_approved_clip(tmp_path):
@@ -164,7 +157,6 @@ def test_timeline_review_requires_at_least_one_approved_clip(tmp_path):
     assert reviewed.timeline_approved is False
     assert all(clip.decision == "rejected" for clip in reviewed.clips)
     assert reviewed.approved_duration_seconds == 0
-
 
 
 def test_optimize_and_review_timeline_cli_commands(tmp_path):
@@ -191,7 +183,6 @@ def test_optimize_and_review_timeline_cli_commands(tmp_path):
     assert [clip.decision for clip in saved.clips] == ["approved", "rejected"]
 
 
-
 def test_cli_help_includes_timeline_commands():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
@@ -203,7 +194,6 @@ def test_cli_help_includes_timeline_commands():
     optimize_help = runner.invoke(app, ["optimize-timeline", "--help"])
     assert optimize_help.exit_code == 0
     assert "--music-analysis" in Text.from_ansi(optimize_help.output).plain
-
 
 
 def test_cinematic_timeline_builds_establishing_action_detail_and_scenic_arc(tmp_path):
@@ -302,7 +292,6 @@ def test_cinematic_timeline_builds_establishing_action_detail_and_scenic_arc(tmp
     assert timeline.clips[-1].visual_role == "scenic_breath"
 
 
-
 def test_chronological_story_keeps_source_order_despite_scene_roles(tmp_path):
     from travel_video_agent.editing.draft_schemas import DraftClip
 
@@ -350,7 +339,6 @@ def test_chronological_story_keeps_source_order_despite_scene_roles(tmp_path):
     assert [clip.clip_id for clip in timeline.clips] == ["earlier-action", "later-establishing"]
 
 
-
 def test_role_aware_pacing_uses_different_targets_for_action_and_scenic_shots():
     from travel_video_agent.editing.timeline_pipeline import _pacing_guidance
 
@@ -361,7 +349,6 @@ def test_role_aware_pacing_uses_different_targets_for_action_and_scenic_shots():
     assert scenic[0] == "within"
     assert action[2] == 3.0
     assert scenic[2] == 4.5
-
 
 
 def test_cinematic_timeline_preserves_ranked_order_without_scene_metadata(tmp_path):
@@ -382,7 +369,6 @@ def test_cinematic_timeline_preserves_ranked_order_without_scene_metadata(tmp_pa
     assert all(clip.visual_role == "unknown" for clip in timeline.clips)
     assert "strongest available shot" in timeline.clips[0].sequence_reason
     assert "metadata is uncertain" in timeline.clips[1].sequence_reason
-
 
 
 def test_music_analysis_guides_pacing_without_changing_source_intervals(tmp_path):
@@ -419,7 +405,6 @@ def test_music_analysis_guides_pacing_without_changing_source_intervals(tmp_path
     ]
 
 
-
 def test_music_analysis_rejects_foreign_project(tmp_path):
     from travel_video_agent.music.schemas import MusicAnalysis
 
@@ -437,7 +422,6 @@ def test_music_analysis_rejects_foreign_project(tmp_path):
     )
     with pytest.raises(ValueError, match="different project"):
         build_draft_timeline(tmp_path, music_analysis_path=analysis_path)
-
 
 
 def test_optimize_timeline_cannot_overwrite_music_analysis(tmp_path):
@@ -514,7 +498,6 @@ def test_motion_aware_pacing_and_continuity_guidance():
     )
     current = previous.model_copy(update={"clip_id": "current"})
     assert "subject and shot scale repeat" in _continuity_guidance(current, previous)
-
 
 
 def test_draft_timeline_carries_motion_metadata_and_continuity_notes(tmp_path):

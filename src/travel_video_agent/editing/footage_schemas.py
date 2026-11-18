@@ -29,8 +29,13 @@ class FootageMatchCandidate(BaseModel):
         "static", "pan", "tilt", "zoom", "tracking", "handheld", "mixed", "unknown"
     ] = "unknown"
     composition: Literal[
-        "centered", "rule_of_thirds", "leading_lines", "symmetrical", "layered_depth",
-        "negative_space", "unknown"
+        "centered",
+        "rule_of_thirds",
+        "leading_lines",
+        "symmetrical",
+        "layered_depth",
+        "negative_space",
+        "unknown",
     ] = "unknown"
     reasons: list[str] = Field(default_factory=list)
 
