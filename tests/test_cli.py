@@ -598,7 +598,7 @@ def _music_sync_cli_inputs(tmp_path: Path) -> tuple[Path, Path]:
 def test_review_music_sync_command_help() -> None:
     result = runner.invoke(app, ["review-music-sync", "--help"], terminal_width=120)
     assert result.exit_code == 0, result.output
-    help_text = " ".join(click.unstyle(result.output).split())
+    help_text = "".join(click.unstyle(result.output).split())
     for option in (
         "--accept",
         "--reject",
