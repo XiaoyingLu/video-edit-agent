@@ -28,6 +28,11 @@ from .editing import (
 from .editing.footage_mapping import suggest_storyboard_footage
 from .editing.footage_review import review_storyboard_footage
 from .editing.planning_generation import VideoPlanningError
+from .editing.storyboard_production import (
+    approve_storyboard,
+    build_storyboard_timeline,
+    save_storyboard_timeline,
+)
 from .editing.storyboard_review import generate_storyboard_review
 from .editing.workflow import create_video_draft
 from .highlights import find_highlights_folder
@@ -1208,6 +1213,90 @@ def suggest_footage(
     console.print(
         "[yellow]Candidates are ranked suggestions only. No footage was assigned, "
         "approved, trimmed, or rendered.[/yellow]"
+    )
+
+
+@app.command("approve-storyboard")
+def approve_storyboard_command(
+    folder: Annotated[
+        Path,
+        typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True),
+    ],
+    plan: Annotated[Path | None, typer.Option("--plan", help="Project plan JSON path.")] = None,
+) -> None:
+    """Explicitly approve a fully footage-mapped creative storyboard."""
+    try:
+        project_plan, destination = approve_storyboard(folder, plan_path=plan)
+    except (FileNotFoundError, ValueError, OSError) as exc:
+        console.print(f"[red]Storyboard approval failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    shot_count = sum(len(scene.shots) for scene in project_plan.scenes)
+    console.print(
+        f"[bold green]Storyboard approved[/bold green] — {shot_count} shot(s), "
+        f"planning stage: {project_plan.planning_stage}."
+    )
+    console.print(f"Updated plan: [green]{destination}[/green]")
+    console.print("[yellow]No timeline was built and no video was rendered.[/yellow]")
+
+
+@app.command("build-storyboard-timeline")
+def build_storyboard_timeline_command(
+    folder: Annotated[
+        Path,
+        typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True),
+    ],
+    plan: Annotated[
+        Path | None, typer.Option("--plan", help="Approved project plan JSON path.")
+    ] = None,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Timeline output path.")
+    ] = None,
+) -> None:
+    """Compile an approved storyboard into a reviewable FFmpeg shot timeline."""
+    try:
+        timeline = build_storyboard_timeline(folder, plan_path=plan)
+    except (FileNotFoundError, ValueError, OSError) as exc:
+        console.print(f"[red]Storyboard timeline build failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    destination = output or folder.resolve() / ".video-agent" / "optimized-timeline.json"
+    destination = destination.expanduser().resolve()
+    try:
+        destination.relative_to(folder.expanduser().resolve())
+    except ValueError as exc:
+        console.print("[red]Timeline output must be inside the project folder.[/red]")
+        raise typer.Exit(code=1) from exc
+    save_storyboard_timeline(timeline, destination)
+
+    table = Table(title="Storyboard Production Timeline — Human Review Required")
+    table.add_column("#", justify="right")
+    table.add_column("Shot", style="cyan")
+    table.add_column("Source interval")
+    table.add_column("Duration", justify="right")
+    table.add_column("Transition")
+    for clip in timeline.clips:
+        transition = (
+            f"{clip.transition_in} ({clip.transition_duration_seconds:.2f}s)"
+            if clip.transition_in != "cut"
+            else "cut"
+        )
+        table.add_row(
+            str(clip.sequence_index),
+            clip.clip_id,
+            f"{clip.source_start_seconds:.2f}–{clip.source_end_seconds:.2f}s",
+            f"{clip.duration_seconds:.2f}s",
+            transition,
+        )
+    console.print(table)
+    console.print(
+        f"Compiled {timeline.proposed_clip_count} storyboard shot(s): "
+        f"{timeline.proposed_duration_seconds:.1f}s proposed, "
+        f"{timeline.target_duration_seconds:.1f}s target."
+    )
+    console.print(f"Timeline saved to [green]{destination}[/green]")
+    console.print(
+        "[yellow]All timeline clips remain pending. Use review-timeline before render-draft; "
+        "no source media was modified and no video was rendered.[/yellow]"
     )
 
 

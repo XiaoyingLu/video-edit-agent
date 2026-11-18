@@ -271,6 +271,19 @@ Source files are never modified. File size and modification time provide a fast 
 11. Music-aware soundtrack tempo, beat/downbeat, and energy-section analysis (implemented as review guidance; automatic beat synchronization remains a future step)
 
 
+### Compile the approved storyboard into a production timeline
+
+Once every storyboard shot has an explicitly approved footage assignment, approve the creative storyboard and compile it into the existing reviewable FFmpeg timeline:
+
+```bash
+docker compose run --rm video-agent approve-storyboard ./travel-test
+docker compose run --rm video-agent build-storyboard-timeline ./travel-test
+docker compose run --rm video-agent review-timeline ./travel-test
+docker compose run --rm video-agent render-draft ./travel-test
+```
+
+The compilation preserves storyboard scene/shot order and uses the approved source intervals. If an assigned source interval is longer than its shot target, the compiler takes a centered trim; if it is shorter, it preserves the available interval without stretching. Transition preferences come from the validated editing plan, with the first shot always beginning on a cut. Every compiled timeline clip starts as `pending`; the normal `review-timeline` approval gate still applies before rendering. The renderer remains deterministic and does not modify source media.
+
 ### Visual storyboard review
 
 After creating the storyboard and analyzing source footage, generate a local HTML review page:

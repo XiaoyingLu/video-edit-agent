@@ -187,6 +187,8 @@ def test_cli_help_includes_timeline_commands():
     assert result.exit_code == 0
     assert "optimize-timeline" in result.output
     assert "review-timeline" in result.output
+    assert "approve-storyboard" in result.output
+    assert "build-storyboard-timeline" in result.output
 
 
 def test_cinematic_timeline_builds_establishing_action_detail_and_scenic_arc(tmp_path):
