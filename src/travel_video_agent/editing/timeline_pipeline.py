@@ -47,10 +47,15 @@ _ROLE_PACING_RANGES = {
 
 
 def _pacing_guidance(
-    duration: float, pacing: str, visual_role: str = "unknown"
+    duration: float,
+    pacing: str,
+    visual_role: str = "unknown",
+    energy_multiplier: float = 1.0,
 ) -> tuple[str, str, float]:
-    """Recommend a role-aware shot duration without changing source intervals."""
+    """Recommend a role- and music-aware shot duration without changing source intervals."""
     lower, upper = _ROLE_PACING_RANGES[pacing].get(visual_role, _PACING_RANGES[pacing])
+    lower *= energy_multiplier
+    upper *= energy_multiplier
     target = round((lower + upper) / 2, 2)
     if duration < lower:
         fit = "short"
@@ -307,10 +312,8 @@ def build_draft_timeline(
                 music_section_start = section.start_seconds
                 music_section_end = section.end_seconds
                 multiplier = {"low": 1.15, "medium": 1.0, "high": 0.8}[section.energy]
-                pacing_target = round(min(10.0, max(1.0, pacing_target * multiplier)), 2)
-                pacing_note = (
-                    f"{pacing_note} Music energy adjusts the advisory target "
-                    f"to about {pacing_target:.1f}s."
+                pacing_fit, pacing_note, pacing_target = _pacing_guidance(
+                    clip.duration_seconds, plan.pacing, clip.visual_role, multiplier
                 )
                 music_pacing_note = {
                     "low": "Quieter music section: consider allowing this shot more breathing room.",
