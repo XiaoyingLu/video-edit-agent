@@ -27,6 +27,7 @@ from .editing import (
 )
 from .editing.footage_mapping import suggest_storyboard_footage
 from .editing.footage_review import review_storyboard_footage
+from .editing.storyboard_review import generate_storyboard_review
 from .editing.planning_generation import VideoPlanningError
 from .editing.workflow import create_video_draft
 from .highlights import find_highlights_folder
@@ -1207,6 +1208,42 @@ def suggest_footage(
     console.print(
         "[yellow]Candidates are ranked suggestions only. No footage was assigned, "
         "approved, trimmed, or rendered.[/yellow]"
+    )
+
+
+@app.command("review-storyboard")
+def review_storyboard(
+    folder: Annotated[
+        Path,
+        typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True),
+    ],
+    plan: Annotated[Path | None, typer.Option("--plan", help="Project plan JSON path.")] = None,
+    understanding: Annotated[
+        Path | None, typer.Option("--understanding", help="Video understanding JSON path.")
+    ] = None,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="HTML output path.")
+    ] = None,
+) -> None:
+    """Generate a local, read-only HTML storyboard with representative footage frames."""
+    try:
+        destination, shot_count, image_count = generate_storyboard_review(
+            folder,
+            plan_path=plan,
+            understanding_path=understanding,
+            output_path=output,
+        )
+    except (FileNotFoundError, ValueError, OSError) as exc:
+        console.print(f"[red]Storyboard review failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    console.print(
+        f"Storyboard review saved to [green]{destination}[/green] — "
+        f"{shot_count} shot(s), {image_count} representative frame(s)."
+    )
+    console.print(
+        "[yellow]Open the HTML file locally to inspect the sequence. "
+        "This is read-only review; no approval or rendering was performed.[/yellow]"
     )
 
 
