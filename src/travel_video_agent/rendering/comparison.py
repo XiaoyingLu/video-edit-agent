@@ -52,8 +52,8 @@ class ComparisonFrameSample(BaseModel):
     dark_pixel_ratio_delta: float
     bright_pixel_ratio_delta: float
     sharpness_variance_delta: float
-    before_image_data_uri: str = Field(exclude=True)
-    after_image_data_uri: str = Field(exclude=True)
+    before_image_data_uri: str = Field(default="", exclude=True)
+    after_image_data_uri: str = Field(default="", exclude=True)
 
 
 class DraftComparisonReport(BaseModel):
