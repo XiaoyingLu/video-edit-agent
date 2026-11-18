@@ -1284,11 +1284,13 @@ def review_revision_suggestions(
         list[str] | None,
         typer.Option(
             "--set-interval",
-            help="Explicit trim as clip_id:start:end; only for accepted overlong timing suggestions.",
+            help=(
+                "Explicit trim as clip_id:start:end; only for accepted overlong timing suggestions."
+            ),
         ),
     ] = None,
 ) -> None:
-    """Accept, reject, or skip critique suggestions and optionally create a separate timeline revision."""
+    """Review critique suggestions and optionally create a separate timeline revision."""
     root = folder.expanduser().resolve()
     suggestion_file = (
         (suggestions or root / ".video-agent" / "draft-revision-suggestions.json")
@@ -1311,7 +1313,9 @@ def review_revision_suggestions(
                 console.print(f"Evidence: {item['evidence']}")
                 console.print(f"Recommendation: {item['recommendation']}")
                 while True:
-                    choice = console.input("Decision [a]ccept / [r]eject / [s]kip: ").strip().lower()
+                    choice = console.input(
+                        "Decision [a]ccept / [r]eject / [s]kip: "
+                    ).strip().lower()
                     if choice in {"a", "accept"}:
                         accepted.add(item["suggestion_id"])
                         break
