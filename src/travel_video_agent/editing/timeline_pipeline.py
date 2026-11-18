@@ -434,6 +434,7 @@ def build_draft_timeline(
                 setting=clip.setting,
                 primary_subject=clip.primary_subject,
                 temporal_summary=clip.temporal_summary,
+                action_progression=clip.action_progression,
                 dynamics_confidence=clip.dynamics_confidence,
                 subject_motion=clip.subject_motion,
                 camera_motion=clip.camera_motion,
