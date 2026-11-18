@@ -8,7 +8,7 @@ from pathlib import Path
 from ..media import analyze_folder, discover_videos
 from .frame_sampler import extract_representative_frames
 from .scene_detection import detect_scenes
-from .schemas import FrameObservation, VideoScene, VideoUnderstanding
+from .schemas import FrameObservation, SceneDynamics, VideoScene, VideoUnderstanding
 from .visual_analyzer import OllamaVisionAnalyzer
 
 
@@ -61,6 +61,16 @@ def understand_folder(
                             **result,
                         )
                     )
+                dynamics = None
+                if len(frames) >= 2:
+                    try:
+                        dynamics = SceneDynamics.model_validate(analyzer.analyze_scene(frames))
+                    except Exception as exc:
+                        warnings.warn(
+                            f"Temporal analysis failed for scene {video_key}-scene-{scene_index:04d}: {exc}",
+                            RuntimeWarning,
+                            stacklevel=2,
+                        )
                 scenes.append(
                     VideoScene(
                         scene_id=f"{video_key}-scene-{scene_index:04d}",
@@ -70,6 +80,7 @@ def understand_folder(
                         story_function=_dominant_label(observations, "visual_role"),
                         dominant_mood=_dominant_label(observations, "mood"),
                         observations=observations,
+                        dynamics=dynamics,
                     )
                 )
 
