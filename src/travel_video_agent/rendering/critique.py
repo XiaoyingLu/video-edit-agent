@@ -76,9 +76,7 @@ class DraftCritiqueReport(BaseModel):
 
 def _run(command: list[str], *, timeout: float = 120) -> subprocess.CompletedProcess[str]:
     try:
-        return subprocess.run(
-            command, capture_output=True, text=True, timeout=timeout, check=False
-        )
+        return subprocess.run(command, capture_output=True, text=True, timeout=timeout, check=False)
     except subprocess.TimeoutExpired as exc:
         raise DraftCritiqueError("Media inspection exceeded its time limit.") from exc
 
@@ -171,12 +169,10 @@ def _analyze_audio(ffmpeg: str, video: Path, has_audio: bool) -> AudioQualitySum
     mean_match = re.search(r"mean_volume:\s*(-?inf|-?\d+(?:\.\d+)?)\s*dB", result.stderr)
     max_match = re.search(r"max_volume:\s*(-?inf|-?\d+(?:\.\d+)?)\s*dB", result.stderr)
     silence_starts = [
-        float(value)
-        for value in re.findall(r"silence_start:\s*(-?\d+(?:\.\d+)?)", result.stderr)
+        float(value) for value in re.findall(r"silence_start:\s*(-?\d+(?:\.\d+)?)", result.stderr)
     ]
     silence_ends = [
-        float(value)
-        for value in re.findall(r"silence_end:\s*(-?\d+(?:\.\d+)?)", result.stderr)
+        float(value) for value in re.findall(r"silence_end:\s*(-?\d+(?:\.\d+)?)", result.stderr)
     ]
     intervals = [
         (start, end)
@@ -186,14 +182,10 @@ def _analyze_audio(ffmpeg: str, video: Path, has_audio: bool) -> AudioQualitySum
     return AudioQualitySummary(
         has_audio=True,
         mean_volume_db=(
-            float(mean_match.group(1))
-            if mean_match and mean_match.group(1) != "-inf"
-            else None
+            float(mean_match.group(1)) if mean_match and mean_match.group(1) != "-inf" else None
         ),
         max_volume_db=(
-            float(max_match.group(1))
-            if max_match and max_match.group(1) != "-inf"
-            else None
+            float(max_match.group(1)) if max_match and max_match.group(1) != "-inf" else None
         ),
         silence_intervals=intervals,
     )
@@ -235,9 +227,7 @@ def critique_rendered_draft(
     plan = VideoProjectPlan.model_validate_json(plan_file.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root or Path(plan.project_path).resolve() != root:
         raise DraftCritiqueError("Timeline and creative plan must belong to this project folder.")
-    if not timeline.timeline_approved or any(
-        clip.decision == "pending" for clip in timeline.clips
-    ):
+    if not timeline.timeline_approved or any(clip.decision == "pending" for clip in timeline.clips):
         raise DraftCritiqueError("The source timeline must be fully reviewed and approved.")
     if not plan.scenes:
         raise DraftCritiqueError("The creative plan must contain a completed storyboard.")
