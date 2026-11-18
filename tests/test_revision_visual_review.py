@@ -4,12 +4,12 @@ from types import SimpleNamespace
 from typer.testing import CliRunner
 
 from travel_video_agent.cli import app
-from travel_video_agent.editing.revisions import TimelineIntervalEdit, create_timeline_revision
 from travel_video_agent.editing.revision_visual_review import (
     build_timeline_revision_visual_review,
     render_timeline_revision_review_html,
     save_timeline_revision_visual_review,
 )
+from travel_video_agent.editing.revisions import TimelineIntervalEdit, create_timeline_revision
 from travel_video_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
 
 
@@ -121,8 +121,10 @@ def test_visual_review_pairs_midpoint_source_frames_and_is_read_only(tmp_path, m
     assert frame.after_frame_data_uri.startswith("data:image/jpeg;base64,")
     assert report.duration_delta_seconds < 0
     assert "not rendered playback" in render_timeline_revision_review_html(report)
-    assert ProjectDraftTimeline.model_validate_json(source.read_text()).timeline_approved is True
-    assert ProjectDraftTimeline.model_validate_json(revision.read_text()).timeline_approved is False
+    original = ProjectDraftTimeline.model_validate_json(source.read_text())
+    revised = ProjectDraftTimeline.model_validate_json(revision.read_text())
+    assert original.timeline_approved is True
+    assert revised.timeline_approved is False
 
 
 def test_visual_review_saves_self_contained_html_and_json(tmp_path, monkeypatch):
