@@ -202,7 +202,10 @@ def render_timeline_visual_review_html(report: TimelineVisualReviewReport) -> st
             ("Continuity", clip.continuity_note),
             ("Pacing", clip.pacing_note),
             ("Music", f"{clip.music_energy} · {clip.music_pacing_note}"),
-            ("Incoming transition", f"{clip.transition_in} · {clip.transition_duration_seconds:.2f}s"),
+            (
+                "Incoming transition",
+                f"{clip.transition_in} · {clip.transition_duration_seconds:.2f}s",
+            ),
             ("Transcript", clip.transcript_excerpt or "Not available"),
         ]
         detail_html = "".join(
@@ -280,7 +283,9 @@ def save_timeline_visual_review(
 ) -> tuple[Path, Path]:
     """Save review metadata and HTML without overwriting earlier review artifacts."""
     root = folder.expanduser().resolve()
-    base = (output_path or root / ".video-agent" / "timeline-visual-review" / "review").expanduser()
+    base = (
+        output_path or root / ".video-agent" / "timeline-visual-review" / "review"
+    ).expanduser()
     base = (root / base).resolve() if not base.is_absolute() else base.resolve()
     try:
         base.relative_to(root)
@@ -290,7 +295,7 @@ def save_timeline_visual_review(
     if json_file.exists() or html_file.exists():
         raise FileExistsError(f"Refusing to overwrite visual timeline review: {base}")
     json_file.parent.mkdir(parents=True, exist_ok=True)
-    json_file.write_text(report.model_dump_json(indent=2) + "\\n", encoding="utf-8")
+    json_file.write_text(report.model_dump_json(indent=2) + "\n", encoding="utf-8")
     html_file.write_text(render_timeline_visual_review_html(report), encoding="utf-8")
     dependency = root / report.timeline_path
     register_artifact(root, json_file, dependencies=[dependency])
