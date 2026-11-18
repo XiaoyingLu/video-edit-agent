@@ -7,17 +7,40 @@ from pathlib import Path
 from ..artifact_tracking import validate_artifact
 from ..media import discover_videos
 from ..understanding.schemas import VideoUnderstanding
-from .planning_schemas import VideoProjectPlan
 from .footage_schemas import (
     FootageMatchCandidate,
     ProjectFootageSuggestions,
     ShotFootageSuggestions,
 )
+from .planning_schemas import VideoProjectPlan
 
 _STOP_WORDS = {
-    "a", "an", "and", "are", "at", "be", "by", "for", "from", "in", "into",
-    "is", "it", "of", "on", "or", "the", "this", "to", "with", "show", "shot",
-    "view", "scene", "camera", "footage",
+    "a",
+    "an",
+    "and",
+    "are",
+    "at",
+    "be",
+    "by",
+    "for",
+    "from",
+    "in",
+    "into",
+    "is",
+    "it",
+    "of",
+    "on",
+    "or",
+    "the",
+    "this",
+    "to",
+    "with",
+    "show",
+    "shot",
+    "view",
+    "scene",
+    "camera",
+    "footage",
 }
 
 
@@ -89,7 +112,10 @@ def suggest_storyboard_footage(
     understanding_file = (
         understanding_path or artifact_dir / "understanding.json"
     ).expanduser().resolve()
-    for path, label in ((plan_file, "video project plan"), (understanding_file, "video understanding")):
+    for path, label in (
+        (plan_file, "video project plan"),
+        (understanding_file, "video understanding"),
+    ):
         try:
             path.relative_to(root)
         except ValueError as exc:
@@ -107,11 +133,11 @@ def suggest_storyboard_footage(
     understanding = VideoUnderstanding.model_validate_json(
         understanding_file.read_text(encoding="utf-8")
     )
-    video_paths = {
-        hashlib.sha256(path.relative_to(root).as_posix().encode("utf-8")).hexdigest()[:12]:
-        path.relative_to(root).as_posix()
-        for path in discover_videos(root)
-    }
+    video_paths = {}
+    for path in discover_videos(root):
+        relative_path = path.relative_to(root).as_posix()
+        video_key = hashlib.sha256(relative_path.encode("utf-8")).hexdigest()[:12]
+        video_paths[video_key] = relative_path
 
     scenes = []
     for source_scene in understanding.scenes:
