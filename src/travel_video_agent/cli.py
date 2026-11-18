@@ -39,6 +39,7 @@ from .highlights import find_highlights_folder
 from .media import MediaToolError, analyze_folder
 from .music import analyze_music
 from .music.pipeline import MusicAnalysisError
+from .music.sync import MusicSyncError, save_music_sync_suggestions, suggest_music_sync
 from .rendering import RenderError, render_approved_shot_timeline, render_project
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
@@ -1718,6 +1719,99 @@ def analyze_music_command(
     console.print(f"Music analysis saved to [green]{destination}[/green]")
     for note in report.notes:
         console.print(f"[dim]• {note}[/dim]")
+
+
+@app.command("suggest-music-sync")
+def suggest_music_sync_command(
+    folder: Annotated[
+        Path,
+        typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True),
+    ],
+    timeline: Annotated[
+        Path | None, typer.Option("--timeline", help="Shot timeline JSON path.")
+    ] = None,
+    music_analysis: Annotated[
+        Path | None, typer.Option("--music-analysis", help="Soundtrack analysis JSON path.")
+    ] = None,
+    tolerance: Annotated[
+        float,
+        typer.Option(
+            "--tolerance",
+            min=0.001,
+            max=1.0,
+            help="Maximum beat distance for a recommendation, in seconds (default: 0.18).",
+        ),
+    ] = 0.18,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Suggestion report output path.")
+    ] = None,
+) -> None:
+    """Compare timeline transitions with soundtrack beats without changing the timeline."""
+    try:
+        report = suggest_music_sync(
+            folder,
+            timeline_path=timeline,
+            music_analysis_path=music_analysis,
+            tolerance_seconds=tolerance,
+        )
+    except (FileNotFoundError, ValueError, OSError) as exc:
+        console.print(f"[red]Music sync analysis failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    destination = (
+        output or folder.resolve() / ".video-agent" / "music-sync-suggestions.json"
+    ).expanduser().resolve()
+    try:
+        destination.relative_to(folder.expanduser().resolve())
+    except ValueError as exc:
+        console.print("[red]Music sync output must be inside the project folder.[/red]")
+        raise typer.Exit(code=1) from exc
+    save_music_sync_suggestions(report, destination)
+    timeline_file = folder.resolve() / report.timeline_path
+    analysis_file = folder.resolve() / report.music_analysis_path
+    register_artifact(
+        folder,
+        destination,
+        dependencies=[timeline_file, analysis_file],
+        config={"tolerance_seconds": tolerance},
+    )
+
+    table = Table(title="Music Sync Suggestions — Review Required")
+    table.add_column("Transition")
+    table.add_column("Current", justify="right")
+    table.add_column("Nearest beat", justify="right")
+    table.add_column("Delta", justify="right")
+    table.add_column("Recommendation")
+    for boundary in report.boundaries:
+        table.add_row(
+            f"{boundary.previous_clip_id} → {boundary.next_clip_id}",
+            f"{boundary.boundary_seconds:.2f}s",
+            (
+                f"{boundary.nearest_beat_seconds:.2f}s"
+                if boundary.nearest_beat_seconds is not None
+                else "—"
+            ),
+            (
+                f"{boundary.beat_delta_seconds:+.2f}s"
+                if boundary.beat_delta_seconds is not None
+                else "—"
+            ),
+            (
+                f"{boundary.recommended_anchor}: "
+                f"{boundary.recommended_boundary_seconds:.2f}s"
+                if boundary.recommended_boundary_seconds is not None
+                else "No change"
+            ),
+        )
+    console.print(table)
+    console.print(
+        f"Suggested {report.aligned_boundary_count}/{report.boundary_count} "
+        f"beat-aligned transition(s); report saved to [green]{destination}[/green]."
+    )
+    console.print(
+        "[yellow]This is a review-only report. Timeline timing and source intervals "
+        "were not changed.[/yellow]"
+    )
 
 
 @app.command("validate-artifacts")
