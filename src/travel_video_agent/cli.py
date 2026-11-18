@@ -45,6 +45,7 @@ from .editing.revision_visual_review import (
 )
 from .editing.revisions import (
     TimelineIntervalEdit,
+    TimelineRevisionError,
     compare_timeline_files,
     create_timeline_revision,
 )
