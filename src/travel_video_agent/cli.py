@@ -783,12 +783,16 @@ def init_title_overlays(
     ] = None,
     output: Annotated[
         Path | None,
-        typer.Option("--output", help="Output JSON path (default: .video-agent/title-overlays.json)."),
+        typer.Option(
+            "--output", help="Output JSON path (default: .video-agent/title-overlays.json)."
+        ),
     ] = None,
 ) -> None:
     """Create an editable title overlay review template for the optimized timeline."""
     root = folder.expanduser().resolve()
-    timeline_file = (timeline or root / ".video-agent" / "optimized-timeline.json").expanduser().resolve()
+    timeline_file = (
+        timeline or root / ".video-agent" / "optimized-timeline.json"
+    ).expanduser().resolve()
     destination = (output or root / ".video-agent" / "title-overlays.json").expanduser().resolve()
     try:
         timeline_relative = timeline_file.relative_to(root)
@@ -818,15 +822,22 @@ def review_titles(
     ],
     overlay_file: Annotated[
         Path | None,
-        typer.Option("--overlay-file", help="Title overlay JSON (default: .video-agent/title-overlays.json)."),
+        typer.Option(
+            "--overlay-file",
+            help="Title overlay JSON (default: .video-agent/title-overlays.json).",
+        ),
     ] = None,
     approve: Annotated[
         list[str] | None,
-        typer.Option("--approve", help="Title overlay ID to approve; repeat for multiple IDs."),
+        typer.Option(
+            "--approve", help="Title overlay ID to approve; repeat for multiple IDs."
+        ),
     ] = None,
     reject: Annotated[
         list[str] | None,
-        typer.Option("--reject", help="Title overlay ID to reject; repeat for multiple IDs."),
+        typer.Option(
+            "--reject", help="Title overlay ID to reject; repeat for multiple IDs."
+        ),
     ] = None,
 ) -> None:
     """Review title suggestions; only approved overlays are burned into the render."""
