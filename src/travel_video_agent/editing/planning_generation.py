@@ -8,7 +8,7 @@ from urllib.request import Request, urlopen
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from ..resource_manager import ResourceError, ensure_memory_available, required_vision_memory_gb
+from ..resource_manager import ResourceError, ensure_memory_available, required_ollama_memory_gb
 from .planning_schemas import PlannedScene, StoryTreatment
 
 
@@ -82,14 +82,14 @@ class OllamaVideoPlanner:
     """Generate a narrative treatment and storyboard using Ollama structured output."""
 
     def __init__(self, model: str | None = None, base_url: str | None = None) -> None:
-        self.model = model or os.getenv("OLLAMA_MODEL", "qwen2.5vl:3b")
+        self.model = model or os.getenv("VIDEO_PLANNER_MODEL", "qwen2.5:1.5b")
         self.base_url = (base_url or os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")).rstrip(
             "/"
         )
         self.keep_alive = os.getenv("OLLAMA_KEEP_ALIVE", "5m")
         try:
             ensure_memory_available(
-                required_vision_memory_gb(self.model),
+                required_ollama_memory_gb(self.model, "VIDEO_PLANNER_MIN_MEMORY_GB"),
                 f"Ollama planning model '{self.model}'",
             )
         except ResourceError as exc:
