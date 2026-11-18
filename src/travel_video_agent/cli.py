@@ -1642,6 +1642,8 @@ def review_timeline(
                         f"Shot scale: {clip.shot_scale.replace('_', ' ')}"
                     )
                 console.print(clip.pacing_note)
+                if clip.music_energy != "unknown":
+                    console.print(f"Music: {clip.music_pacing_note}")
                 if clip.transition_in != "cut":
                     console.print(
                         f"Incoming transition: {clip.transition_in} "
