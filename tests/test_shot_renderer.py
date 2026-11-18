@@ -92,6 +92,21 @@ def test_shot_renderer_builds_crossfade_and_audio_crossfade_graph(tmp_path):
     assert "[v0][a0][v1][a1]concat" not in graph
 
 
+def test_shot_renderer_supports_crop_and_pad_fit_modes(tmp_path):
+    crop = _build_shot_render_command("ffmpeg", [(tmp_path / "one.mp4", 0, 2, False, "cut", 0)], tmp_path / "crop.mp4", 1080, 1920, fit_mode="crop")
+    crop_graph = crop[crop.index("-filter_complex") + 1]
+    assert "force_original_aspect_ratio=increase,crop=1080:1920" in crop_graph
+    pad = _build_shot_render_command("ffmpeg", [(tmp_path / "one.mp4", 0, 2, False, "cut", 0)], tmp_path / "pad.mp4", 1080, 1920, fit_mode="pad")
+    pad_graph = pad[pad.index("-filter_complex") + 1]
+    assert "force_original_aspect_ratio=decrease" in pad_graph
+    assert "pad=width=1080:height=1920" in pad_graph
+
+
+def test_shot_renderer_rejects_unknown_fit_mode(tmp_path):
+    with pytest.raises(ValueError, match="fit_mode"):
+        _build_shot_render_command("ffmpeg", [(tmp_path / "one.mp4", 0, 2, False, "cut", 0)], tmp_path / "out.mp4", 1920, 1080, fit_mode="stretch")
+
+
 def test_shot_renderer_uses_concat_for_hard_cuts(tmp_path):
     command = _build_shot_render_command(
         "ffmpeg",
