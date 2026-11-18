@@ -353,7 +353,7 @@ def build_draft_timeline(
             )
         )
         previous_duration = clip.duration_seconds
-        elapsed_seconds += clip.duration_seconds
+        elapsed_seconds += max(0.0, clip.duration_seconds - transition_duration)
 
     duration = sum(clip.duration_seconds for clip in timeline_clips) - sum(
         clip.transition_duration_seconds for clip in timeline_clips[1:]
