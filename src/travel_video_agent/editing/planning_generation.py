@@ -110,7 +110,12 @@ class OllamaVideoPlanner:
         except (HTTPError, URLError, TimeoutError, OSError):
             return
 
-    def generate(self, prompt: str, brief: dict) -> GeneratedVideoPlanContent:
+    def generate(
+        self,
+        prompt: str,
+        brief: dict,
+        music_sections: list[dict] | None = None,
+    ) -> GeneratedVideoPlanContent:
         schema = GeneratedVideoPlanContent.model_json_schema()
         system_prompt = (
             "You are an experienced travel-film director and storyboard artist. "
@@ -127,7 +132,11 @@ class OllamaVideoPlanner:
             "footage_start_seconds, and footage_end_seconds unset, and set "
             "assignment_status to unassigned. Make choices grounded in the user's brief; "
             "flag uncertain details "
-            "as assumptions rather than inventing personal trip events."
+            "as assumptions rather than inventing personal trip events. When soundtrack "
+            "energy sections are supplied, shape the scene progression to complement their "
+            "low, medium, and high energy changes where editorially appropriate. Treat these "
+            "as broad loudness cues, not semantic labels such as chorus or drop. Do not force "
+            "every shot to end on a beat, and do not invent soundtrack events."
         )
         payload = json.dumps(
             {
@@ -139,7 +148,13 @@ class OllamaVideoPlanner:
                     {"role": "system", "content": system_prompt},
                     {
                         "role": "user",
-                        "content": json.dumps({"request": prompt, "brief": brief}),
+                        "content": json.dumps(
+                            {
+                                "request": prompt,
+                                "brief": brief,
+                                "soundtrack_energy_sections": music_sections or [],
+                            }
+                        ),
                     },
                 ],
                 "options": {"temperature": 0.2},
@@ -212,12 +227,15 @@ def normalize_storyboard_ids(content: GeneratedVideoPlanContent) -> GeneratedVid
 
 
 def generate_video_plan_content(
-    prompt: str, brief: dict, model: str | None = None
+    prompt: str,
+    brief: dict,
+    model: str | None = None,
+    music_sections: list[dict] | None = None,
 ) -> GeneratedVideoPlanContent:
     """Generate structured story content and fit shot durations to the validated brief."""
     planner = OllamaVideoPlanner(model=model)
     try:
-        content = planner.generate(prompt, brief)
+        content = planner.generate(prompt, brief, music_sections=music_sections)
     finally:
         planner.unload_model()
 
