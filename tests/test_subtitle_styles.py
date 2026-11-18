@@ -8,13 +8,20 @@ from travel_video_agent.rendering.renderer import (
 )
 
 
-def test_classic_subtitle_style_preserves_existing_default():
-    style = _subtitle_force_style("classic", 28, "bottom", 1920, 1080)
+@pytest.mark.parametrize(("position", "alignment", "margin"), [
+    ("bottom", 2, 48),
+    ("center", 5, 0),
+    ("top", 8, 48),
+])
+def test_classic_subtitle_style_preserves_existing_defaults(
+    position: str, alignment: int, margin: int
+):
+    style = _subtitle_force_style("classic", 28, position, 1920, 1080)
 
     assert style == (
         "FontName=DejaVu Sans,FontSize=28,"
         "PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,"
-        "BorderStyle=1,Outline=2,Shadow=1,Alignment=2,MarginV=48"
+        f"BorderStyle=1,Outline=2,Shadow=1,Alignment={alignment},MarginV={margin}"
     )
 
 
