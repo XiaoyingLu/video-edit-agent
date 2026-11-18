@@ -6,12 +6,16 @@ import pytest
 from typer.testing import CliRunner
 
 from travel_video_agent.cli import app
+from travel_video_agent.artifact_tracking import register_artifact
 from travel_video_agent.editing.timeline_schemas import (
     DraftTimelineClip,
     ProjectDraftTimeline,
 )
 from travel_video_agent.rendering import RenderError, RenderReport, render_approved_shot_timeline
-from travel_video_agent.rendering.shot_renderer import _build_shot_render_command
+from travel_video_agent.rendering.shot_renderer import (
+    _build_shot_render_command,
+    _resolve_output_dimensions,
+)
 
 runner = CliRunner()
 
@@ -73,6 +77,39 @@ def _timeline(root: Path, *, approved: bool = True) -> ProjectDraftTimeline:
         ),
         timeline_approved=approved,
     )
+
+
+def test_output_dimensions_follow_project_plan_and_require_fresh_artifact(tmp_path):
+    artifact = tmp_path / ".video-agent"
+    artifact.mkdir()
+    plan_path = artifact / "video-project-plan.json"
+    plan_path.write_text(
+        __import__("json").dumps(
+            {
+                "project_path": str(tmp_path.resolve()),
+                "brief": {
+                    "source_prompt": "Create a vertical video",
+                    "target_duration_seconds": 10,
+                    "style": "cinematic",
+                    "aspect_ratio": "9:16",
+                    "resolution": "1080p",
+                    "pacing": "moderate",
+                },
+                "editing_preferences": {
+                    "source_prompt": "Create a vertical video",
+                    "target_duration_seconds": 10,
+                    "style": "cinematic",
+                    "aspect_ratio": "9:16",
+                    "resolution": "1080p",
+                    "pacing": "moderate",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    register_artifact(tmp_path, plan_path)
+
+    assert _resolve_output_dimensions(tmp_path, 1920, 1080) == (1080, 1920)
 
 
 def test_shot_renderer_builds_crossfade_and_audio_crossfade_graph(tmp_path):
