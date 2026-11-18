@@ -143,7 +143,8 @@ def build_draft_revision_suggestions(
                 evidence=evidence or "The semantic review did not provide supporting detail.",
                 recommendation=(
                     suggestion
-                    or (\n                        "Inspect the shot against its storyboard intent and consider a "
+                    or (
+                        "Inspect the shot against its storyboard intent and consider a "
                         "different footage assignment."
                     )
                 ),
@@ -216,7 +217,8 @@ def save_draft_revision_suggestions(
         raise FileExistsError(f"Suggestion output already exists: {output}")
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = output.with_suffix(output.suffix + ".tmp")
-    temporary.write_text(json.dumps(report.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8")
+    payload = json.dumps(report.model_dump(mode="json"), indent=2) + "\n"
+    temporary.write_text(payload, encoding="utf-8")
     temporary.replace(output)
     register_artifact(
         root,
