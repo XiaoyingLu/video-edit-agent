@@ -177,9 +177,7 @@ def test_saves_suggestions_with_artifact_dependencies(tmp_path, monkeypatch):
     assert len(registered["dependencies"]) == 2
 
 
-def test_review_records_decisions_and_creates_separate_timeline_revision(
-    tmp_path, monkeypatch
-):
+def test_review_records_decisions_and_creates_separate_timeline_revision(tmp_path, monkeypatch):
     _inputs(tmp_path)
     monkeypatch.setattr(
         "travel_video_agent.editing.revision_suggestions.validate_artifact",
@@ -271,9 +269,7 @@ def test_review_rejects_interval_for_unaccepted_suggestion(tmp_path, monkeypatch
         )
 
 
-def test_review_revision_suggestions_cli_accepts_explicit_interval(
-    tmp_path, monkeypatch
-):
+def test_review_revision_suggestions_cli_accepts_explicit_interval(tmp_path, monkeypatch):
     _inputs(tmp_path)
     monkeypatch.setattr(
         "travel_video_agent.editing.revision_suggestions.validate_artifact",
