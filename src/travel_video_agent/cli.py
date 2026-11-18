@@ -1541,7 +1541,9 @@ def optimize_timeline(
 ) -> None:
     """Order selected shots and propose pacing and transitions for human review."""
     try:
-        timeline = build_draft_timeline(\n            folder, selection_path=selection, plan_path=plan, music_analysis_path=music_analysis\n        )
+        timeline = build_draft_timeline(
+            folder, selection_path=selection, plan_path=plan, music_analysis_path=music_analysis
+        )
     except (FileNotFoundError, ValueError) as exc:
         console.print(f"[red]Timeline optimization failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
