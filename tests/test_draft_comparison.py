@@ -10,7 +10,6 @@ from typer.testing import CliRunner
 from travel_video_agent.cli import app
 from travel_video_agent.rendering.comparison import (
     DraftComparisonError,
-    DraftVideoMetadata,
     compare_rendered_drafts,
     render_comparison_html,
 )
