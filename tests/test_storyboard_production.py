@@ -27,6 +27,7 @@ def _write_plan(root: Path, *, mapped: bool = True) -> Path:
             "visual_role": "establishing",
             "primary_subject": "mountain lake",
             "temporal_summary": "The camera tracks a hiker toward the lake.",
+            "action_progression": ["The hiker approaches the lake viewpoint"],
             "dynamics_confidence": 0.9,
             "subject_motion": "approaching",
             "camera_motion": "tracking",
@@ -125,6 +126,7 @@ def test_approve_and_compile_storyboard_preserves_order_and_trims(tmp_path: Path
     assert timeline.clips[0].transition_in == "cut"
     assert timeline.clips[0].primary_subject == "mountain lake"
     assert timeline.clips[0].subject_motion == "approaching"
+    assert timeline.clips[0].action_progression == ["The hiker approaches the lake viewpoint"]
     assert timeline.clips[0].dynamics_confidence == 0.9
     assert timeline.clips[0].camera_motion == "tracking"
     assert timeline.clips[0].composition == "leading_lines"
