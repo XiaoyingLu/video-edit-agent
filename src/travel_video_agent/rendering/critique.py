@@ -46,7 +46,7 @@ class CritiqueFinding(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     severity: Literal["info", "warning"]
-    category: Literal["duration", "format", "pacing", "visual", "audio", "render"]
+    category: Literal["duration", "format", "pacing", "visual", "audio", "render", "story"]
     message: str
     evidence: str
 
@@ -239,6 +239,8 @@ def _semantic_targets(
 
     if len(targets) <= sample_limit:
         return targets
+    if sample_limit == 1:
+        return [targets[len(targets) // 2]]
     indices = sorted(
         {round(index * (len(targets) - 1) / (sample_limit - 1)) for index in range(sample_limit)}
     )
