@@ -1,3 +1,4 @@
+import json
 import shutil
 import subprocess
 from pathlib import Path
@@ -84,7 +85,7 @@ def test_output_dimensions_follow_project_plan_and_require_fresh_artifact(tmp_pa
     artifact.mkdir()
     plan_path = artifact / "video-project-plan.json"
     plan_path.write_text(
-        __import__("json").dumps(
+        json.dumps(
             {
                 "project_path": str(tmp_path.resolve()),
                 "brief": {
