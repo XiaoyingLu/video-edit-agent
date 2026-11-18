@@ -5,6 +5,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 import pytest
+from rich.text import Text
 from typer.testing import CliRunner
 
 from travel_video_agent.cli import app
@@ -187,6 +188,7 @@ def test_cli_writes_json_and_standalone_html(tmp_path, monkeypatch):
 def test_cli_help_documents_comparison_inputs():
     result = runner.invoke(app, ["compare-drafts", "--help"])
     assert result.exit_code == 0
-    assert "--before" in result.output
-    assert "--after" in result.output
-    assert "--samples" in result.output
+    help_text = Text.from_ansi(result.output).plain
+    assert "--before" in help_text
+    assert "--after" in help_text
+    assert "--samples" in help_text
