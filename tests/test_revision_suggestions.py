@@ -1,7 +1,14 @@
 import json
 from pathlib import Path
 
-from travel_video_agent.editing.revision_review import review_draft_revision_suggestions\nfrom travel_video_agent.editing.revisions import TimelineIntervalEdit\nfrom travel_video_agent.editing.revision_suggestions import (
+import pytest
+
+from travel_video_agent.editing.revision_review import (
+    RevisionSuggestionReviewError,
+    review_draft_revision_suggestions,
+)
+from travel_video_agent.editing.revisions import TimelineIntervalEdit
+from travel_video_agent.editing.revision_suggestions import (
     build_draft_revision_suggestions,
     save_draft_revision_suggestions,
 )
@@ -245,10 +252,6 @@ def test_review_rejects_interval_for_unaccepted_suggestion(tmp_path, monkeypatch
     )
     suggestions = build_draft_revision_suggestions(tmp_path)
     suggestion_file = save_draft_revision_suggestions(tmp_path, suggestions)
-
-    import pytest
-
-    from travel_video_agent.editing.revision_review import RevisionSuggestionReviewError
 
     with pytest.raises(RevisionSuggestionReviewError, match="requires an accepted timing"):
         review_draft_revision_suggestions(
