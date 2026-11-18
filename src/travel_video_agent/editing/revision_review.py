@@ -13,6 +13,7 @@ from .revisions import (
     TimelineRevisionResult,
     create_timeline_revision,
 )
+from .revision_suggestions import DraftRevisionSuggestions
 from .timeline_schemas import ProjectDraftTimeline
 
 
@@ -80,11 +81,18 @@ def review_draft_revision_suggestions(
         )
 
     try:
-        payload = json.loads(suggestion_file.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise RevisionSuggestionReviewError("Suggestion artifact is not valid JSON") from exc
-    suggestions = payload.get("suggestions", [])
-    known = {str(item.get("suggestion_id")): item for item in suggestions}
+        suggestion_document = DraftRevisionSuggestions.model_validate_json(
+            suggestion_file.read_text(encoding="utf-8")
+        )
+    except ValueError as exc:
+        raise RevisionSuggestionReviewError(
+            "Suggestion artifact does not match the expected schema"
+        ) from exc
+    payload = suggestion_document.model_dump(mode="json")
+    suggestions = suggestion_document.suggestions
+    known = {item.suggestion_id: item.model_dump(mode="json") for item in suggestions}
+    if len(known) != len(suggestions):
+        raise RevisionSuggestionReviewError("Suggestion IDs must be unique")
     if accept_ids & reject_ids:
         raise RevisionSuggestionReviewError("A suggestion cannot be both accepted and rejected")
     unknown = (accept_ids | reject_ids) - known.keys()
@@ -107,7 +115,7 @@ def review_draft_revision_suggestions(
     timeline = ProjectDraftTimeline.model_validate_json(
         timeline_file.read_text(encoding="utf-8")
     )
-    if Path(payload.get("project_path", "")).resolve() != root:
+    if Path(suggestion_document.project_path).resolve() != root:
         raise RevisionSuggestionReviewError("Suggestions belong to a different project folder")
     if Path(timeline.project_path).resolve() != root:
         raise RevisionSuggestionReviewError("Timeline belongs to a different project folder")
@@ -117,6 +125,27 @@ def review_draft_revision_suggestions(
         raise RevisionSuggestionReviewError(
             "Only a fully approved source timeline can be reviewed"
         )
+
+    clip_map = {clip.clip_id: clip for clip in timeline.clips}
+    for item in suggestions:
+        clip = clip_map.get(item.clip_id)
+        if clip is None:
+            raise RevisionSuggestionReviewError(
+                f"Suggestion references unknown timeline shot: {item.clip_id}"
+            )
+        if (
+            abs(item.current_source_start_seconds - clip.source_start_seconds) > 0.001
+            or abs(item.current_source_end_seconds - clip.source_end_seconds) > 0.001
+            or abs(item.current_duration_seconds - clip.duration_seconds) > 0.001
+        ):
+            raise RevisionSuggestionReviewError(
+                f"Suggestion for {item.clip_id} no longer matches the source timeline"
+            )
+        expected_action = "review_footage" if item.category == "story" else "review_timing"
+        if item.action != expected_action:
+            raise RevisionSuggestionReviewError(
+                f"Suggestion action is inconsistent for {item.suggestion_id}"
+            )
 
     decisions: list[RevisionSuggestionDecision] = []
     accepted_footage: list[str] = []
@@ -153,7 +182,6 @@ def review_draft_revision_suggestions(
         raise RevisionSuggestionReviewError(
             f"Interval edit requires an accepted timing suggestion: {sorted(unauthorized)[0]}"
         )
-    clip_map = {clip.clip_id: clip for clip in timeline.clips}
     for edit in edits:
         clip = clip_map.get(edit.clip_id)
         if clip is None or clip.pacing_fit != "long":
