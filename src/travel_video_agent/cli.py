@@ -1189,7 +1189,7 @@ def compare_drafts(
         typer.Option(
             "--output",
             "-o",
-            help="Output base path; generates JSON and HTML (default: .video-agent/draft-comparison).",
+            help="Output base path; creates JSON and HTML reports.",
         ),
     ] = None,
 ) -> None:
