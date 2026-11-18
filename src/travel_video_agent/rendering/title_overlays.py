@@ -231,12 +231,15 @@ def suggest_narrative_title_sequences(
         )
 
     treatment = plan.story_treatment
+    opening_title = treatment.working_title.strip()
+    if len(opening_title) > 40:
+        opening_title = opening_title[:37].rstrip() + "..."
     opening_subtitle = treatment.logline.strip()
-    if len(opening_subtitle) > 120:
-        opening_subtitle = opening_subtitle[:117].rstrip() + "..."
+    if len(opening_subtitle) > 48:
+        opening_subtitle = opening_subtitle[:45].rstrip() + "..."
     closing_text = treatment.narrative_arc[-1].strip()
-    if len(closing_text) > 120:
-        closing_text = closing_text[:117].rstrip() + "..."
+    if len(closing_text) > 40:
+        closing_text = closing_text[:37].rstrip() + "..."
     if not closing_text:
         closing_text = "The journey continues"
 
@@ -247,7 +250,7 @@ def suggest_narrative_title_sequences(
         overlays=[
             TitleOverlay(
                 overlay_id="opening-title",
-                text=treatment.working_title,
+                text=opening_title,
                 start_seconds=0,
                 end_seconds=opening_end,
                 placement="center",
