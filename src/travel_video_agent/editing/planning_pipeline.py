@@ -152,9 +152,9 @@ def _annotate_scenes_with_music(
                 overlaps,
                 key=lambda item: (item[0], -item[1].start_seconds),
             )
-            note = "Dominant {energy}-energy section overlaps {duration:.1f}s of this scene.".format(
-                energy=dominant.energy,
-                duration=overlap,
+            note = "Dominant {}-energy section overlaps {:.1f}s of this scene.".format(
+                dominant.energy,
+                overlap,
             )
             annotated.append(
                 scene.model_copy(
