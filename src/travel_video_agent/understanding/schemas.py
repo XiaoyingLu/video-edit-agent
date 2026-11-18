@@ -66,6 +66,21 @@ class FrameObservation(BaseModel):
     primary_subject: str = Field(default="", max_length=100)
 
 
+class SceneDynamics(BaseModel):
+    """Temporal action and camera movement inferred from ordered scene frames."""
+
+    model_config = ConfigDict(extra="forbid")
+    temporal_summary: str = Field(default="", max_length=300)
+    action_progression: list[str] = Field(default_factory=list, max_length=6)
+    subject_motion: Literal[
+        "approaching", "receding", "crossing", "stationary", "interacting", "mixed", "unknown"
+    ] = "unknown"
+    camera_motion: Literal[
+        "static", "pan", "tilt", "zoom", "tracking", "handheld", "mixed", "unknown"
+    ] = "unknown"
+    confidence: float = Field(default=0, ge=0, le=1)
+
+
 class VideoScene(BaseModel):
     """A detected scene with visual observations sampled across its duration."""
 
