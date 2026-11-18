@@ -131,11 +131,12 @@ def test_music_sync_rejects_invalid_tolerance(tmp_path: Path) -> None:
 
 
 def test_music_sync_rejects_artifacts_from_another_project(tmp_path: Path) -> None:
-    _write_inputs(tmp_path)
+    project = tmp_path / "project"
+    _write_inputs(project)
     other = tmp_path / "other"
     other.mkdir()
     with pytest.raises(MusicSyncError, match="inside the project folder"):
-        suggest_music_sync(tmp_path, timeline_path=other / "timeline.json")
+        suggest_music_sync(project, timeline_path=other / "timeline.json")
 
 
 def test_music_sync_report_serializable(tmp_path: Path) -> None:

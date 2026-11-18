@@ -511,7 +511,6 @@ def test_suggest_footage_command_help():
     assert "never assign footage automatically" in help_text
 
 
-
 def test_suggest_music_sync_command_help():
     result = runner.invoke(app, ["suggest-music-sync", "--help"])
     assert result.exit_code == 0

@@ -1,7 +1,7 @@
 """Reviewable beat-alignment suggestions for an approved or proposed shot timeline."""
 
-from bisect import bisect_left
 import json
+from bisect import bisect_left
 from pathlib import Path
 from typing import Literal
 
@@ -80,9 +80,7 @@ def suggest_music_sync(
         raise MusicSyncError("tolerance_seconds must be greater than 0 and at most 1 second")
     root = folder.expanduser().resolve()
     timeline_file = (
-        (timeline_path or root / ".video-agent" / "optimized-timeline.json")
-        .expanduser()
-        .resolve()
+        (timeline_path or root / ".video-agent" / "optimized-timeline.json").expanduser().resolve()
     )
     music_file = (
         (music_analysis_path or root / ".video-agent" / "music-analysis.json")
@@ -101,9 +99,7 @@ def suggest_music_sync(
             raise FileNotFoundError(f"Missing {label} artifact: {path}")
         validate_artifact(root, path)
 
-    timeline = ProjectDraftTimeline.model_validate_json(
-        timeline_file.read_text(encoding="utf-8")
-    )
+    timeline = ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
     music = MusicAnalysis.model_validate_json(music_file.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root:
         raise MusicSyncError("optimized timeline belongs to a different project folder")
@@ -168,13 +164,18 @@ def suggest_music_sync(
             elapsed += clip.duration_seconds
 
     notes = [
-        "Suggestions compare each transition midpoint (or hard-cut boundary) with the nearest detected beat.",
+        "Suggestions compare each transition midpoint (or hard-cut boundary) "
+        "with the nearest detected beat.",
         "No clip duration, source interval, transition, or render artifact is modified.",
-        "A recommendation is shown only when an anchor is within the configured tolerance and beat confidence is at least 0.10.",
-        "Review the soundtrack and footage before applying any timing change; signal-based beat estimates can be imperfect.",
+        "A recommendation is shown only when an anchor is within the configured tolerance "
+        "and beat confidence is at least 0.10.",
+        "Review the soundtrack and footage before applying any timing change; "
+        "signal-based beat estimates can be imperfect.",
     ]
     if not beats:
-        notes.append("No stable beat grid is available; no beat-alignment recommendations were made.")
+        notes.append(
+            "No stable beat grid is available; no beat-alignment recommendations were made."
+        )
     return MusicSyncSuggestions(
         project_path=str(root),
         timeline_path=timeline_file.relative_to(root).as_posix(),
@@ -190,9 +191,7 @@ def suggest_music_sync(
     )
 
 
-def save_music_sync_suggestions(
-    suggestions: MusicSyncSuggestions, destination: Path
-) -> None:
+def save_music_sync_suggestions(suggestions: MusicSyncSuggestions, destination: Path) -> None:
     """Write the report as a standalone JSON artifact."""
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(
