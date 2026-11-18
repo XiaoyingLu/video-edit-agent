@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from travel_video_agent.editing.revision_suggestions import (
+from travel_video_agent.editing.revision_review import review_draft_revision_suggestions\nfrom travel_video_agent.editing.revisions import TimelineIntervalEdit\nfrom travel_video_agent.editing.revision_suggestions import (
     build_draft_revision_suggestions,
     save_draft_revision_suggestions,
 )
@@ -166,3 +166,101 @@ def test_saves_suggestions_with_artifact_dependencies(tmp_path, monkeypatch):
     assert json.loads(destination.read_text())["suggestions"][0]["clip_id"] == "shot-a"
     assert registered["path"] == destination
     assert len(registered["dependencies"]) == 2
+
+
+def test_review_records_decisions_and_creates_separate_timeline_revision(
+    tmp_path, monkeypatch
+):
+    _inputs(tmp_path)
+    monkeypatch.setattr(
+        "travel_video_agent.editing.revision_suggestions.validate_artifact",
+        lambda *_: True,
+    )
+    monkeypatch.setattr(
+        "travel_video_agent.editing.revision_review.validate_artifact",
+        lambda *_: True,
+    )
+    monkeypatch.setattr(
+        "travel_video_agent.editing.revisions.validate_artifact",
+        lambda *_: True,
+    )
+    monkeypatch.setattr(
+        "travel_video_agent.editing.revision_suggestions.register_artifact",
+        lambda *_args, **_kwargs: None,
+    )
+    registered = []
+    monkeypatch.setattr(
+        "travel_video_agent.editing.revision_review.register_artifact",
+        lambda root, path, dependencies: registered.append((path, dependencies)),
+    )
+    monkeypatch.setattr(
+        "travel_video_agent.editing.revisions.register_artifact",
+        lambda *_args, **_kwargs: None,
+    )
+    suggestions = build_draft_revision_suggestions(tmp_path)
+    suggestion_file = save_draft_revision_suggestions(tmp_path, suggestions)
+
+    result, review_file, revision = review_draft_revision_suggestions(
+        tmp_path,
+        suggestions_path=suggestion_file,
+        accept_ids={"shot-b-pacing"},
+        reject_ids={"shot-a-story"},
+        interval_edits=[
+            TimelineIntervalEdit(
+                clip_id="shot-b",
+                source_start_seconds=6,
+                source_end_seconds=9,
+            )
+        ],
+    )
+
+    assert result.timeline_revision_path == revision.revision_path
+    assert result.source_timeline_modified is False
+    assert result.timeline_modified is False
+    assert {item.suggestion_id: item.status for item in result.decisions} == {
+        "shot-a-story": "rejected",
+        "shot-b-pacing": "accepted",
+    }
+    assert review_file.is_file()
+    assert revision.timeline.clips[1].source_start_seconds == 6
+    original = json.loads((tmp_path / suggestions.source_timeline).read_text())
+    assert original["timeline_approved"] is True
+    assert original["clips"][1]["source_start_seconds"] == 5
+    assert registered[0][0] == review_file
+
+
+def test_review_rejects_interval_for_unaccepted_suggestion(tmp_path, monkeypatch):
+    _inputs(tmp_path)
+    monkeypatch.setattr(
+        "travel_video_agent.editing.revision_suggestions.validate_artifact",
+        lambda *_: True,
+    )
+    monkeypatch.setattr(
+        "travel_video_agent.editing.revision_suggestions.register_artifact",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "travel_video_agent.editing.revision_review.validate_artifact",
+        lambda *_: True,
+    )
+    suggestions = build_draft_revision_suggestions(tmp_path)
+    suggestion_file = save_draft_revision_suggestions(tmp_path, suggestions)
+
+    import pytest
+
+    from travel_video_agent.editing.revision_review import RevisionSuggestionReviewError
+
+    with pytest.raises(RevisionSuggestionReviewError, match="requires an accepted timing"):
+        review_draft_revision_suggestions(
+            tmp_path,
+            suggestions_path=suggestion_file,
+            accept_ids=set(),
+            reject_ids=set(),
+            interval_edits=[
+                TimelineIntervalEdit(
+                    clip_id="shot-b",
+                    source_start_seconds=6,
+                    source_end_seconds=9,
+                )
+            ],
+        )
