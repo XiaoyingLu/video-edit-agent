@@ -38,6 +38,11 @@ from .editing.revision_suggestions import (
     build_draft_revision_suggestions,
     save_draft_revision_suggestions,
 )
+from .editing.revision_visual_review import (
+    TimelineRevisionVisualReviewError,
+    build_timeline_revision_visual_review,
+    save_timeline_revision_visual_review,
+)
 from .editing.revisions import (
     TimelineIntervalEdit,
     compare_timeline_files,
@@ -2479,6 +2484,69 @@ def revise_timeline(
         "[yellow]Only changed shots are pending. Review this revision with "
         "review-timeline before rendering; the original timeline and source media "
         "are unchanged.[/yellow]"
+    )
+
+
+@app.command("review-timeline-revision")
+def review_timeline_revision(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder containing both timeline versions and source media.",
+        ),
+    ],
+    before: Annotated[Path, typer.Option("--before", help="Original timeline JSON path.")],
+    after: Annotated[Path, typer.Option("--after", help="Revised timeline JSON path.")],
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", help="Output base path for the JSON and HTML reports."),
+    ] = None,
+) -> None:
+    """Create a visual before/after source-frame review for a timeline revision."""
+    try:
+        report = build_timeline_revision_visual_review(
+            folder,
+            before_path=before,
+            after_path=after,
+        )
+        json_file, html_file = save_timeline_revision_visual_review(
+            folder,
+            report,
+            output_path=output,
+        )
+    except (
+        FileNotFoundError,
+        FileExistsError,
+        OSError,
+        ValueError,
+        TimelineRevisionVisualReviewError,
+        TimelineRevisionError,
+    ) as exc:
+        console.print(f"[red]Timeline revision review failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    table = Table(title="Timeline Revision Visual Review")
+    table.add_column("Shot")
+    table.add_column("Before interval")
+    table.add_column("After interval")
+    for frame in report.frames:
+        table.add_row(
+            frame.clip_id,
+            f"{frame.before_start_seconds:.2f}–{frame.before_end_seconds:.2f}s",
+            f"{frame.after_start_seconds:.2f}–{frame.after_end_seconds:.2f}s",
+        )
+    console.print(table)
+    console.print(f"JSON report: [green]{json_file}[/green]")
+    console.print(f"Visual review: [green]{html_file}[/green]")
+    console.print(
+        "[yellow]This report shows representative source frames, not rendered playback. "
+        "Review full shot context and transitions before approving the revised timeline. "
+        "Neither timeline nor source media was modified.[/yellow]"
     )
 
 
