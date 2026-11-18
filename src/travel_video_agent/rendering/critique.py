@@ -166,7 +166,8 @@ def _analyze_audio(ffmpeg: str, video: Path, has_audio: bool) -> AudioQualitySum
         timeout=180,
     )
     if result.returncode != 0:
-        raise DraftCritiqueError(f"Could not analyze rendered audio: {result.stderr.strip()[-1200:]}")
+        detail = result.stderr.strip()[-1200:]
+        raise DraftCritiqueError(f"Could not analyze rendered audio: {detail}")
     mean_match = re.search(r"mean_volume:\s*(-?inf|-?\d+(?:\.\d+)?)\s*dB", result.stderr)
     max_match = re.search(r"max_volume:\s*(-?inf|-?\d+(?:\.\d+)?)\s*dB", result.stderr)
     silence_starts = [
@@ -259,7 +260,8 @@ def critique_rendered_draft(
         timeout=60,
     )
     if probe.returncode != 0:
-        raise DraftCritiqueError(f"ffprobe could not inspect the rendered video: {probe.stderr.strip()}")
+        detail = probe.stderr.strip()
+        raise DraftCritiqueError(f"ffprobe could not inspect the rendered video: {detail}")
     try:
         payload = json.loads(probe.stdout)
         duration = float(payload["format"]["duration"])
@@ -271,6 +273,8 @@ def critique_rendered_draft(
         raise DraftCritiqueError("Rendered output does not contain a video stream.")
     width = int(video_stream.get("width") or 0)
     height = int(video_stream.get("height") or 0)
+    if video.suffix.lower() != ".mp4":
+        raise DraftCritiqueError("Rendered video must use the .mp4 extension.")
     if duration <= 0 or width <= 0 or height <= 0:
         raise DraftCritiqueError("Rendered output has invalid duration or dimensions.")
     audio_stream = next((item for item in streams if item.get("codec_type") == "audio"), None)
@@ -366,7 +370,9 @@ def critique_rendered_draft(
             CritiqueFinding(
                 severity="warning",
                 category="audio",
-                message="Rendered audio appears silent or could not produce a measurable mean level.",
+                message=(
+                "Rendered audio appears silent or could not produce a measurable mean level."
+            ),
                 evidence="FFmpeg volumedetect did not report a finite mean volume.",
             )
         )
@@ -404,7 +410,8 @@ def critique_rendered_draft(
                 category="visual",
                 message="Some sampled frames contain extensive near-white areas.",
                 evidence=", ".join(
-                    f"{frame.timestamp_seconds:.1f}s ({frame.bright_pixel_ratio:.0%} above luma 239)"
+                    f"{frame.timestamp_seconds:.1f}s "
+                    f"({frame.bright_pixel_ratio:.0%} above luma 239)"
                     for frame in clipped_frames
                 ),
             )
