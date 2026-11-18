@@ -462,7 +462,8 @@ class OllamaVisionAnalyzer:
         evidence = assessment.get("evidence")
         suggestion = assessment.get("suggestion")
         if (
-            match not in {"match", "partial", "mismatch", "uncertain"}
+            not isinstance(match, str)
+            or match not in {"match", "partial", "mismatch", "uncertain"}
             or isinstance(score, bool)
             or not isinstance(score, (int, float))
             or not math.isfinite(score)
