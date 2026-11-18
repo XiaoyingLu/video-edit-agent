@@ -191,7 +191,9 @@ def render_timeline_revision_review_html(report: TimelineRevisionVisualReport) -
 </section>"""
         )
     if not sections:
-        sections.append("<p>No source intervals or transitions changed between these timelines.</p>")
+        sections.append(
+            "<p>No source intervals or transitions changed between these timelines.</p>"
+        )
     delta = f"{report.duration_delta_seconds:+.2f}s"
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -227,7 +229,9 @@ def save_timeline_revision_visual_review(
 ) -> tuple[Path, Path]:
     """Save JSON metadata and a self-contained HTML visual review without overwriting."""
     root = folder.expanduser().resolve()
-    base = (output_path or root / ".video-agent" / "timeline-revision-review" / "review").expanduser()
+    base = (
+        output_path or root / ".video-agent" / "timeline-revision-review" / "review"
+    ).expanduser()
     base = (root / base).resolve() if not base.is_absolute() else base.resolve()
     try:
         base.relative_to(root)
