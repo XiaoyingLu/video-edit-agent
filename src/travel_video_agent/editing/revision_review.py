@@ -8,12 +8,12 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from .revision_suggestions import DraftRevisionSuggestions
 from .revisions import (
     TimelineIntervalEdit,
     TimelineRevisionResult,
     create_timeline_revision,
 )
-from .revision_suggestions import DraftRevisionSuggestions
 from .timeline_schemas import ProjectDraftTimeline
 
 
