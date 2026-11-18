@@ -145,6 +145,7 @@ def build_storyboard_timeline(
                     scene_summary=f"{scene.title}: {shot.visual_description}",
                     primary_subject=shot.primary_subject,
                     temporal_summary=shot.temporal_summary,
+                    action_progression=shot.action_progression,
                     dynamics_confidence=shot.dynamics_confidence,
                     subject_motion=shot.subject_motion,
                     camera_motion=shot.camera_motion,

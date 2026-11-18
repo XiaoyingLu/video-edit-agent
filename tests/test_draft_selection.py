@@ -240,6 +240,7 @@ def test_draft_selection_carries_temporal_scene_metadata(tmp_path):
 
     clip = draft.clips[0]
     assert clip.temporal_summary == "A hiker walks toward the lake viewpoint."
+    assert clip.action_progression == ["The hiker approaches the viewpoint"]
     assert clip.dynamics_confidence == 0.9
     assert clip.subject_motion == "approaching"
     assert clip.camera_motion == "tracking"

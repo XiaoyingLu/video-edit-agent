@@ -224,6 +224,9 @@ def build_draft_selection(
                 temporal_summary=(
                     scene.dynamics.temporal_summary if scene and scene.dynamics else ""
                 ),
+                action_progression=(
+                    scene.dynamics.action_progression if scene and scene.dynamics else []
+                ),
                 dynamics_confidence=(
                     scene.dynamics.confidence if scene and scene.dynamics else 0.0
                 ),

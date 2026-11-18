@@ -51,7 +51,9 @@ The `optimize-timeline` stage uses the scene metadata to build a deterministic v
 
 Pacing recommendations combine editorial role, inferred subject/camera motion, and (when supplied) soundtrack energy. Stationary scenes can receive more breathing room, while active subject movement and tracking/handheld camera motion can receive tighter targets. Motion adjustments are applied only when the temporal-analysis confidence is at least 0.5; otherwise the role/music target is retained. The combined factors are bounded so uncertain or mixed motion does not dominate the recommendation. The timeline records temporal summaries, motion labels, composition, continuity notes, sequence rationale, and a recommended duration.
 
-Adjacent-shot continuity checks flag repeated subject/scale/composition combinations and potentially abrupt motion-direction changes. These are review notes only: they never reorder storyboard shots, change source intervals, or apply trims. Existing draft sequencing behavior remains deterministic; human review is still required before rendering.
+Cinematic sequencing also uses temporal action progression when available: clips that follow the same identified subject with a distinct next action receive a continuity preference, while repeated descriptions of the same beat are discouraged. Sequence rationale explains when a shot continues a subject's story. This evidence is carried through reviewed storyboard footage assignments and shown in timeline review. It does not infer events between sampled frames, override chronological-story preferences, or reorder an approved storyboard.
+
+Adjacent-shot continuity checks flag repeated subject/scale/composition combinations and potentially abrupt motion-direction changes. These are review notes only: they never change source intervals or apply trims. All sequencing recommendations remain reviewable, and human approval is still required before rendering.
 
 ## Music-aware editing
 
