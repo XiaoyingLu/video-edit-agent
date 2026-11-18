@@ -552,3 +552,20 @@ docker compose run --rm video-agent suggest-revisions ./travel-test --minimum-co
 The command writes `.video-agent/draft-revision-suggestions.json`. Semantic mismatches and partial matches are mapped to their existing storyboard/timeline shot IDs only when confidence meets the threshold. Pacing outliers are surfaced from the approved timeline. Each suggestion includes its evidence, affected shot, current source interval, and a bounded review action.
 
 These are review prompts, not generated edits. The tool does not invent trim timestamps, extend source handles, replace footage, reorder shots, approve a timeline, or render a video. Use the existing `revise-timeline --set-interval` workflow only after choosing an exact, safe trim yourself; footage reassignment remains a separate storyboard review workflow. The suggestion artifact tracks both the critique report and source timeline, so stale upstream inputs must be regenerated.
+
+
+To review suggestions interactively:
+
+```bash
+docker compose run --rm video-agent review-revision-suggestions ./travel-test
+```
+
+Choose accept, reject, or skip for each item. For an accepted overlong timing suggestion, you can enter an exact `start:end` source interval; the tool validates that it is a trim within the existing source range. Alternatively, use repeatable flags for a scripted review:
+
+```bash
+docker compose run --rm video-agent review-revision-suggestions ./travel-test \
+  --accept shot-b-pacing --reject shot-a-story \
+  --set-interval shot-b:6.0:9.0
+```
+
+The review decisions are saved under `.video-agent/revision-reviews/`. If an accepted overlong shot has an explicit interval, a separate unapproved timeline is created under `.video-agent/timeline-revisions/`. The original approved timeline is never overwritten. Accepted footage-review suggestions are recorded as follow-up tasks; they do not silently replace footage. Short shots cannot be extended by this workflow.

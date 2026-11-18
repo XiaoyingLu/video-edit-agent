@@ -29,6 +29,10 @@ from .editing.embeddings import EmbeddingModelError
 from .editing.footage_mapping import suggest_storyboard_footage
 from .editing.footage_review import review_storyboard_footage
 from .editing.planning_generation import VideoPlanningError
+from .editing.revision_review import (
+    RevisionSuggestionReviewError,
+    review_draft_revision_suggestions,
+)
 from .editing.revision_suggestions import (
     RevisionSuggestionError,
     build_draft_revision_suggestions,
@@ -1249,6 +1253,157 @@ def suggest_revisions(
         "timeline approvals, or rendered videos were changed. Review each recommendation "
         "and use the existing revision workflow for any explicit trim.[/yellow]"
     )
+
+
+@app.command("review-revision-suggestions")
+def review_revision_suggestions(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder containing draft-revision-suggestions.json.",
+        ),
+    ],
+    suggestions: Annotated[
+        Path | None,
+        typer.Option("--suggestions", help="Suggestion JSON path."),
+    ] = None,
+    accept: Annotated[
+        list[str] | None,
+        typer.Option("--accept", help="Suggestion ID to accept; repeat for multiple IDs."),
+    ] = None,
+    reject: Annotated[
+        list[str] | None,
+        typer.Option("--reject", help="Suggestion ID to reject; repeat for multiple IDs."),
+    ] = None,
+    set_interval: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--set-interval",
+            help=(
+                "Explicit trim as clip_id:start:end; only for accepted overlong timing suggestions."
+            ),
+        ),
+    ] = None,
+) -> None:
+    """Review critique suggestions and optionally create a separate timeline revision."""
+    root = folder.expanduser().resolve()
+    suggestion_file = (
+        (suggestions or root / ".video-agent" / "draft-revision-suggestions.json")
+        .expanduser()
+        .resolve()
+    )
+    try:
+        payload = json.loads(suggestion_file.read_text(encoding="utf-8"))
+        items = payload.get("suggestions", [])
+        known_ids = {str(item["suggestion_id"]) for item in items}
+        accepted = set(accept or [])
+        rejected = set(reject or [])
+        interactive_edits = []
+        if not accepted and not rejected:
+            for item in items:
+                console.print(
+                    f"\n[bold]{item['suggestion_id']}[/bold] — {item['summary']} "
+                    f"({item['clip_id']})"
+                )
+                console.print(f"Evidence: {item['evidence']}")
+                console.print(f"Recommendation: {item['recommendation']}")
+                while True:
+                    choice = (
+                        console.input("Decision [a]ccept / [r]eject / [s]kip: ").strip().lower()
+                    )
+                    if choice in {"a", "accept"}:
+                        accepted.add(item["suggestion_id"])
+                        break
+                    if choice in {"r", "reject"}:
+                        rejected.add(item["suggestion_id"])
+                        break
+                    if choice in {"s", "skip"}:
+                        break
+                    console.print("[yellow]Enter a, r, or s.[/yellow]")
+                if (
+                    item["suggestion_id"] in accepted
+                    and item["action"] == "review_timing"
+                    and "should be shorter" in item.get("recommendation", "")
+                ):
+                    console.print(
+                        f"Current source interval: "
+                        f"{item['current_source_start_seconds']:.3f}–"
+                        f"{item['current_source_end_seconds']:.3f}s"
+                    )
+                    raw_interval = console.input(
+                        "New source interval start:end (Enter to skip the trim): "
+                    ).strip()
+                    if raw_interval:
+                        bounds = raw_interval.split(":")
+                        if len(bounds) != 2:
+                            raise RevisionSuggestionReviewError(
+                                "Enter the trim as start:end, using seconds."
+                            )
+                        interactive_edits.append(
+                            TimelineIntervalEdit(
+                                clip_id=item["clip_id"],
+                                source_start_seconds=float(bounds[0]),
+                                source_end_seconds=float(bounds[1]),
+                            )
+                        )
+        if (accepted | rejected) - known_ids:
+            raise RevisionSuggestionReviewError(
+                f"Unknown suggestion ID: {sorted((accepted | rejected) - known_ids)[0]}"
+            )
+
+        edits = []
+        edits.extend(interactive_edits)
+        for raw in set_interval or []:
+            parts = raw.split(":")
+            if len(parts) != 3:
+                raise RevisionSuggestionReviewError("--set-interval must use clip_id:start:end")
+            edits.append(
+                TimelineIntervalEdit(
+                    clip_id=parts[0],
+                    source_start_seconds=float(parts[1]),
+                    source_end_seconds=float(parts[2]),
+                )
+            )
+        result, review_file, revision = review_draft_revision_suggestions(
+            root,
+            suggestions_path=suggestion_file,
+            accept_ids=accepted,
+            reject_ids=rejected,
+            interval_edits=edits,
+        )
+    except (
+        FileNotFoundError,
+        ValueError,
+        OSError,
+        RevisionSuggestionReviewError,
+    ) as exc:
+        console.print(f"[red]Revision suggestion review failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    table = Table(title="Revision Suggestion Decisions")
+    table.add_column("Suggestion")
+    table.add_column("Shot")
+    table.add_column("Decision")
+    for item in result.decisions:
+        table.add_row(item.suggestion_id, item.clip_id, item.status)
+    console.print(table)
+    console.print(f"Review saved to [green]{review_file}[/green]")
+    if revision:
+        console.print(f"Separate timeline revision: [green]{revision.revision_path}[/green]")
+        console.print(
+            "[yellow]The new revision is unapproved. Review it before rendering; "
+            "the original approved timeline remains unchanged.[/yellow]"
+        )
+    else:
+        console.print(
+            "No source intervals were changed. Accepted footage-review suggestions remain "
+            "follow-up tasks for the separate storyboard footage workflow."
+        )
 
 
 @app.command("compare-drafts")
