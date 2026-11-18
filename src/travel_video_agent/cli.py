@@ -1197,7 +1197,10 @@ def suggest_footage(
         str | None,
         typer.Option(
             "--embedding-model",
-            help="Optional Ollama embedding model for hybrid semantic ranking (e.g. nomic-embed-text).",
+            help=(
+                "Optional Ollama embedding model for hybrid semantic ranking "
+                "(e.g. nomic-embed-text)."
+            ),
         ),
     ] = os.getenv("FOOTAGE_EMBEDDING_MODEL"),
 ) -> None:

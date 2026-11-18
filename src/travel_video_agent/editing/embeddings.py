@@ -53,8 +53,7 @@ def ollama_embed_texts(
             not isinstance(vector, list)
             or not vector
             or any(
-                isinstance(value, bool) or not isinstance(value, (int, float))
-                for value in vector
+                isinstance(value, bool) or not isinstance(value, (int, float)) for value in vector
             )
             for vector in vectors
         )
