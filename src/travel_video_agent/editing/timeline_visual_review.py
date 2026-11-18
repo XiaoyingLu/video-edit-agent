@@ -2,6 +2,7 @@
 
 import base64
 import html
+import hashlib
 import json
 import os
 import shutil
@@ -55,6 +56,7 @@ class TimelineVisualReviewReport(BaseModel):
     schema_version: str = "1.0"
     project_path: str
     timeline_path: str
+    timeline_sha256: str
     proposed_duration_seconds: float
     target_duration_seconds: float
     timeline_approved: bool
@@ -70,6 +72,7 @@ class TimelineVisualReviewDecisions(BaseModel):
 
     schema_version: str = "1.0"
     timeline_path: str
+    timeline_sha256: str
     decisions: dict[str, str]
 
 
@@ -176,6 +179,7 @@ def build_timeline_visual_review(
     return TimelineVisualReviewReport(
         project_path=str(root),
         timeline_path=timeline_file.relative_to(root).as_posix(),
+        timeline_sha256=hashlib.sha256(timeline_file.read_bytes()).hexdigest(),
         proposed_duration_seconds=timeline.proposed_duration_seconds,
         target_duration_seconds=timeline.target_duration_seconds,
         timeline_approved=timeline.timeline_approved,
