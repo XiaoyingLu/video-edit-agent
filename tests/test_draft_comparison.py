@@ -157,9 +157,7 @@ def test_html_contains_paired_visual_evidence_and_caveat(tmp_path, monkeypatch):
 def test_cli_writes_json_and_standalone_html(tmp_path, monkeypatch):
     before, after = _media(tmp_path)
     _mock_tools(monkeypatch, before, after)
-    monkeypatch.setattr(
-        "travel_video_agent.cli.register_artifact", lambda *_args, **_kwargs: None
-    )
+    monkeypatch.setattr("travel_video_agent.cli.register_artifact", lambda *_args, **_kwargs: None)
 
     result = runner.invoke(
         app,
