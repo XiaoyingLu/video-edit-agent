@@ -164,7 +164,6 @@ def test_normalize_storyboard_ids_repairs_duplicate_model_ids():
     assert [shot.scene_id for shot in shots] == ["scene-01", "scene-02"]
 
 
-
 def test_planner_discards_partial_model_footage_assignments(monkeypatch):
     generated = _generated_content().model_dump(mode="json")
     first_shot = generated["scenes"][0]["shots"][0]
