@@ -806,6 +806,7 @@ def render_draft(
             overwrite=overwrite,
             timeout_seconds=timeout_seconds,
             dry_run=dry_run,
+            fit_mode=fit_mode,
         )
     except (FileNotFoundError, FileExistsError, ValueError, RenderError) as exc:
         console.print(f"[red]Draft render failed:[/red] {exc}")
