@@ -569,3 +569,19 @@ docker compose run --rm video-agent review-revision-suggestions ./travel-test \
 ```
 
 The review decisions are saved under `.video-agent/revision-reviews/`. If an accepted overlong shot has an explicit interval, a separate unapproved timeline is created under `.video-agent/timeline-revisions/`. The original approved timeline is never overwritten. Accepted footage-review suggestions are recorded as follow-up tasks; they do not silently replace footage. Short shots cannot be extended by this workflow.
+
+
+To inspect a timeline revision visually before approving or rendering it:
+
+```bash
+docker compose run --rm video-agent review-timeline-revision ./travel-test \
+  --before .video-agent/optimized-timeline.json \
+  --after .video-agent/timeline-revisions/revision-001.json
+```
+
+The command writes a JSON report and a self-contained HTML page under
+`.video-agent/timeline-revision-review/`. For every changed shot, the page pairs a
+representative midpoint frame from the original source interval with one from the revised
+interval and shows both source ranges. It does not render the timeline or modify either
+timeline or any source media. These are source-frame samples, not a substitute for watching
+the full revised sequence and checking transition context.
