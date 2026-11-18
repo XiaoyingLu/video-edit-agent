@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from ..artifact_tracking import register_artifact, validate_artifact
 from ..rendering.critique import _run
 from .revisions import TimelineRevisionError, compare_timeline_files
-from .timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
+from .timeline_schemas import ProjectDraftTimeline
 
 
 class RevisionFramePair(BaseModel):
@@ -111,6 +111,10 @@ def build_timeline_revision_visual_review(
     if not root.is_dir():
         raise NotADirectoryError(f"Project folder does not exist: {root}")
     comparison = compare_timeline_files(root, before_path, after_path)
+    if comparison.before_path == comparison.after_path:
+        raise TimelineRevisionVisualReviewError(
+            "Before and after timelines must be different files"
+        )
     before_file = root / comparison.before_path
     after_file = root / comparison.after_path
     validate_artifact(root, before_file)
@@ -144,9 +148,7 @@ def build_timeline_revision_visual_review(
             frames.append(
                 RevisionFramePair(
                     clip_id=change.clip_id,
-                    before_video_path=before_file.relative_to(root).as_posix()
-                    if False
-                    else old.video_path,
+                    before_video_path=old.video_path,
                     after_video_path=new.video_path,
                     before_start_seconds=old.source_start_seconds,
                     before_end_seconds=old.source_end_seconds,
