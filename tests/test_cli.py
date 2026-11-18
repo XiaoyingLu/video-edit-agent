@@ -517,3 +517,10 @@ def test_suggest_music_sync_command_help():
     help_text = " ".join(click.unstyle(result.stdout).split())
     assert "--music-analysis" in help_text
     assert "--tolerance" in help_text
+
+
+
+def test_create_plan_command_exposes_music_analysis_option():
+    result = runner.invoke(app, ["create-plan", "--help"])
+    assert result.exit_code == 0
+    assert "--music-analysis" in result.stdout
