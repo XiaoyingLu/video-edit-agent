@@ -70,9 +70,7 @@ def _mock_tools(monkeypatch, before, after):
     monkeypatch.setattr(
         "travel_video_agent.rendering.comparison.validate_artifact", lambda *_: False
     )
-    monkeypatch.setattr(
-        "travel_video_agent.rendering.comparison.shutil.which", lambda name: name
-    )
+    monkeypatch.setattr("travel_video_agent.rendering.comparison.shutil.which", lambda name: name)
     monkeypatch.setattr(
         "travel_video_agent.rendering.comparison._analyze_audio",
         lambda _ffmpeg, video, _has_audio: _audio(-18 if video == before else -16),
