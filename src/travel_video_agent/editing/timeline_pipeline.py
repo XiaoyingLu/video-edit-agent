@@ -4,9 +4,9 @@ import json
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..music.schemas import MusicAnalysis
 from .draft_schemas import ProjectDraftSelection
 from .intent_schemas import EditingPlan
-from ..music.schemas import MusicAnalysis
 from .timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
 
 _PACING_RANGES = {
@@ -400,7 +400,11 @@ def save_draft_timeline(timeline: ProjectDraftTimeline, destination: Path) -> No
         root = Path(timeline.project_path).expanduser().resolve()
         dependencies = [
             Path(value) if Path(value).is_absolute() else root / value
-            for value in (timeline.source_selection, timeline.source_editing_plan, timeline.source_music_analysis)
+            for value in (
+                timeline.source_selection,
+                timeline.source_editing_plan,
+                timeline.source_music_analysis,
+            )
             if value is not None
         ]
         register_artifact(root, destination, dependencies=dependencies)
