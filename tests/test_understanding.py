@@ -98,7 +98,9 @@ def test_understanding_pipeline_builds_timestamped_scenes(monkeypatch, tmp_path:
         "extract_representative_frames",
         lambda *args, **kwargs: [(2.5, frame)],
     )
-    monkeypatch.setattr(pipeline.OllamaVisionAnalyzer, "unload_model", lambda self: True)
+    monkeypatch.setattr(
+        pipeline.OllamaVisionAnalyzer, "unload_model", lambda self: True
+    )
     monkeypatch.setattr(
         pipeline.OllamaVisionAnalyzer,
         "analyze_frame",
@@ -502,8 +504,9 @@ def test_scene_editorial_labels_use_most_common_known_value() -> None:
     assert _dominant_label(observations, "mood") == "unknown"
 
 
-
-def test_temporal_analyzer_uses_ordered_frames_and_validates_dynamics(monkeypatch, tmp_path):
+def test_temporal_analyzer_uses_ordered_frames_and_validates_dynamics(
+    monkeypatch, tmp_path
+):
     from travel_video_agent.understanding.visual_analyzer import OllamaVisionAnalyzer
 
     frames = []
@@ -523,7 +526,10 @@ def test_temporal_analyzer_uses_ordered_frames_and_validates_dynamics(monkeypatc
         def read(self):
             result = {
                 "temporal_summary": "A hiker walks toward the mountain viewpoint.",
-                "action_progression": ["Hiker enters the frame", "Hiker approaches the viewpoint"],
+                "action_progression": [
+                    "Hiker enters the frame",
+                    "Hiker approaches the viewpoint",
+                ],
                 "subject_motion": "approaching",
                 "camera_motion": "static",
                 "confidence": 0.88,
@@ -558,7 +564,9 @@ def test_temporal_analyzer_returns_unknown_for_single_frame(tmp_path):
     assert result["confidence"] == 0
 
 
-def test_understanding_pipeline_attaches_temporal_scene_dynamics(monkeypatch, tmp_path):
+def test_understanding_pipeline_attaches_temporal_scene_dynamics(
+    monkeypatch, tmp_path
+):
     from travel_video_agent.understanding import pipeline
 
     video = tmp_path / "clip.mp4"
@@ -591,7 +599,10 @@ def test_understanding_pipeline_attaches_temporal_scene_dynamics(monkeypatch, tm
         "analyze_scene",
         lambda self, scene_frames: {
             "temporal_summary": "The hiker walks uphill and moves farther into the landscape.",
-            "action_progression": ["Hiker walks uphill", "Hiker recedes into the distance"],
+            "action_progression": [
+                "Hiker walks uphill",
+                "Hiker recedes into the distance",
+            ],
             "subject_motion": "receding",
             "camera_motion": "static",
             "confidence": 0.9,
