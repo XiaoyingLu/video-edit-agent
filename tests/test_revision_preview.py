@@ -129,7 +129,7 @@ def test_revision_preview_requires_approved_revision(tmp_path, monkeypatch):
 
 
 def test_revision_preview_rejects_non_revision_timeline(tmp_path, monkeypatch):
-    revision = _approved_revision(tmp_path)
+    _approved_revision(tmp_path)
     calls = _mock_renderer(monkeypatch)
 
     with pytest.raises(ValueError, match="timeline-revisions"):
