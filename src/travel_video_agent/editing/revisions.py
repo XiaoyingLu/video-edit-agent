@@ -94,9 +94,7 @@ def create_timeline_revision(
         raise TimelineRevisionError("minimum clip duration must be positive")
 
     root = folder.expanduser().resolve()
-    source_file = (
-        timeline_path or root / ".video-agent" / "optimized-timeline.json"
-    ).expanduser().resolve()
+    source_file = (timeline_path or root / ".video-agent" / "optimized-timeline.json").expanduser().resolve()
     try:
         source_file.relative_to(root)
     except ValueError as exc:
@@ -227,9 +225,7 @@ def create_timeline_revision(
     return result
 
 
-def compare_timeline_files(
-    folder: Path, before_path: Path, after_path: Path
-) -> TimelineComparison:
+def compare_timeline_files(folder: Path, before_path: Path, after_path: Path) -> TimelineComparison:
     """Compare two project-local timeline files without changing either artifact."""
     root = folder.expanduser().resolve()
     timelines: list[tuple[Path, ProjectDraftTimeline]] = []
