@@ -365,6 +365,41 @@ docker compose run --rm video-agent review-footage ./travel-test \
 Repeat `--select SHOT_ID=CANDIDATE_NUMBER` for each shot. Use `--reject SHOT_ID` to clear an earlier assignment. Unselected shots remain unassigned. The project advances to `footage_mapped` only when every storyboard shot has an explicitly approved source interval. This stage does not approve the overall creative plan, alter source media, or render a video.
 
 
+### Declarative animated title overlays
+
+Create a title-overlay review artifact after building the optimized timeline:
+
+```bash
+docker compose run --rm video-agent init-title-overlays ./travel-test
+```
+
+Edit `.video-agent/title-overlays.json` and add entries to its `overlays` array. Each entry has a unique ID, text (maximum 120 characters), output-time start/end, placement, built-in style, and animation preset. Example:
+
+```json
+{
+  "overlay_id": "opening-title",
+  "text": "A Weekend in the Rockies",
+  "start_seconds": 0.5,
+  "end_seconds": 4.5,
+  "placement": "bottom",
+  "style": "cinematic",
+  "animation": "fade",
+  "decision": "pending"
+}
+```
+
+Supported placements are `top`, `center`, and `bottom`; styles are `cinematic`, `minimal`, and `bold`; animations are `none`, `fade`, and `slide_up`. These map to fixed renderer presets—title data cannot supply arbitrary FFmpeg filters, expressions, fonts, or commands. Title times refer to the final concatenated output, not source-video timestamps.
+
+Review each title explicitly, then render only approved overlays:
+
+```bash
+docker compose run --rm video-agent review-title-overlays ./travel-test --approve opening-title
+docker compose run --rm video-agent render-draft ./travel-test --title-overlays ./travel-test/.video-agent/title-overlays.json --dry-run
+docker compose run --rm video-agent render-draft ./travel-test --title-overlays ./travel-test/.video-agent/title-overlays.json
+```
+
+Rejected and pending overlays are ignored. Overlay intervals must fit within the approved rendered duration. The renderer applies titles after shot transitions, so title timing is stable on the final output timeline. The title artifact tracks the optimized timeline as an upstream dependency; source clips and the reviewed shot timeline remain unchanged. The first implementation intentionally focuses on titles; lower thirds, closing cards, and richer motion presets can build on this schema later.
+
 ### Output aspect ratio and resolution
 
 When a current `.video-agent/video-project-plan.json` exists, `render-draft` uses its requested aspect ratio and resolution (16:9, 9:16, or 1:1; 720p, 1080p, or 4K). The rendered dimensions are verified with ffprobe, and the render artifact tracks the project plan as an upstream dependency.
