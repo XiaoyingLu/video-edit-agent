@@ -1,4 +1,5 @@
 import pytest
+from rich.text import Text
 from typer.testing import CliRunner
 
 from travel_video_agent.cli import app
@@ -185,13 +186,14 @@ def test_optimize_and_review_timeline_cli_commands(tmp_path):
 def test_cli_help_includes_timeline_commands():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    assert "optimize-timeline" in result.output
-    assert "review-timeline" in result.output
-    assert "approve-storyboard" in result.output
-    assert "build-storyboard-timeline" in result.output
+    help_text = Text.from_ansi(result.output).plain
+    assert "optimize-timeline" in help_text
+    assert "review-timeline" in help_text
+    assert "approve-storyboard" in help_text
+    assert "build-storyboard-timeline" in help_text
     optimize_help = runner.invoke(app, ["optimize-timeline", "--help"])
     assert optimize_help.exit_code == 0
-    assert "--music-analysis" in optimize_help.output
+    assert "--music-analysis" in Text.from_ansi(optimize_help.output).plain
 
 
 def test_cinematic_timeline_builds_establishing_action_detail_and_scenic_arc(tmp_path):
