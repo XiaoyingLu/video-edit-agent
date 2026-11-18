@@ -364,3 +364,69 @@ def test_cinematic_timeline_preserves_ranked_order_without_scene_metadata(tmp_pa
     assert all(clip.visual_role == "unknown" for clip in timeline.clips)
     assert "strongest available shot" in timeline.clips[0].sequence_reason
     assert "metadata is uncertain" in timeline.clips[1].sequence_reason
+
+
+
+def test_music_analysis_guides_pacing_without_changing_source_intervals(tmp_path):
+    import json
+
+    from travel_video_agent.editing.draft_schemas import DraftClip
+    from travel_video_agent.music.schemas import MusicAnalysis, MusicSection
+
+    _write_inputs(tmp_path, style="vlog", transition="cut")
+    artifact = tmp_path / ".video-agent"
+    selection = ProjectDraftSelection.model_validate_json(
+        (artifact / "draft-selection.json").read_text(encoding="utf-8")
+    )
+    selection.clips[0].source_start_seconds = 0
+    selection.clips[0].source_end_seconds = 4
+    selection.clips[0].duration_seconds = 4
+    selection.clips[1].source_start_seconds = 4
+    selection.clips[1].source_end_seconds = 8
+    selection.clips[1].duration_seconds = 4
+    (artifact / "draft-selection.json").write_text(selection.model_dump_json(), encoding="utf-8")
+    soundtrack = tmp_path / "score.mp3"
+    soundtrack.write_bytes(b"test soundtrack")
+    analysis = MusicAnalysis(
+        project_path=str(tmp_path.resolve()),
+        music_path=str(soundtrack),
+        duration_seconds=30,
+        sample_rate=22050,
+        beat_confidence=0.5,
+        sections=[
+            MusicSection(start_seconds=0, end_seconds=4, energy="low", energy_rms=0.1),
+            MusicSection(start_seconds=4, end_seconds=30, energy="high", energy_rms=0.8),
+        ],
+    )
+    analysis_path = artifact / "music-analysis.json"
+    analysis_path.write_text(analysis.model_dump_json(), encoding="utf-8")
+
+    timeline = build_draft_timeline(tmp_path, music_analysis_path=analysis_path)
+
+    assert timeline.source_music_analysis == ".video-agent/music-analysis.json"
+    assert [clip.music_energy for clip in timeline.clips] == ["low", "high"]
+    assert timeline.clips[0].pacing_target_seconds > timeline.clips[1].pacing_target_seconds
+    assert "breathing room" in timeline.clips[0].music_pacing_note
+    assert "tighter shot" in timeline.clips[1].music_pacing_note
+    assert [(clip.source_start_seconds, clip.source_end_seconds) for clip in timeline.clips] == [
+        (1, 5), (8, 12)
+    ]
+
+
+def test_music_analysis_rejects_foreign_project(tmp_path):
+    from travel_video_agent.music.schemas import MusicAnalysis
+
+    _write_inputs(tmp_path)
+    analysis_path = tmp_path / "music-analysis.json"
+    analysis_path.write_text(
+        MusicAnalysis(
+            project_path=str(tmp_path / "other"),
+            music_path=str(tmp_path / "score.mp3"),
+            duration_seconds=20,
+            sample_rate=22050,
+            beat_confidence=0.2,
+        ).model_dump_json(),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="different project"):
+        build_draft_timeline(tmp_path, music_analysis_path=analysis_path)
