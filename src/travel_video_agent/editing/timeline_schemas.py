@@ -51,12 +51,23 @@ class DraftTimelineClip(BaseModel):
     transition_duration_seconds: float = Field(default=0, ge=0, le=2)
     pacing_fit: Literal["short", "within", "long"] = "within"
     pacing_note: str
+    music_energy: Literal["low", "medium", "high", "unknown"] = "unknown"
+    music_section_start_seconds: float | None = Field(default=None, ge=0)
+    music_section_end_seconds: float | None = Field(default=None, gt=0)
+    music_pacing_note: str = "No soundtrack energy guidance was supplied."
     reasons: list[str] = Field(default_factory=list)
     decision: Literal["pending", "approved", "rejected"] = "pending"
     review_required: bool = True
 
     @model_validator(mode="after")
     def validate_clip(self) -> "DraftTimelineClip":
+        if (self.music_section_start_seconds is None) != (self.music_section_end_seconds is None):
+            raise ValueError("music section start and end must be supplied together")
+        if (
+            self.music_section_start_seconds is not None
+            and self.music_section_end_seconds <= self.music_section_start_seconds
+        ):
+            raise ValueError("music section end must be greater than its start")
         if self.source_end_seconds <= self.source_start_seconds:
             raise ValueError("source_end_seconds must be greater than source_start_seconds")
         if abs(self.source_end_seconds - self.source_start_seconds - self.duration_seconds) > 0.02:
@@ -79,6 +90,7 @@ class ProjectDraftTimeline(BaseModel):
     project_path: str
     source_selection: str = ".video-agent/draft-selection.json"
     source_editing_plan: str = ".video-agent/editing-plan.json"
+    source_music_analysis: str | None = None
     style: Literal["cinematic", "vlog", "documentary", "highlight_reel", "social_media"]
     pacing: Literal["slow", "moderate", "fast"]
     target_duration_seconds: float = Field(gt=0)
