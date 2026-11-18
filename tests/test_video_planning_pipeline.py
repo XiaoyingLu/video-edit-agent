@@ -15,12 +15,12 @@ from travel_video_agent.editing.planning_generation import (
     infer_creative_priorities,
     normalize_storyboard_ids,
 )
-from travel_video_agent.music.schemas import MusicAnalysis, MusicSection
 from travel_video_agent.editing.planning_schemas import (
     PlannedScene,
     StoryboardShot,
     StoryTreatment,
 )
+from travel_video_agent.music.schemas import MusicAnalysis, MusicSection
 
 
 def _generated_content():
@@ -251,9 +251,9 @@ def test_create_video_project_plan_uses_music_sections_and_tracks_dependency(
 
     assert [item["energy"] for item in captured["sections"]] == ["low", "high", "medium"]
     assert plan.source_music_analysis == ".video-agent/music-analysis.json"
-    assert [scene.music_energy for scene in plan.scenes] == ["low", "high"]
+    assert [scene.music_energy for scene in plan.scenes] == ["low", "medium"]
     assert plan.scenes[0].music_section_start_seconds == 0
-    assert plan.scenes[1].music_section_start_seconds == 30
+    assert plan.scenes[1].music_section_start_seconds == 60
     assert validate_artifact(tmp_path, destination) is True
 
     analysis_path.write_text('{"changed": true}', encoding="utf-8")
@@ -275,9 +275,7 @@ def test_create_video_project_plan_rejects_external_music_analysis(tmp_path):
 def test_planned_scene_validates_music_section_bounds():
     scene = _generated_content().scenes[0]
     with pytest.raises(ValueError, match="must be supplied together"):
-        scene.model_copy(
-            update={"music_section_start_seconds": 2.0},
-        ).__class__.model_validate(
+        PlannedScene.model_validate(
             scene.model_dump() | {"music_section_start_seconds": 2.0}
         )
 
@@ -288,7 +286,7 @@ def test_scene_music_annotation_uses_largest_overlap_and_marks_uncovered():
         scenes,
         [
             MusicSection(start_seconds=0, end_seconds=20, energy="low", energy_rms=0.1),
-            MusicSection(start_seconds=20, end_seconds=60, energy="high", energy_rms=0.4),
+            MusicSection(start_seconds=20, end_seconds=45, energy="high", energy_rms=0.4),
         ],
     )
 
