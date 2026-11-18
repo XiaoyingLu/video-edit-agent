@@ -13,6 +13,9 @@ class FootageMatchCandidate(BaseModel):
     source_start_seconds: float = Field(ge=0)
     source_end_seconds: float = Field(gt=0)
     score: float = Field(ge=0, le=100)
+    lexical_score: float = Field(default=0, ge=0, le=100)
+    semantic_similarity: float | None = Field(default=None, ge=0, le=1)
+    match_method: str = "lexical"
     scene_summary: str
     reasons: list[str] = Field(default_factory=list)
 
@@ -41,5 +44,7 @@ class ProjectFootageSuggestions(BaseModel):
     suggestions: list[ShotFootageSuggestions] = Field(default_factory=list)
     candidate_count: int = Field(ge=0)
     matched_shot_count: int = Field(ge=0)
+    embedding_model: str | None = None
+    matching_method: str = "lexical"
     review_required: bool = True
     assignments_performed: bool = False
