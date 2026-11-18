@@ -2,7 +2,9 @@ import json
 from pathlib import Path
 
 import pytest
+from typer.testing import CliRunner
 
+from travel_video_agent.cli import app
 from travel_video_agent.editing.revision_review import (
     RevisionSuggestionReviewError,
     review_draft_revision_suggestions,
@@ -267,3 +269,54 @@ def test_review_rejects_interval_for_unaccepted_suggestion(tmp_path, monkeypatch
                 )
             ],
         )
+
+
+def test_review_revision_suggestions_cli_accepts_explicit_interval(
+    tmp_path, monkeypatch
+):
+    _inputs(tmp_path)
+    monkeypatch.setattr(
+        "travel_video_agent.editing.revision_suggestions.validate_artifact",
+        lambda *_: True,
+    )
+    monkeypatch.setattr(
+        "travel_video_agent.editing.revision_suggestions.register_artifact",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "travel_video_agent.editing.revision_review.validate_artifact",
+        lambda *_: True,
+    )
+    monkeypatch.setattr(
+        "travel_video_agent.editing.revisions.validate_artifact",
+        lambda *_: True,
+    )
+    monkeypatch.setattr(
+        "travel_video_agent.editing.revision_review.register_artifact",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "travel_video_agent.editing.revisions.register_artifact",
+        lambda *_args, **_kwargs: None,
+    )
+    report = build_draft_revision_suggestions(tmp_path)
+    save_draft_revision_suggestions(tmp_path, report)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        app,
+        [
+            "review-revision-suggestions",
+            str(tmp_path),
+            "--accept",
+            "shot-b-pacing",
+            "--reject",
+            "shot-a-story",
+            "--set-interval",
+            "shot-b:6:9",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "revision-001.json" in result.output
+    assert (tmp_path / ".video-agent" / "timeline-revisions" / "revision-001.json").is_file()
