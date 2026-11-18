@@ -223,7 +223,7 @@ def test_review_records_decisions_and_creates_separate_timeline_revision(
 
     assert result.timeline_revision_path == revision.revision_path
     assert result.source_timeline_modified is False
-    assert result.timeline_modified is False
+    assert result.timeline_revision_created is True
     assert {item.suggestion_id: item.status for item in result.decisions} == {
         "shot-a-story": "rejected",
         "shot-b-pacing": "accepted",
