@@ -367,7 +367,8 @@ def render_approved_shot_timeline(
     if expected_duration <= 0:
         raise RenderError("approved shot sequence has no positive output duration")
     approved_titles = [
-        item for item in (title_document.overlays if title_document is not None else [])
+        item
+        for item in (title_document.overlays if title_document is not None else [])
         if item.decision == "approved"
     ]
     for title in approved_titles:
