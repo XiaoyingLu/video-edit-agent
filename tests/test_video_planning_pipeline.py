@@ -204,9 +204,7 @@ def test_planner_discards_partial_model_footage_assignments(monkeypatch):
     assert result.scenes[0].music_section_start_seconds is None
 
 
-def test_create_video_project_plan_uses_music_sections_and_tracks_dependency(
-    tmp_path, monkeypatch
-):
+def test_create_video_project_plan_uses_music_sections_and_tracks_dependency(tmp_path, monkeypatch):
     monkeypatch.setattr(
         planning_pipeline,
         "parse_editing_intent",
@@ -284,9 +282,7 @@ def test_create_video_project_plan_rejects_external_music_analysis(tmp_path):
 def test_planned_scene_validates_music_section_bounds():
     scene = _generated_content().scenes[0]
     with pytest.raises(ValueError, match="must be supplied together"):
-        PlannedScene.model_validate(
-            scene.model_dump() | {"music_section_start_seconds": 2.0}
-        )
+        PlannedScene.model_validate(scene.model_dump() | {"music_section_start_seconds": 2.0})
 
 
 def test_scene_music_annotation_uses_largest_overlap_and_marks_uncovered():
@@ -303,7 +299,6 @@ def test_scene_music_annotation_uses_largest_overlap_and_marks_uncovered():
     assert annotated[0].music_section_start_seconds == 20
     assert annotated[1].music_energy == "unknown"
     assert annotated[1].music_section_start_seconds is None
-
 
 
 def test_create_video_project_plan_cannot_overwrite_music_analysis(tmp_path):
