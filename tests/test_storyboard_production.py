@@ -95,7 +95,7 @@ def _write_plan(root: Path, *, mapped: bool = True) -> Path:
 def test_approve_storyboard_requires_all_footage_assignments(tmp_path: Path) -> None:
     plan_path = _write_plan(tmp_path, mapped=False)
 
-    with pytest.raises(ValueError, match="fully footage-mapped"):
+    with pytest.raises(ValueError, match="requires every shot to have an approved footage match"):
         approve_storyboard(tmp_path, plan_path=plan_path)
 
 

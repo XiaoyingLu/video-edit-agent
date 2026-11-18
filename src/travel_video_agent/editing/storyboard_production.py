@@ -14,7 +14,9 @@ def approve_storyboard(
 ) -> tuple[VideoProjectPlan, Path]:
     """Explicitly approve a fully footage-mapped storyboard for timeline compilation."""
     root = folder.expanduser().resolve()
-    destination = (plan_path or root / ".video-agent" / "video-project-plan.json").expanduser().resolve()
+    destination = (
+        (plan_path or root / ".video-agent" / "video-project-plan.json").expanduser().resolve()
+    )
     try:
         destination.relative_to(root)
     except ValueError as exc:
@@ -26,7 +28,9 @@ def approve_storyboard(
     if Path(plan.project_path).resolve() != root:
         raise ValueError("video project plan belongs to a different project folder")
     if plan.planning_stage not in {"footage_mapped", "production_ready"}:
-        raise ValueError("storyboard approval requires every shot to have an approved footage match")
+        raise ValueError(
+            "storyboard approval requires every shot to have an approved footage match"
+        )
     shots = [shot for scene in plan.scenes for shot in scene.shots]
     if not shots or any(shot.assignment_status != "approved" for shot in shots):
         raise ValueError("every storyboard shot must have an approved footage assignment")
@@ -35,14 +39,18 @@ def approve_storyboard(
         try:
             source.relative_to(root)
         except ValueError as exc:
-            raise ValueError(f"source footage for {shot.shot_id} escapes the project folder") from exc
+            raise ValueError(
+                f"source footage for {shot.shot_id} escapes the project folder"
+            ) from exc
         if not source.is_file():
             raise ValueError(f"source footage for {shot.shot_id} does not exist: {source}")
         if shot.footage_start_seconds is None or shot.footage_end_seconds is None:
             raise ValueError(f"source interval is missing for {shot.shot_id}")
     plan.approved = True
     plan.planning_stage = "production_ready"
-    destination.write_text(json.dumps(plan.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8")
+    destination.write_text(
+        json.dumps(plan.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
+    )
     register_artifact(root, destination)
     return plan, destination
 
@@ -58,7 +66,9 @@ def build_storyboard_timeline(
     footage is available. Shorter source intervals are preserved without stretching.
     """
     root = folder.expanduser().resolve()
-    plan_file = (plan_path or root / ".video-agent" / "video-project-plan.json").expanduser().resolve()
+    plan_file = (
+        (plan_path or root / ".video-agent" / "video-project-plan.json").expanduser().resolve()
+    )
     try:
         plan_file.relative_to(root)
     except ValueError as exc:
@@ -78,12 +88,16 @@ def build_storyboard_timeline(
     for scene in plan.scenes:
         for shot in scene.shots:
             if shot.assignment_status != "approved" or not shot.footage_path:
-                raise ValueError(f"shot {shot.shot_id} does not have an approved footage assignment")
+                raise ValueError(
+                    f"shot {shot.shot_id} does not have an approved footage assignment"
+                )
             source = (root / shot.footage_path).resolve()
             try:
                 source.relative_to(root)
             except ValueError as exc:
-                raise ValueError(f"source footage for {shot.shot_id} escapes the project folder") from exc
+                raise ValueError(
+                    f"source footage for {shot.shot_id} escapes the project folder"
+                ) from exc
             if not source.is_file():
                 raise ValueError(f"source footage for {shot.shot_id} does not exist: {source}")
             if shot.footage_start_seconds is None or shot.footage_end_seconds is None:
@@ -155,9 +169,7 @@ def build_storyboard_timeline(
     )
 
 
-def save_storyboard_timeline(
-    timeline: ProjectDraftTimeline, destination: Path
-) -> None:
+def save_storyboard_timeline(timeline: ProjectDraftTimeline, destination: Path) -> None:
     """Persist the compiled timeline and register storyboard dependencies."""
     save_draft_timeline(timeline, destination)
     root = Path(timeline.project_path).expanduser().resolve()

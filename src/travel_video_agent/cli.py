@@ -28,12 +28,12 @@ from .editing import (
 from .editing.footage_mapping import suggest_storyboard_footage
 from .editing.footage_review import review_storyboard_footage
 from .editing.planning_generation import VideoPlanningError
-from .editing.storyboard_review import generate_storyboard_review
 from .editing.storyboard_production import (
     approve_storyboard,
     build_storyboard_timeline,
     save_storyboard_timeline,
 )
+from .editing.storyboard_review import generate_storyboard_review
 from .editing.workflow import create_video_draft
 from .highlights import find_highlights_folder
 from .media import MediaToolError, analyze_folder
@@ -1245,7 +1245,9 @@ def build_storyboard_timeline_command(
         Path,
         typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True),
     ],
-    plan: Annotated[Path | None, typer.Option("--plan", help="Approved project plan JSON path.")] = None,
+    plan: Annotated[
+        Path | None, typer.Option("--plan", help="Approved project plan JSON path.")
+    ] = None,
     output: Annotated[
         Path | None, typer.Option("--output", "-o", help="Timeline output path.")
     ] = None,
