@@ -197,10 +197,10 @@ def suggest_narrative_title_sequences(
     if duration < 1.5:
         raise ValueError("the approved timeline is too short for opening and closing title sequences")
 
-    sequence_duration = min(4.0, duration * 0.22)
+    sequence_duration = max(0.75, min(4.0, duration * 0.22))
     opening_end = sequence_duration
     closing_start = duration - sequence_duration
-    if closing_start <= opening_end:
+    if closing_start < opening_end:
         raise ValueError("the approved timeline is too short for separate opening and closing sequences")
 
     treatment = plan.story_treatment
@@ -230,7 +230,7 @@ def suggest_narrative_title_sequences(
             TitleOverlay(
                 overlay_id="opening-logline",
                 text=opening_subtitle,
-                start_seconds=0.35,
+                start_seconds=0,
                 end_seconds=opening_end,
                 placement="bottom",
                 style="minimal",
