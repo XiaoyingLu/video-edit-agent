@@ -69,7 +69,8 @@ def understand_folder(
                         dynamics = SceneDynamics.model_validate(analyzer.analyze_scene(frames))
                     except (VisionModelError, ValidationError) as exc:
                         warnings.warn(
-                            f"Temporal analysis failed for scene {video_key}-scene-{scene_index:04d}: {exc}",
+                            "Temporal analysis failed for scene "
+                            f"{video_key}-scene-{scene_index:04d}: {exc}",
                             RuntimeWarning,
                             stacklevel=2,
                         )
