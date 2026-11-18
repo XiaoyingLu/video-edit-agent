@@ -74,6 +74,33 @@ docker compose run --rm video-agent suggest-music-sync ./travel-test --tolerance
 
 The command writes `.video-agent/music-sync-suggestions.json`. It compares hard-cut boundaries and crossfade midpoints with the nearest beat and downbeat, and recommends an anchor only when it is within the configured tolerance and the beat detector has sufficient confidence. The report is review-only: it does not alter clip durations, source intervals, transitions, approvals, or rendered media. The report tracks both the timeline and music analysis as dependencies.
 
+Review the suggestions and create a separate timeline revision. Run without decision flags for an interactive accept/reject/skip review, or pass repeatable `--accept` and `--reject` boundary IDs for a non-interactive review:
+
+```bash
+docker compose run --rm -it video-agent review-music-sync ./travel-test
+
+# Or explicitly accept/reject selected boundaries:
+docker compose run --rm video-agent review-music-sync ./travel-test \
+  --accept shot-001\->shot-002 \
+  --reject shot-002\->shot-003
+```
+
+Each run saves a new revision and a matching review report under `.video-agent/music-sync-revisions/` (for example, `revision-001.json` and `revision-001.review.json`). The original `.video-agent/optimized-timeline.json` and source media remain unchanged. Accepted shifts are checked against source-media duration and the minimum resulting clip duration; unsafe changes are recorded as infeasible rather than applied. Unlisted boundaries in a flag-based review are skipped.
+
+A music-sync revision is deliberately **not approved**. Inspect and approve that exact revision with the existing timeline review gate, then render the same file:
+
+```bash
+docker compose run --rm video-agent review-timeline ./travel-test \
+  --timeline ./.video-agent/music-sync-revisions/revision-001.json \
+  --approve shot-001 --approve shot-002
+
+docker compose run --rm video-agent render-draft ./travel-test \
+  --timeline ./.video-agent/music-sync-revisions/revision-001.json
+```
+
+Use the actual clip IDs shown by the timeline review output. Review decisions are saved to the revision file; rendering remains a separate explicit step and is never started by `review-music-sync`.
+
+
 ## Requirements
 
 - Docker Engine and Docker Compose
