@@ -10,6 +10,7 @@ from typer.testing import CliRunner
 from travel_video_agent.cli import app
 from travel_video_agent.rendering.comparison import (
     DraftComparisonError,
+    DraftComparisonReport,
     compare_rendered_drafts,
     render_comparison_html,
 )
@@ -109,6 +110,8 @@ def test_comparison_pairs_samples_by_normalized_position_and_reports_deltas(tmp_
     assert report.frames[0].mean_luma_delta > 0
     assert report.timeline_modified is False
     assert report.rendered_videos_modified is False
+    serialized = json.dumps(report.model_dump(mode="json"))
+    assert DraftComparisonReport.model_validate_json(serialized).frames[0].before_image_data_uri == ""
 
 
 def test_comparison_rejects_same_video_and_paths_outside_project(tmp_path, monkeypatch):
