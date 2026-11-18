@@ -115,6 +115,8 @@ def test_suggest_narrative_title_sequences_uses_story_and_approved_timeline(
     assert document.overlays[0].start_seconds == 0
     assert document.overlays[2].end_seconds == pytest.approx(19)
     assert registered[0][1] == [timeline_path, plan_path]
+    title_overlays.save_title_overlays(tmp_path, document, destination)
+    assert registered[1][1] == [timeline_path, plan_path]
     saved = json.loads(destination.read_text(encoding="utf-8"))
     assert saved["overlays"][0]["decision"] == "pending"
 
