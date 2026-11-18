@@ -400,6 +400,26 @@ docker compose run --rm video-agent render-draft ./travel-test --title-overlays 
 
 Rejected and pending overlays are ignored. Overlay intervals must fit within the approved rendered duration. The renderer applies titles after shot transitions, so title timing is stable on the final output timeline. The title artifact tracks the optimized timeline as an upstream dependency; source clips and the reviewed shot timeline remain unchanged. The first implementation intentionally focuses on titles; lower thirds, closing cards, and richer motion presets can build on this schema later.
 
+### Narrative-aware opening and closing title suggestions
+
+After creating a creative video plan and approving the optimized timeline, generate an editable title-sequence proposal:
+
+```bash
+docker compose run --rm video-agent suggest-title-sequences ./travel-test
+```
+
+The command uses the story treatment's working title and logline for the opening, and the final narrative-arc beat for the closing card. Timing is derived from the approved timeline's actual duration, including transition overlaps. It refuses to run without an approved timeline and a story treatment, and it never overwrites an existing title review artifact.
+
+The generated `.video-agent/title-overlays.json` contains three pending suggestions: an opening title, an opening logline, and a closing card. Each is marked with its `sequence_role` and uses existing fixed animation/style presets. These are suggestions, not approved edits. Review the exact entries you want to use, then render:
+
+```bash
+docker compose run --rm video-agent review-title-overlays ./travel-test --approve opening-title --approve opening-logline --approve closing-card
+docker compose run --rm video-agent render-draft ./travel-test --title-overlays ./travel-test/.video-agent/title-overlays.json --dry-run
+docker compose run --rm video-agent render-draft ./travel-test --title-overlays ./travel-test/.video-agent/title-overlays.json
+```
+
+The title artifact records dependencies on both the creative plan and optimized timeline. Regenerate suggestions to a separate output path if you want to preserve an existing review. No footage is reordered or modified, and no title is automatically approved.
+
 ### Output aspect ratio and resolution
 
 When a current `.video-agent/video-project-plan.json` exists, `render-draft` uses its requested aspect ratio and resolution (16:9, 9:16, or 1:1; 720p, 1080p, or 4K). The rendered dimensions are verified with ffprobe, and the render artifact tracks the project plan as an upstream dependency.
