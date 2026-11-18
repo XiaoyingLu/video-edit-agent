@@ -1766,9 +1766,12 @@ def suggest_music_sync_command(
     except ValueError as exc:
         console.print("[red]Music sync output must be inside the project folder.[/red]")
         raise typer.Exit(code=1) from exc
-    save_music_sync_suggestions(report, destination)
     timeline_file = folder.resolve() / report.timeline_path
     analysis_file = folder.resolve() / report.music_analysis_path
+    if destination in {timeline_file, analysis_file, Path(report.music_path).resolve()}:
+        console.print("[red]Music sync output cannot overwrite an input artifact or soundtrack.[/red]")
+        raise typer.Exit(code=1)
+    save_music_sync_suggestions(report, destination)
     register_artifact(
         folder,
         destination,
