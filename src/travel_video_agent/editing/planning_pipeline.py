@@ -73,9 +73,7 @@ def create_video_project_plan(
         json.dumps(editing_plan.model_dump(mode="json"), indent=2) + "\n",
         encoding="utf-8",
     )
-    register_artifact(
-        root, editing_path, config={"prompt": prompt, "planner_model": planner_model}
-    )
+    register_artifact(root, editing_path, config={"prompt": prompt, "planner_model": planner_model})
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(

@@ -20,12 +20,8 @@ def test_ollama_text_and_vision_model_memory_estimates(monkeypatch):
     assert resources.required_ollama_memory_gb("qwen2.5vl:3b") == 6.0
 
     monkeypatch.setenv("VIDEO_PLANNER_MIN_MEMORY_GB", "2.0")
-    assert resources.required_ollama_memory_gb(
-        "qwen2.5:1.5b", "VIDEO_PLANNER_MIN_MEMORY_GB"
-    ) == 2.0
-    assert resources.required_ollama_memory_gb(
-        "qwen2.5vl:3b", "VIDEO_PLANNER_MIN_MEMORY_GB"
-    ) == 2.0
+    assert resources.required_ollama_memory_gb("qwen2.5:1.5b", "VIDEO_PLANNER_MIN_MEMORY_GB") == 2.0
+    assert resources.required_ollama_memory_gb("qwen2.5vl:3b", "VIDEO_PLANNER_MIN_MEMORY_GB") == 2.0
 
 
 def test_whisper_memory_estimates_and_override(monkeypatch):
