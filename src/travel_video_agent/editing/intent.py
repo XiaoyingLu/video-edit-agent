@@ -8,7 +8,11 @@ from urllib.request import Request, urlopen
 
 from pydantic import ValidationError
 
-from ..resource_manager import ResourceError, ensure_memory_available, required_ollama_memory_gb
+from ..resource_manager import (
+    ResourceError,
+    ensure_memory_available,
+    required_ollama_memory_gb,
+)
 from .intent_schemas import EditingPlan
 
 
@@ -36,7 +40,7 @@ class OllamaIntentParser:
         try:
             ensure_memory_available(
                 required_ollama_memory_gb(self.model, memory_override_env),
-                f"Ollama intent model '{self.model}'"
+                f"Ollama intent model '{self.model}',"
             )
         except ResourceError as exc:
             raise IntentParsingError(str(exc)) from exc
