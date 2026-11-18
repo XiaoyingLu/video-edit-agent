@@ -98,9 +98,7 @@ def test_understanding_pipeline_builds_timestamped_scenes(monkeypatch, tmp_path:
         "extract_representative_frames",
         lambda *args, **kwargs: [(2.5, frame)],
     )
-    monkeypatch.setattr(
-        pipeline.OllamaVisionAnalyzer, "unload_model", lambda self: True
-    )
+    monkeypatch.setattr(pipeline.OllamaVisionAnalyzer, "unload_model", lambda self: True)
     monkeypatch.setattr(
         pipeline.OllamaVisionAnalyzer,
         "analyze_frame",
@@ -504,9 +502,7 @@ def test_scene_editorial_labels_use_most_common_known_value() -> None:
     assert _dominant_label(observations, "mood") == "unknown"
 
 
-def test_temporal_analyzer_uses_ordered_frames_and_validates_dynamics(
-    monkeypatch, tmp_path
-):
+def test_temporal_analyzer_uses_ordered_frames_and_validates_dynamics(monkeypatch, tmp_path):
     from travel_video_agent.understanding.visual_analyzer import OllamaVisionAnalyzer
 
     frames = []
@@ -540,9 +536,7 @@ def test_temporal_analyzer_uses_ordered_frames_and_validates_dynamics(
         captured["payload"] = json.loads(request.data.decode("utf-8"))
         return FakeResponse()
 
-    monkeypatch.setattr(
-        "travel_video_agent.understanding.visual_analyzer.urlopen", fake_urlopen
-    )
+    monkeypatch.setattr("travel_video_agent.understanding.visual_analyzer.urlopen", fake_urlopen)
     analyzer = OllamaVisionAnalyzer(model="qwen2.5vl:3b")
     result = analyzer.analyze_scene(frames)
 
@@ -564,9 +558,7 @@ def test_temporal_analyzer_returns_unknown_for_single_frame(tmp_path):
     assert result["confidence"] == 0
 
 
-def test_understanding_pipeline_attaches_temporal_scene_dynamics(
-    monkeypatch, tmp_path
-):
+def test_understanding_pipeline_attaches_temporal_scene_dynamics(monkeypatch, tmp_path):
     from travel_video_agent.understanding import pipeline
 
     video = tmp_path / "clip.mp4"
@@ -580,9 +572,7 @@ def test_understanding_pipeline_attaches_temporal_scene_dynamics(
         frame = tmp_path / f"frame-{index}.jpg"
         frame.write_bytes(b"fake")
         frames.append((timestamp, frame))
-    monkeypatch.setattr(
-        pipeline, "extract_representative_frames", lambda *args, **kwargs: frames
-    )
+    monkeypatch.setattr(pipeline, "extract_representative_frames", lambda *args, **kwargs: frames)
     monkeypatch.setattr(pipeline.OllamaVisionAnalyzer, "unload_model", lambda self: True)
     monkeypatch.setattr(
         pipeline.OllamaVisionAnalyzer,

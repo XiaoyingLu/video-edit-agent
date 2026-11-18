@@ -396,8 +396,7 @@ class OllamaVisionAnalyzer:
             indices = [round(index * (len(selected) - 1) / 5) for index in range(6)]
             selected = [selected[index] for index in indices]
         images = [
-            base64.b64encode(frame_path.read_bytes()).decode("ascii")
-            for _, frame_path in selected
+            base64.b64encode(frame_path.read_bytes()).decode("ascii") for _, frame_path in selected
         ]
         timestamps = ", ".join(f"{timestamp:.2f}s" for timestamp, _ in selected)
         response_schema = {
@@ -484,9 +483,7 @@ class OllamaVisionAnalyzer:
                 f"Could not reach Ollama at {self.base_url} for temporal scene analysis."
             ) from exc
         except (json.JSONDecodeError, UnicodeDecodeError, KeyError, TypeError) as exc:
-            raise VisionModelError(
-                "Ollama returned invalid temporal scene analysis JSON."
-            ) from exc
+            raise VisionModelError("Ollama returned invalid temporal scene analysis JSON.") from exc
 
         if not isinstance(dynamics, dict):
             raise VisionModelError("Temporal scene analysis must be a JSON object.")
