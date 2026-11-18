@@ -68,8 +68,8 @@ def build_draft_revision_suggestions(
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise NotADirectoryError(f"Project folder does not exist: {root}")
-    critique_file = (critique_path or root / ".video-agent" / "draft-critique.json")
-    timeline_file = (timeline_path or root / ".video-agent" / "optimized-timeline.json")
+    critique_file = critique_path or root / ".video-agent" / "draft-critique.json"
+    timeline_file = timeline_path or root / ".video-agent" / "optimized-timeline.json"
     critique_file = (
         (root / critique_file).resolve()
         if not critique_file.is_absolute()
