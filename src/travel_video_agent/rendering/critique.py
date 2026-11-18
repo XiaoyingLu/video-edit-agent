@@ -1,6 +1,7 @@
 """Evidence-based technical and structural critique of rendered video drafts."""
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -50,6 +51,18 @@ class CritiqueFinding(BaseModel):
     evidence: str
 
 
+class SemanticFrameReview(BaseModel):
+    """Vision-model assessment of one rendered shot against its storyboard intent."""
+
+    shot_id: str
+    timestamp_seconds: float = Field(ge=0)
+    match: Literal["match", "partial", "mismatch", "uncertain"]
+    score: float = Field(ge=0, le=1)
+    confidence: float = Field(ge=0, le=1)
+    evidence: str = Field(max_length=240)
+    suggestion: str = Field(max_length=240)
+
+
 class DraftCritiqueReport(BaseModel):
     """Read-only critique report for a rendered draft and its creative inputs."""
 
@@ -69,6 +82,8 @@ class DraftCritiqueReport(BaseModel):
     frames: list[FrameQualitySample] = Field(default_factory=list)
     audio: AudioQualitySummary
     findings: list[CritiqueFinding] = Field(default_factory=list)
+    semantic_model: str | None = None
+    semantic_reviews: list[SemanticFrameReview] = Field(default_factory=list)
     review_required: Literal[True] = True
     timeline_modified: Literal[False] = False
     rendered_video_modified: Literal[False] = False
@@ -191,6 +206,138 @@ def _analyze_audio(ffmpeg: str, video: Path, has_audio: bool) -> AudioQualitySum
     )
 
 
+def _semantic_targets(
+    clips: list,
+    plan: VideoProjectPlan,
+    *,
+    rendered_duration: float,
+    sample_limit: int,
+) -> list[tuple[float, object, object | None]]:
+    """Choose evenly distributed clip midpoints and match clips to storyboard shots."""
+    shots = {
+        shot.shot_id: shot
+        for scene in plan.scenes
+        for shot in scene.shots
+    }
+    targets: list[tuple[float, object, object | None]] = []
+    cursor = 0.0
+    previous_index: int | None = None
+    for clip in clips:
+        overlap = (
+            clip.transition_duration_seconds
+            if previous_index is not None
+            and clip.sequence_index == previous_index + 1
+            and clip.transition_in != "cut"
+            else 0.0
+        )
+        start = max(0.0, cursor - overlap)
+        timestamp = start + clip.duration_seconds / 2
+        timestamp = min(max(timestamp, 0.0), max(0.0, rendered_duration - 0.05))
+        targets.append((timestamp, clip, shots.get(clip.clip_id)))
+        cursor = start + clip.duration_seconds
+        previous_index = clip.sequence_index
+
+    if len(targets) <= sample_limit:
+        return targets
+    indices = sorted(
+        {round(index * (len(targets) - 1) / (sample_limit - 1)) for index in range(sample_limit)}
+    )
+    return [targets[index] for index in indices]
+
+
+def _review_semantic_frames(
+    ffmpeg: str,
+    video: Path,
+    duration: float,
+    clips: list,
+    plan: VideoProjectPlan,
+    *,
+    sample_limit: int,
+    model: str | None,
+) -> tuple[str, list[SemanticFrameReview]]:
+    """Compare representative rendered frames with storyboard intent using local Ollama."""
+    from ..understanding.visual_analyzer import OllamaVisionAnalyzer, VisionModelError
+
+    selected_model = model or os.getenv("OLLAMA_MODEL", "qwen2.5vl:7b")
+    analyzer = OllamaVisionAnalyzer(model=selected_model)
+    reviews: list[SemanticFrameReview] = []
+    targets = _semantic_targets(
+        clips,
+        plan,
+        rendered_duration=duration,
+        sample_limit=sample_limit,
+    )
+    try:
+        with tempfile.TemporaryDirectory(prefix="video-agent-semantic-critique-") as temporary:
+            directory = Path(temporary)
+            for index, (timestamp, clip, shot) in enumerate(targets, start=1):
+                frame_path = directory / f"semantic-frame-{index:02d}.jpg"
+                result = _run(
+                    [
+                        ffmpeg,
+                        "-hide_banner",
+                        "-loglevel",
+                        "error",
+                        "-nostdin",
+                        "-ss",
+                        f"{timestamp:.3f}",
+                        "-i",
+                        str(video),
+                        "-frames:v",
+                        "1",
+                        "-vf",
+                        "scale=768:-2:force_original_aspect_ratio=decrease",
+                        "-q:v",
+                        "3",
+                        "-y",
+                        str(frame_path),
+                    ],
+                    timeout=60,
+                )
+                if result.returncode != 0 or not frame_path.is_file():
+                    raise DraftCritiqueError(
+                        f"Could not extract semantic review frame at {timestamp:.2f}s: "
+                        f"{result.stderr.strip()}"
+                    )
+                if shot is None:
+                    purpose = clip.sequence_reason or "Match the rendered shot to its timeline intent"
+                    visual_description = clip.scene_summary or "No storyboard description is available"
+                    shot_id = clip.clip_id
+                    primary_subject = clip.primary_subject
+                    expected_role = clip.visual_role
+                    expected_scale = clip.shot_scale
+                else:
+                    purpose = shot.purpose
+                    visual_description = shot.visual_description
+                    shot_id = shot.shot_id
+                    primary_subject = shot.primary_subject
+                    expected_role = shot.visual_role
+                    expected_scale = shot.shot_scale
+                try:
+                    assessment = analyzer.compare_frame_to_storyboard(
+                        frame_path,
+                        purpose=purpose,
+                        visual_description=visual_description,
+                        primary_subject=primary_subject,
+                        expected_role=expected_role,
+                        expected_scale=expected_scale,
+                    )
+                    reviews.append(
+                        SemanticFrameReview(
+                            shot_id=shot_id,
+                            timestamp_seconds=timestamp,
+                            **assessment,
+                        )
+                    )
+                except VisionModelError as exc:
+                    raise DraftCritiqueError(
+                        f"Semantic critique failed for shot {shot_id}: {exc}"
+                    ) from exc
+    finally:
+        analyzer.unload_model()
+    return selected_model, reviews
+
+
 def critique_rendered_draft(
     folder: Path,
     *,
@@ -198,10 +345,15 @@ def critique_rendered_draft(
     timeline_path: Path | None = None,
     plan_path: Path | None = None,
     sample_count: int = 8,
+    semantic: bool = False,
+    semantic_samples: int = 8,
+    vision_model: str | None = None,
 ) -> DraftCritiqueReport:
     """Inspect a rendered draft against its approved timeline and creative brief."""
     if not 1 <= sample_count <= 24:
         raise ValueError("sample_count must be between 1 and 24")
+    if not 1 <= semantic_samples <= 12:
+        raise ValueError("semantic_samples must be between 1 and 12")
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise NotADirectoryError(f"Project folder does not exist: {root}")
@@ -272,6 +424,43 @@ def critique_rendered_draft(
     frames = _sample_frames(ffmpeg, video, duration, sample_count)
     audio = _analyze_audio(ffmpeg, video, audio_stream is not None)
     findings: list[CritiqueFinding] = []
+    semantic_model = None
+    semantic_reviews: list[SemanticFrameReview] = []
+    if semantic:
+        approved_clips_for_review = [
+            clip for clip in timeline.clips if clip.decision == "approved"
+        ]
+        semantic_model, semantic_reviews = _review_semantic_frames(
+            ffmpeg,
+            video,
+            duration,
+            approved_clips_for_review,
+            plan,
+            sample_limit=semantic_samples,
+            model=vision_model,
+        )
+        concerns = [
+            review
+            for review in semantic_reviews
+            if review.match in {"partial", "mismatch"} and review.confidence >= 0.55
+        ]
+        for review in concerns:
+            severity = "warning" if review.match == "mismatch" else "info"
+            findings.append(
+                CritiqueFinding(
+                    severity=severity,
+                    category="story",
+                    message=(
+                        f"Rendered shot {review.shot_id} may not match its storyboard intent "
+                        f"({review.match}, score {review.score:.2f})."
+                    ),
+                    evidence=(
+                        f"At {review.timestamp_seconds:.1f}s, confidence "
+                        f"{review.confidence:.2f}: {review.evidence} "
+                        f"Suggested review: {review.suggestion}"
+                    ),
+                )
+            )
 
     target_duration = plan.brief.target_duration_seconds
     duration_delta = duration - target_duration
@@ -448,6 +637,8 @@ def critique_rendered_draft(
         frames=frames,
         audio=audio,
         findings=findings,
+        semantic_model=semantic_model,
+        semantic_reviews=semantic_reviews,
     )
 
 
