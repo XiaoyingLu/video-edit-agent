@@ -21,8 +21,8 @@ def review_storyboard_footage(
     artifact_dir = root / ".video-agent"
     plan_file = (plan_path or artifact_dir / "video-project-plan.json").expanduser().resolve()
     suggestions_file = (
-        suggestions_path or artifact_dir / "footage-suggestions.json"
-    ).expanduser().resolve()
+        (suggestions_path or artifact_dir / "footage-suggestions.json").expanduser().resolve()
+    )
     for path, label in ((plan_file, "project plan"), (suggestions_file, "footage suggestions")):
         try:
             path.relative_to(root)
@@ -36,7 +36,10 @@ def review_storyboard_footage(
     suggestions = ProjectFootageSuggestions.model_validate_json(
         suggestions_file.read_text(encoding="utf-8")
     )
-    if Path(plan.project_path).resolve() != root or Path(suggestions.project_path).resolve() != root:
+    if (
+        Path(plan.project_path).resolve() != root
+        or Path(suggestions.project_path).resolve() != root
+    ):
         raise ValueError("planning artifacts belong to a different project folder")
     if plan.planning_stage not in {"storyboard_ready", "footage_mapped"}:
         raise ValueError("footage review requires a storyboard_ready or footage_mapped plan")
@@ -62,7 +65,9 @@ def review_storyboard_footage(
         try:
             source.relative_to(root)
         except ValueError as exc:
-            raise ValueError(f"candidate footage for '{shot_id}' escapes the project folder") from exc
+            raise ValueError(
+                f"candidate footage for '{shot_id}' escapes the project folder"
+            ) from exc
         if not source.is_file():
             raise ValueError(f"candidate source video does not exist for '{shot_id}': {source}")
         if candidate.source_end_seconds <= candidate.source_start_seconds:
@@ -83,6 +88,8 @@ def review_storyboard_footage(
     all_assigned = all(shot.assignment_status != "unassigned" for shot in shots.values())
     plan.planning_stage = "footage_mapped" if all_assigned else "storyboard_ready"
     plan.approved = False
-    plan_file.write_text(json.dumps(plan.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8")
+    plan_file.write_text(
+        json.dumps(plan.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
+    )
     register_artifact(root, plan_file)
     return plan, plan_file

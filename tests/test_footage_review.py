@@ -1,7 +1,5 @@
 """Tests for human-reviewed storyboard footage assignment."""
 
-import json
-
 import pytest
 
 from travel_video_agent.artifact_tracking import register_artifact
@@ -10,11 +8,15 @@ from travel_video_agent.editing.footage_review import review_storyboard_footage
 from travel_video_agent.editing.planning_schemas import (
     CreativeBrief,
     PlannedScene,
-    StoryTreatment,
     StoryboardShot,
+    StoryTreatment,
     VideoProjectPlan,
 )
-from travel_video_agent.understanding.schemas import FrameObservation, VideoScene, VideoUnderstanding
+from travel_video_agent.understanding.schemas import (
+    FrameObservation,
+    VideoScene,
+    VideoUnderstanding,
+)
 
 
 def _artifacts(root):
@@ -33,7 +35,11 @@ def _artifacts(root):
             resolution="1080p",
             pacing="moderate",
         ),
-        editing_preferences={"source_prompt":"Create a 5-second travel film","target_duration_seconds":5,"style":"cinematic"},
+        editing_preferences={
+            "source_prompt": "Create a 5-second travel film",
+            "target_duration_seconds": 5,
+            "style": "cinematic",
+        },
         story_treatment=StoryTreatment(
             working_title="Mountain Light",
             logline="A quiet mountain journey.",
@@ -91,8 +97,11 @@ def _artifacts(root):
     understanding_path.write_text(understanding.model_dump_json(), encoding="utf-8")
     register_artifact(root, plan_path)
     register_artifact(root, understanding_path)
-    suggest_storyboard_footage(root)
-    return plan_path, artifact_dir / "footage-suggestions.json"
+    suggestions = suggest_storyboard_footage(root)
+    suggestions_path = artifact_dir / "footage-suggestions.json"
+    suggestions_path.write_text(suggestions.model_dump_json(), encoding="utf-8")
+    register_artifact(root, suggestions_path)
+    return plan_path, suggestions_path
 
 
 def test_review_footage_applies_only_explicit_selection_and_advances_stage(tmp_path):
@@ -121,5 +130,8 @@ def test_review_footage_rejects_unknown_shot(tmp_path):
     plan_path, suggestions_path = _artifacts(tmp_path)
     with pytest.raises(ValueError, match="unknown storyboard shot"):
         review_storyboard_footage(
-            tmp_path, selections={"missing": 1}, plan_path=plan_path, suggestions_path=suggestions_path
+            tmp_path,
+            selections={"missing": 1},
+            plan_path=plan_path,
+            suggestions_path=suggestions_path,
         )

@@ -1218,7 +1218,9 @@ def review_footage(
     ],
     select: Annotated[
         list[str] | None,
-        typer.Option("--select", help="Approve a candidate as SHOT_ID=CANDIDATE_NUMBER; repeatable."),
+        typer.Option(
+            "--select", help="Approve a candidate as SHOT_ID=CANDIDATE_NUMBER; repeatable."
+        ),
     ] = None,
     reject: Annotated[
         list[str] | None,
@@ -1261,10 +1263,18 @@ def review_footage(
         f"stage: [cyan]{plan_result.planning_stage}[/cyan]."
     )
     if plan_result.planning_stage == "footage_mapped":
-        console.print("[bold green]Every storyboard shot has an explicitly approved footage match.[/bold green]")
+        console.print(
+            "[bold green]Every storyboard shot has an explicitly approved footage match."
+            "[/bold green]"
+        )
     else:
-        console.print("[yellow]Unassigned shots remain in storyboard_ready; review more candidates to complete mapping.[/yellow]")
-    console.print("[yellow]This does not approve the overall creative plan or render video.[/yellow]")
+        console.print(
+            "[yellow]Unassigned shots remain in storyboard_ready; "
+            "review more candidates to complete mapping.[/yellow]"
+        )
+    console.print(
+        "[yellow]This does not approve the overall creative plan or render video.[/yellow]"
+    )
 
 
 @app.command("draft-edit")
