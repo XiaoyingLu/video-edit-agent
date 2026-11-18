@@ -523,7 +523,7 @@ def test_suggest_music_sync_command_help():
 def test_create_plan_command_exposes_music_analysis_option():
     result = runner.invoke(app, ["create-plan", "--help"])
     assert result.exit_code == 0
-    help_text = " ".join(click.unstyle(result.output).split())
+    help_text = "".join(click.unstyle(result.output).split())
     assert "--music-analysis" in help_text
 
 
@@ -697,7 +697,7 @@ def test_review_music_sync_command_interactively_prompts_for_each_pending_bounda
         )
 
     monkeypatch.setattr(cli, "apply_music_sync_review", fake_review)
-    result = runner.invoke(app, ["review-music-sync", str(tmp_path)], input="a\\n")
+    result = runner.invoke(app, ["review-music-sync", str(tmp_path)], input="a\n")
 
     assert result.exit_code == 0, result.output
     assert captured["accept_ids"] == {"shot-001->shot-002"}
