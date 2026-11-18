@@ -7,8 +7,8 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
-from ..rendering.shot_renderer import render_approved_shot_timeline
 from ..rendering.renderer import RenderReport
+from ..rendering.shot_renderer import render_approved_shot_timeline
 from .timeline_schemas import ProjectDraftTimeline
 
 
