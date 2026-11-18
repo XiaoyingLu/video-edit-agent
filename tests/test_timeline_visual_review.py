@@ -98,7 +98,7 @@ def test_visual_review_rejects_stale_or_external_timeline(tmp_path, monkeypatch)
         build_timeline_visual_review(tmp_path)
 
     with pytest.raises(TimelineVisualReviewError, match="inside the project"):
-        build_timeline_visual_review(tmp_path, timeline_path=source.parent.parent / "outside.json")
+        build_timeline_visual_review(tmp_path, timeline_path=tmp_path.parent / "outside.json")
 
 
 def test_html_embeds_frames_and_exports_version_bound_decisions(tmp_path, monkeypatch):
