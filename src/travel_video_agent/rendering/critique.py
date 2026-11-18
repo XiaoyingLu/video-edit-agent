@@ -302,8 +302,12 @@ def _review_semantic_frames(
                         f"{result.stderr.strip()}"
                     )
                 if shot is None:
-                    purpose = clip.sequence_reason or "Match the rendered shot to its timeline intent"
-                    visual_description = clip.scene_summary or "No storyboard description is available"
+                    purpose = (
+                        clip.sequence_reason or "Match the rendered shot to its timeline intent"
+                    )
+                    visual_description = (
+                        clip.scene_summary or "No storyboard description is available"
+                    )
                     shot_id = clip.clip_id
                     primary_subject = clip.primary_subject
                     expected_role = clip.visual_role
