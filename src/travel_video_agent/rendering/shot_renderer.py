@@ -80,7 +80,7 @@ def _build_shot_render_command(
             f"[{index}:v:0]trim=start={_seconds(start)}:end={_seconds(end)},"
             f"setpts=PTS-STARTPTS,{fit_filters},"
             f"setsar=1,fps={_seconds(frame_rate)},settb=AVTB,"
-            
+            f"format=yuv420p[v{index}]"
         )
         if has_audio:
             filters.append(
