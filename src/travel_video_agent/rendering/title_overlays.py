@@ -103,12 +103,13 @@ def review_title_overlays(
     unknown = (approve_ids | reject_ids) - overlays.keys()
     if unknown:
         raise ValueError(f"unknown title overlay ID(s): {', '.join(sorted(unknown))}")
-    for item in document.overlays:
+    reviewed = document.model_copy(deep=True)
+    for item in reviewed.overlays:
         if item.overlay_id in approve_ids:
             item.decision = "approved"
         elif item.overlay_id in reject_ids:
             item.decision = "rejected"
-    return TitleOverlayDocument.model_validate(document.model_dump())
+    return TitleOverlayDocument.model_validate(reviewed.model_dump())
 
 
 def save_title_overlays(
