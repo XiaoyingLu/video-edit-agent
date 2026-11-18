@@ -18,6 +18,8 @@ class TitleOverlay(BaseModel):
 
     overlay_id: str = Field(min_length=1, max_length=80)
     text: str = Field(min_length=1, max_length=120)
+    overlay_kind: Literal["title", "lower_third"] = "title"
+    secondary_text: str | None = Field(default=None, max_length=100)
     start_seconds: float = Field(ge=0)
     end_seconds: float = Field(gt=0)
     placement: Literal["top", "center", "bottom"] = "bottom"
@@ -30,6 +32,13 @@ class TitleOverlay(BaseModel):
     def validate_interval(self) -> "TitleOverlay":
         if not self.text.strip() or any(ord(character) < 32 for character in self.text):
             raise ValueError("title text must be non-empty and contain no control characters")
+        if self.secondary_text is not None and (
+            not self.secondary_text.strip()
+            or any(ord(character) < 32 for character in self.secondary_text)
+        ):
+            raise ValueError("secondary text must be non-empty and contain no control characters")
+        if self.overlay_kind == "title" and self.secondary_text is not None:
+            raise ValueError("secondary text is only supported for lower-third overlays")
         if self.end_seconds <= self.start_seconds:
             raise ValueError("title end_seconds must be greater than start_seconds")
         if self.end_seconds - self.start_seconds < 0.5:
