@@ -113,6 +113,20 @@ _VISION_RESPONSE_SCHEMA: dict[str, Any] = {
 }
 
 
+_STORYBOARD_MATCH_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "match": {"type": "string", "enum": ["match", "partial", "mismatch", "uncertain"]},
+        "score": {"type": "number", "minimum": 0, "maximum": 1},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "evidence": {"type": "string", "maxLength": 240},
+        "suggestion": {"type": "string", "maxLength": 240},
+    },
+    "required": ["match", "score", "confidence", "evidence", "suggestion"],
+    "additionalProperties": False,
+}
+
+
 def _enum_value(value: Any, allowed: set[str]) -> str:
     """Normalize optional editorial labels; unknown values never leak into artifacts."""
     return value if isinstance(value, str) and value in allowed else "unknown"
@@ -371,6 +385,105 @@ class OllamaVisionAnalyzer:
                 ) from exc
 
         raise VisionModelError(f"The vision model could not analyze {frame_path}.")
+
+    def compare_frame_to_storyboard(
+        self,
+        frame_path: Path,
+        *,
+        purpose: str,
+        visual_description: str,
+        primary_subject: str = "",
+        expected_role: str = "unknown",
+        expected_scale: str = "unknown",
+    ) -> dict[str, Any]:
+        """Compare one rendered frame with its intended storyboard shot."""
+        if not self._memory_checked:
+            try:
+                ensure_memory_available(
+                    required_vision_memory_gb(self.model), f"Ollama vision model '{self.model}'"
+                )
+            except ResourceError as exc:
+                raise VisionModelError(str(exc)) from exc
+            self._memory_checked = True
+        image = base64.b64encode(frame_path.read_bytes()).decode("ascii")
+        prompt = (
+            "Act as a careful travel-film continuity editor. Compare the supplied rendered "
+            "video frame with the intended storyboard shot below. Judge only whether the visible "
+            "content supports the intended subject, action, setting, shot purpose, and broad "
+            "composition. Do not penalize harmless differences in lighting, framing, or exact "
+            "camera angle. Do not assume the image shows events outside this single frame. "
+            "Use 'uncertain' and low confidence when evidence is ambiguous or the frame is a "
+            "transition. A scenic establishing shot can satisfy a scenic purpose without people. "
+            "Return concise, evidence-based JSON; never invent details.\n"
+            f"Purpose: {purpose[:240]}\n"
+            f"Intended visual: {visual_description[:600]}\n"
+            f"Primary subject: {primary_subject[:100] or 'not specified'}\n"
+            f"Expected editorial role: {expected_role}\n"
+            f"Expected shot scale: {expected_scale}"
+        )
+        payload = json.dumps(
+            {
+                "model": self.model,
+                "keep_alive": self.keep_alive,
+                "stream": False,
+                "format": _STORYBOARD_MATCH_SCHEMA,
+                "messages": [{"role": "user", "content": prompt, "images": [image]}],
+                "options": {"temperature": 0, "num_predict": 180},
+            }
+        ).encode("utf-8")
+        request = Request(
+            f"{self.base_url}/api/chat",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urlopen(request, timeout=self.timeout_seconds) as response:
+                result = json.loads(response.read().decode("utf-8"))
+                self._model_used = True
+            assessment = json.loads(result["message"]["content"])
+        except HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            raise VisionModelError(
+                f"Ollama returned HTTP {exc.code} during storyboard comparison: {detail}"
+            ) from exc
+        except (URLError, TimeoutError, OSError) as exc:
+            raise VisionModelError(
+                f"Could not reach Ollama at {self.base_url} for storyboard comparison."
+            ) from exc
+        except (json.JSONDecodeError, UnicodeDecodeError, KeyError, TypeError) as exc:
+            raise VisionModelError("Ollama returned invalid storyboard comparison JSON.") from exc
+
+        if not isinstance(assessment, dict):
+            raise VisionModelError("Storyboard comparison must be a JSON object.")
+        match = assessment.get("match")
+        score = assessment.get("score")
+        confidence = assessment.get("confidence")
+        evidence = assessment.get("evidence")
+        suggestion = assessment.get("suggestion")
+        if (
+            match not in {"match", "partial", "mismatch", "uncertain"}
+            or isinstance(score, bool)
+            or not isinstance(score, (int, float))
+            or not math.isfinite(score)
+            or not 0 <= score <= 1
+            or isinstance(confidence, bool)
+            or not isinstance(confidence, (int, float))
+            or not math.isfinite(confidence)
+            or not 0 <= confidence <= 1
+            or not isinstance(evidence, str)
+            or len(evidence) > 240
+            or not isinstance(suggestion, str)
+            or len(suggestion) > 240
+        ):
+            raise VisionModelError("Ollama returned invalid storyboard comparison fields.")
+        return {
+            "match": match,
+            "score": float(score),
+            "confidence": float(confidence),
+            "evidence": evidence.strip(),
+            "suggestion": suggestion.strip(),
+        }
 
     def analyze_scene(self, frames: list[tuple[float, Path]]) -> dict[str, Any]:
         """Infer temporal action and camera movement from ordered scene frames."""
