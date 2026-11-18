@@ -110,8 +110,8 @@ def suggest_storyboard_footage(
     artifact_dir = root / ".video-agent"
     plan_file = (plan_path or artifact_dir / "video-project-plan.json").expanduser().resolve()
     understanding_file = (
-        understanding_path or artifact_dir / "understanding.json"
-    ).expanduser().resolve()
+        (understanding_path or artifact_dir / "understanding.json").expanduser().resolve()
+    )
     for path, label in (
         (plan_file, "video project plan"),
         (understanding_file, "video understanding"),
