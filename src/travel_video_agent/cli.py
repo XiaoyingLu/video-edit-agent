@@ -793,7 +793,10 @@ def render_draft(
     ] = False,
     fit_mode: Annotated[
         str,
-        typer.Option("--fit-mode", help="Source framing: crop to fill or pad to preserve the full frame."),
+        typer.Option(
+            "--fit-mode",
+            help="Source framing: crop to fill or pad to preserve the full frame.",
+        ),
     ] = "crop",
 ) -> None:
     """Render the approved timeline using the creative plan output profile."""
