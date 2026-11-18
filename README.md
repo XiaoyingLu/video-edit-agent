@@ -153,6 +153,22 @@ Semantic critique uses the configured local Ollama vision model (`OLLAMA_MODEL`,
 
 Findings include the measurements that triggered them. Frame metrics are technical signals, not aesthetic scores: dark scenic footage, intentional silence, and soft-focus shots may all be deliberate creative choices. Review the evidence in context rather than treating a threshold as an automatic defect. The report is registered as depending on the rendered MP4, approved timeline, and creative plan, so changes to those inputs invalidate it. The technical checks are deterministic. Optional semantic checks use the local vision model and are explicitly confidence-scored. Neither mode modifies the timeline or rendered video.
 
+## Compare rendered draft versions
+
+After rendering a revised timeline to a separate MP4, generate a side-by-side review:
+
+```bash
+docker compose run --rm video-agent compare-drafts ./travel-test \
+  --before ./.video-agent/rendered-draft.mp4 \
+  --after ./.video-agent/rendered-revision-001.mp4 \
+  --samples 8
+```
+
+The command writes a standalone `.video-agent/draft-comparison.html` contact sheet and a machine-readable `.video-agent/draft-comparison.json` report. Each row pairs frames sampled at the same normalized playback position in both videos, even when their total durations differ. The report compares duration, resolution, frame rate, codecs, audio presence/loudness/quiet intervals, and per-frame luminance, near-black/near-white pixel ratios, and sharpness variance. Use `--samples` (1–16) to adjust the number of paired frames, or `--output` to choose another project-local output base path.
+
+The HTML contains embedded frame images, so it can be opened locally without a server or access to the original temporary frame files. The JSON stores metrics and timestamps without duplicating image data. Both reports are registered as depending on the two input MP4s, so changing either render invalidates the comparison. Inputs must be distinct project-local MP4 files.
+
+These measurements are objective signals, not aesthetic scores: higher sharpness or brightness is not inherently better, and normalized positions do not guarantee that two edits show the same scene at the same moment. Inspect both complete videos and listen to the soundtrack before deciding whether to keep a revision. The command never modifies videos, source footage, or timelines.
 ## Requirements
 
 - Docker Engine and Docker Compose
