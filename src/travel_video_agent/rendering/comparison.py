@@ -115,7 +115,9 @@ def _probe_video(ffprobe: str, ffmpeg: str, root: Path, video: Path) -> DraftVid
         duration = float(payload["format"]["duration"])
         streams = payload["streams"]
     except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
-        raise DraftComparisonError(f"ffprobe returned incomplete metadata for {video.name}.") from exc
+        raise DraftComparisonError(
+            f"ffprobe returned incomplete metadata for {video.name}."
+        ) from exc
     video_stream = next((item for item in streams if item.get("codec_type") == "video"), None)
     if video_stream is None:
         raise DraftComparisonError(f"{video.name} does not contain a video stream.")
@@ -308,7 +310,7 @@ def render_comparison_html(report: DraftComparisonReport) -> str:
 :root {{ color-scheme: light dark; font-family: system-ui, sans-serif; }}
 body {{ max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }}
 h1 {{ margin-bottom: .25rem; }} .note {{ color: #777; }}
-.summary {{ display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: .75rem; }}
+.summary {{ display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); }}
 .card {{ border: 1px solid #8886; border-radius: 10px; padding: .9rem; }}
 .pair {{ display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }}
 figure {{ margin: 0; }} img {{ display: block; width: 100%; height: auto; border-radius: 8px; }}
@@ -323,10 +325,12 @@ not a score of creative quality or a recommendation to keep either edit.</p>
 <div class="summary">
   <div class="card"><strong>Before</strong><p>{before_name}</p>
     <p>{report.before.duration_seconds:.2f}s · {report.before.width}×{report.before.height}</p>
-    <p>{html.escape(report.before.video_codec)} video · {html.escape(report.before.audio_codec or "no audio")}</p></div>
+    <p>{html.escape(report.before.video_codec)} video ·
+      {html.escape(report.before.audio_codec or "no audio")}</p></div>
   <div class="card"><strong>After</strong><p>{after_name}</p>
     <p>{report.after.duration_seconds:.2f}s · {report.after.width}×{report.after.height}</p>
-    <p>{html.escape(report.after.video_codec)} video · {html.escape(report.after.audio_codec or "no audio")}</p></div>
+    <p>{html.escape(report.after.video_codec)} video ·
+      {html.escape(report.after.audio_codec or "no audio")}</p></div>
   <div class="card"><strong>Duration change</strong><p>{report.duration_delta_seconds:+.2f}s</p>
     <p>Resolution changed: {"yes" if report.resolution_changed else "no"}</p></div>
   <div class="card"><strong>Audio change</strong><p>Mean volume: {volume}</p>
