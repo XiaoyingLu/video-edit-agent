@@ -94,9 +94,11 @@ def create_video_project_plan(
         model=planner_model,
         music_sections=music_sections,
     )
-    scenes = _annotate_scenes_with_music(generated.scenes, music_analysis.sections) if (
-        music_analysis is not None
-    ) else generated.scenes
+    scenes = (
+        _annotate_scenes_with_music(generated.scenes, music_analysis.sections)
+        if music_analysis is not None
+        else generated.scenes
+    )
     project_plan = VideoProjectPlan(
         project_path=str(root),
         brief=brief,
