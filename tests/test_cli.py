@@ -627,9 +627,7 @@ def test_review_music_sync_command_accepts_and_persists_selected_boundary(
             suggestions_path=".video-agent/music-sync-suggestions.json",
             revision_path=".video-agent/music-sync-revisions/revision-001.json",
             decisions=[
-                MusicSyncReviewDecision(
-                    boundary_id="shot-001->shot-002", status="accepted"
-                )
+                MusicSyncReviewDecision(boundary_id="shot-001->shot-002", status="accepted")
             ],
         )
 
@@ -707,4 +705,3 @@ def test_review_music_sync_command_interactively_prompts_for_each_pending_bounda
     assert captured["reject_ids"] == set()
     assert "Current boundary: 4.000s" in result.output
     assert "Suggested: 4.200s" in result.output
-
