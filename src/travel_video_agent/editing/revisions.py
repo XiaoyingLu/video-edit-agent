@@ -94,7 +94,8 @@ def create_timeline_revision(
         raise TimelineRevisionError("minimum clip duration must be positive")
 
     root = folder.expanduser().resolve()
-    source_file = (timeline_path or root / ".video-agent" / "optimized-timeline.json").expanduser().resolve()
+    default_timeline = root / ".video-agent" / "optimized-timeline.json"
+    source_file = (timeline_path or default_timeline).expanduser().resolve()
     try:
         source_file.relative_to(root)
     except ValueError as exc:
