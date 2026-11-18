@@ -228,7 +228,7 @@ def critique_rendered_draft(
         plan_path or root / ".video-agent" / "video-project-plan.json",
         "Creative project plan",
     )
-    for artifact in (timeline_file, plan_file):
+    for artifact in (video, timeline_file, plan_file):
         validate_artifact(root, artifact)
 
     timeline = ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
@@ -314,6 +314,27 @@ def critique_rendered_draft(
             )
         )
 
+    long_side = {"720p": 1280, "1080p": 1920, "4k": 3840}[plan.brief.resolution]
+    short_side = {"720p": 720, "1080p": 1080, "4k": 2160}[plan.brief.resolution]
+    if plan.brief.aspect_ratio == "16:9":
+        minimum_width, minimum_height = long_side, short_side
+    elif plan.brief.aspect_ratio == "9:16":
+        minimum_width, minimum_height = short_side, long_side
+    else:
+        minimum_width = minimum_height = short_side
+    if width < minimum_width or height < minimum_height:
+        findings.append(
+            CritiqueFinding(
+                severity="warning",
+                category="format",
+                message="Rendered resolution is below the creative brief target.",
+                evidence=(
+                    f"Requested at least {minimum_width}x{minimum_height}; "
+                    f"rendered {width}x{height}."
+                ),
+            )
+        )
+
     approved_clips = [clip for clip in timeline.clips if clip.decision == "approved"]
     expected_timeline_duration = sum(clip.duration_seconds for clip in approved_clips) - sum(
         clip.transition_duration_seconds
@@ -371,8 +392,8 @@ def critique_rendered_draft(
                 severity="warning",
                 category="audio",
                 message=(
-                "Rendered audio appears silent or could not produce a measurable mean level."
-            ),
+                    "Rendered audio appears silent or could not produce a measurable mean level."
+                ),
                 evidence="FFmpeg volumedetect did not report a finite mean volume.",
             )
         )
