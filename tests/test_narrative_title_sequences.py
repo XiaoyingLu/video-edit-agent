@@ -107,6 +107,7 @@ def test_suggest_narrative_title_sequences_uses_story_and_approved_timeline(
         "closing-card",
     ]
     assert document.overlays[0].text == "A Weekend in the Rockies"
+    assert document.source_plan == str(plan_path.relative_to(tmp_path))
     assert document.overlays[2].text == "Finding stillness in the mountains"
     assert document.overlays[0].sequence_role == "opening"
     assert document.overlays[2].sequence_role == "closing"
