@@ -106,7 +106,6 @@ def test_renderer_supports_slide_up_and_minimal_title_preset(tmp_path: Path):
     assert "y='if(" in graph
 
 
-
 def test_lower_third_schema_supports_bounded_secondary_context():
     overlay = _overlay(
         overlay_kind="lower_third",
