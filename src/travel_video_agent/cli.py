@@ -25,8 +25,8 @@ from .editing import (
     save_draft_timeline,
     save_edit_proposal,
 )
-from .editing.footage_mapping import suggest_storyboard_footage
 from .editing.embeddings import EmbeddingModelError
+from .editing.footage_mapping import suggest_storyboard_footage
 from .editing.footage_review import review_storyboard_footage
 from .editing.planning_generation import VideoPlanningError
 from .editing.storyboard_production import (
