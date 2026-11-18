@@ -14,6 +14,19 @@ A local-first Python CLI for editing personal travel footage. Media stays on you
 - Natural-language editing intent parsing into a validated, reviewable plan
 - Local soundtrack tempo, beat/downbeat, and energy-section analysis
 
+## Hierarchical video planning
+
+The `create-plan` command generates a creative brief, narrative treatment, and structured storyboard using the local Ollama model:
+
+```bash
+docker compose run --rm video-agent create-plan ./travel-test \
+  --prompt "Create a 90-second cinematic Banff travel film focused on mountain scenery and memorable moments"
+```
+
+It writes `.video-agent/video-project-plan.json` and the compatible `.video-agent/editing-plan.json`. The project plan includes a working title, logline, narrative arc, emotional journey, ordered scenes, and concrete storyboard shots with visual descriptions, shot scale, editorial role, duration, narration/text suggestions, and audio cues. Explicit durations in the user's prompt (for example, `90-second` or `2 minutes`) take precedence over model defaults. Scene and shot durations are normalized and validated against the requested total.
+
+Storyboard shots describe intended visuals; they are not claims about footage that has been inspected. Footage paths and source intervals remain unassigned until a later matching stage. The project plan is separate from `.video-agent/optimized-timeline.json`, which contains concrete source paths and time intervals for rendering. Planning does not modify source media, approve edits, or render video. The project-plan artifact depends on the editing-plan artifact, so changing upstream intent invalidates the derived plan.
+
 ## Cinematic scene understanding
 
 The `understand` command analyzes representative frames with the local Ollama vision model and stores both factual descriptions and bounded editorial attributes in `.video-agent/understanding.json`. Each observation includes shot scale, camera angle, composition, lighting, mood, likely editorial role (such as establishing, action, detail, or scenic breath), broad setting, and primary subject. Scene-level story function and dominant mood are aggregated from frame labels.

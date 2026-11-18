@@ -11,6 +11,14 @@ from .pipeline import (
     load_edit_proposal,
     save_edit_proposal,
 )
+from .planning_pipeline import create_video_project_plan
+from .planning_schemas import (
+    CreativeBrief,
+    PlannedScene,
+    StoryboardShot,
+    StoryTreatment,
+    VideoProjectPlan,
+)
 from .timeline_pipeline import (
     apply_timeline_review,
     build_draft_timeline,
@@ -21,6 +29,12 @@ from .timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
 
 __all__ = [
     "EditingPlan",
+    "CreativeBrief",
+    "StoryTreatment",
+    "StoryboardShot",
+    "PlannedScene",
+    "VideoProjectPlan",
+    "create_video_project_plan",
     "DraftClip",
     "ProjectDraftSelection",
     "build_draft_selection",

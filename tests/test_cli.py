@@ -107,6 +107,7 @@ def test_cli_help_is_available() -> None:
     assert "plan" in result.output
     assert "draft-edit" in result.output
     assert "create-video" in result.output
+    assert "create-plan" in result.output
     assert "validate-artifacts" in result.output
 
 
@@ -415,3 +416,85 @@ def test_draft_edit_command_writes_selection_json(tmp_path: Path, monkeypatch) -
     assert result.exit_code == 0, result.output
     assert json.loads(output.read_text(encoding="utf-8")) == expected.model_dump(mode="json")
     assert "No existing timeline was changed" in result.output
+
+
+def test_create_plan_command_writes_hierarchical_brief(tmp_path: Path, monkeypatch) -> None:
+    from travel_video_agent import cli
+    from travel_video_agent.editing.planning_schemas import VideoProjectPlan
+
+    expected = VideoProjectPlan(
+        project_path=str(tmp_path.resolve()),
+        brief={
+            "source_prompt": "Create a 90-second cinematic travel film",
+            "target_duration_seconds": 90,
+            "style": "cinematic",
+            "aspect_ratio": "16:9",
+            "resolution": "1080p",
+            "pacing": "moderate",
+            "creative_priorities": ["scenic_landscapes"],
+        },
+        editing_preferences={
+            "source_prompt": "Create a 90-second cinematic travel film",
+            "target_duration_seconds": 90,
+            "style": "cinematic",
+            "priorities": ["scenic_landscapes"],
+        },
+        story_treatment={
+            "working_title": "Beyond the Mountains",
+            "logline": "A journey into the Rockies.",
+            "narrative_arc": ["Arrival", "Discovery"],
+            "emotional_journey": "Anticipation becomes wonder.",
+        },
+        scenes=[
+            {
+                "scene_id": "scene-1",
+                "sequence_index": 1,
+                "title": "Arrival",
+                "purpose": "Introduce the landscape.",
+                "narrative_function": "hook",
+                "target_duration_seconds": 90,
+                "shots": [
+                    {
+                        "shot_id": "shot-1",
+                        "scene_id": "scene-1",
+                        "sequence_index": 1,
+                        "purpose": "Reveal the mountains.",
+                        "visual_description": "A wide mountain panorama.",
+                        "target_duration_seconds": 45,
+                    },
+                    {
+                        "shot_id": "shot-2",
+                        "scene_id": "scene-1",
+                        "sequence_index": 2,
+                        "purpose": "Move toward the lake.",
+                        "visual_description": "A slow approach to a turquoise lake.",
+                        "target_duration_seconds": 45,
+                    },
+                ],
+            }
+        ],
+        planning_stage="storyboard_ready",
+    )
+    destination = tmp_path / ".video-agent" / "video-project-plan.json"
+
+    def fake_create(folder, prompt, *, model=None, output_path=None):
+        assert prompt == "Create a 90-second cinematic travel film"
+        return expected, destination
+
+    monkeypatch.setattr(cli, "create_video_project_plan", fake_create)
+    result = runner.invoke(
+        app,
+        [
+            "create-plan",
+            str(tmp_path),
+            "--prompt",
+            "Create a 90-second cinematic travel film",
+            "--model",
+            "qwen2.5vl:3b",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "story and storyboard plan created" in result.output
+    assert "Beyond the Mountains" in result.output
+    assert "storyboard_ready" in result.output
