@@ -498,3 +498,11 @@ def test_create_plan_command_writes_hierarchical_brief(tmp_path: Path, monkeypat
     assert "story and storyboard plan created" in result.output
     assert "Beyond the Mountains" in result.output
     assert "storyboard_ready" in result.output
+
+
+
+def test_suggest_footage_command_help():
+    result = runner.invoke(app, ["suggest-footage", "--help"])
+    assert result.exit_code == 0
+    assert "--max-candidates" in result.stdout
+    assert "never assign footage automatically" in result.stdout
