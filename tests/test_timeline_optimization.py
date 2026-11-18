@@ -369,7 +369,6 @@ def test_cinematic_timeline_preserves_ranked_order_without_scene_metadata(tmp_pa
     assert "metadata is uncertain" in timeline.clips[1].sequence_reason
 
 
-
 def test_music_analysis_guides_pacing_without_changing_source_intervals(tmp_path):
     from travel_video_agent.music.schemas import MusicAnalysis, MusicSection
 
