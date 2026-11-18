@@ -528,30 +528,44 @@ def test_create_plan_command_exposes_music_analysis_option():
 
 
 def _music_sync_cli_inputs(tmp_path: Path) -> tuple[Path, Path]:
+    from travel_video_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
     from travel_video_agent.music.sync import MusicSyncBoundary, MusicSyncSuggestions
 
     artifacts = tmp_path / ".video-agent"
     artifacts.mkdir(exist_ok=True)
     timeline = artifacts / "optimized-timeline.json"
-    timeline.write_text(
-        json.dumps(
-            {
-                "clips": [
-                    {
-                        "clip_id": "shot-001",
-                        "video_path": "a.mp4",
-                        "source_start_seconds": 1.0,
-                        "source_end_seconds": 5.0,
-                    },
-                    {
-                        "clip_id": "shot-002",
-                        "video_path": "b.mp4",
-                        "source_start_seconds": 2.0,
-                        "source_end_seconds": 6.0,
-                    },
-                ]
-            }
+    clips = [
+        DraftTimelineClip(
+            clip_id="shot-001",
+            sequence_index=1,
+            video_path="a.mp4",
+            source_start_seconds=1.0,
+            source_end_seconds=5.0,
+            duration_seconds=4.0,
+            combined_score=90,
+            pacing_note="Opening shot",
         ),
+        DraftTimelineClip(
+            clip_id="shot-002",
+            sequence_index=2,
+            video_path="b.mp4",
+            source_start_seconds=2.0,
+            source_end_seconds=6.0,
+            duration_seconds=4.0,
+            combined_score=90,
+            pacing_note="Following shot",
+        ),
+    ]
+    timeline.write_text(
+        ProjectDraftTimeline(
+            project_path=str(tmp_path.resolve()),
+            style="cinematic",
+            pacing="moderate",
+            target_duration_seconds=8,
+            proposed_duration_seconds=8,
+            proposed_clip_count=2,
+            clips=clips,
+        ).model_dump_json(),
         encoding="utf-8",
     )
     suggestions = artifacts / "music-sync-suggestions.json"
@@ -579,7 +593,6 @@ def _music_sync_cli_inputs(tmp_path: Path) -> tuple[Path, Path]:
     )
     suggestions.write_text(report.model_dump_json(), encoding="utf-8")
     return timeline, suggestions
-
 
 def test_review_music_sync_command_help() -> None:
     result = runner.invoke(app, ["review-music-sync", "--help"])
