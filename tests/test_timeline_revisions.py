@@ -62,7 +62,10 @@ def _approved_timeline(root):
 
 def _patch_artifact_tracking(monkeypatch):
     monkeypatch.setattr("travel_video_agent.editing.revisions.validate_artifact", lambda *_: True)
-    monkeypatch.setattr("travel_video_agent.editing.revisions.register_artifact", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        "travel_video_agent.editing.revisions.register_artifact",
+        lambda *_args, **_kwargs: None,
+    )
 
 
 def test_create_revision_trims_only_selected_clip_and_resets_its_approval(tmp_path, monkeypatch):
@@ -103,7 +106,11 @@ def test_revision_rejects_extension_outside_existing_source_interval(tmp_path, m
     with pytest.raises(TimelineRevisionError, match="existing source interval"):
         create_timeline_revision(
             tmp_path,
-            [TimelineIntervalEdit(clip_id="later", source_start_seconds=7.5, source_end_seconds=11)],
+            [
+                TimelineIntervalEdit(
+                    clip_id="later", source_start_seconds=7.5, source_end_seconds=11
+                )
+            ],
         )
 
 
