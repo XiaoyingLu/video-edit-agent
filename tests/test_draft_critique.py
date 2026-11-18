@@ -46,7 +46,10 @@ def _write_inputs(root: Path, *, target_duration: float = 10) -> tuple[Path, Pat
         pacing="moderate",
         creative_priorities=["scenic_landscapes"],
     )
-    editing = EditingPlan(source_prompt=brief.source_prompt, target_duration_seconds=target_duration)
+    editing = EditingPlan(
+        source_prompt=brief.source_prompt,
+        target_duration_seconds=target_duration,
+    )
     shot = StoryboardShot(
         shot_id="shot-1",
         scene_id="scene-1",
