@@ -123,7 +123,10 @@ class OllamaVideoPlanner:
             "Use only supported enum values. The sum of all shot durations MUST equal the "
             "requested target duration exactly; each scene duration must equal the sum of "
             "its shot durations. Do not assign source footage or claim real footage has been "
-            "inspected. Make choices grounded in the user's brief; flag uncertain details "
+            "inspected. For every storyboard shot, leave footage_path, "
+            "footage_start_seconds, and footage_end_seconds unset, and set "
+            "assignment_status to unassigned. Make choices grounded in the user's brief; "
+            "flag uncertain details "
             "as assumptions rather than inventing personal trip events."
         )
         payload = json.dumps(
@@ -152,6 +155,14 @@ class OllamaVideoPlanner:
             with urlopen(request, timeout=300) as response:
                 result = json.loads(response.read().decode("utf-8"))
             parsed = json.loads(result["message"]["content"])
+            # Creative storyboards must never carry partial or speculative footage mappings.
+            # Strip assignment fields before validation; footage mapping is a later stage.
+            for scene in parsed.get("scenes", []):
+                for shot in scene.get("shots", []):
+                    shot.pop("footage_path", None)
+                    shot.pop("footage_start_seconds", None)
+                    shot.pop("footage_end_seconds", None)
+                    shot.pop("assignment_status", None)
             return GeneratedVideoPlanContent.model_validate(parsed)
         except HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")
