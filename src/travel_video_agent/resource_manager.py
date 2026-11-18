@@ -119,7 +119,8 @@ def required_ollama_memory_gb(
 
     normalized = model.lower()
     if "vl" in normalized or "vision" in normalized:
-        return required_vision_memory_gb(model)
+        match = re.search(r"(?<![0-9.])(3|7|32|72)b(?:$|[-_:])", normalized)
+        return _VISION_MEMORY_GB.get(match.group(1), 8.0) if match else 8.0
     match = re.search(
         r"(?<![0-9.])(0.5|1.5|3|7|14|32)b(?:$|[-_:])", normalized
     )
