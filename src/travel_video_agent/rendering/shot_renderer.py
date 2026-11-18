@@ -7,6 +7,7 @@ from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
 from ..editing.timeline_schemas import ProjectDraftTimeline
+from ..editing.planning_schemas import VideoProjectPlan
 from .renderer import (
     RenderError,
     RenderReport,
@@ -31,6 +32,24 @@ def _safe_source(root: Path, relative_path: str) -> Path:
     return source
 
 
+def _resolve_output_dimensions(root: Path, fallback_width: int, fallback_height: int) -> tuple[int, int]:
+    """Resolve the requested output profile from the current creative project plan."""
+    plan_file = root / ".video-agent" / "video-project-plan.json"
+    if not plan_file.is_file():
+        return fallback_width, fallback_height
+    validate_artifact(root, plan_file)
+    plan = VideoProjectPlan.model_validate_json(plan_file.read_text(encoding="utf-8"))
+    if Path(plan.project_path).resolve() != root:
+        raise RenderError("video project plan belongs to a different project folder")
+    long_side = {"720p": 1280, "1080p": 1920, "4k": 3840}[plan.brief.resolution]
+    short_side = {"720p": 720, "1080p": 1080, "4k": 2160}[plan.brief.resolution]
+    if plan.brief.aspect_ratio == "16:9":
+        return long_side, short_side
+    if plan.brief.aspect_ratio == "9:16":
+        return short_side, long_side
+    return short_side, short_side
+
+
 def _build_shot_render_command(
     ffmpeg: str,
     clips: list[tuple[Path, float, float, bool, str, float]],
@@ -38,8 +57,11 @@ def _build_shot_render_command(
     width: int,
     height: int,
     frame_rate: float = 30.0,
+    fit_mode: str = "crop",
 ) -> list[str]:
     """Build a filter graph that preserves shot order and applies approved transitions."""
+    if fit_mode not in {"crop", "pad"}:
+        raise ValueError("fit_mode must be crop or pad")
     command = [ffmpeg, "-hide_banner", "-nostdin", "-y"]
     for source, *_ in clips:
         command.extend(["-i", str(source)])
@@ -47,13 +69,18 @@ def _build_shot_render_command(
     filters: list[str] = []
     for index, (_, start, end, has_audio, _, _) in enumerate(clips):
         duration = end - start
+        fit_filters = (
+            f"scale=w={width}:h={height}:force_original_aspect_ratio=increase,"
+            f"crop={width}:{height}"
+            if fit_mode == "crop"
+            else f"scale=w={width}:h={height}:force_original_aspect_ratio=decrease,"
+            f"pad=width={width}:height={height}:x=(ow-iw)/2:y=(oh-ih)/2"
+        )
         filters.append(
             f"[{index}:v:0]trim=start={_seconds(start)}:end={_seconds(end)},"
-            f"setpts=PTS-STARTPTS,scale=w={width}:h={height}:"
-            f"force_original_aspect_ratio=decrease,"
-            f"pad=width={width}:height={height}:x=(ow-iw)/2:y=(oh-ih)/2,"
+            f"setpts=PTS-STARTPTS,{fit_filters},"
             f"setsar=1,fps={_seconds(frame_rate)},settb=AVTB,"
-            f"format=yuv420p[v{index}]"
+            
         )
         if has_audio:
             filters.append(
@@ -145,10 +172,13 @@ def render_approved_shot_timeline(
     overwrite: bool = False,
     timeout_seconds: float = 3600,
     dry_run: bool = False,
+    fit_mode: str = "crop",
 ) -> RenderReport | None:
     """Render only approved shots after every proposed shot has a decision."""
     if timeout_seconds <= 0:
         raise ValueError("timeout_seconds must be greater than zero")
+    if fit_mode not in {"crop", "pad"}:
+        raise ValueError("fit_mode must be crop or pad")
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise FileNotFoundError(f"Project folder does not exist: {root}")
@@ -255,6 +285,7 @@ def render_approved_shot_timeline(
     height -= height % 2
     if width < 2 or height < 2:
         raise RenderError("could not determine a valid output resolution from the first source")
+    width, height = _resolve_output_dimensions(root, width, height)
 
     expected_duration = sum(end - start for _, start, end, *_ in clip_inputs) - sum(
         transition_duration
@@ -271,7 +302,9 @@ def render_approved_shot_timeline(
         temporary_path = Path(temporary_file.name)
         temporary_file.close()
     try:
-        command = _build_shot_render_command(ffmpeg, clip_inputs, temporary_path, width, height)
+        command = _build_shot_render_command(
+            ffmpeg, clip_inputs, temporary_path, width, height, fit_mode=fit_mode
+        )
         if dry_run:
             _validate_filter_graph(command, timeout=min(timeout_seconds, 120))
             return None
@@ -304,6 +337,12 @@ def render_approved_shot_timeline(
             raise RenderError("rendered MP4 is missing a valid video or audio stream")
         if output_video.get("codec_name") != "h264" or output_audio.get("codec_name") != "aac":
             raise RenderError("rendered MP4 does not contain the expected H.264/AAC streams")
+        actual_width = int(output_video.get("width") or 0)
+        actual_height = int(output_video.get("height") or 0)
+        if (actual_width, actual_height) != (width, height):
+            raise RenderError(
+                f"rendered dimensions mismatch: expected {width}x{height}, got {actual_width}x{actual_height}"
+            )
         tolerance = max(0.75, len(clip_inputs) / 30.0 * 2)
         if abs(actual_duration - expected_duration) > tolerance:
             raise RenderError(
@@ -316,7 +355,11 @@ def render_approved_shot_timeline(
             temporary_path.unlink(missing_ok=True)
         raise
 
-    register_artifact(root, destination, dependencies=[timeline_file], verify_content=False)
+    dependencies = [timeline_file]
+    plan_file = root / ".video-agent" / "video-project-plan.json"
+    if plan_file.is_file():
+        dependencies.append(plan_file)
+    register_artifact(root, destination, dependencies=dependencies, verify_content=False)
 
     return RenderReport(
         output_path=str(destination),
