@@ -893,6 +893,8 @@ def find_highlights(
     table.add_column("Video", style="cyan")
     table.add_column("Time")
     table.add_column("Score", justify="right")
+    table.add_column("Semantic", justify="right")
+    table.add_column("Lexical", justify="right")
     table.add_column("Scene")
     for rank, candidate in enumerate(report.candidates, start=1):
         table.add_row(
@@ -1224,7 +1226,10 @@ def suggest_footage(
         folder,
         destination,
         dependencies=(report.source_plan, report.source_understanding),
-        config={"max_candidates_per_shot": max_candidates},
+        config={
+            "max_candidates_per_shot": max_candidates,
+            "embedding_model": embedding_model,
+        },
     )
 
     table = Table(title="Storyboard Footage Suggestions — Human Review Required")
@@ -1234,7 +1239,7 @@ def suggest_footage(
     table.add_column("Score", justify="right")
     for item in report.suggestions:
         if not item.candidates:
-            table.add_row(item.shot_id, "No analyzed scene candidates", "—", "—")
+            table.add_row(item.shot_id, "No analyzed scene candidates", "—", "—", "—", "—")
             continue
         for index, candidate in enumerate(item.candidates, start=1):
             table.add_row(
@@ -1242,6 +1247,12 @@ def suggest_footage(
                 candidate.video_path,
                 f"{candidate.source_start_seconds:.2f}–{candidate.source_end_seconds:.2f}s",
                 f"{candidate.score:.1f}",
+                (
+                    f"{candidate.semantic_similarity:.2f}"
+                    if candidate.semantic_similarity is not None
+                    else "—"
+                ),
+                f"{candidate.lexical_score:.1f}",
             )
     console.print(table)
     console.print(f"Matching method: {report.matching_method}")
