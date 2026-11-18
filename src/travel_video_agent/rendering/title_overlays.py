@@ -55,7 +55,10 @@ class TitleOverlayDocument(BaseModel):
 
 
 def load_title_overlays(
-    folder: Path, overlay_path: Path | None = None
+    folder: Path,
+    overlay_path: Path | None = None,
+    *,
+    validate_overlay_artifact: bool = True,
 ) -> tuple[TitleOverlayDocument, Path]:
     """Load a project-local title document and validate its timeline dependency."""
     root = folder.expanduser().resolve()
@@ -66,7 +69,8 @@ def load_title_overlays(
         raise FileNotFoundError(
             f"Missing {destination}; create .video-agent/title-overlays.json first."
         )
-    validate_artifact(root, destination)
+    if validate_overlay_artifact:
+        validate_artifact(root, destination)
     document = TitleOverlayDocument.model_validate_json(destination.read_text(encoding="utf-8"))
     if Path(document.project_path).resolve() != root:
         raise ValueError("title overlay document belongs to a different project folder")
