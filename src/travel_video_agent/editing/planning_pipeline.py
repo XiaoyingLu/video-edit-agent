@@ -43,7 +43,9 @@ def create_video_project_plan(
         except ValueError as exc:
             raise ValueError("music analysis artifact must be inside the project folder") from exc
         if not music_analysis_file.is_file():
-            raise FileNotFoundError(f"Music analysis artifact does not exist: {music_analysis_file}")
+            raise FileNotFoundError(
+                f"Music analysis artifact does not exist: {music_analysis_file}"
+            )
         validate_artifact(root, music_analysis_file)
         music_analysis = MusicAnalysis.model_validate_json(
             music_analysis_file.read_text(encoding="utf-8")
