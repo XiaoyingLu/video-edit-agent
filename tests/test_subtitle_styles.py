@@ -8,11 +8,14 @@ from travel_video_agent.rendering.renderer import (
 )
 
 
-@pytest.mark.parametrize(("position", "alignment", "margin"), [
-    ("bottom", 2, 48),
-    ("center", 5, 0),
-    ("top", 8, 48),
-])
+@pytest.mark.parametrize(
+    ("position", "alignment", "margin"),
+    [
+        ("bottom", 2, 48),
+        ("center", 5, 0),
+        ("top", 8, 48),
+    ],
+)
 def test_classic_subtitle_style_preserves_existing_defaults(
     position: str, alignment: int, margin: int
 ):
