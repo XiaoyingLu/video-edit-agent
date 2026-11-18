@@ -499,6 +499,7 @@ def test_create_plan_command_writes_hierarchical_brief(tmp_path: Path, monkeypat
     assert "Beyond the Mountains" in result.output
     assert "storyboard_ready" in result.output
 
+
 def test_suggest_footage_command_help():
     result = runner.invoke(app, ["suggest-footage", "--help"])
     assert result.exit_code == 0
