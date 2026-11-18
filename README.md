@@ -104,6 +104,35 @@ docker compose run --rm video-agent render-draft ./travel-test \
 Review each clip interactively, or explicitly approve/reject every clip ID shown by the timeline review output. Review decisions are saved to the revision file; rendering remains a separate explicit step and is never started by `review-music-sync`.
 
 
+## Selective timeline revisions
+
+After reviewing a rendered draft, make explicit, bounded trims to individual shots without replacing the approved source timeline:
+
+```bash
+docker compose run --rm video-agent revise-timeline ./travel-test \
+  --set-interval shot-0001:12.5:16.0 \
+  --set-interval shot-0004:28.0:31.5
+```
+
+Each `--set-interval` value is `CLIP_ID:SOURCE_START:SOURCE_END`. A revision can only narrow a shot's existing source interval; it cannot extend beyond the already reviewed footage, change media assignments, or reorder shots. The command saves a separate, versioned file under `.video-agent/timeline-revisions/`. Only edited shots return to pending review, while unchanged approvals are preserved. Transitions are reduced when needed to remain within the renderer's supported overlap limits. The original timeline and source media are never modified.
+
+Inspect the exact changes before approving or rendering:
+
+```bash
+docker compose run --rm video-agent compare-timelines ./travel-test \
+  --before ./.video-agent/optimized-timeline.json \
+  --after ./.video-agent/timeline-revisions/revision-001.json
+
+docker compose run --rm -it video-agent review-timeline ./travel-test \
+  --timeline ./.video-agent/timeline-revisions/revision-001.json
+
+docker compose run --rm video-agent render-draft ./travel-test \
+  --timeline ./.video-agent/timeline-revisions/revision-001.json \
+  --output ./.video-agent/rendered-revision-001.mp4
+```
+
+The comparison is read-only and reports changed source intervals, transition adjustments, and total duration delta. A revised timeline remains unapproved until the changed shots are explicitly reviewed; rendering is always a separate command.
+
 ## Rendered-draft critique
 
 After rendering and reviewing a draft, inspect it against the creative brief and approved shot timeline:

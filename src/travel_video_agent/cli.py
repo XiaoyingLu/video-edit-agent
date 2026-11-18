@@ -29,6 +29,11 @@ from .editing.embeddings import EmbeddingModelError
 from .editing.footage_mapping import suggest_storyboard_footage
 from .editing.footage_review import review_storyboard_footage
 from .editing.planning_generation import VideoPlanningError
+from .editing.revisions import (
+    TimelineIntervalEdit,
+    compare_timeline_files,
+    create_timeline_revision,
+)
 from .editing.storyboard_production import (
     approve_storyboard,
     build_storyboard_timeline,
@@ -2045,6 +2050,120 @@ def review_timeline(
     else:
         console.print("[yellow]Sequence is not approved yet; resolve all pending clips.[/yellow]")
     console.print("[yellow]No renderer timeline was created and no video was rendered.[/yellow]")
+
+
+@app.command("revise-timeline")
+def revise_timeline(
+    folder: Annotated[
+        Path,
+        typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True),
+    ],
+    set_interval: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--set-interval",
+            help="Trim a shot using CLIP_ID:SOURCE_START:SOURCE_END; repeat for multiple shots.",
+        ),
+    ] = None,
+    timeline: Annotated[
+        Path | None, typer.Option("--timeline", help="Approved source timeline JSON path.")
+    ] = None,
+    minimum_clip_duration: Annotated[
+        float,
+        typer.Option("--minimum-clip-duration", min=0.1, help="Minimum resulting shot duration."),
+    ] = 1.0,
+) -> None:
+    """Create a separate revision with explicitly requested shot trims."""
+    edits: list[TimelineIntervalEdit] = []
+    try:
+        for value in set_interval or []:
+            parts = value.rsplit(":", maxsplit=2)
+            if len(parts) != 3 or not parts[0]:
+                raise ValueError(f"invalid --set-interval '{value}'; expected CLIP_ID:START:END")
+            edits.append(
+                TimelineIntervalEdit(
+                    clip_id=parts[0],
+                    source_start_seconds=float(parts[1]),
+                    source_end_seconds=float(parts[2]),
+                )
+            )
+        result = create_timeline_revision(
+            folder,
+            edits,
+            timeline_path=timeline,
+            minimum_clip_duration_seconds=minimum_clip_duration,
+        )
+    except (FileNotFoundError, ValueError, OSError) as exc:
+        console.print(f"[red]Timeline revision failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    table = Table(title="Timeline Revision — Human Review Required")
+    table.add_column("Clip ID")
+    table.add_column("Decision")
+    table.add_column("New interval", justify="right")
+    for clip in result.timeline.clips:
+        if clip.clip_id in result.changed_clip_ids:
+            table.add_row(
+                clip.clip_id,
+                clip.decision,
+                f"{clip.source_start_seconds:.2f}–{clip.source_end_seconds:.2f}s",
+            )
+    console.print(table)
+    console.print(
+        f"Duration: {result.before_duration_seconds:.2f}s → {result.after_duration_seconds:.2f}s"
+    )
+    console.print(f"Revision saved to [green]{folder.resolve() / result.revision_path}[/green]")
+    console.print(
+        "[yellow]Only changed shots are pending. Review this revision with "
+        "review-timeline before rendering; the original timeline and source media "
+        "are unchanged.[/yellow]"
+    )
+
+
+@app.command("compare-timelines")
+def compare_timelines(
+    folder: Annotated[
+        Path,
+        typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True),
+    ],
+    before: Annotated[
+        Path,
+        typer.Option("--before", help="Earlier project-local timeline JSON."),
+    ],
+    after: Annotated[
+        Path,
+        typer.Option("--after", help="Revised project-local timeline JSON."),
+    ],
+) -> None:
+    """Show a read-only before/after comparison of two timeline versions."""
+    try:
+        comparison = compare_timeline_files(folder, before, after)
+    except (FileNotFoundError, ValueError, OSError) as exc:
+        console.print(f"[red]Timeline comparison failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    table = Table(title="Timeline Comparison")
+    table.add_column("Clip ID")
+    table.add_column("Before interval", justify="right")
+    table.add_column("After interval", justify="right")
+    table.add_column("Duration", justify="right")
+    table.add_column("Transition")
+    for change in comparison.changes:
+        table.add_row(
+            change.clip_id,
+            f"{change.before_start_seconds:.2f}–{change.before_end_seconds:.2f}s",
+            f"{change.after_start_seconds:.2f}–{change.after_end_seconds:.2f}s",
+            f"{change.before_duration_seconds:.2f}s → {change.after_duration_seconds:.2f}s",
+            f"{change.before_transition} → {change.after_transition}",
+        )
+    console.print(table)
+    console.print(
+        f"Total duration: {comparison.before_duration_seconds:.2f}s → "
+        f"{comparison.after_duration_seconds:.2f}s "
+        f"({comparison.duration_delta_seconds:+.2f}s)"
+    )
+    if not comparison.changes:
+        console.print("[dim]No source-interval or transition changes were found.[/dim]")
 
 
 @app.command("analyze-music")
