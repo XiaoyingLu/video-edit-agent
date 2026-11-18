@@ -311,3 +311,14 @@ docker compose run --rm video-agent review-footage ./travel-test \
 ```
 
 Repeat `--select SHOT_ID=CANDIDATE_NUMBER` for each shot. Use `--reject SHOT_ID` to clear an earlier assignment. Unselected shots remain unassigned. The project advances to `footage_mapped` only when every storyboard shot has an explicitly approved source interval. This stage does not approve the overall creative plan, alter source media, or render a video.
+
+
+### Output aspect ratio and resolution
+
+When a current `.video-agent/video-project-plan.json` exists, `render-draft` uses its requested aspect ratio and resolution (16:9, 9:16, or 1:1; 720p, 1080p, or 4K). The rendered dimensions are verified with ffprobe, and the render artifact tracks the project plan as an upstream dependency.
+
+Use `--fit-mode crop` (default) to fill the requested frame with a centered crop, or `--fit-mode pad` to preserve the complete source frame with letterboxing/pillarboxing. Crop can remove content near the edges; pad preserves all source content. If no project plan exists, the first approved source clip continues to determine output dimensions.
+
+```bash
+docker compose run --rm video-agent render-draft ./travel-test --fit-mode pad
+```

@@ -1,17 +1,23 @@
+import json
 import shutil
 import subprocess
 from pathlib import Path
 
+import click
 import pytest
 from typer.testing import CliRunner
 
+from travel_video_agent.artifact_tracking import register_artifact
 from travel_video_agent.cli import app
 from travel_video_agent.editing.timeline_schemas import (
     DraftTimelineClip,
     ProjectDraftTimeline,
 )
 from travel_video_agent.rendering import RenderError, RenderReport, render_approved_shot_timeline
-from travel_video_agent.rendering.shot_renderer import _build_shot_render_command
+from travel_video_agent.rendering.shot_renderer import (
+    _build_shot_render_command,
+    _resolve_output_dimensions,
+)
 
 runner = CliRunner()
 
@@ -75,6 +81,39 @@ def _timeline(root: Path, *, approved: bool = True) -> ProjectDraftTimeline:
     )
 
 
+def test_output_dimensions_follow_project_plan_and_require_fresh_artifact(tmp_path):
+    artifact = tmp_path / ".video-agent"
+    artifact.mkdir()
+    plan_path = artifact / "video-project-plan.json"
+    plan_path.write_text(
+        json.dumps(
+            {
+                "project_path": str(tmp_path.resolve()),
+                "brief": {
+                    "source_prompt": "Create a vertical video",
+                    "target_duration_seconds": 10,
+                    "style": "cinematic",
+                    "aspect_ratio": "9:16",
+                    "resolution": "1080p",
+                    "pacing": "moderate",
+                },
+                "editing_preferences": {
+                    "source_prompt": "Create a vertical video",
+                    "target_duration_seconds": 10,
+                    "style": "cinematic",
+                    "aspect_ratio": "9:16",
+                    "resolution": "1080p",
+                    "pacing": "moderate",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    register_artifact(tmp_path, plan_path)
+
+    assert _resolve_output_dimensions(tmp_path, 1920, 1080) == (1080, 1920)
+
+
 def test_shot_renderer_builds_crossfade_and_audio_crossfade_graph(tmp_path):
     command = _build_shot_render_command(
         "ffmpeg",
@@ -90,6 +129,42 @@ def test_shot_renderer_builds_crossfade_and_audio_crossfade_graph(tmp_path):
     assert "xfade=transition=fade:duration=0.500000:offset=2.500000" in graph
     assert "acrossfade=d=0.500000" in graph
     assert "[v0][a0][v1][a1]concat" not in graph
+
+
+def test_shot_renderer_supports_crop_and_pad_fit_modes(tmp_path):
+    crop = _build_shot_render_command(
+        "ffmpeg",
+        [(tmp_path / "one.mp4", 0, 2, False, "cut", 0)],
+        tmp_path / "crop.mp4",
+        1080,
+        1920,
+        fit_mode="crop",
+    )
+    crop_graph = crop[crop.index("-filter_complex") + 1]
+    assert "force_original_aspect_ratio=increase,crop=1080:1920" in crop_graph
+    pad = _build_shot_render_command(
+        "ffmpeg",
+        [(tmp_path / "one.mp4", 0, 2, False, "cut", 0)],
+        tmp_path / "pad.mp4",
+        1080,
+        1920,
+        fit_mode="pad",
+    )
+    pad_graph = pad[pad.index("-filter_complex") + 1]
+    assert "force_original_aspect_ratio=decrease" in pad_graph
+    assert "pad=width=1080:height=1920" in pad_graph
+
+
+def test_shot_renderer_rejects_unknown_fit_mode(tmp_path):
+    with pytest.raises(ValueError, match="fit_mode"):
+        _build_shot_render_command(
+            "ffmpeg",
+            [(tmp_path / "one.mp4", 0, 2, False, "cut", 0)],
+            tmp_path / "out.mp4",
+            1920,
+            1080,
+            fit_mode="stretch",
+        )
 
 
 def test_shot_renderer_uses_concat_for_hard_cuts(tmp_path):
@@ -192,6 +267,9 @@ def test_cli_help_includes_render_draft():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "render-draft" in result.output
+    result = runner.invoke(app, ["render-draft", "--help"])
+    assert result.exit_code == 0
+    assert "--fit-mode" in click.unstyle(result.output)
 
 
 def test_render_draft_cli_dry_run_reports_preflight_without_rendering(tmp_path, monkeypatch):

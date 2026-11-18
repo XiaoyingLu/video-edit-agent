@@ -791,8 +791,15 @@ def render_draft(
             help="Probe inputs and validate the FFmpeg transition graph without writing an MP4.",
         ),
     ] = False,
+    fit_mode: Annotated[
+        str,
+        typer.Option(
+            "--fit-mode",
+            help="Source framing: crop to fill or pad to preserve the full frame.",
+        ),
+    ] = "crop",
 ) -> None:
-    """Render the fully approved shot timeline with its proposed transitions."""
+    """Render the approved timeline using the creative plan output profile."""
     try:
         report = render_approved_shot_timeline(
             folder,
@@ -801,6 +808,7 @@ def render_draft(
             overwrite=overwrite,
             timeout_seconds=timeout_seconds,
             dry_run=dry_run,
+            fit_mode=fit_mode,
         )
     except (FileNotFoundError, FileExistsError, ValueError, RenderError) as exc:
         console.print(f"[red]Draft render failed:[/red] {exc}")
