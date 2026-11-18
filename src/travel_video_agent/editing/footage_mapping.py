@@ -6,11 +6,10 @@ import re
 from collections.abc import Callable
 from pathlib import Path
 
-from .embeddings import ollama_embed_texts
-
 from ..artifact_tracking import validate_artifact
 from ..media import discover_videos
 from ..understanding.schemas import VideoUnderstanding
+from .embeddings import ollama_embed_texts
 from .footage_schemas import (
     FootageMatchCandidate,
     ProjectFootageSuggestions,
@@ -85,7 +84,10 @@ def _candidate_score(
         scene.story_function == shot.visual_role
         or any(item.visual_role == shot.visual_role for item in scene.observations)
     )
-    lexical_score = min(100.0, coverage * 70.0 + (15.0 if scale_match else 0.0) + (15.0 if role_match else 0.0))
+    lexical_score = min(
+        100.0,
+        coverage * 70.0 + (15.0 if scale_match else 0.0) + (15.0 if role_match else 0.0),
+    )
     if semantic_similarity is None:
         score = lexical_score
     else:
@@ -171,7 +173,9 @@ def suggest_storyboard_footage(
         ] + [_scene_text(source_scene) for _, source_scene in scenes]
         vectors = (embedder or ollama_embed_texts)(texts, embedding_model)
         if len(vectors) != len(texts):
-            raise ValueError("embedding provider returned a different number of vectors than requested")
+            raise ValueError(
+                "embedding provider returned a different number of vectors than requested"
+            )
         shot_vectors = vectors[: len(shot_items)]
         scene_vectors = vectors[len(shot_items) :]
         if any(len(vector) != len(shot_vectors[0]) for vector in vectors):
@@ -186,9 +190,9 @@ def suggest_storyboard_footage(
                     if shot_norm and scene_norm
                     else 0.0
                 )
-                semantic_scores[(shot_items[shot_index].shot_id, scenes[scene_index][1].scene_id)] = (
-                    max(0.0, min(1.0, (similarity + 1.0) / 2.0))
-                )
+                semantic_scores[
+                    (shot_items[shot_index].shot_id, scenes[scene_index][1].scene_id)
+                ] = max(0.0, min(1.0, (similarity + 1.0) / 2.0))
 
     suggestions = []
     candidate_count = 0
