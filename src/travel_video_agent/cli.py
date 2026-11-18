@@ -1600,6 +1600,8 @@ def optimize_timeline(
     table.add_column("Transition")
     table.add_column("Role")
     table.add_column("Scale")
+    table.add_column("Motion")
+    table.add_column("Composition")
     table.add_column("Pacing target", justify="right")
     table.add_column("Music energy")
     for clip in timeline.clips:
@@ -1616,6 +1618,8 @@ def optimize_timeline(
             transition,
             clip.visual_role.replace("_", " "),
             clip.shot_scale.replace("_", " "),
+            (f"{clip.subject_motion.replace('_', ' ')} / {clip.camera_motion.replace('_', ' ')}"),
+            clip.composition.replace("_", " "),
             f"{clip.pacing_target_seconds:.1f}s ({clip.pacing_fit})",
             clip.music_energy,
         )
@@ -1676,6 +1680,16 @@ def review_timeline(
                 if clip.scene_summary:
                     console.print(f"Scene: {clip.scene_summary}")
                 console.print(f"Sequence rationale: {clip.sequence_reason}")
+                if clip.temporal_summary:
+                    console.print(f"Temporal action: {clip.temporal_summary}")
+                if clip.subject_motion != "unknown" or clip.camera_motion != "unknown":
+                    console.print(
+                        f"Motion: subject {clip.subject_motion.replace('_', ' ')} | "
+                        f"camera {clip.camera_motion.replace('_', ' ')}"
+                    )
+                if clip.composition != "unknown":
+                    console.print(f"Composition: {clip.composition.replace('_', ' ')}")
+                console.print(f"Continuity: {clip.continuity_note}")
                 if clip.visual_role != "unknown" or clip.shot_scale != "unknown":
                     console.print(
                         f"Editorial role: {clip.visual_role.replace('_', ' ')} | "

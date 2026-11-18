@@ -457,3 +457,100 @@ def test_optimize_timeline_cannot_overwrite_music_analysis(tmp_path):
     assert result.exit_code == 1
     assert "cannot overwrite" in result.output
     assert MusicAnalysis.model_validate_json(analysis_path.read_text(encoding="utf-8"))
+
+
+def test_motion_aware_pacing_and_continuity_guidance():
+    from travel_video_agent.editing.timeline_pipeline import (
+        _continuity_guidance,
+        _pacing_guidance,
+    )
+
+    calm = _pacing_guidance(
+        4.0, "moderate", "scenic_breath", subject_motion="stationary", motion_confidence=0.9
+    )
+    active = _pacing_guidance(
+        4.0,
+        "moderate",
+        "scenic_breath",
+        subject_motion="crossing",
+        camera_motion="tracking",
+        motion_confidence=0.9,
+    )
+    assert calm[2] > active[2]
+    uncertain = _pacing_guidance(
+        4.0, "moderate", "scenic_breath", subject_motion="stationary", motion_confidence=0.2
+    )
+    baseline = _pacing_guidance(4.0, "moderate", "scenic_breath")
+    assert uncertain[2] == baseline[2]
+
+    previous = DraftClip(
+        clip_id="previous",
+        video_path="trip.mp4",
+        source_start_seconds=0,
+        source_end_seconds=4,
+        duration_seconds=4,
+        highlight_score=80,
+        relevance_score=80,
+        combined_score=80,
+        shot_scale="wide",
+        composition="leading_lines",
+        primary_subject="mountain lake",
+    )
+    current = previous.model_copy(update={"clip_id": "current"})
+    assert "subject and shot scale repeat" in _continuity_guidance(current, previous)
+
+
+def test_draft_timeline_carries_motion_metadata_and_continuity_notes(tmp_path):
+    _write_inputs(tmp_path, style="highlight_reel", transition="cut")
+    artifact = tmp_path / ".video-agent"
+    selection = ProjectDraftSelection(
+        project_path=str(tmp_path.resolve()),
+        source_artifacts=[".video-agent/editing-plan.json"],
+        target_duration_seconds=12,
+        selected_duration_seconds=8,
+        selected_clip_count=2,
+        candidates_considered=2,
+        clips=[
+            DraftClip(
+                clip_id="one",
+                video_path="trip.mp4",
+                source_start_seconds=0,
+                source_end_seconds=4,
+                duration_seconds=4,
+                highlight_score=90,
+                relevance_score=80,
+                combined_score=86,
+                shot_scale="wide",
+                primary_subject="mountain lake",
+                composition="leading_lines",
+                subject_motion="stationary",
+                selected=True,
+            ),
+            DraftClip(
+                clip_id="two",
+                video_path="trip.mp4",
+                source_start_seconds=4,
+                source_end_seconds=8,
+                duration_seconds=4,
+                highlight_score=80,
+                relevance_score=80,
+                combined_score=80,
+                shot_scale="wide",
+                primary_subject="mountain lake",
+                composition="leading_lines",
+                subject_motion="stationary",
+                selected=True,
+            ),
+        ],
+    )
+    (artifact / "draft-selection.json").write_text(selection.model_dump_json(), encoding="utf-8")
+
+    timeline = build_draft_timeline(tmp_path)
+
+    assert timeline.clips[0].subject_motion == "stationary"
+    assert timeline.clips[0].composition == "leading_lines"
+    assert "subject and shot scale repeat" in timeline.clips[1].continuity_note
+    assert [(clip.source_start_seconds, clip.source_end_seconds) for clip in timeline.clips] == [
+        (0, 4),
+        (4, 8),
+    ]

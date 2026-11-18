@@ -221,6 +221,19 @@ def build_draft_selection(
                     if scene
                     else ""
                 ),
+                temporal_summary=(
+                    scene.dynamics.temporal_summary if scene and scene.dynamics else ""
+                ),
+                dynamics_confidence=(
+                    scene.dynamics.confidence if scene and scene.dynamics else 0.0
+                ),
+                subject_motion=(
+                    scene.dynamics.subject_motion if scene and scene.dynamics else "unknown"
+                ),
+                camera_motion=(
+                    scene.dynamics.camera_motion if scene and scene.dynamics else "unknown"
+                ),
+                composition=_dominant_observation_value(scene, "composition"),
                 reasons=reasons,
             )
         )

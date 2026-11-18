@@ -74,6 +74,24 @@ class StoryboardShot(BaseModel):
     narration: str | None = Field(default=None, max_length=1000)
     on_screen_text: str | None = Field(default=None, max_length=240)
     audio_cue: str | None = Field(default=None, max_length=240)
+    primary_subject: str = Field(default="", max_length=100)
+    temporal_summary: str = Field(default="", max_length=300)
+    dynamics_confidence: float = Field(default=0, ge=0, le=1)
+    subject_motion: Literal[
+        "approaching", "receding", "crossing", "stationary", "interacting", "mixed", "unknown"
+    ] = "unknown"
+    camera_motion: Literal[
+        "static", "pan", "tilt", "zoom", "tracking", "handheld", "mixed", "unknown"
+    ] = "unknown"
+    composition: Literal[
+        "centered",
+        "rule_of_thirds",
+        "leading_lines",
+        "symmetrical",
+        "layered_depth",
+        "negative_space",
+        "unknown",
+    ] = "unknown"
     footage_path: str | None = None
     footage_start_seconds: float | None = Field(default=None, ge=0)
     footage_end_seconds: float | None = Field(default=None, gt=0)

@@ -49,7 +49,9 @@ These are model-assisted visual classifications, not ground truth. The prompt ex
 
 The `optimize-timeline` stage uses the scene metadata to build a deterministic visual arc for cinematic and social-media edits. When reliable labels are available, it prefers an establishing view near the opening, varies action/detail/reaction beats through the middle, alternates shot scales where possible, and favors a scenic-breath or establishing shot for the ending. If scene-role metadata is missing or uncertain, it preserves the existing score-ranked order. Vlog and documentary edits, or plans with the `chronological_story` priority, retain source chronology.
 
-Pacing recommendations are now role-aware: establishing and scenic-breath shots receive more room, while action and detail shots receive shorter targets. The timeline records each shot's editorial role, scale, sequence rationale, and recommended duration. These targets are advisory only: source intervals remain unchanged, and the reviewer decides whether to trim or extend footage. The ordering is deterministic and reviewable; it does not auto-approve shots or render media.
+Pacing recommendations combine editorial role, inferred subject/camera motion, and (when supplied) soundtrack energy. Stationary scenes can receive more breathing room, while active subject movement and tracking/handheld camera motion can receive tighter targets. Motion adjustments are applied only when the temporal-analysis confidence is at least 0.5; otherwise the role/music target is retained. The combined factors are bounded so uncertain or mixed motion does not dominate the recommendation. The timeline records temporal summaries, motion labels, composition, continuity notes, sequence rationale, and a recommended duration.
+
+Adjacent-shot continuity checks flag repeated subject/scale/composition combinations and potentially abrupt motion-direction changes. These are review notes only: they never reorder storyboard shots, change source intervals, or apply trims. Existing draft sequencing behavior remains deterministic; human review is still required before rendering.
 
 ## Music-aware editing
 

@@ -76,6 +76,12 @@ def review_storyboard_footage(
         shot.footage_path = candidate.video_path
         shot.footage_start_seconds = candidate.source_start_seconds
         shot.footage_end_seconds = candidate.source_end_seconds
+        shot.primary_subject = candidate.primary_subject
+        shot.temporal_summary = candidate.temporal_summary
+        shot.dynamics_confidence = candidate.dynamics_confidence
+        shot.subject_motion = candidate.subject_motion
+        shot.camera_motion = candidate.camera_motion
+        shot.composition = candidate.composition
         shot.assignment_status = "approved"
 
     for shot_id in rejected:
@@ -83,6 +89,12 @@ def review_storyboard_footage(
         shot.footage_path = None
         shot.footage_start_seconds = None
         shot.footage_end_seconds = None
+        shot.primary_subject = ""
+        shot.temporal_summary = ""
+        shot.dynamics_confidence = 0.0
+        shot.subject_motion = "unknown"
+        shot.camera_motion = "unknown"
+        shot.composition = "unknown"
         shot.assignment_status = "unassigned"
 
     all_assigned = all(shot.assignment_status != "unassigned" for shot in shots.values())

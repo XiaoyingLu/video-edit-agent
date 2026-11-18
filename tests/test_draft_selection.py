@@ -187,3 +187,60 @@ def test_draft_selection_carries_cinematic_scene_metadata(tmp_path):
     assert clip.mood == "serene"
     assert clip.setting == "alpine lake"
     assert clip.primary_subject == "mountain lake"
+
+
+def test_draft_selection_carries_temporal_scene_metadata(tmp_path):
+    import hashlib
+
+    video_path = "clip-a.mp4"
+    video_key = hashlib.sha256(video_path.encode("utf-8")).hexdigest()[:12]
+    candidate = {
+        "candidate_id": "motion",
+        "video_path": video_path,
+        "start_seconds": 0,
+        "end_seconds": 5,
+        "duration_seconds": 5,
+        "score": 85,
+        "signals": {"motion": 0.5, "sharpness": 0.8, "exposure": 0.8, "saturation": 0.5},
+        "reasons": [],
+        "scene_summary": "A hiker approaches a mountain lake",
+        "review_required": True,
+    }
+    scene = {
+        "scene_id": f"{video_key}-scene-0001",
+        "start_seconds": 0,
+        "end_seconds": 5,
+        "summary": "A hiker approaches a mountain lake",
+        "story_function": "action",
+        "dynamics": {
+            "temporal_summary": "A hiker walks toward the lake viewpoint.",
+            "action_progression": ["The hiker approaches the viewpoint"],
+            "subject_motion": "approaching",
+            "camera_motion": "tracking",
+            "confidence": 0.9,
+        },
+        "observations": [
+            {
+                "timestamp_seconds": 1,
+                "frame_path": "frame.jpg",
+                "description": "A hiker beside a mountain lake.",
+                "composition": "leading_lines",
+                "primary_subject": "hiker",
+            }
+        ],
+    }
+    _write_artifacts(tmp_path, [candidate], scenes=[scene])
+    plan = EditingPlan(
+        source_prompt="Create a mountain travel video",
+        target_duration_seconds=5,
+        priorities=["scenic_landscapes"],
+    )
+
+    draft = build_draft_selection(tmp_path, plan)
+
+    clip = draft.clips[0]
+    assert clip.temporal_summary == "A hiker walks toward the lake viewpoint."
+    assert clip.dynamics_confidence == 0.9
+    assert clip.subject_motion == "approaching"
+    assert clip.camera_motion == "tracking"
+    assert clip.composition == "leading_lines"

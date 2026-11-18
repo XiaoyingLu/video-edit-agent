@@ -51,11 +51,36 @@ def _pacing_guidance(
     pacing: str,
     visual_role: str = "unknown",
     energy_multiplier: float = 1.0,
+    subject_motion: str = "unknown",
+    camera_motion: str = "unknown",
+    motion_confidence: float = 0.0,
 ) -> tuple[str, str, float]:
-    """Recommend a role- and music-aware shot duration without changing source intervals."""
+    """Recommend a role-, motion-, and music-aware duration without changing source intervals."""
     lower, upper = _ROLE_PACING_RANGES[pacing].get(visual_role, _PACING_RANGES[pacing])
-    lower *= energy_multiplier
-    upper *= energy_multiplier
+    motion_multiplier = 1.0
+    camera_multiplier = 1.0
+    if motion_confidence >= 0.5:
+        motion_multiplier = {
+            "approaching": 0.9,
+            "receding": 0.95,
+            "crossing": 0.9,
+            "stationary": 1.1,
+            "interacting": 0.9,
+            "mixed": 0.9,
+        }.get(subject_motion, 1.0)
+        camera_multiplier = {
+            "pan": 0.98,
+            "tilt": 0.98,
+            "zoom": 0.98,
+            "tracking": 0.95,
+            "handheld": 0.95,
+            "mixed": 0.98,
+        }.get(camera_motion, 1.0)
+    content_multiplier = max(
+        0.8, min(1.2, energy_multiplier * motion_multiplier * camera_multiplier)
+    )
+    lower *= content_multiplier
+    upper *= content_multiplier
     target = round((lower + upper) / 2, 2)
     if duration < lower:
         fit = "short"
@@ -194,6 +219,55 @@ def _sequence_reason(clip, previous, index: int, count: int) -> str:
     return "Retains ranked footage order because scene-role metadata is uncertain."
 
 
+def _continuity_guidance(clip, previous) -> str:
+    """Describe adjacent-shot continuity without changing sequence or source intervals."""
+    if previous is None:
+        return "Opening shot; no preceding composition or motion needs to be matched."
+    if (
+        clip.primary_subject
+        and previous.primary_subject
+        and clip.primary_subject.casefold() == previous.primary_subject.casefold()
+        and clip.shot_scale == previous.shot_scale
+        and clip.shot_scale != "unknown"
+    ):
+        return (
+            "The subject and shot scale repeat the previous clip; consider an alternate angle "
+            "or a brief cutaway during review."
+        )
+    if (
+        clip.composition != "unknown"
+        and clip.composition == previous.composition
+        and clip.shot_scale == previous.shot_scale
+        and clip.shot_scale != "unknown"
+    ):
+        return (
+            "The composition and shot scale repeat the previous clip; consider a contrasting "
+            "angle or framing during review."
+        )
+    opposing_motion = {
+        ("approaching", "receding"),
+        ("receding", "approaching"),
+        ("crossing", "approaching"),
+        ("approaching", "crossing"),
+    }
+    if (
+        previous.dynamics_confidence >= 0.5
+        and clip.dynamics_confidence >= 0.5
+        and (previous.subject_motion, clip.subject_motion) in opposing_motion
+    ):
+        return (
+            "Subject motion changes direction across this cut; review the transition for a "
+            "deliberate visual handoff."
+        )
+    if (
+        clip.shot_scale != "unknown"
+        and previous.shot_scale != "unknown"
+        and clip.shot_scale != previous.shot_scale
+    ):
+        return "Shot scale changes from the previous clip, providing a clear visual contrast."
+    return "No strong continuity conflict was detected from the available scene metadata."
+
+
 def build_draft_timeline(
     folder: Path,
     selection_path: Path | None = None,
@@ -286,7 +360,12 @@ def build_draft_timeline(
                 transition_duration = 0.0
 
         pacing_fit, pacing_note, pacing_target = _pacing_guidance(
-            clip.duration_seconds, plan.pacing, clip.visual_role
+            clip.duration_seconds,
+            plan.pacing,
+            clip.visual_role,
+            subject_motion=clip.subject_motion,
+            camera_motion=clip.camera_motion,
+            motion_confidence=clip.dynamics_confidence,
         )
         music_energy = "unknown"
         music_section_start = None
@@ -313,7 +392,13 @@ def build_draft_timeline(
                 music_section_end = section.end_seconds
                 multiplier = {"low": 1.15, "medium": 1.0, "high": 0.8}[section.energy]
                 pacing_fit, pacing_note, pacing_target = _pacing_guidance(
-                    clip.duration_seconds, plan.pacing, clip.visual_role, multiplier
+                    clip.duration_seconds,
+                    plan.pacing,
+                    clip.visual_role,
+                    multiplier,
+                    clip.subject_motion,
+                    clip.camera_motion,
+                    clip.dynamics_confidence,
                 )
                 music_pacing_note = {
                     "low": (
@@ -348,6 +433,14 @@ def build_draft_timeline(
                 mood=clip.mood,
                 setting=clip.setting,
                 primary_subject=clip.primary_subject,
+                temporal_summary=clip.temporal_summary,
+                dynamics_confidence=clip.dynamics_confidence,
+                subject_motion=clip.subject_motion,
+                camera_motion=clip.camera_motion,
+                composition=clip.composition,
+                continuity_note=_continuity_guidance(
+                    clip, timeline_clips[-1] if timeline_clips else None
+                ),
                 sequence_reason=_sequence_reason(clip, previous_clip, index, len(selected)),
                 pacing_target_seconds=pacing_target,
                 transition_in=transition,

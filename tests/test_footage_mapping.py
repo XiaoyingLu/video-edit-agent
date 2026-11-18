@@ -231,3 +231,28 @@ def test_scene_text_includes_temporal_action_and_camera_evidence(tmp_path):
     assert "hiker approaches the viewpoint" in text
     assert "approaching" in text
     assert "static" in text
+
+
+def test_footage_candidates_include_temporal_and_composition_evidence(tmp_path):
+    (tmp_path / "clip.mp4").write_bytes(b"test video placeholder")
+    artifact_dir = tmp_path / ".video-agent"
+    artifact_dir.mkdir()
+    plan_path = artifact_dir / "video-project-plan.json"
+    understanding_path = artifact_dir / "understanding.json"
+    plan_path.write_text(
+        json.dumps(_project_plan(tmp_path).model_dump(mode="json")), encoding="utf-8"
+    )
+    understanding_path.write_text(
+        json.dumps(_understanding(tmp_path).model_dump(mode="json")), encoding="utf-8"
+    )
+    register_artifact(tmp_path, plan_path)
+    register_artifact(tmp_path, understanding_path)
+
+    report = suggest_storyboard_footage(tmp_path)
+    candidate = report.suggestions[0].candidates[0]
+
+    assert candidate.temporal_summary == "A hiker walks toward the mountain viewpoint."
+    assert candidate.dynamics_confidence == 0.9
+    assert candidate.subject_motion == "approaching"
+    assert candidate.camera_motion == "static"
+    assert candidate.primary_subject == "mountain lake"

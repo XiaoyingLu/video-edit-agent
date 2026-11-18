@@ -5,7 +5,7 @@ from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
 from .planning_schemas import VideoProjectPlan
-from .timeline_pipeline import _pacing_guidance, save_draft_timeline
+from .timeline_pipeline import _continuity_guidance, _pacing_guidance, save_draft_timeline
 from .timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
 
 
@@ -121,8 +121,17 @@ def build_storyboard_timeline(
                 if transition_duration <= 0:
                     transition = "cut"
 
+            music_multiplier = {"low": 1.15, "medium": 1.0, "high": 0.8}.get(
+                scene.music_energy, 1.0
+            )
             pacing_fit, pacing_note, pacing_target = _pacing_guidance(
-                duration, editing.pacing, shot.visual_role
+                duration,
+                editing.pacing,
+                shot.visual_role,
+                energy_multiplier=music_multiplier,
+                subject_motion=shot.subject_motion,
+                camera_motion=shot.camera_motion,
+                motion_confidence=shot.dynamics_confidence,
             )
             clips.append(
                 DraftTimelineClip(
@@ -134,6 +143,13 @@ def build_storyboard_timeline(
                     duration_seconds=round(duration, 3),
                     combined_score=100.0,
                     scene_summary=f"{scene.title}: {shot.visual_description}",
+                    primary_subject=shot.primary_subject,
+                    temporal_summary=shot.temporal_summary,
+                    dynamics_confidence=shot.dynamics_confidence,
+                    subject_motion=shot.subject_motion,
+                    camera_motion=shot.camera_motion,
+                    composition=shot.composition,
+                    continuity_note=_continuity_guidance(shot, clips[-1] if clips else None),
                     shot_scale=shot.shot_scale,
                     visual_role=shot.visual_role,
                     sequence_reason=f"Storyboard order: {scene.title} — {shot.purpose}",
@@ -148,6 +164,11 @@ def build_storyboard_timeline(
                         f"{shot.target_duration_seconds:.1f}s storyboard target; footage was "
                         "not stretched."
                     ),
+                    music_energy=scene.music_energy,
+                    music_section_start_seconds=scene.music_section_start_seconds,
+                    music_section_end_seconds=scene.music_section_end_seconds,
+                    music_pacing_note=scene.music_alignment_note
+                    or "No soundtrack energy guidance was supplied.",
                     reasons=["Explicitly approved storyboard footage assignment."],
                 )
             )
@@ -160,6 +181,7 @@ def build_storyboard_timeline(
         project_path=str(root),
         source_selection=plan_file.relative_to(root).as_posix(),
         source_editing_plan=plan.source_editing_plan,
+        source_music_analysis=plan.source_music_analysis,
         style=editing.style,
         pacing=editing.pacing,
         target_duration_seconds=plan.brief.target_duration_seconds,
@@ -175,4 +197,7 @@ def save_storyboard_timeline(timeline: ProjectDraftTimeline, destination: Path) 
     root = Path(timeline.project_path).expanduser().resolve()
     plan_file = root / timeline.source_selection
     editing_file = root / timeline.source_editing_plan
-    register_artifact(root, destination, dependencies=[plan_file, editing_file])
+    dependencies = [plan_file, editing_file]
+    if timeline.source_music_analysis is not None:
+        dependencies.append(root / timeline.source_music_analysis)
+    register_artifact(root, destination, dependencies=dependencies)
