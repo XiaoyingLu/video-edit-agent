@@ -1034,7 +1034,8 @@ def critique_draft(
         ),
     ],
     video: Annotated[
-        Path | None, typer.Option("--video", help="Rendered MP4 path (default: rendered-draft.mp4).")
+        Path | None,
+        typer.Option("--video", help="Rendered MP4 path (default: rendered-draft.mp4)."),
     ] = None,
     timeline: Annotated[
         Path | None, typer.Option("--timeline", help="Approved timeline JSON path.")
@@ -1048,7 +1049,9 @@ def critique_draft(
     ] = 8,
     output: Annotated[
         Path | None,
-        typer.Option("--output", "-o", help="JSON report path (default: .video-agent/draft-critique.json)."),
+        typer.Option(
+            "--output", "-o", help="JSON report path (default: .video-agent/draft-critique.json)."
+        ),
     ] = None,
 ) -> None:
     """Inspect a rendered draft against the creative brief and approved timeline."""
@@ -1082,7 +1085,8 @@ def critique_draft(
         raise typer.Exit(code=1)
     if destination.exists():
         console.print(
-            f"[red]Critique report already exists: {destination}; choose another --output path.[/red]"
+            "[red]Critique report already exists: "
+            f"{destination}; choose another --output path.[/red]"
         )
         raise typer.Exit(code=1)
     destination.parent.mkdir(parents=True, exist_ok=True)
