@@ -1553,7 +1553,9 @@ def optimize_timeline(
     if timeline.source_music_analysis is not None:
         music_file = (folder.expanduser().resolve() / timeline.source_music_analysis).resolve()
         if destination == music_file:
-            console.print("[red]Timeline output cannot overwrite the music analysis artifact.[/red]")
+            console.print(
+                "[red]Timeline output cannot overwrite the music analysis artifact.[/red]"
+            )
             raise typer.Exit(code=1)
     save_draft_timeline(timeline, destination)
 
