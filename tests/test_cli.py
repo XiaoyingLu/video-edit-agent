@@ -480,8 +480,9 @@ def test_create_plan_command_writes_hierarchical_brief(tmp_path: Path, monkeypat
     )
     destination = tmp_path / ".video-agent" / "video-project-plan.json"
 
-    def fake_create(folder, prompt, *, model=None, output_path=None):
+    def fake_create(folder, prompt, *, model=None, output_path=None, music_analysis_path=None):
         assert prompt == "Create a 90-second cinematic travel film"
+        assert music_analysis_path is None
         return expected, destination
 
     monkeypatch.setattr(cli, "create_video_project_plan", fake_create)
@@ -517,3 +518,10 @@ def test_suggest_music_sync_command_help():
     help_text = " ".join(click.unstyle(result.stdout).split())
     assert "--music-analysis" in help_text
     assert "--tolerance" in help_text
+
+
+def test_create_plan_command_exposes_music_analysis_option():
+    result = runner.invoke(app, ["create-plan", "--help"])
+    assert result.exit_code == 0
+    help_text = " ".join(click.unstyle(result.output).split())
+    assert "--music-analysis" in help_text

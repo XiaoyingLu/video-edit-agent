@@ -2,7 +2,11 @@ import json
 
 import pytest
 
-from travel_video_agent.artifact_tracking import StaleArtifactError, validate_artifact
+from travel_video_agent.artifact_tracking import (
+    StaleArtifactError,
+    register_artifact,
+    validate_artifact,
+)
 from travel_video_agent.editing import planning_generation, planning_pipeline
 from travel_video_agent.editing.intent_schemas import EditingPlan
 from travel_video_agent.editing.planning_generation import (
@@ -16,6 +20,7 @@ from travel_video_agent.editing.planning_schemas import (
     StoryboardShot,
     StoryTreatment,
 )
+from travel_video_agent.music.schemas import MusicAnalysis, MusicSection
 
 
 def _generated_content():
@@ -87,7 +92,7 @@ def test_create_video_project_plan_generates_storyboard_and_registers_dependency
     monkeypatch.setattr(
         planning_pipeline,
         "generate_video_plan_content",
-        lambda prompt, brief, model=None: _generated_content(),
+        lambda prompt, brief, model=None, music_sections=None: _generated_content(),
     )
 
     plan, destination = planning_pipeline.create_video_project_plan(
@@ -166,6 +171,9 @@ def test_normalize_storyboard_ids_repairs_duplicate_model_ids():
 
 def test_planner_discards_partial_model_footage_assignments(monkeypatch):
     generated = _generated_content().model_dump(mode="json")
+    generated["scenes"][0]["music_energy"] = "high"
+    generated["scenes"][0]["music_section_start_seconds"] = 0
+    generated["scenes"][0]["music_section_end_seconds"] = 45
     first_shot = generated["scenes"][0]["shots"][0]
     first_shot["footage_start_seconds"] = 12.5
     first_shot["footage_path"] = "invented.mp4"
@@ -192,3 +200,117 @@ def test_planner_discards_partial_model_footage_assignments(monkeypatch):
     assert shot.footage_start_seconds is None
     assert shot.footage_end_seconds is None
     assert shot.assignment_status == "unassigned"
+    assert result.scenes[0].music_energy == "unknown"
+    assert result.scenes[0].music_section_start_seconds is None
+
+
+def test_create_video_project_plan_uses_music_sections_and_tracks_dependency(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        planning_pipeline,
+        "parse_editing_intent",
+        lambda prompt, model=None, memory_override_env=None: EditingPlan(
+            source_prompt=prompt,
+            target_duration_seconds=90,
+            style="cinematic",
+            priorities=["scenic_landscapes"],
+        ),
+    )
+    captured = {}
+
+    def fake_generate(prompt, brief, model=None, music_sections=None):
+        captured["sections"] = music_sections
+        return _generated_content()
+
+    monkeypatch.setattr(planning_pipeline, "generate_video_plan_content", fake_generate)
+    artifact_dir = tmp_path / ".video-agent"
+    artifact_dir.mkdir()
+    soundtrack = tmp_path / "travel-score.wav"
+    soundtrack.write_bytes(b"audio")
+    analysis = MusicAnalysis(
+        project_path=str(tmp_path.resolve()),
+        music_path=str(soundtrack.resolve()),
+        duration_seconds=90,
+        sample_rate=11025,
+        bpm=120,
+        beat_confidence=0.8,
+        beat_interval_seconds=0.5,
+        beat_times_seconds=[0.5, 1.0],
+        downbeat_times_seconds=[0.5],
+        sections=[
+            MusicSection(start_seconds=0, end_seconds=30, energy="low", energy_rms=0.1),
+            MusicSection(start_seconds=30, end_seconds=60, energy="high", energy_rms=0.4),
+            MusicSection(start_seconds=60, end_seconds=90, energy="medium", energy_rms=0.2),
+        ],
+    )
+    analysis_path = artifact_dir / "music-analysis.json"
+    analysis_path.write_text(analysis.model_dump_json(), encoding="utf-8")
+    register_artifact(tmp_path, analysis_path, dependencies=[soundtrack])
+
+    plan, destination = planning_pipeline.create_video_project_plan(
+        tmp_path,
+        "Create a 90-second cinematic mountain film",
+        music_analysis_path=analysis_path,
+    )
+
+    assert [item["energy"] for item in captured["sections"]] == [
+        "low",
+        "high",
+        "medium",
+    ]
+    assert plan.source_music_analysis == ".video-agent/music-analysis.json"
+    assert [scene.music_energy for scene in plan.scenes] == ["low", "medium"]
+    assert plan.scenes[0].music_section_start_seconds == 0
+    assert plan.scenes[1].music_section_start_seconds == 60
+    assert validate_artifact(tmp_path, destination) is True
+
+    analysis_path.write_text('{"changed": true}', encoding="utf-8")
+    with pytest.raises(StaleArtifactError):
+        validate_artifact(tmp_path, destination)
+
+
+def test_create_video_project_plan_rejects_external_music_analysis(tmp_path):
+    external = tmp_path.parent / "music-analysis.json"
+    external.write_text("{}", encoding="utf-8")
+    with pytest.raises(ValueError, match="inside the project folder"):
+        planning_pipeline.create_video_project_plan(
+            tmp_path,
+            "Create a cinematic travel film",
+            music_analysis_path=external,
+        )
+
+
+def test_planned_scene_validates_music_section_bounds():
+    scene = _generated_content().scenes[0]
+    with pytest.raises(ValueError, match="must be supplied together"):
+        PlannedScene.model_validate(scene.model_dump() | {"music_section_start_seconds": 2.0})
+
+
+def test_scene_music_annotation_uses_largest_overlap_and_marks_uncovered():
+    scenes = _generated_content().scenes
+    annotated = planning_pipeline._annotate_scenes_with_music(
+        scenes,
+        [
+            MusicSection(start_seconds=0, end_seconds=20, energy="low", energy_rms=0.1),
+            MusicSection(start_seconds=20, end_seconds=45, energy="high", energy_rms=0.4),
+        ],
+    )
+
+    assert annotated[0].music_energy == "high"
+    assert annotated[0].music_section_start_seconds == 20
+    assert annotated[1].music_energy == "unknown"
+    assert annotated[1].music_section_start_seconds is None
+
+
+def test_create_video_project_plan_cannot_overwrite_music_analysis(tmp_path):
+    artifact_dir = tmp_path / ".video-agent"
+    artifact_dir.mkdir()
+    analysis_path = artifact_dir / "music-analysis.json"
+    analysis_path.write_text("{}", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="cannot overwrite music-analysis.json"):
+        planning_pipeline.create_video_project_plan(
+            tmp_path,
+            "Create a cinematic travel film",
+            output_path=analysis_path,
+            music_analysis_path=analysis_path,
+        )

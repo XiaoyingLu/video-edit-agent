@@ -110,7 +110,23 @@ class PlannedScene(BaseModel):
     ]
     target_duration_seconds: float = Field(gt=0, le=3600)
     emotional_intent: str = Field(default="", max_length=200)
+    music_energy: Literal["low", "medium", "high", "unknown"] = "unknown"
+    music_section_start_seconds: float | None = Field(default=None, ge=0)
+    music_section_end_seconds: float | None = Field(default=None, gt=0)
+    music_alignment_note: str = Field(default="", max_length=240)
     shots: list[StoryboardShot] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_music_section(self) -> "PlannedScene":
+        if (self.music_section_start_seconds is None) != (self.music_section_end_seconds is None):
+            raise ValueError("music section start and end must be supplied together")
+        if (
+            self.music_section_start_seconds is not None
+            and self.music_section_end_seconds is not None
+            and self.music_section_end_seconds <= self.music_section_start_seconds
+        ):
+            raise ValueError("music section end must be greater than its start")
+        return self
 
 
 class VideoProjectPlan(BaseModel):
@@ -121,6 +137,7 @@ class VideoProjectPlan(BaseModel):
     schema_version: Literal["1.0"] = "1.0"
     project_path: str
     source_editing_plan: str = ".video-agent/editing-plan.json"
+    source_music_analysis: str | None = None
     brief: CreativeBrief
     editing_preferences: EditingPlan
     story_treatment: StoryTreatment | None = None

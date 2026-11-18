@@ -57,6 +57,9 @@ Analyze an explicit soundtrack independently of the video clips:
 
 ```bash
 docker compose run --rm video-agent analyze-music ./travel-test --music ./travel-test/music/travel-score.mp3
+docker compose run --rm video-agent create-plan ./travel-test \
+  --prompt "Create a 90-second cinematic mountain film" \
+  --music-analysis ./travel-test/.video-agent/music-analysis.json
 ```
 
 The command decodes audio locally with FFmpeg, computes a spectral-flux onset envelope, estimates tempo with FFT-based autocorrelation, builds a beat grid, and summarizes relative RMS energy in eight-second sections. It writes `.video-agent/music-analysis.json` with estimated BPM, beat and four-beat downbeat timestamps, energy sections, and candidate cut anchors. The soundtrack is recorded as a direct artifact dependency, so replacing the music invalidates the analysis.
