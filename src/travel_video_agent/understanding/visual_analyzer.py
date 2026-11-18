@@ -372,6 +372,143 @@ class OllamaVisionAnalyzer:
 
         raise VisionModelError(f"The vision model could not analyze {frame_path}.")
 
+    def analyze_scene(self, frames: list[tuple[float, Path]]) -> dict[str, Any]:
+        """Infer temporal action and camera movement from ordered scene frames."""
+        if len(frames) < 2:
+            return {
+                "temporal_summary": "",
+                "action_progression": [],
+                "subject_motion": "unknown",
+                "camera_motion": "unknown",
+                "confidence": 0.0,
+            }
+        if not self._memory_checked:
+            try:
+                ensure_memory_available(
+                    required_vision_memory_gb(self.model), f"Ollama vision model '{self.model}'"
+                )
+            except ResourceError as exc:
+                raise VisionModelError(str(exc)) from exc
+            self._memory_checked = True
+
+        selected = frames
+        if len(selected) > 6:
+            indices = [round(index * (len(selected) - 1) / 5) for index in range(6)]
+            selected = [selected[index] for index in indices]
+        images = [
+            base64.b64encode(frame_path.read_bytes()).decode("ascii")
+            for _, frame_path in selected
+        ]
+        timestamps = ", ".join(f"{timestamp:.2f}s" for timestamp, _ in selected)
+        response_schema = {
+            "type": "object",
+            "properties": {
+                "temporal_summary": {"type": "string", "maxLength": 300},
+                "action_progression": {
+                    "type": "array",
+                    "items": {"type": "string", "maxLength": 100},
+                    "maxItems": 6,
+                },
+                "subject_motion": {
+                    "type": "string",
+                    "enum": [
+                        "approaching", "receding", "crossing", "stationary",
+                        "interacting", "mixed", "unknown",
+                    ],
+                },
+                "camera_motion": {
+                    "type": "string",
+                    "enum": [
+                        "static", "pan", "tilt", "zoom", "tracking",
+                        "handheld", "mixed", "unknown",
+                    ],
+                },
+                "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+            },
+            "required": [
+                "temporal_summary", "action_progression", "subject_motion",
+                "camera_motion", "confidence",
+            ],
+            "additionalProperties": False,
+        }
+        prompt = (
+            "Analyze these ordered frames from one continuous travel-video scene. "
+            f"Frame timestamps: {timestamps}. Describe only changes supported by the sequence. "
+            "Distinguish subject movement from camera movement. Use camera_motion 'unknown' "
+            "unless viewpoint changes clearly support pan, tilt, zoom, tracking, or handheld "
+            "movement. Changing subjects alone is not camera motion. Do not invent events "
+            "between sampled frames. Return concise JSON matching the schema."
+        )
+        payload = json.dumps(
+            {
+                "model": self.model,
+                "keep_alive": self.keep_alive,
+                "stream": False,
+                "format": response_schema,
+                "messages": [{"role": "user", "content": prompt, "images": images}],
+                "options": {"temperature": 0, "num_predict": 220},
+            }
+        ).encode("utf-8")
+        request = Request(
+            f"{self.base_url}/api/chat",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urlopen(request, timeout=self.timeout_seconds) as response:
+                result = json.loads(response.read().decode("utf-8"))
+                self._model_used = True
+            dynamics = json.loads(result["message"]["content"])
+        except HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            raise VisionModelError(
+                f"Ollama returned HTTP {exc.code} during temporal scene analysis: {detail}"
+            ) from exc
+        except (URLError, TimeoutError, OSError) as exc:
+            raise VisionModelError(
+                f"Could not reach Ollama at {self.base_url} for temporal scene analysis."
+            ) from exc
+        except (json.JSONDecodeError, UnicodeDecodeError, KeyError, TypeError) as exc:
+            raise VisionModelError("Ollama returned invalid temporal scene analysis JSON.") from exc
+
+        if not isinstance(dynamics, dict):
+            raise VisionModelError("Temporal scene analysis must be a JSON object.")
+        summary = dynamics.get("temporal_summary")
+        progression = dynamics.get("action_progression")
+        confidence = dynamics.get("confidence")
+        if (
+            not isinstance(summary, str)
+            or len(summary) > 300
+            or not isinstance(progression, list)
+            or len(progression) > 6
+            or any(not isinstance(item, str) or len(item) > 100 for item in progression)
+            or isinstance(confidence, bool)
+            or not isinstance(confidence, (int, float))
+            or not math.isfinite(confidence)
+            or not 0 <= confidence <= 1
+        ):
+            raise VisionModelError("Ollama returned invalid temporal scene analysis fields.")
+        return {
+            "temporal_summary": summary.strip(),
+            "action_progression": [item.strip() for item in progression],
+            "subject_motion": _enum_value(
+                dynamics.get("subject_motion"),
+                {
+                    "approaching", "receding", "crossing", "stationary",
+                    "interacting", "mixed", "unknown",
+                },
+            ),
+            "camera_motion": _enum_value(
+                dynamics.get("camera_motion"),
+                {
+                    "static", "pan", "tilt", "zoom", "tracking",
+                    "handheld", "mixed", "unknown",
+                },
+            ),
+            "confidence": float(confidence),
+        }
+
     def unload_model(self) -> bool:
         """Ask Ollama to evict this model from VRAM/RAM after the vision phase."""
         if not self._model_used:
