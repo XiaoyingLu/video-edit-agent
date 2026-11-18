@@ -58,6 +58,9 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
+_MUSIC_ANALYSIS_OPTION = typer.Option(
+    None, "--music-analysis", help="Optional soundtrack energy analysis JSON path."
+)
 
 
 def _track_artifact(
@@ -1526,6 +1529,7 @@ def optimize_timeline(
         Path | None,
         typer.Option("--plan", help="Editing plan JSON path."),
     ] = None,
+    music_analysis: Path | None = _MUSIC_ANALYSIS_OPTION,
     output: Annotated[
         Path | None,
         typer.Option(
@@ -1537,13 +1541,22 @@ def optimize_timeline(
 ) -> None:
     """Order selected shots and propose pacing and transitions for human review."""
     try:
-        timeline = build_draft_timeline(folder, selection_path=selection, plan_path=plan)
+        timeline = build_draft_timeline(
+            folder, selection_path=selection, plan_path=plan, music_analysis_path=music_analysis
+        )
     except (FileNotFoundError, ValueError) as exc:
         console.print(f"[red]Timeline optimization failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
     destination = output or folder.resolve() / ".video-agent" / "optimized-timeline.json"
     destination = destination.expanduser().resolve()
+    if timeline.source_music_analysis is not None:
+        music_file = (folder.expanduser().resolve() / timeline.source_music_analysis).resolve()
+        if destination == music_file:
+            console.print(
+                "[red]Timeline output cannot overwrite the music analysis artifact.[/red]"
+            )
+            raise typer.Exit(code=1)
     save_draft_timeline(timeline, destination)
 
     table = Table(title="Optimized Shot Timeline — Human Review Required")
@@ -1555,6 +1568,7 @@ def optimize_timeline(
     table.add_column("Role")
     table.add_column("Scale")
     table.add_column("Pacing target", justify="right")
+    table.add_column("Music energy")
     for clip in timeline.clips:
         transition = (
             f"{clip.transition_in} ({clip.transition_duration_seconds:.2f}s)"
@@ -1570,12 +1584,15 @@ def optimize_timeline(
             clip.visual_role.replace("_", " "),
             clip.shot_scale.replace("_", " "),
             f"{clip.pacing_target_seconds:.1f}s ({clip.pacing_fit})",
+            clip.music_energy,
         )
     console.print(table)
     console.print(
         f"Proposed {timeline.proposed_duration_seconds:.1f}s across "
         f"{timeline.proposed_clip_count} clip(s); target {timeline.target_duration_seconds:.1f}s."
     )
+    if timeline.source_music_analysis:
+        console.print(f"Music-aware pacing source: {timeline.source_music_analysis}")
     console.print(f"Optimized timeline saved to [green]{destination}[/green]")
     console.print(
         "[yellow]Review every clip with review-timeline. This is not the renderer's "
@@ -1632,6 +1649,8 @@ def review_timeline(
                         f"Shot scale: {clip.shot_scale.replace('_', ' ')}"
                     )
                 console.print(clip.pacing_note)
+                if clip.music_energy != "unknown":
+                    console.print(f"Music: {clip.music_pacing_note}")
                 if clip.transition_in != "cut":
                     console.print(
                         f"Incoming transition: {clip.transition_in} "

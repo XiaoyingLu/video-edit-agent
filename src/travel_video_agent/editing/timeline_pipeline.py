@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..music.schemas import MusicAnalysis
 from .draft_schemas import ProjectDraftSelection
 from .intent_schemas import EditingPlan
 from .timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
@@ -46,10 +47,15 @@ _ROLE_PACING_RANGES = {
 
 
 def _pacing_guidance(
-    duration: float, pacing: str, visual_role: str = "unknown"
+    duration: float,
+    pacing: str,
+    visual_role: str = "unknown",
+    energy_multiplier: float = 1.0,
 ) -> tuple[str, str, float]:
-    """Recommend a role-aware shot duration without changing source intervals."""
+    """Recommend a role- and music-aware shot duration without changing source intervals."""
     lower, upper = _ROLE_PACING_RANGES[pacing].get(visual_role, _PACING_RANGES[pacing])
+    lower *= energy_multiplier
+    upper *= energy_multiplier
     target = round((lower + upper) / 2, 2)
     if duration < lower:
         fit = "short"
@@ -192,6 +198,7 @@ def build_draft_timeline(
     folder: Path,
     selection_path: Path | None = None,
     plan_path: Path | None = None,
+    music_analysis_path: Path | None = None,
 ) -> ProjectDraftTimeline:
     """Convert selected footage into an ordered, review-only shot timeline.
 
@@ -216,6 +223,32 @@ def build_draft_timeline(
         selection_file.read_text(encoding="utf-8")
     )
     plan = EditingPlan.model_validate_json(plan_file.read_text(encoding="utf-8"))
+    music_file = (
+        (music_analysis_path or artifact_dir / "music-analysis.json").expanduser().resolve()
+        if music_analysis_path is not None
+        else None
+    )
+    music_analysis = None
+    if music_file is not None:
+        if not music_file.is_file():
+            raise FileNotFoundError(f"Music analysis not found: {music_file}")
+        if music_file in {selection_file, plan_file}:
+            raise ValueError("music analysis cannot overwrite or alias another input artifact")
+        validate_artifact(root, music_file)
+        music_analysis = MusicAnalysis.model_validate_json(music_file.read_text(encoding="utf-8"))
+        if Path(music_analysis.project_path).resolve() != root:
+            raise ValueError("music analysis belongs to a different project folder")
+        try:
+            music_file.relative_to(root)
+        except ValueError as exc:
+            raise ValueError("music analysis must be inside the project folder") from exc
+        soundtrack = Path(music_analysis.music_path)
+        if not soundtrack.is_absolute():
+            soundtrack = root / soundtrack
+        if not soundtrack.is_file():
+            raise FileNotFoundError(
+                f"Soundtrack referenced by music analysis is missing: {soundtrack}"
+            )
     if Path(selection.project_path).resolve() != root:
         raise ValueError("draft selection belongs to a different project folder")
 
@@ -236,6 +269,7 @@ def build_draft_timeline(
 
     timeline_clips: list[DraftTimelineClip] = []
     previous_duration: float | None = None
+    elapsed_seconds = 0.0
     for index, clip in enumerate(selected, start=1):
         if index == 1 or plan.transitions.default == "cut":
             transition = "cut"
@@ -254,6 +288,49 @@ def build_draft_timeline(
         pacing_fit, pacing_note, pacing_target = _pacing_guidance(
             clip.duration_seconds, plan.pacing, clip.visual_role
         )
+        music_energy = "unknown"
+        music_section_start = None
+        music_section_end = None
+        music_pacing_note = "No soundtrack energy guidance was supplied."
+        if music_analysis is not None:
+            timeline_start = max(0.0, elapsed_seconds - transition_duration)
+            timeline_end = timeline_start + clip.duration_seconds
+            section_overlaps = [
+                (
+                    max(
+                        0.0,
+                        min(timeline_end, item.end_seconds)
+                        - max(timeline_start, item.start_seconds),
+                    ),
+                    item,
+                )
+                for item in music_analysis.sections
+            ]
+            overlap, section = max(section_overlaps, key=lambda item: item[0], default=(0.0, None))
+            if section is not None and overlap > 0:
+                music_energy = section.energy
+                music_section_start = section.start_seconds
+                music_section_end = section.end_seconds
+                multiplier = {"low": 1.15, "medium": 1.0, "high": 0.8}[section.energy]
+                pacing_fit, pacing_note, pacing_target = _pacing_guidance(
+                    clip.duration_seconds, plan.pacing, clip.visual_role, multiplier
+                )
+                music_pacing_note = {
+                    "low": (
+                        "Quieter music section: consider allowing this shot more breathing room."
+                    ),
+                    "medium": (
+                        "Moderate-energy music section: retain the role-aware pacing target."
+                    ),
+                    "high": (
+                        "Higher-energy music section: consider a tighter shot if the footage "
+                        "supports it."
+                    ),
+                }[section.energy]
+            else:
+                music_pacing_note = (
+                    "No analyzed energy section covers this point in the soundtrack."
+                )
         previous_clip = timeline_clips[-1] if timeline_clips else None
         timeline_clips.append(
             DraftTimelineClip(
@@ -277,10 +354,15 @@ def build_draft_timeline(
                 transition_duration_seconds=round(transition_duration, 3),
                 pacing_fit=pacing_fit,
                 pacing_note=pacing_note,
+                music_energy=music_energy,
+                music_section_start_seconds=music_section_start,
+                music_section_end_seconds=music_section_end,
+                music_pacing_note=music_pacing_note,
                 reasons=clip.reasons,
             )
         )
         previous_duration = clip.duration_seconds
+        elapsed_seconds += max(0.0, clip.duration_seconds - transition_duration)
 
     duration = sum(clip.duration_seconds for clip in timeline_clips) - sum(
         clip.transition_duration_seconds for clip in timeline_clips[1:]
@@ -301,6 +383,9 @@ def build_draft_timeline(
         proposed_duration_seconds=round(duration, 3),
         proposed_clip_count=len(timeline_clips),
         clips=timeline_clips,
+        source_music_analysis=(
+            str(music_file.relative_to(root)) if music_file is not None else None
+        ),
     )
 
 
@@ -334,7 +419,12 @@ def save_draft_timeline(timeline: ProjectDraftTimeline, destination: Path) -> No
         root = Path(timeline.project_path).expanduser().resolve()
         dependencies = [
             Path(value) if Path(value).is_absolute() else root / value
-            for value in (timeline.source_selection, timeline.source_editing_plan)
+            for value in (
+                timeline.source_selection,
+                timeline.source_editing_plan,
+                timeline.source_music_analysis,
+            )
+            if value is not None
         ]
         register_artifact(root, destination, dependencies=dependencies)
 

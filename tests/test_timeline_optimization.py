@@ -1,4 +1,5 @@
 import pytest
+from rich.text import Text
 from typer.testing import CliRunner
 
 from travel_video_agent.cli import app
@@ -185,10 +186,14 @@ def test_optimize_and_review_timeline_cli_commands(tmp_path):
 def test_cli_help_includes_timeline_commands():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    assert "optimize-timeline" in result.output
-    assert "review-timeline" in result.output
-    assert "approve-storyboard" in result.output
-    assert "build-storyboard-timeline" in result.output
+    help_text = Text.from_ansi(result.output).plain
+    assert "optimize-timeline" in help_text
+    assert "review-timeline" in help_text
+    assert "approve-storyboard" in help_text
+    assert "build-storyboard-timeline" in help_text
+    optimize_help = runner.invoke(app, ["optimize-timeline", "--help"])
+    assert optimize_help.exit_code == 0
+    assert "--music-analysis" in Text.from_ansi(optimize_help.output).plain
 
 
 def test_cinematic_timeline_builds_establishing_action_detail_and_scenic_arc(tmp_path):
@@ -364,3 +369,91 @@ def test_cinematic_timeline_preserves_ranked_order_without_scene_metadata(tmp_pa
     assert all(clip.visual_role == "unknown" for clip in timeline.clips)
     assert "strongest available shot" in timeline.clips[0].sequence_reason
     assert "metadata is uncertain" in timeline.clips[1].sequence_reason
+
+
+def test_music_analysis_guides_pacing_without_changing_source_intervals(tmp_path):
+    from travel_video_agent.music.schemas import MusicAnalysis, MusicSection
+
+    _write_inputs(tmp_path, style="vlog", transition="cut")
+    artifact = tmp_path / ".video-agent"
+    soundtrack = tmp_path / "score.mp3"
+    soundtrack.write_bytes(b"test soundtrack")
+    analysis = MusicAnalysis(
+        project_path=str(tmp_path.resolve()),
+        music_path=str(soundtrack),
+        duration_seconds=30,
+        sample_rate=22050,
+        beat_confidence=0.5,
+        sections=[
+            MusicSection(start_seconds=0, end_seconds=4, energy="low", energy_rms=0.1),
+            MusicSection(start_seconds=4, end_seconds=30, energy="high", energy_rms=0.8),
+        ],
+    )
+    analysis_path = artifact / "music-analysis.json"
+    analysis_path.write_text(analysis.model_dump_json(), encoding="utf-8")
+
+    timeline = build_draft_timeline(tmp_path, music_analysis_path=analysis_path)
+
+    assert timeline.source_music_analysis == ".video-agent/music-analysis.json"
+    assert [clip.music_energy for clip in timeline.clips] == ["low", "high"]
+    assert timeline.clips[0].pacing_target_seconds > timeline.clips[1].pacing_target_seconds
+    assert "breathing room" in timeline.clips[0].music_pacing_note
+    assert "tighter shot" in timeline.clips[1].music_pacing_note
+    assert [(clip.source_start_seconds, clip.source_end_seconds) for clip in timeline.clips] == [
+        (1, 5),
+        (8, 12),
+    ]
+
+
+def test_music_analysis_rejects_foreign_project(tmp_path):
+    from travel_video_agent.music.schemas import MusicAnalysis
+
+    _write_inputs(tmp_path)
+    analysis_path = tmp_path / "music-analysis.json"
+    analysis_path.write_text(
+        MusicAnalysis(
+            project_path=str(tmp_path / "other"),
+            music_path=str(tmp_path / "score.mp3"),
+            duration_seconds=20,
+            sample_rate=22050,
+            beat_confidence=0.2,
+        ).model_dump_json(),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="different project"):
+        build_draft_timeline(tmp_path, music_analysis_path=analysis_path)
+
+
+def test_optimize_timeline_cannot_overwrite_music_analysis(tmp_path):
+    from travel_video_agent.music.schemas import MusicAnalysis
+
+    _write_inputs(tmp_path)
+    soundtrack = tmp_path / "score.mp3"
+    soundtrack.write_bytes(b"test soundtrack")
+    analysis_path = tmp_path / ".video-agent" / "music-analysis.json"
+    analysis_path.write_text(
+        MusicAnalysis(
+            project_path=str(tmp_path.resolve()),
+            music_path=str(soundtrack),
+            duration_seconds=20,
+            sample_rate=22050,
+            beat_confidence=0.2,
+        ).model_dump_json(),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "optimize-timeline",
+            str(tmp_path),
+            "--music-analysis",
+            str(analysis_path),
+            "--output",
+            str(analysis_path),
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "cannot overwrite" in result.output
+    assert MusicAnalysis.model_validate_json(analysis_path.read_text(encoding="utf-8"))
