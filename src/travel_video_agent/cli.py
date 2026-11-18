@@ -1047,6 +1047,27 @@ def critique_draft(
         int,
         typer.Option("--samples", min=1, max=24, help="Number of evenly spaced frames to inspect."),
     ] = 8,
+    semantic: Annotated[
+        bool,
+        typer.Option(
+            "--semantic",
+            is_flag=True,
+            help="Use the local vision model to compare rendered shots with storyboard intent.",
+        ),
+    ] = False,
+    semantic_samples: Annotated[
+        int,
+        typer.Option(
+            "--semantic-samples",
+            min=1,
+            max=12,
+            help="Maximum storyboard shots sampled for semantic critique.",
+        ),
+    ] = 8,
+    vision_model: Annotated[
+        str | None,
+        typer.Option("--vision-model", help="Ollama vision model (default: OLLAMA_MODEL)."),
+    ] = None,
     output: Annotated[
         Path | None,
         typer.Option(
@@ -1062,6 +1083,9 @@ def critique_draft(
             timeline_path=timeline,
             plan_path=plan,
             sample_count=samples,
+            semantic=semantic,
+            semantic_samples=semantic_samples,
+            vision_model=vision_model,
         )
     except (FileNotFoundError, NotADirectoryError, ValueError, OSError, DraftCritiqueError) as exc:
         console.print(f"[red]Draft critique failed:[/red] {exc}")
@@ -1113,6 +1137,10 @@ def critique_draft(
         f"Inspected {report.duration_seconds:.2f}s at {report.width}x{report.height}; "
         f"{len(report.frames)} frames sampled."
     )
+    if report.semantic_model:
+        console.print(
+            f"Semantic review: {len(report.semantic_reviews)} shots via {report.semantic_model}."
+        )
     console.print(f"Report saved to [green]{destination}[/green]")
     console.print(
         "[yellow]Findings are evidence-based review prompts, not aesthetic judgments. "
