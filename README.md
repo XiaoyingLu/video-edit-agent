@@ -398,7 +398,7 @@ docker compose run --rm video-agent render-draft ./travel-test --title-overlays 
 docker compose run --rm video-agent render-draft ./travel-test --title-overlays ./travel-test/.video-agent/title-overlays.json
 ```
 
-Rejected and pending overlays are ignored. Overlay intervals must fit within the approved rendered duration. The renderer applies titles after shot transitions, so title timing is stable on the final output timeline. The title artifact tracks the optimized timeline as an upstream dependency; source clips and the reviewed shot timeline remain unchanged. The first implementation intentionally focuses on titles; lower thirds, closing cards, and richer motion presets can build on this schema later.
+Rejected and pending overlays are ignored. Overlay intervals must fit within the approved rendered duration. The renderer applies titles after shot transitions, so title timing is stable on the final output timeline. The title artifact tracks the optimized timeline as an upstream dependency; source clips and the reviewed shot timeline remain unchanged. The same artifact also supports cinematic lower thirds. Set `overlay_kind` to `lower_third`; use `text` for the location/person name and optional `secondary_text` for a date or short context line. The renderer uses a fixed, percentage-based lower-left card with safe margins that adapt to landscape, portrait, and square output. Both lines are escaped and rendered with expansion disabled. Lower thirds use the same bounded fade/slide presets and remain pending until explicitly approved.
 
 ### Narrative-aware opening and closing title suggestions
 
@@ -428,4 +428,29 @@ Use `--fit-mode crop` (default) to fill the requested frame with a centered crop
 
 ```bash
 docker compose run --rm video-agent render-draft ./travel-test --fit-mode pad
+```
+
+
+### Cinematic lower thirds
+
+Add a lower-third entry to `.video-agent/title-overlays.json` alongside title cards:
+
+```json
+{
+  "overlay_id": "lake-louise-location",
+  "overlay_kind": "lower_third",
+  "text": "Lake Louise",
+  "secondary_text": "Banff National Park · Alberta",
+  "start_seconds": 18.0,
+  "end_seconds": 23.0,
+  "animation": "fade",
+  "decision": "pending"
+}
+```
+
+Use the primary line for a place or person name and the optional secondary line for a date or concise description. The fixed lower-left card uses proportional safe-area geometry for 16:9, 9:16, and 1:1 outputs; it does not accept custom coordinates, fonts, FFmpeg expressions, or filter text. Review it like any other title overlay before rendering:
+
+```bash
+docker compose run --rm video-agent review-title-overlays ./travel-test --approve lake-louise-location
+docker compose run --rm video-agent render-draft ./travel-test --title-overlays ./travel-test/.video-agent/title-overlays.json --dry-run
 ```

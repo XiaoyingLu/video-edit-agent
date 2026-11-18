@@ -150,6 +150,58 @@ def _build_shot_render_command(
         if overlay.decision != "approved":
             continue
         escaped_text = _escape_drawtext(overlay.text)
+        next_label = f"vtitle{index}"
+        if overlay.overlay_kind == "lower_third":
+            # Percentage-based geometry keeps the card inside safe margins for
+            # landscape, portrait, and square output profiles.
+            card_width = "w*0.88" if height > width else "w*0.62"
+            card_height = "h*0.16"
+            card_y = "h*0.76"
+            filters.append(
+                f"[{video_label}]drawbox=x=w*0.06:y={card_y}:w={card_width}:"
+                f"h={card_height}:color=black@0.62:t=fill:"
+                f"enable='between(t,{_seconds(overlay.start_seconds)},{_seconds(overlay.end_seconds)})'"
+                f"[{next_label}bg]"
+            )
+            primary_size = max(26, min(64, int(width * 0.034)))
+            secondary_size = max(20, min(42, int(width * 0.022)))
+            alpha = "1"
+            if overlay.animation == "fade":
+                fade_seconds = min(0.45, (overlay.end_seconds - overlay.start_seconds) / 2)
+                fade_in_end = overlay.start_seconds + fade_seconds
+                fade_out_start = overlay.end_seconds - fade_seconds
+                alpha = (
+                    f"if(lt(t,{_seconds(fade_in_end)}),"
+                    f"(t-{_seconds(overlay.start_seconds)})/{_seconds(fade_seconds)},"
+                    f"if(gt(t,{_seconds(fade_out_start)}),"
+                    f"({_seconds(overlay.end_seconds)}-t)/{_seconds(fade_seconds)},1))"
+                )
+            elif overlay.animation == "slide_up":
+                alpha = (
+                    f"if(lt(t,{_seconds(overlay.start_seconds + 0.45)}),"
+                    f"(t-{_seconds(overlay.start_seconds)})/0.45,1)"
+                )
+            primary_label = f"vtitle{index}primary"
+            filters.append(
+                f"[{next_label}bg]drawtext=text='{escaped_text}':expansion=none:"
+                f"font='DejaVu Sans':fontsize={primary_size}:fontcolor=white:"
+                f"x=w*0.09:y=h*0.785:alpha='{alpha}':"
+                f"enable='between(t,{_seconds(overlay.start_seconds)},{_seconds(overlay.end_seconds)})'"
+                f"[{primary_label}]"
+            )
+            if overlay.secondary_text:
+                secondary_label = f"vtitle{index}secondary"
+                filters.append(
+                    f"[{primary_label}]drawtext=text='{_escape_drawtext(overlay.secondary_text)}':"
+                    f"expansion=none:font='DejaVu Sans':fontsize={secondary_size}:"
+                    f"fontcolor=white@0.88:x=w*0.09:y=h*0.835:alpha='{alpha}':"
+                    f"enable='between(t,{_seconds(overlay.start_seconds)},{_seconds(overlay.end_seconds)})'"
+                    f"[{secondary_label}]"
+                )
+                video_label = secondary_label
+            else:
+                video_label = primary_label
+            continue
         font_size = max(32, min(96, int(width * 0.045)))
         if overlay.style == "minimal":
             font_size = max(28, int(width * 0.035))
@@ -180,7 +232,6 @@ def _build_shot_render_command(
                 f"({base_y})+80*({_seconds(overlay.start_seconds + 0.45)}-t)/0.45,"
                 f"({base_y}))"
             )
-        next_label = f"vtitle{index}"
         filters.append(
             f"[{video_label}]drawtext=text='{escaped_text}':expansion=none:"
             f"font='DejaVu Sans':fontsize={font_size}:fontcolor=white:"

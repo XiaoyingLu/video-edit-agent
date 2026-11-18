@@ -104,3 +104,42 @@ def test_renderer_supports_slide_up_and_minimal_title_preset(tmp_path: Path):
     assert "box=0" in graph
     assert "if(lt(t,0.450000)" in graph
     assert "y='if(" in graph
+
+
+def test_lower_third_schema_supports_bounded_secondary_context():
+    overlay = _overlay(
+        overlay_kind="lower_third",
+        text="Lake Louise",
+        secondary_text="Banff National Park · Alberta",
+        placement="bottom",
+    )
+    assert overlay.overlay_kind == "lower_third"
+    with pytest.raises(ValidationError, match="only supported for lower-third"):
+        _overlay(secondary_text="Context without lower-third kind")
+
+
+@pytest.mark.parametrize("width,height", [(1920, 1080), (1080, 1920), (1080, 1080)])
+def test_renderer_builds_safe_lower_third_for_all_aspect_ratios(
+    tmp_path: Path, width: int, height: int
+):
+    overlay = _overlay(
+        overlay_kind="lower_third",
+        text="Lake Louise: Alberta",
+        secondary_text="Canadian Rockies",
+        animation="fade",
+    )
+    command = _build_shot_render_command(
+        "ffmpeg",
+        [(tmp_path / "clip.mp4", 0, 4, False, "cut", 0)],
+        tmp_path / "output.mp4",
+        width,
+        height,
+        title_overlays=[overlay],
+    )
+    graph = command[command.index("-filter_complex") + 1]
+    assert "drawbox=x=w*0.06" in graph
+    assert ("w*0.88" if height > width else "w*0.62") in graph
+    assert "Lake Louise" in graph
+    assert "Canadian Rockies" in graph
+    assert "expansion=none" in graph
+    assert "vtitle0secondary" in graph
