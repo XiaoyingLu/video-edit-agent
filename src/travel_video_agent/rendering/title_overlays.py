@@ -26,6 +26,8 @@ class TitleOverlay(BaseModel):
 
     @model_validator(mode="after")
     def validate_interval(self) -> "TitleOverlay":
+        if not self.text.strip() or any(ord(character) < 32 for character in self.text):
+            raise ValueError("title text must be non-empty and contain no control characters")
         if self.end_seconds <= self.start_seconds:
             raise ValueError("title end_seconds must be greater than start_seconds")
         if self.end_seconds - self.start_seconds < 0.5:
