@@ -38,7 +38,6 @@ from .editing.storyboard_review import generate_storyboard_review
 from .editing.timeline_schemas import ProjectDraftTimeline
 from .editing.revisions import (
     TimelineIntervalEdit,
-    TimelineRevisionError,
     compare_timeline_files,
     create_timeline_revision,
 )
