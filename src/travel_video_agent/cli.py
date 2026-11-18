@@ -902,6 +902,7 @@ def review_titles(
     table.add_column("ID", style="cyan")
     table.add_column("Text")
     table.add_column("Time", justify="right")
+    table.add_column("Role")
     table.add_column("Placement")
     table.add_column("Animation")
     table.add_column("Decision")
@@ -910,6 +911,7 @@ def review_titles(
             item.overlay_id,
             item.text,
             f"{item.start_seconds:.2f}–{item.end_seconds:.2f}s",
+            item.sequence_role,
             item.placement,
             item.animation,
             item.decision,
