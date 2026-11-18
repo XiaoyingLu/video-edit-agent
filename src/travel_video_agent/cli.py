@@ -44,6 +44,11 @@ from .music.pipeline import MusicAnalysisError
 from .music.refinement import apply_music_sync_review
 from .music.sync import MusicSyncSuggestions, save_music_sync_suggestions, suggest_music_sync
 from .rendering import RenderError, render_approved_shot_timeline, render_project
+from .rendering.title_overlays import (
+    load_title_overlays,
+    review_title_overlays,
+    save_title_overlays,
+)
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
 from .storage_cleanup import cleanup_generated_storage
@@ -765,6 +770,54 @@ def render(
     console.print("[yellow]Original source videos were not modified.[/yellow]")
 
 
+@app.command("review-title-overlays")
+def review_titles(
+    folder: Annotated[
+        Path,
+        typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True),
+    ],
+    overlay_file: Annotated[
+        Path | None,
+        typer.Option("--overlay-file", help="Title overlay JSON (default: .video-agent/title-overlays.json)."),
+    ] = None,
+    approve: Annotated[
+        list[str] | None,
+        typer.Option("--approve", help="Title overlay ID to approve; repeat for multiple IDs."),
+    ] = None,
+    reject: Annotated[
+        list[str] | None,
+        typer.Option("--reject", help="Title overlay ID to reject; repeat for multiple IDs."),
+    ] = None,
+) -> None:
+    """Review title suggestions; only approved overlays are burned into the render."""
+    try:
+        document, destination = load_title_overlays(folder, overlay_file)
+        reviewed = review_title_overlays(document, set(approve or []), set(reject or []))
+        save_title_overlays(folder, reviewed, destination)
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[red]Title review failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    table = Table(title="Title Overlay Review")
+    table.add_column("ID", style="cyan")
+    table.add_column("Text")
+    table.add_column("Time", justify="right")
+    table.add_column("Placement")
+    table.add_column("Animation")
+    table.add_column("Decision")
+    for item in reviewed.overlays:
+        table.add_row(
+            item.overlay_id,
+            item.text,
+            f"{item.start_seconds:.2f}–{item.end_seconds:.2f}s",
+            item.placement,
+            item.animation,
+            item.decision,
+        )
+    console.print(table)
+    console.print(f"Title overlay review saved to [green]{destination}[/green]")
+
+
 @app.command("render-draft")
 def render_draft(
     folder: Annotated[
@@ -805,6 +858,10 @@ def render_draft(
             help="Probe inputs and validate the FFmpeg transition graph without writing an MP4.",
         ),
     ] = False,
+    title_overlays: Annotated[
+        Path | None,
+        typer.Option("--title-overlays", help="Optional reviewed title overlay JSON artifact."),
+    ] = None,
     fit_mode: Annotated[
         str,
         typer.Option(
@@ -823,6 +880,7 @@ def render_draft(
             timeout_seconds=timeout_seconds,
             dry_run=dry_run,
             fit_mode=fit_mode,
+            title_overlay_path=title_overlays,
         )
     except (FileNotFoundError, FileExistsError, ValueError, RenderError) as exc:
         console.print(f"[red]Draft render failed:[/red] {exc}")
