@@ -840,7 +840,9 @@ def review_titles(
 ) -> None:
     """Review title suggestions; only approved overlays are burned into the render."""
     try:
-        document, destination = load_title_overlays(folder, overlay_file)
+        document, destination = load_title_overlays(
+            folder, overlay_file, validate_overlay_artifact=False
+        )
         reviewed = review_title_overlays(document, set(approve or []), set(reject or []))
         save_title_overlays(folder, reviewed, destination)
     except (FileNotFoundError, ValueError) as exc:
