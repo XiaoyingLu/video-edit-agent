@@ -627,3 +627,30 @@ manifest, and rendered comparison. The source-frame timeline review is optional.
 does not infer approval, change media, or replace the detailed evidence reports; it provides a
 traceable entry point for reviewing one iteration. Re-run with a different `--output` base
 for subsequent cycles; existing reports are never overwritten.
+
+
+## Browser-based visual timeline review
+
+For a visual review of the proposed shot order, generate an offline HTML page with one
+representative midpoint frame per shot and its scene, motion, continuity, pacing, music, and
+transition context:
+
+```bash
+docker compose run --rm video-agent review-timeline-visual ./travel-test
+```
+
+Open `.video-agent/timeline-visual-review/review.html` in a browser. Choose approve, reject,
+or skip for each shot, then use **Export review decisions (.json)**. Apply that exported file
+through the existing timeline review gate:
+
+```bash
+docker compose run --rm video-agent review-timeline ./travel-test \
+  --decisions-file ./travel-test/timeline-review-decisions.json
+```
+
+The exported decisions are bound to the exact timeline file hash and rejected if the timeline
+has changed since the review page was generated. Every clip must have an explicit exported
+decision; skipped clips remain pending. The timeline is approved only when no clips remain
+pending and at least one clip is approved. The browser page itself never changes the timeline,
+and the CLI still performs the validated approval transition. Source videos are only read for
+frame extraction and are never modified.
