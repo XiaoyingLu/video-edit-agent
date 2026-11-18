@@ -90,15 +90,14 @@ Each run saves a new revision and a matching review report under `.video-agent/m
 A music-sync revision is deliberately **not approved**. Inspect and approve that exact revision with the existing timeline review gate, then render the same file:
 
 ```bash
-docker compose run --rm video-agent review-timeline ./travel-test \
-  --timeline ./.video-agent/music-sync-revisions/revision-001.json \
-  --approve shot-001 --approve shot-002
+docker compose run --rm -it video-agent review-timeline ./travel-test \
+  --timeline ./.video-agent/music-sync-revisions/revision-001.json
 
 docker compose run --rm video-agent render-draft ./travel-test \
   --timeline ./.video-agent/music-sync-revisions/revision-001.json
 ```
 
-Use the actual clip IDs shown by the timeline review output. Review decisions are saved to the revision file; rendering remains a separate explicit step and is never started by `review-music-sync`.
+Review each clip interactively, or explicitly approve/reject every clip ID shown by the timeline review output. Review decisions are saved to the revision file; rendering remains a separate explicit step and is never started by `review-music-sync`.
 
 
 ## Requirements
