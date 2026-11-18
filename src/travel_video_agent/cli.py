@@ -1123,7 +1123,12 @@ def critique_draft(
             root / report.source_timeline,
             root / report.source_plan,
         ],
-        config={"sample_count": samples},
+        config={
+            "sample_count": samples,
+            "semantic": semantic,
+            "semantic_samples": semantic_samples,
+            "vision_model": vision_model,
+        },
     )
 
     table = Table(title="Rendered Draft Critique — Review Required")
