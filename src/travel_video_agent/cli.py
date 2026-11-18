@@ -1922,11 +1922,8 @@ def review_music_sync(
                     f"{following.source_start_seconds:.2f}–{following.source_end_seconds:.2f}s"
                 )
                 while True:
-                    choice = (
-                        console.input("Decision [a]ccept / [r]eject / [s]kip: ")
-                        .strip()
-                        .lower()
-                    )
+                    choice = console.input("Decision [a]ccept / [r]eject / [s]kip: ")
+                    choice = choice.strip().lower()
                     if choice in {"a", "accept"}:
                         accept_ids.add(boundary_id)
                         break
