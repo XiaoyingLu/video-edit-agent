@@ -1899,15 +1899,23 @@ def review_music_sync(
                 if item.adjustment_seconds is None:
                     continue
                 boundary_id = f"{item.previous_clip_id}->{item.next_clip_id}"
-                previous = clips.get(item.previous_clip_id, {})
-                following = clips.get(item.next_clip_id, {})
+                previous = clips.get(item.previous_clip_id)
+                following = clips.get(item.next_clip_id)
+                if previous is None or following is None:
+                    raise ValueError(
+                        f"music sync boundary '{boundary_id}' references a missing timeline clip"
+                    )
                 console.print(
                     f"\n[bold cyan]{boundary_id}[/bold cyan] — {item.transition}"
                 )
+                suggested = (
+                    f"{item.recommended_boundary_seconds:.3f}s"
+                    if item.recommended_boundary_seconds is not None
+                    else "—"
+                )
                 console.print(
                     f"Current boundary: {item.boundary_seconds:.3f}s | "
-                    f"Suggested: {item.recommended_boundary_seconds:.3f}s | "
-                    f"Adjustment: {item.adjustment_seconds:+.3f}s"
+                    f"Suggested: {suggested} | Adjustment: {item.adjustment_seconds:+.3f}s"
                 )
                 console.print(
                     f"Outgoing source: {previous.video_path} "
