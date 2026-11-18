@@ -6,8 +6,8 @@ import tempfile
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
-from ..editing.timeline_schemas import ProjectDraftTimeline
 from ..editing.planning_schemas import VideoProjectPlan
+from ..editing.timeline_schemas import ProjectDraftTimeline
 from .renderer import (
     RenderError,
     RenderReport,
@@ -32,7 +32,9 @@ def _safe_source(root: Path, relative_path: str) -> Path:
     return source
 
 
-def _resolve_output_dimensions(root: Path, fallback_width: int, fallback_height: int) -> tuple[int, int]:
+def _resolve_output_dimensions(
+    root: Path, fallback_width: int, fallback_height: int
+) -> tuple[int, int]:
     """Resolve the requested output profile from the current creative project plan."""
     plan_file = root / ".video-agent" / "video-project-plan.json"
     if not plan_file.is_file():
@@ -341,7 +343,8 @@ def render_approved_shot_timeline(
         actual_height = int(output_video.get("height") or 0)
         if (actual_width, actual_height) != (width, height):
             raise RenderError(
-                f"rendered dimensions mismatch: expected {width}x{height}, got {actual_width}x{actual_height}"
+                f"rendered dimensions mismatch: expected {width}x{height}, "
+                f"got {actual_width}x{actual_height}"
             )
         tolerance = max(0.75, len(clip_inputs) / 30.0 * 2)
         if abs(actual_duration - expected_duration) > tolerance:
