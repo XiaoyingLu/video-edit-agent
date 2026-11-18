@@ -983,7 +983,7 @@ def render_revision_preview(
         typer.Option(
             "--output",
             "-o",
-            help="Separate MP4 output path (default: .video-agent/revision-previews/<revision>.mp4).",
+            help="Separate MP4 output path under .video-agent/revision-previews/ by default.",
         ),
     ] = None,
     timeout_seconds: Annotated[
