@@ -118,12 +118,8 @@ class PlannedScene(BaseModel):
 
     @model_validator(mode="after")
     def validate_music_section(self) -> "PlannedScene":
-        if (self.music_section_start_seconds is None) != (
-            self.music_section_end_seconds is None
-        ):
-            raise ValueError(
-                "music section start and end must be supplied together"
-            )
+        if (self.music_section_start_seconds is None) != (self.music_section_end_seconds is None):
+            raise ValueError("music section start and end must be supplied together")
         if (
             self.music_section_start_seconds is not None
             and self.music_section_end_seconds is not None
