@@ -63,8 +63,8 @@ def load_title_overlays(
     """Load a project-local title document and validate its timeline dependency."""
     root = folder.expanduser().resolve()
     destination = (
-        overlay_path or root / ".video-agent" / "title-overlays.json"
-    ).expanduser().resolve()
+        (overlay_path or root / ".video-agent" / "title-overlays.json").expanduser().resolve()
+    )
     if not destination.is_file():
         raise FileNotFoundError(
             f"Missing {destination}; create .video-agent/title-overlays.json first."
@@ -112,9 +112,7 @@ def review_title_overlays(
     return TitleOverlayDocument.model_validate(reviewed.model_dump())
 
 
-def save_title_overlays(
-    folder: Path, document: TitleOverlayDocument, destination: Path
-) -> None:
+def save_title_overlays(folder: Path, document: TitleOverlayDocument, destination: Path) -> None:
     """Persist reviewed overlays and track their timeline dependency."""
     root = folder.expanduser().resolve()
     destination = destination.expanduser().resolve()
