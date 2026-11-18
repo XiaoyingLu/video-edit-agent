@@ -1167,7 +1167,7 @@ def suggest_footage(
     destination = destination.expanduser().resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(
-        json.dumps(report.model_dump(mode="json"), indent=2) + "\\n", encoding="utf-8"
+        json.dumps(report.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
     )
     _track_artifact(
         folder,
