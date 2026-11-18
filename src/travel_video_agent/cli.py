@@ -1090,9 +1090,7 @@ def critique_draft(
         )
         raise typer.Exit(code=1)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(report.model_dump(mode="json"), indent=2), encoding="utf-8"
-    )
+    destination.write_text(json.dumps(report.model_dump(mode="json"), indent=2), encoding="utf-8")
     register_artifact(
         root,
         destination,
