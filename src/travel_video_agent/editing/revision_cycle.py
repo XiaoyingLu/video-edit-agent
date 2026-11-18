@@ -139,9 +139,9 @@ def render_revision_cycle_html(
         relative_link = Path(os.path.relpath(target, html_path.parent)).as_posix()
         path = html.escape(relative_link, quote=True)
         rows.append(
-            f'<tr><th>{html.escape(artifact.role)}</th>'
+            f"<tr><th>{html.escape(artifact.role)}</th>"
             f'<td><a href="{path}">{html.escape(artifact.path)}</a></td>'
-            f'<td>{html.escape(artifact.summary)}</td></tr>'
+            f"<td>{html.escape(artifact.summary)}</td></tr>"
         )
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -149,7 +149,8 @@ def render_revision_cycle_html(
 <title>Revision Iteration Report</title>
 <style>
 body {{ max-width: 1000px; margin: 2rem auto; padding: 0 1rem; font: 16px system-ui,sans-serif; }}
-table {{ width:100%; border-collapse:collapse; }} th,td {{ text-align:left; padding:.8rem; border-bottom:1px solid #8886; }}
+table {{ width:100%; border-collapse:collapse; }}
+th,td {{ text-align:left; padding:.8rem; border-bottom:1px solid #8886; }}
 th {{ width:18%; }} a {{ overflow-wrap:anywhere; }}
 .note {{ margin-top:2rem; padding:1rem; border:1px solid #8886; border-radius:8px; }}
 </style></head><body>

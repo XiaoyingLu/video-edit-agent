@@ -29,12 +29,12 @@ from .editing.embeddings import EmbeddingModelError
 from .editing.footage_mapping import suggest_storyboard_footage
 from .editing.footage_review import review_storyboard_footage
 from .editing.planning_generation import VideoPlanningError
-from .editing.revision_preview import render_timeline_revision_preview
 from .editing.revision_cycle import (
     RevisionCycleError,
     build_revision_cycle_report,
     save_revision_cycle_report,
 )
+from .editing.revision_preview import render_timeline_revision_preview
 from .editing.revision_review import (
     RevisionSuggestionReviewError,
     review_draft_revision_suggestions,
@@ -3081,7 +3081,6 @@ if __name__ == "__main__":
     app()
 
 
-
 @app.command("report-revision-cycle")
 def report_revision_cycle(
     folder: Annotated[
@@ -3096,7 +3095,9 @@ def report_revision_cycle(
         ),
     ],
     critique: Annotated[Path, typer.Option("--critique", help="Rendered-draft critique JSON.")],
-    suggestions: Annotated[Path, typer.Option("--suggestions", help="Shot-level suggestions JSON.")],
+    suggestions: Annotated[
+        Path, typer.Option("--suggestions", help="Shot-level suggestions JSON.")
+    ],
     original_timeline: Annotated[
         Path, typer.Option("--original-timeline", help="Original approved timeline JSON.")
     ],

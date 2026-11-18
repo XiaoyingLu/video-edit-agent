@@ -37,9 +37,9 @@ def _artifacts(root: Path) -> dict[str, Path]:
     return paths
 
 
-def _build(root, paths, monkeypatch, timeline_review=None):
+def _build(root, paths, monkeypatch, timeline_review=None, *, valid_artifact=True):
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_cycle.validate_artifact", lambda *_: True
+        "travel_video_agent.editing.revision_cycle.validate_artifact", lambda *_: valid_artifact
     )
     return build_revision_cycle_report(
         root,
@@ -85,12 +85,9 @@ def test_revision_cycle_rejects_artifact_outside_project(tmp_path, monkeypatch):
 
 def test_revision_cycle_rejects_stale_or_untracked_artifact(tmp_path, monkeypatch):
     paths = _artifacts(tmp_path)
-    monkeypatch.setattr(
-        "travel_video_agent.editing.revision_cycle.validate_artifact", lambda *_: False
-    )
 
     with pytest.raises(RevisionCycleError, match="not a current tracked artifact"):
-        _build(tmp_path, paths, monkeypatch)
+        _build(tmp_path, paths, monkeypatch, valid_artifact=False)
 
 
 def test_revision_cycle_html_escapes_paths_and_summaries(tmp_path):
@@ -104,7 +101,7 @@ def test_revision_cycle_html_escapes_paths_and_summaries(tmp_path):
         artifacts=[
             RevisionCycleArtifact(
                 role="critique",
-                path='.video-agent/<script>.json',
+                path=".video-agent/<script>.json",
                 summary="<script>alert(1)</script>",
             )
         ],
@@ -154,12 +151,18 @@ def test_revision_cycle_cli_writes_report(tmp_path, monkeypatch):
         [
             "report-revision-cycle",
             str(tmp_path),
-            "--critique", str(paths["critique"]),
-            "--suggestions", str(paths["suggestions"]),
-            "--original-timeline", str(paths["original"]),
-            "--revised-timeline", str(paths["revised"]),
-            "--preview-manifest", str(paths["preview"]),
-            "--comparison", str(paths["comparison"]),
+            "--critique",
+            str(paths["critique"]),
+            "--suggestions",
+            str(paths["suggestions"]),
+            "--original-timeline",
+            str(paths["original"]),
+            "--revised-timeline",
+            str(paths["revised"]),
+            "--preview-manifest",
+            str(paths["preview"]),
+            "--comparison",
+            str(paths["comparison"]),
         ],
     )
 
