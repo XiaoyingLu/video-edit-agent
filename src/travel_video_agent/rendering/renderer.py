@@ -166,10 +166,11 @@ def _subtitle_force_style(
 
     alignment = {"bottom": 2, "center": 5, "top": 8}[position]
     if style_name == "classic":
+        margin = 0 if position == "center" else 48
         return (
             f"FontName=DejaVu Sans,FontSize={font_size},"
             f"PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,"
-            f"BorderStyle=1,Outline=2,Shadow=1,Alignment={alignment},MarginV=48"
+            f"BorderStyle=1,Outline=2,Shadow=1,Alignment={alignment},MarginV={margin}"
         )
 
     responsive_size = max(12, min(72, round(font_size * height / 1080)))
