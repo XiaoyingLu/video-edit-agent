@@ -81,7 +81,6 @@ def _artifacts(root):
                 summary="A mountain lake surrounded by peaks.",
                 dynamics={
                     "temporal_summary": "A hiker approaches the lake viewpoint.",
-                    "action_progression": ["The hiker approaches the viewpoint"],
                     "action_progression": ["A hiker approaches the viewpoint"],
                     "subject_motion": "approaching",
                     "camera_motion": "tracking",
