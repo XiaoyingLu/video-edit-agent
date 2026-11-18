@@ -29,6 +29,11 @@ from .editing.embeddings import EmbeddingModelError
 from .editing.footage_mapping import suggest_storyboard_footage
 from .editing.footage_review import review_storyboard_footage
 from .editing.planning_generation import VideoPlanningError
+from .editing.revision_suggestions import (
+    RevisionSuggestionError,
+    build_draft_revision_suggestions,
+    save_draft_revision_suggestions,
+)
 from .editing.revisions import (
     TimelineIntervalEdit,
     compare_timeline_files,
@@ -1158,6 +1163,91 @@ def critique_draft(
     console.print(
         "[yellow]Findings are evidence-based review prompts, not aesthetic judgments. "
         "No timeline, rendered video, or source media was modified.[/yellow]"
+    )
+
+
+@app.command("suggest-revisions")
+def suggest_revisions(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder containing a critique report and approved timeline.",
+        ),
+    ],
+    critique: Annotated[
+        Path | None,
+        typer.Option("--critique", help="Critique JSON path (default: draft-critique.json)."),
+    ] = None,
+    timeline: Annotated[
+        Path | None,
+        typer.Option("--timeline", help="Approved timeline JSON path."),
+    ] = None,
+    minimum_confidence: Annotated[
+        float,
+        typer.Option(
+            "--minimum-confidence",
+            min=0.0,
+            max=1.0,
+            help="Minimum semantic-review confidence for story suggestions.",
+        ),
+    ] = 0.55,
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help="Suggestion JSON path (default: draft-revision-suggestions.json).",
+        ),
+    ] = None,
+) -> None:
+    """Turn critique evidence into shot-level suggestions for human review."""
+    try:
+        report = build_draft_revision_suggestions(
+            folder,
+            critique_path=critique,
+            timeline_path=timeline,
+            minimum_semantic_confidence=minimum_confidence,
+        )
+        destination = save_draft_revision_suggestions(folder, report, output)
+    except (
+        FileNotFoundError,
+        NotADirectoryError,
+        FileExistsError,
+        ValueError,
+        OSError,
+        RevisionSuggestionError,
+    ) as exc:
+        console.print(f"[red]Revision suggestions failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    table = Table(title="Shot-level Revision Suggestions — Human Review Required")
+    table.add_column("Priority")
+    table.add_column("Shot")
+    table.add_column("Category")
+    table.add_column("Action")
+    table.add_column("Recommendation")
+    for item in report.suggestions:
+        table.add_row(
+            item.priority,
+            item.clip_id,
+            item.category,
+            item.action,
+            item.recommendation,
+        )
+    if not report.suggestions:
+        console.print("No shot-level revision suggestions met the configured evidence thresholds.")
+    else:
+        console.print(table)
+    console.print(f"Suggestions saved to [green]{destination}[/green]")
+    console.print(
+        "[yellow]Suggestions are advisory. No source intervals, footage assignments, "
+        "timeline approvals, or rendered videos were changed. Review each recommendation "
+        "and use the existing revision workflow for any explicit trim.[/yellow]"
     )
 
 
