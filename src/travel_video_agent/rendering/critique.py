@@ -360,6 +360,8 @@ def critique_rendered_draft(
         raise ValueError("sample_count must be between 1 and 24")
     if not 1 <= semantic_samples <= 12:
         raise ValueError("semantic_samples must be between 1 and 12")
+    if vision_model is not None and not vision_model.strip():
+        raise ValueError("vision_model cannot be empty")
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise NotADirectoryError(f"Project folder does not exist: {root}")
@@ -621,10 +623,19 @@ def critique_rendered_draft(
             CritiqueFinding(
                 severity="info",
                 category="render",
-                message="No threshold-based issues were detected in this pass.",
+                message=(
+                    "No threshold-based or semantic issues were detected."
+                    if semantic
+                    else "No threshold-based issues were detected in this pass."
+                ),
                 evidence=(
                     f"Checked duration, aspect ratio, approved timeline consistency, "
                     f"{len(frames)} sampled frames, and audio stream levels."
+                    + (
+                        f" Semantic review compared {len(semantic_reviews)} storyboard shots."
+                        if semantic
+                        else ""
+                    )
                 ),
             )
         )
