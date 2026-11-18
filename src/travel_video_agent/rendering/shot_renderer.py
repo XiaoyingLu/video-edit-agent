@@ -276,7 +276,11 @@ def render_approved_shot_timeline(
     )
     if destination.suffix.lower() != ".mp4":
         raise RenderError("render output must use the .mp4 extension")
-    if destination in {timeline_file, root / ".video-agent" / "optimized-timeline.json", title_file}:
+    if destination in {
+        timeline_file,
+        root / ".video-agent" / "optimized-timeline.json",
+        title_file,
+    }:
         raise RenderError("render output cannot overwrite the optimized timeline")
     if not dry_run:
         destination.parent.mkdir(parents=True, exist_ok=True)
