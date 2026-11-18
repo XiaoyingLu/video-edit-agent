@@ -56,7 +56,9 @@ def create_video_project_plan(
         creative_priorities=editing_plan.priorities,
         assumptions=editing_plan.assumptions,
     )
-    generated = generate_video_plan_content(prompt, brief.model_dump(mode="json"), model=planner_model)
+    generated = generate_video_plan_content(
+        prompt, brief.model_dump(mode="json"), model=planner_model
+    )
     project_plan = VideoProjectPlan(
         project_path=str(root),
         brief=brief,
@@ -71,7 +73,9 @@ def create_video_project_plan(
         json.dumps(editing_plan.model_dump(mode="json"), indent=2) + "\n",
         encoding="utf-8",
     )
-    register_artifact(root, editing_path, config={"prompt": prompt, "planner_model": planner_model})
+    register_artifact(
+        root, editing_path, config={"prompt": prompt, "planner_model": planner_model}
+    )
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(
