@@ -1887,9 +1887,7 @@ def review_music_sync(
             timeline_file.read_text(encoding="utf-8")
         )
         clips = {clip.clip_id: clip for clip in timeline_model.clips}
-        known_ids = {
-            f"{item.previous_clip_id}->{item.next_clip_id}" for item in report.boundaries
-        }
+        known_ids = {f"{item.previous_clip_id}->{item.next_clip_id}" for item in report.boundaries}
         unknown = (accept_ids | reject_ids) - known_ids
         if unknown:
             raise ValueError(f"unknown music sync boundary: {sorted(unknown)[0]}")
@@ -1905,9 +1903,7 @@ def review_music_sync(
                     raise ValueError(
                         f"music sync boundary '{boundary_id}' references a missing timeline clip"
                     )
-                console.print(
-                    f"\n[bold cyan]{boundary_id}[/bold cyan] — {item.transition}"
-                )
+                console.print(f"\n[bold cyan]{boundary_id}[/bold cyan] — {item.transition}")
                 suggested = (
                     f"{item.recommended_boundary_seconds:.3f}s"
                     if item.recommended_boundary_seconds is not None
@@ -1926,11 +1922,7 @@ def review_music_sync(
                     f"{following.source_start_seconds:.2f}–{following.source_end_seconds:.2f}s"
                 )
                 while True:
-                    choice = (
-                        console.input("Decision [a]ccept / [r]eject / [s]kip: ")
-                        .strip()
-                        .lower()
-                    )
+                    choice = console.input("Decision [a]ccept / [r]eject / [s]kip: ").strip().lower()
                     if choice in {"a", "accept"}:
                         accept_ids.add(boundary_id)
                         break
