@@ -114,7 +114,9 @@ def review_draft_revision_suggestions(
     if not timeline.timeline_approved or any(
         clip.decision != "approved" for clip in timeline.clips
     ):
-        raise RevisionSuggestionReviewError("Only a fully approved source timeline can be reviewed")
+        raise RevisionSuggestionReviewError(
+            "Only a fully approved source timeline can be reviewed"
+        )
 
     decisions: list[RevisionSuggestionDecision] = []
     accepted_footage: list[str] = []
