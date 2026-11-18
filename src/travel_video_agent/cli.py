@@ -1313,9 +1313,9 @@ def review_revision_suggestions(
                 console.print(f"Evidence: {item['evidence']}")
                 console.print(f"Recommendation: {item['recommendation']}")
                 while True:
-                    choice = console.input(
-                        "Decision [a]ccept / [r]eject / [s]kip: "
-                    ).strip().lower()
+                    choice = (
+                        console.input("Decision [a]ccept / [r]eject / [s]kip: ").strip().lower()
+                    )
                     if choice in {"a", "accept"}:
                         accepted.add(item["suggestion_id"])
                         break
@@ -1361,9 +1361,7 @@ def review_revision_suggestions(
         for raw in set_interval or []:
             parts = raw.split(":")
             if len(parts) != 3:
-                raise RevisionSuggestionReviewError(
-                    "--set-interval must use clip_id:start:end"
-                )
+                raise RevisionSuggestionReviewError("--set-interval must use clip_id:start:end")
             edits.append(
                 TimelineIntervalEdit(
                     clip_id=parts[0],
