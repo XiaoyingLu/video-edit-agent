@@ -1026,7 +1026,6 @@ def render_revision_preview(
         OSError,
         ValueError,
         RenderError,
-        RevisionPreviewError,
     ) as exc:
         console.print(f"[red]Revision preview failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
