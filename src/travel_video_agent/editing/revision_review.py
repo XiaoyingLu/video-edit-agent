@@ -186,9 +186,7 @@ def review_draft_revision_suggestions(
                 "short shots require a separate footage-selection decision"
             )
 
-    revision = (
-        create_timeline_revision(root, edits, timeline_path=timeline_file) if edits else None
-    )
+    revision = create_timeline_revision(root, edits, timeline_path=timeline_file) if edits else None
     result = RevisionSuggestionReviewResult(
         suggestions_path=suggestion_file.relative_to(root).as_posix(),
         source_timeline_path=timeline_file.relative_to(root).as_posix(),
