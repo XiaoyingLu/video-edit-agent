@@ -26,6 +26,7 @@ from .editing import (
     save_edit_proposal,
 )
 from .editing.footage_mapping import suggest_storyboard_footage
+from .editing.footage_review import review_storyboard_footage
 from .editing.planning_generation import VideoPlanningError
 from .editing.workflow import create_video_draft
 from .highlights import find_highlights_folder
@@ -1207,6 +1208,63 @@ def suggest_footage(
         "[yellow]Candidates are ranked suggestions only. No footage was assigned, "
         "approved, trimmed, or rendered.[/yellow]"
     )
+
+
+@app.command("review-footage")
+def review_footage(
+    folder: Annotated[
+        Path,
+        typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True),
+    ],
+    select: Annotated[
+        list[str] | None,
+        typer.Option("--select", help="Approve a candidate as SHOT_ID=CANDIDATE_NUMBER; repeatable."),
+    ] = None,
+    reject: Annotated[
+        list[str] | None,
+        typer.Option("--reject", help="Leave a shot unassigned; repeatable."),
+    ] = None,
+    plan: Annotated[Path | None, typer.Option("--plan", help="Project plan JSON path.")] = None,
+    suggestions: Annotated[
+        Path | None, typer.Option("--suggestions", help="Footage suggestions JSON path.")
+    ] = None,
+) -> None:
+    """Review ranked footage candidates and explicitly approve shot assignments."""
+    selections = {}
+    try:
+        for item in select or []:
+            shot_id, separator, number = item.partition("=")
+            if not separator or not shot_id.strip():
+                raise ValueError("each --select value must use SHOT_ID=CANDIDATE_NUMBER")
+            if shot_id.strip() in selections:
+                raise ValueError(f"shot '{shot_id.strip()}' was selected more than once")
+            selections[shot_id.strip()] = int(number)
+        plan_result, destination = review_storyboard_footage(
+            folder,
+            selections=selections,
+            rejected_shot_ids=set(reject or []),
+            plan_path=plan,
+            suggestions_path=suggestions,
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[red]Footage review failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    assigned = sum(
+        shot.assignment_status != "unassigned"
+        for scene in plan_result.scenes
+        for shot in scene.shots
+    )
+    total = sum(len(scene.shots) for scene in plan_result.scenes)
+    console.print(
+        f"Saved [green]{destination}[/green] — {assigned}/{total} shot(s) assigned; "
+        f"stage: [cyan]{plan_result.planning_stage}[/cyan]."
+    )
+    if plan_result.planning_stage == "footage_mapped":
+        console.print("[bold green]Every storyboard shot has an explicitly approved footage match.[/bold green]")
+    else:
+        console.print("[yellow]Unassigned shots remain in storyboard_ready; review more candidates to complete mapping.[/yellow]")
+    console.print("[yellow]This does not approve the overall creative plan or render video.[/yellow]")
 
 
 @app.command("draft-edit")
