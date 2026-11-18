@@ -640,12 +640,13 @@ docker compose run --rm video-agent review-timeline-visual ./travel-test
 ```
 
 Open `.video-agent/timeline-visual-review/review.html` in a browser. Choose approve, reject,
-or skip for each shot, then use **Export review decisions (.json)**. Apply that exported file
-through the existing timeline review gate:
+or set pending for each shot, then use **Export review decisions (.json)**. Move the downloaded
+JSON file into the project folder (for example, as
+`.video-agent/timeline-review-decisions.json`) and apply it through the existing review gate:
 
 ```bash
 docker compose run --rm video-agent review-timeline ./travel-test \
-  --decisions-file ./travel-test/timeline-review-decisions.json
+  --decisions-file ./.video-agent/timeline-review-decisions.json
 ```
 
 The exported decisions are bound to the exact timeline file hash and rejected if the timeline
