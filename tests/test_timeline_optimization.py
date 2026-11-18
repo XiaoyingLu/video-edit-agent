@@ -421,7 +421,6 @@ def test_music_analysis_rejects_foreign_project(tmp_path):
         build_draft_timeline(tmp_path, music_analysis_path=analysis_path)
 
 
-
 def test_optimize_timeline_cannot_overwrite_music_analysis(tmp_path):
     from travel_video_agent.music.schemas import MusicAnalysis
 
