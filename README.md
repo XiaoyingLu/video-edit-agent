@@ -454,3 +454,23 @@ Use the primary line for a place or person name and the optional secondary line 
 docker compose run --rm video-agent review-title-overlays ./travel-test --approve lake-louise-location
 docker compose run --rm video-agent render-draft ./travel-test --title-overlays ./travel-test/.video-agent/title-overlays.json --dry-run
 ```
+
+
+### Subtitle presentation presets
+
+Burn captions into a rendered timeline with a fixed appearance preset:
+
+```bash
+docker compose run --rm video-agent render ./travel-test --burn-subtitles --subtitle-style cinematic
+docker compose run --rm video-agent render ./travel-test --burn-subtitles --subtitle-style boxed --subtitle-position bottom
+docker compose run --rm video-agent render ./travel-test --subtitle-file ./travel-test/captions.srt --subtitle-style minimal --dry-run
+```
+
+Available styles are:
+
+- `classic`: the existing white text with dark outline and shadow; this remains the default and preserves its previous sizing and placement.
+- `cinematic`: bold white captions with a stronger outline and generous safe-area margin.
+- `boxed`: white captions on a translucent dark panel.
+- `minimal`: a lighter outline and shadow for a restrained look.
+
+For non-classic presets, font size and vertical margin scale with output height, so portrait exports receive larger captions and proportionate bottom clearance. `--subtitle-font-size` remains the 1080p reference size (12–72); `--subtitle-position` supports bottom, center, or top. Subtitle cue timestamps and text are unchanged by presentation styling. The renderer uses only built-in presets and does not accept arbitrary ASS/FFmpeg style strings.
