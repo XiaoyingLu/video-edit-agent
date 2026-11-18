@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
+from rich.text import Text
 from typer.testing import CliRunner
 
 from travel_video_agent.cli import app
@@ -235,7 +236,7 @@ def test_critique_rejects_invalid_sample_count(tmp_path):
 
 @pytest.mark.parametrize(
     ("value", "expected"),
-    [("30/1", 30), ("30000/1001", pytest.approx(29.97)), ("0/0", None), ("N/A", None)],
+    [("30/1", 30), ("30000/1001", pytest.approx(30000 / 1001)), ("0/0", None), ("N/A", None)],
 )
 def test_parse_frame_rate(value, expected):
     assert _parse_frame_rate(value) == expected
@@ -291,5 +292,6 @@ def test_critique_cli_writes_review_only_report(tmp_path, monkeypatch):
 def test_critique_cli_help_documents_sample_limit():
     result = runner.invoke(app, ["critique-draft", "--help"])
     assert result.exit_code == 0
-    assert "--samples" in result.output
-    assert "--timeline" in result.output
+    help_text = Text.from_ansi(result.output).plain
+    assert "--samples" in help_text
+    assert "--timeline" in help_text
