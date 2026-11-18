@@ -39,8 +39,8 @@ class RevisionSuggestionReviewResult(BaseModel):
     accepted_footage_reviews: list[str] = Field(default_factory=list)
     accepted_timing_reviews: list[str] = Field(default_factory=list)
     timeline_revision_path: str | None = None
-    timeline_modified: Literal[False] = False
     source_timeline_modified: Literal[False] = False
+    timeline_revision_created: bool = False
     review_required: Literal[True] = True
 
 
@@ -170,6 +170,7 @@ def review_draft_revision_suggestions(
         accepted_footage_reviews=accepted_footage,
         accepted_timing_reviews=accepted_timing,
         timeline_revision_path=revision.revision_path if revision else None,
+        timeline_revision_created=revision is not None,
     )
 
     review_directory = root / ".video-agent" / "revision-reviews"
