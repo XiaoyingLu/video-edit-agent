@@ -509,3 +509,12 @@ def test_suggest_footage_command_help():
     help_text = " ".join(click.unstyle(result.stdout).split())
     assert "--max-candidates" in help_text
     assert "never assign footage automatically" in help_text
+
+
+
+def test_suggest_music_sync_command_help():
+    result = runner.invoke(app, ["suggest-music-sync", "--help"])
+    assert result.exit_code == 0
+    help_text = " ".join(click.unstyle(result.stdout).split())
+    assert "--music-analysis" in help_text
+    assert "--tolerance" in help_text
