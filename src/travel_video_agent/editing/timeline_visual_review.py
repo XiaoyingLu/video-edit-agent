@@ -1,8 +1,8 @@
 """Browser-based visual review for a proposed shot timeline."""
 
 import base64
-import html
 import hashlib
+import html
 import json
 import os
 import shutil
@@ -259,7 +259,8 @@ const report = {payload_json};
 document.getElementById("export").addEventListener("click", () => {{
   const decisions = {{}};
   for (const clip of report.clips) {{
-    const selected = document.querySelector('input[name="decision-' + clip.sequence_index + '"]:checked');
+    const selector = 'input[name="decision-' + clip.sequence_index + '"]:checked';
+    const selected = document.querySelector(selector);
     decisions[clip.clip_id] = selected ? selected.value : "pending";
   }}
   const output = {{schema_version:"1.0", timeline_path:report.timeline_path, decisions}};
@@ -290,7 +291,9 @@ def save_timeline_visual_review(
     try:
         base.relative_to(root)
     except ValueError as exc:
-        raise TimelineVisualReviewError("Review output must stay inside the project folder") from exc
+        raise TimelineVisualReviewError(
+            "Review output must stay inside the project folder"
+        ) from exc
     json_file, html_file = base.with_suffix(".json"), base.with_suffix(".html")
     if json_file.exists() or html_file.exists():
         raise FileExistsError(f"Refusing to overwrite visual timeline review: {base}")
