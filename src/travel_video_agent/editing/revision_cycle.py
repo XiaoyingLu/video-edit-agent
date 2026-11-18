@@ -2,6 +2,7 @@
 
 import html
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -126,14 +127,20 @@ def build_revision_cycle_report(
     return RevisionCycleReport(project_path=str(root), artifacts=artifacts)
 
 
-def render_revision_cycle_html(report: RevisionCycleReport) -> str:
+def render_revision_cycle_html(
+    report: RevisionCycleReport, *, report_path: Path | None = None
+) -> str:
     """Render a self-contained HTML index with links to the original evidence."""
     rows = []
     for artifact in report.artifacts:
-        path = html.escape(artifact.path, quote=True)
+        root = Path(report.project_path)
+        html_path = report_path or root / ".video-agent" / "revision-cycles" / "cycle-001.html"
+        target = root / artifact.path
+        relative_link = Path(os.path.relpath(target, html_path.parent)).as_posix()
+        path = html.escape(relative_link, quote=True)
         rows.append(
             f'<tr><th>{html.escape(artifact.role)}</th>'
-            f'<td><a href="{path}">{path}</a></td>'
+            f'<td><a href="{path}">{html.escape(artifact.path)}</a></td>'
             f'<td>{html.escape(artifact.summary)}</td></tr>'
         )
     return f"""<!doctype html>
@@ -176,7 +183,9 @@ def save_revision_cycle_report(
         raise FileExistsError(f"Revision-cycle report already exists: {base}")
     json_file.parent.mkdir(parents=True, exist_ok=True)
     json_file.write_text(report.model_dump_json(indent=2) + "\n", encoding="utf-8")
-    html_file.write_text(render_revision_cycle_html(report), encoding="utf-8")
+    html_file.write_text(
+        render_revision_cycle_html(report, report_path=html_file), encoding="utf-8"
+    )
     dependencies = [root / item.path for item in report.artifacts]
     register_artifact(root, json_file, dependencies=dependencies)
     register_artifact(root, html_file, dependencies=[json_file, *dependencies])
