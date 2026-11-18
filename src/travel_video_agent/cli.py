@@ -49,6 +49,7 @@ from .rendering.title_overlays import (
     load_title_overlays,
     review_title_overlays,
     save_title_overlays,
+    suggest_narrative_title_sequences,
 )
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
@@ -812,6 +813,58 @@ def init_title_overlays(
     console.print("Add overlay entries to the JSON, then review them with review-title-overlays.")
 
 
+@app.command("suggest-title-sequences")
+def suggest_title_sequences(
+    folder: Annotated[
+        Path,
+        typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True),
+    ],
+    timeline: Annotated[
+        Path | None,
+        typer.Option("--timeline", help="Approved optimized timeline JSON."),
+    ] = None,
+    plan: Annotated[
+        Path | None,
+        typer.Option("--plan", help="Creative video project plan JSON."),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", help="Output title overlay JSON path."),
+    ] = None,
+) -> None:
+    """Suggest story-driven opening and closing titles for human review."""
+    try:
+        document, destination = suggest_narrative_title_sequences(
+            folder,
+            timeline_path=timeline,
+            plan_path=plan,
+            output_path=output,
+        )
+    except (FileNotFoundError, FileExistsError, ValueError) as exc:
+        console.print(f"[red]Title sequence suggestion failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    table = Table(title="Suggested Narrative Title Sequences")
+    table.add_column("ID", style="cyan")
+    table.add_column("Role")
+    table.add_column("Text")
+    table.add_column("Time", justify="right")
+    table.add_column("Animation")
+    table.add_column("Decision")
+    for item in document.overlays:
+        table.add_row(
+            item.overlay_id,
+            item.sequence_role,
+            item.text,
+            f"{item.start_seconds:.2f}–{item.end_seconds:.2f}s",
+            item.animation,
+            item.decision,
+        )
+    console.print(table)
+    console.print(f"Review suggestions in [green]{destination}[/green]")
+    console.print("Nothing is approved automatically; use review-title-overlays before rendering.")
+
+
 @app.command("review-title-overlays")
 def review_titles(
     folder: Annotated[
@@ -849,6 +902,7 @@ def review_titles(
     table.add_column("ID", style="cyan")
     table.add_column("Text")
     table.add_column("Time", justify="right")
+    table.add_column("Role")
     table.add_column("Placement")
     table.add_column("Animation")
     table.add_column("Decision")
@@ -857,6 +911,7 @@ def review_titles(
             item.overlay_id,
             item.text,
             f"{item.start_seconds:.2f}–{item.end_seconds:.2f}s",
+            item.sequence_role,
             item.placement,
             item.animation,
             item.decision,
