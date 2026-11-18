@@ -254,7 +254,11 @@ def test_create_video_project_plan_uses_music_sections_and_tracks_dependency(
         music_analysis_path=analysis_path,
     )
 
-    assert [item["energy"] for item in captured["sections"]] == ["low", "high", "medium"]
+    assert [item["energy"] for item in captured["sections"]] == [
+        "low",
+        "high",
+        "medium",
+    ]
     assert plan.source_music_analysis == ".video-agent/music-analysis.json"
     assert [scene.music_energy for scene in plan.scenes] == ["low", "medium"]
     assert plan.scenes[0].music_section_start_seconds == 0
