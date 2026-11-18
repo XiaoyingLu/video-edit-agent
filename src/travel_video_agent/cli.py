@@ -25,6 +25,7 @@ from .editing import (
     save_draft_timeline,
     save_edit_proposal,
 )
+from .editing.embeddings import EmbeddingModelError
 from .editing.footage_mapping import suggest_storyboard_footage
 from .editing.footage_review import review_storyboard_footage
 from .editing.planning_generation import VideoPlanningError
@@ -1192,6 +1193,16 @@ def suggest_footage(
             help="Candidates to show per storyboard shot.",
         ),
     ] = 3,
+    embedding_model: Annotated[
+        str | None,
+        typer.Option(
+            "--embedding-model",
+            help=(
+                "Optional Ollama embedding model for hybrid semantic ranking "
+                "(e.g. nomic-embed-text)."
+            ),
+        ),
+    ] = os.getenv("FOOTAGE_EMBEDDING_MODEL"),
 ) -> None:
     """Rank analyzed source scenes for storyboard shots; never assign footage automatically."""
     try:
@@ -1200,8 +1211,9 @@ def suggest_footage(
             plan_path=plan,
             understanding_path=understanding,
             max_candidates_per_shot=max_candidates,
+            embedding_model=embedding_model,
         )
-    except (FileNotFoundError, ValueError) as exc:
+    except (FileNotFoundError, ValueError, EmbeddingModelError) as exc:
         console.print(f"[red]Footage suggestion failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
@@ -1215,7 +1227,10 @@ def suggest_footage(
         folder,
         destination,
         dependencies=(report.source_plan, report.source_understanding),
-        config={"max_candidates_per_shot": max_candidates},
+        config={
+            "max_candidates_per_shot": max_candidates,
+            "embedding_model": embedding_model,
+        },
     )
 
     table = Table(title="Storyboard Footage Suggestions — Human Review Required")
@@ -1223,9 +1238,11 @@ def suggest_footage(
     table.add_column("Candidate footage")
     table.add_column("Source interval")
     table.add_column("Score", justify="right")
+    table.add_column("Semantic", justify="right")
+    table.add_column("Lexical", justify="right")
     for item in report.suggestions:
         if not item.candidates:
-            table.add_row(item.shot_id, "No analyzed scene candidates", "—", "—")
+            table.add_row(item.shot_id, "No analyzed scene candidates", "—", "—", "—", "—")
             continue
         for index, candidate in enumerate(item.candidates, start=1):
             table.add_row(
@@ -1233,8 +1250,17 @@ def suggest_footage(
                 candidate.video_path,
                 f"{candidate.source_start_seconds:.2f}–{candidate.source_end_seconds:.2f}s",
                 f"{candidate.score:.1f}",
+                (
+                    f"{candidate.semantic_similarity:.2f}"
+                    if candidate.semantic_similarity is not None
+                    else "—"
+                ),
+                f"{candidate.lexical_score:.1f}",
             )
     console.print(table)
+    console.print(f"Matching method: {report.matching_method}")
+    if report.embedding_model:
+        console.print(f"Embedding model: {report.embedding_model}")
     console.print(
         f"Suggested {report.candidate_count} candidate(s) for "
         f"{report.matched_shot_count}/{len(report.suggestions)} storyboard shot(s)."

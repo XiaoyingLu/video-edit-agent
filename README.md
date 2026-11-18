@@ -341,6 +341,15 @@ After generating a creative storyboard and analyzing the source videos, rank can
 docker compose run --rm video-agent suggest-footage ./travel-test
 ```
 
+The default matcher uses explainable lexical overlap plus shot-scale and editorial-role evidence. For stronger semantic retrieval, install a local Ollama embedding model and opt in:
+
+```bash
+docker compose exec ollama ollama pull nomic-embed-text
+docker compose run --rm video-agent suggest-footage ./travel-test --embedding-model nomic-embed-text
+```
+
+Hybrid ranking combines embedding similarity with lexical coverage and visual-role/shot-scale matches. The report records the model, semantic similarity, lexical score, and matching method for each candidate. Embeddings run locally through Ollama; without `--embedding-model`, the existing lexical matcher is used. Matches remain suggestions only and still require explicit human review.
+
 Inspect `.video-agent/footage-suggestions.json`, then explicitly approve candidate numbers per shot (candidate numbers are 1-based):
 
 ```bash
