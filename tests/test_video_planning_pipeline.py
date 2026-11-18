@@ -147,9 +147,9 @@ def test_normalize_storyboard_ids_repairs_duplicate_model_ids():
             "scene_id": content.scenes[0].scene_id,
             "sequence_index": 1,
             "shots": [
-                content.scenes[1].shots[0].model_copy(
-                    update={"shot_id": content.scenes[0].shots[0].shot_id}
-                )
+                content.scenes[1]
+                .shots[0]
+                .model_copy(update={"shot_id": content.scenes[0].shots[0].shot_id})
             ],
         }
     )
