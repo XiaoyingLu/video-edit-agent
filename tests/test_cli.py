@@ -525,3 +525,167 @@ def test_create_plan_command_exposes_music_analysis_option():
     assert result.exit_code == 0
     help_text = " ".join(click.unstyle(result.output).split())
     assert "--music-analysis" in help_text
+
+
+def _music_sync_cli_inputs(tmp_path: Path) -> tuple[Path, Path]:
+    from travel_video_agent.music.sync import MusicSyncBoundary, MusicSyncSuggestions
+
+    artifacts = tmp_path / ".video-agent"
+    artifacts.mkdir(exist_ok=True)
+    timeline = artifacts / "optimized-timeline.json"
+    timeline.write_text(
+        json.dumps(
+            {
+                "clips": [
+                    {
+                        "clip_id": "shot-001",
+                        "video_path": "a.mp4",
+                        "source_start_seconds": 1.0,
+                        "source_end_seconds": 5.0,
+                    },
+                    {
+                        "clip_id": "shot-002",
+                        "video_path": "b.mp4",
+                        "source_start_seconds": 2.0,
+                        "source_end_seconds": 6.0,
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    suggestions = artifacts / "music-sync-suggestions.json"
+    report = MusicSyncSuggestions(
+        project_path=str(tmp_path.resolve()),
+        timeline_path=timeline.relative_to(tmp_path).as_posix(),
+        music_analysis_path=".video-agent/music-analysis.json",
+        music_path=str(tmp_path / "track.mp3"),
+        beat_confidence=0.9,
+        tolerance_seconds=0.18,
+        boundary_count=1,
+        aligned_boundary_count=1,
+        boundaries=[
+            MusicSyncBoundary(
+                previous_clip_id="shot-001",
+                next_clip_id="shot-002",
+                boundary_seconds=4.0,
+                transition="cut",
+                transition_duration_seconds=0,
+                recommended_anchor="beat",
+                recommended_boundary_seconds=4.2,
+                adjustment_seconds=0.2,
+            )
+        ],
+    )
+    suggestions.write_text(report.model_dump_json(), encoding="utf-8")
+    return timeline, suggestions
+
+
+def test_review_music_sync_command_help() -> None:
+    result = runner.invoke(app, ["review-music-sync", "--help"])
+    assert result.exit_code == 0, result.output
+    help_text = " ".join(click.unstyle(result.output).split())
+    for option in ("--accept", "--reject", "--timeline", "--suggestions", "--minimum-clip-duration"):
+        assert option in help_text
+
+
+def test_review_music_sync_command_accepts_and_persists_selected_boundary(
+    tmp_path: Path, monkeypatch
+) -> None:
+    from travel_video_agent import cli
+    from travel_video_agent.music.refinement import (
+        MusicSyncReviewDecision,
+        MusicSyncReviewResult,
+    )
+
+    _music_sync_cli_inputs(tmp_path)
+    captured = {}
+
+    def fake_review(folder, **kwargs):
+        captured.update(kwargs)
+        return MusicSyncReviewResult(
+            source_timeline_path=".video-agent/optimized-timeline.json",
+            suggestions_path=".video-agent/music-sync-suggestions.json",
+            revision_path=".video-agent/music-sync-revisions/revision-001.json",
+            decisions=[
+                MusicSyncReviewDecision(
+                    boundary_id="shot-001->shot-002", status="accepted"
+                )
+            ],
+        )
+
+    monkeypatch.setattr(cli, "apply_music_sync_review", fake_review)
+    result = runner.invoke(
+        app, ["review-music-sync", str(tmp_path), "--accept", "shot-001->shot-002"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert captured["accept_ids"] == {"shot-001->shot-002"}
+    assert captured["reject_ids"] == set()
+    assert "review-timeline" in result.output
+    assert "No video was rendered" in result.output
+
+
+def test_review_music_sync_command_rejects_overlapping_accept_and_reject_ids(
+    tmp_path: Path, monkeypatch
+) -> None:
+    from travel_video_agent import cli
+
+    called = False
+
+    def fake_review(*args, **kwargs):
+        nonlocal called
+        called = True
+
+    monkeypatch.setattr(cli, "apply_music_sync_review", fake_review)
+    result = runner.invoke(
+        app,
+        [
+            "review-music-sync",
+            str(tmp_path),
+            "--accept",
+            "shot-001->shot-002",
+            "--reject",
+            "shot-001->shot-002",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert called is False
+    assert "both accepted and rejected" in result.output
+
+
+def test_review_music_sync_command_interactively_prompts_for_each_pending_boundary(
+    tmp_path: Path, monkeypatch
+) -> None:
+    from travel_video_agent import cli
+    from travel_video_agent.music.refinement import (
+        MusicSyncReviewDecision,
+        MusicSyncReviewResult,
+    )
+
+    _music_sync_cli_inputs(tmp_path)
+    captured = {}
+
+    def fake_review(folder, **kwargs):
+        captured.update(kwargs)
+        return MusicSyncReviewResult(
+            source_timeline_path=".video-agent/optimized-timeline.json",
+            suggestions_path=".video-agent/music-sync-suggestions.json",
+            revision_path=".video-agent/music-sync-revisions/revision-001.json",
+            decisions=[
+                MusicSyncReviewDecision(
+                    boundary_id="shot-001->shot-002", status="accepted"
+                )
+            ],
+        )
+
+    monkeypatch.setattr(cli, "apply_music_sync_review", fake_review)
+    result = runner.invoke(app, ["review-music-sync", str(tmp_path)], input="a\\n")
+
+    assert result.exit_code == 0, result.output
+    assert captured["accept_ids"] == {"shot-001->shot-002"}
+    assert captured["reject_ids"] == set()
+    assert "Current boundary: 4.000s" in result.output
+    assert "Suggested: 4.200s" in result.output
+
