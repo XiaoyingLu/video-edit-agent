@@ -52,6 +52,14 @@ def _resolve_output_dimensions(
     return short_side, short_side
 
 
+def _escape_drawtext(value: str) -> str:
+    """Escape user text for a quoted FFmpeg filter value with expansion disabled."""
+    escaped = value.replace("\\", "\\\\")
+    for character in (":", "'", ",", ";", "[", "]"):
+        escaped = escaped.replace(character, "\\" + character)
+    return escaped
+
+
 def _build_shot_render_command(
     ffmpeg: str,
     clips: list[tuple[Path, float, float, bool, str, float]],
@@ -140,15 +148,7 @@ def _build_shot_render_command(
     for index, overlay in enumerate(title_overlays or []):
         if overlay.decision != "approved":
             continue
-        escaped_text = (
-            overlay.text.replace("\\\\", "\\\\\\\\")
-            .replace("'", "\\\\'")
-            .replace(":", "\\\\:")
-            .replace(",", "\\\\,")
-            .replace(";", "\\\\;")
-            .replace("[", "\\\\[")
-            .replace("]", "\\\\]")
-        )
+        escaped_text = _escape_drawtext(overlay.text)
         font_size = max(32, min(96, int(width * 0.045)))
         if overlay.style == "minimal":
             font_size = max(28, int(width * 0.035))
