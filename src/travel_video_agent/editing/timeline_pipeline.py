@@ -113,8 +113,38 @@ def _has_cinematic_metadata(clips: list) -> bool:
 def _progression_terms(clip) -> set[str]:
     """Extract meaningful words from temporal action evidence for deterministic comparison."""
     text = " ".join([clip.temporal_summary, *clip.action_progression]).lower()
-    ignored = {"about", "after", "along", "around", "from", "into", "onto", "over", "then", "the", "through", "toward", "while", "with"}
+    ignored = {
+        "about",
+        "after",
+        "along",
+        "around",
+        "from",
+        "into",
+        "onto",
+        "over",
+        "then",
+        "the",
+        "through",
+        "toward",
+        "while",
+        "with",
+    }
     return {word for word in re.findall(r"[a-z0-9]+", text) if len(word) > 2 and word not in ignored}
+
+
+def _has_distinct_action_beat(previous, candidate) -> bool:
+    """Check whether a known subject continues with meaningfully different action evidence."""
+    if not (
+        previous.primary_subject
+        and previous.primary_subject.casefold() == candidate.primary_subject.casefold()
+    ):
+        return False
+    previous_terms = _progression_terms(previous)
+    candidate_terms = _progression_terms(candidate)
+    if not previous_terms or not candidate_terms:
+        return False
+    overlap = len(previous_terms & candidate_terms) / len(previous_terms | candidate_terms)
+    return overlap < 0.7
 
 
 def _narrative_transition_score(previous, candidate) -> int:
@@ -128,8 +158,7 @@ def _narrative_transition_score(previous, candidate) -> int:
     previous_terms = _progression_terms(previous)
     candidate_terms = _progression_terms(candidate)
     if same_subject and previous_terms and candidate_terms:
-        overlap = len(previous_terms & candidate_terms) / len(previous_terms | candidate_terms)
-        score += 14 if overlap < 0.7 else -10
+        score += 14 if _has_distinct_action_beat(previous, candidate) else -10
     if (
         previous.setting
         and candidate.setting
@@ -240,16 +269,7 @@ def _sequence_reason(clip, previous, index: int, count: int) -> str:
         return "Opens with the strongest available shot; no clear establishing shot was identified."
     if index == count and clip.visual_role in {"scenic_breath", "establishing"}:
         return "Closes on a scenic breathing shot to give the sequence a visual landing."
-    if (
-        previous
-        and previous.primary_subject
-        and previous.primary_subject.casefold() == clip.primary_subject.casefold()
-        and _progression_terms(previous)
-        and _progression_terms(clip)
-        and len(_progression_terms(previous) & _progression_terms(clip))
-        / len(_progression_terms(previous) | _progression_terms(clip))
-        < 0.7
-    ):
+    if previous and _has_distinct_action_beat(previous, clip):
         return (
             f"Continues the {clip.primary_subject} story with a distinct action beat: "
             f"{clip.temporal_summary or clip.action_progression[0]}."
