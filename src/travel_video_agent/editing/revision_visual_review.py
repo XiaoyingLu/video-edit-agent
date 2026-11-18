@@ -11,7 +11,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
-from ..rendering.critique import _run
+from ..rendering.critique import DraftCritiqueError, _run
 from .revisions import TimelineRevisionError, compare_timeline_files
 from .timeline_schemas import ProjectDraftTimeline
 
@@ -69,9 +69,10 @@ def _project_media(root: Path, value: str) -> Path:
 
 
 def _extract_frame(ffmpeg: str, video: Path, timestamp: float, destination: Path) -> str:
-    result = _run(
-        [
-            ffmpeg,
+    try:
+        result = _run(
+            [
+                ffmpeg,
             "-hide_banner",
             "-loglevel",
             "error",
@@ -88,9 +89,11 @@ def _extract_frame(ffmpeg: str, video: Path, timestamp: float, destination: Path
             "4",
             "-y",
             str(destination),
-        ],
-        timeout=60,
-    )
+            ],
+            timeout=60,
+        )
+    except DraftCritiqueError as exc:
+        raise TimelineRevisionVisualReviewError(str(exc)) from exc
     if result.returncode != 0 or not destination.is_file():
         raise TimelineRevisionVisualReviewError(
             f"Could not extract a frame from {video.name} at {timestamp:.2f}s: "
@@ -123,8 +126,8 @@ def build_timeline_revision_visual_review(
     after = ProjectDraftTimeline.model_validate_json(after_file.read_text(encoding="utf-8"))
     before_clips = {clip.clip_id: clip for clip in before.clips}
     after_clips = {clip.clip_id: clip for clip in after.clips}
-    ffmpeg = shutil.which("ffmpeg")
-    if ffmpeg is None:
+    ffmpeg = shutil.which("ffmpeg") if comparison.changes else None
+    if comparison.changes and ffmpeg is None:
         raise TimelineRevisionVisualReviewError(
             "ffmpeg must be installed and available on PATH"
         )
