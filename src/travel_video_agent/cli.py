@@ -2079,9 +2079,7 @@ def revise_timeline(
         for value in set_interval or []:
             parts = value.rsplit(":", maxsplit=2)
             if len(parts) != 3 or not parts[0]:
-                raise ValueError(
-                    f"invalid --set-interval '{value}'; expected CLIP_ID:START:END"
-                )
+                raise ValueError(f"invalid --set-interval '{value}'; expected CLIP_ID:START:END")
             edits.append(
                 TimelineIntervalEdit(
                     clip_id=parts[0],
@@ -2112,8 +2110,7 @@ def revise_timeline(
             )
     console.print(table)
     console.print(
-        f"Duration: {result.before_duration_seconds:.2f}s → "
-        f"{result.after_duration_seconds:.2f}s"
+        f"Duration: {result.before_duration_seconds:.2f}s → {result.after_duration_seconds:.2f}s"
     )
     console.print(f"Revision saved to [green]{folder.resolve() / result.revision_path}[/green]")
     console.print(
