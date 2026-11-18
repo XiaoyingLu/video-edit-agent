@@ -12,6 +12,19 @@ def test_vision_model_memory_estimates_and_override(monkeypatch):
     assert resources.required_vision_memory_gb("qwen2.5vl:7b") == 9.5
 
 
+def test_ollama_text_and_vision_model_memory_estimates(monkeypatch):
+    monkeypatch.delenv("OLLAMA_MIN_MEMORY_GB", raising=False)
+    monkeypatch.delenv("VIDEO_PLANNER_MIN_MEMORY_GB", raising=False)
+    assert resources.required_ollama_memory_gb("qwen2.5:1.5b") == 2.5
+    assert resources.required_ollama_memory_gb("qwen2.5:3b") == 4.0
+    assert resources.required_ollama_memory_gb("qwen2.5vl:3b") == 6.0
+
+    monkeypatch.setenv("VIDEO_PLANNER_MIN_MEMORY_GB", "2.0")
+    assert resources.required_ollama_memory_gb(
+        "qwen2.5:1.5b", "VIDEO_PLANNER_MIN_MEMORY_GB"
+    ) == 2.0
+
+
 def test_whisper_memory_estimates_and_override(monkeypatch):
     monkeypatch.delenv("WHISPER_MIN_MEMORY_GB", raising=False)
     monkeypatch.delenv("WHISPER_MIN_VRAM_GB", raising=False)
