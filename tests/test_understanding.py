@@ -82,6 +82,59 @@ def test_ollama_analyzer_parses_structured_response(monkeypatch, tmp_path: Path)
     assert result["confidence"] == 0.9
 
 
+def test_ollama_analyzer_compares_rendered_frame_to_storyboard(monkeypatch, tmp_path: Path):
+    frame = tmp_path / "rendered-frame.jpg"
+    frame.write_bytes(b"fake-image")
+    captured = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self):
+            assessment = {
+                "match": "partial",
+                "score": 0.62,
+                "confidence": 0.88,
+                "evidence": "The image shows a mountain lake, but no visible trail.",
+                "suggestion": "Check whether a hiking shot better supports the intended beat.",
+            }
+            return json.dumps({"message": {"content": json.dumps(assessment)}}).encode()
+
+    def fake_urlopen(request, timeout):
+        captured["payload"] = json.loads(request.data.decode("utf-8"))
+        return FakeResponse()
+
+    monkeypatch.setattr("travel_video_agent.understanding.visual_analyzer.urlopen", fake_urlopen)
+    analyzer = OllamaVisionAnalyzer(model="qwen2.5vl:3b")
+    result = analyzer.compare_frame_to_storyboard(
+        frame,
+        purpose="Show the journey into the mountains",
+        visual_description="A hiker following a trail toward a mountain lake",
+        primary_subject="hiker",
+        expected_role="action",
+        expected_scale="wide",
+    )
+
+    assert result["match"] == "partial"
+    assert result["score"] == 0.62
+    assert result["confidence"] == 0.88
+    assert captured["payload"]["format"]["type"] == "object"
+    assert set(captured["payload"]["format"]["required"]) == {
+        "match",
+        "score",
+        "confidence",
+        "evidence",
+        "suggestion",
+    }
+    prompt = captured["payload"]["messages"][0]["content"]
+    assert "A hiker following a trail toward a mountain lake" in prompt
+    assert "Expected editorial role: action" in prompt
+
+
 def test_understanding_pipeline_builds_timestamped_scenes(monkeypatch, tmp_path: Path) -> None:
     from travel_video_agent.understanding import pipeline
 
