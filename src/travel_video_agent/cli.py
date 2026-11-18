@@ -1148,7 +1148,12 @@ def suggest_footage(
     ] = None,
     max_candidates: Annotated[
         int,
-        typer.Option("--max-candidates", min=1, max=10, help="Candidates to show per storyboard shot."),
+        typer.Option(
+            "--max-candidates",
+            min=1,
+            max=10,
+            help="Candidates to show per storyboard shot.",
+        ),
     ] = 3,
 ) -> None:
     """Rank analyzed source scenes for storyboard shots; never assign footage automatically."""
