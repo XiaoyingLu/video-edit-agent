@@ -1901,7 +1901,7 @@ def review_music_sync(
                 previous = clips.get(item.previous_clip_id, {})
                 following = clips.get(item.next_clip_id, {})
                 console.print(
-                    f"\\n[bold cyan]{boundary_id}[/bold cyan] — {item.transition}"
+                    f"\n[bold cyan]{boundary_id}[/bold cyan] — {item.transition}"
                 )
                 console.print(
                     f"Current boundary: {item.boundary_seconds:.3f}s | "
