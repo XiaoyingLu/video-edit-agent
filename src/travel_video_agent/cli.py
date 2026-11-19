@@ -278,7 +278,7 @@ def understand(
         console.print(f"[red]Video understanding failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
-    destination = output or folder.resolve() / ".video-agent" / "understanding.json"
+    destination = output or project_root / ".video-agent" / "understanding.json"
     destination = destination.expanduser().resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(
