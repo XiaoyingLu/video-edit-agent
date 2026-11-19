@@ -26,6 +26,7 @@ class MusicTimelinePreview(BaseModel):
     timeline_path: str
     timeline_sha256: str
     music_analysis_path: str
+    suggestions_path: str = ".video-agent/music-sync-suggestions.json"
     music_path: str
     duration_seconds: float = Field(gt=0)
     bpm: float | None = None
@@ -99,6 +100,12 @@ def build_music_timeline_preview(
     ):
         raise MusicTimelinePreviewError("Music sync suggestions reference different music analysis")
     soundtrack = Path(music.music_path).expanduser().resolve()
+    try:
+        soundtrack.relative_to(root)
+    except ValueError as exc:
+        raise MusicTimelinePreviewError(
+            "Analyzed soundtrack must remain inside the project folder for browser preview"
+        ) from exc
     if not soundtrack.is_file() or soundtrack != Path(suggestions.music_path).resolve():
         raise MusicTimelinePreviewError(
             "Analyzed soundtrack is missing or does not match suggestions"
@@ -122,6 +129,7 @@ def build_music_timeline_preview(
         timeline_path=timeline_file.relative_to(root).as_posix(),
         timeline_sha256=hashlib.sha256(timeline_file.read_bytes()).hexdigest(),
         music_analysis_path=analysis_file.relative_to(root).as_posix(),
+        suggestions_path=suggestions_file.relative_to(root).as_posix(),
         music_path=str(soundtrack),
         duration_seconds=music.duration_seconds,
         bpm=music.bpm,
@@ -293,7 +301,11 @@ def save_music_timeline_preview(
     register_artifact(
         root,
         json_path,
-        dependencies=[root / report.timeline_path, root / report.music_analysis_path],
+        dependencies=[
+            root / report.timeline_path,
+            root / report.music_analysis_path,
+            root / report.suggestions_path,
+        ],
     )
     return json_path, html_path
 
