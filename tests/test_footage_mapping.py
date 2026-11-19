@@ -281,9 +281,7 @@ def test_suggest_storyboard_footage_boosts_chapter_picks_but_keeps_outside_match
     chapter_pick = source_scenes[1].scene_id
     plan = plan.model_copy(
         update={
-            "scenes": [
-                plan.scenes[0].model_copy(update={"candidate_scene_ids": [chapter_pick]})
-            ]
+            "scenes": [plan.scenes[0].model_copy(update={"candidate_scene_ids": [chapter_pick]})]
         }
     )
     understanding = _understanding(tmp_path)
@@ -293,9 +291,7 @@ def test_suggest_storyboard_footage_boosts_chapter_picks_but_keeps_outside_match
 
     candidates = report.suggestions[0].candidates
     chapter_candidate = next(item for item in candidates if item.source_scene_id == chapter_pick)
-    outside_candidate = next(
-        item for item in candidates if item.source_scene_id != chapter_pick
-    )
+    outside_candidate = next(item for item in candidates if item.source_scene_id != chapter_pick)
     assert "Chapter pick" in " ".join(chapter_candidate.reasons)
     assert chapter_candidate.score > chapter_candidate.lexical_score
     assert outside_candidate.source_scene_id == source_scenes[0].scene_id
@@ -332,9 +328,7 @@ def test_suggest_storyboard_footage_always_includes_must_include_scenes(
 def test_suggest_storyboard_footage_discourages_reusing_previous_top_pick(tmp_path):
     plan = _project_plan(tmp_path)
     first_scene = plan.scenes[0]
-    first_shot = first_scene.shots[0].model_copy(
-        update={"target_duration_seconds": 4}
-    )
+    first_shot = first_scene.shots[0].model_copy(update={"target_duration_seconds": 4})
     first_scene = first_scene.model_copy(
         update={"target_duration_seconds": 4, "shots": [first_shot]}
     )
@@ -361,9 +355,7 @@ def test_suggest_storyboard_footage_discourages_reusing_previous_top_pick(tmp_pa
             "end_seconds": 20,
         }
     )
-    understanding = understanding.model_copy(
-        update={"scenes": [first_source, alternative]}
-    )
+    understanding = understanding.model_copy(update={"scenes": [first_source, alternative]})
     _write_footage_artifacts(tmp_path, plan, understanding)
 
     report = suggest_storyboard_footage(tmp_path, max_candidates_per_shot=2)
@@ -373,7 +365,6 @@ def test_suggest_storyboard_footage_discourages_reusing_previous_top_pick(tmp_pa
     assert second_candidates[0].source_scene_id != first_pick
     reused = next(item for item in second_candidates if item.source_scene_id == first_pick)
     assert "Reuse discouraged" in " ".join(reused.reasons)
-
 
 
 def test_suggest_storyboard_footage_fails_if_must_include_scene_is_unavailable(tmp_path):
