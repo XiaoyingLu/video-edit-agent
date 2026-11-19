@@ -262,7 +262,13 @@ def understand(
             samples_per_scene=samples_per_scene,
             resume=not no_resume,
         )
-    except (FileNotFoundError, NotADirectoryError, MediaToolError, VisionModelError) as exc:
+    except (
+        FileNotFoundError,
+        NotADirectoryError,
+        MediaToolError,
+        VisionModelError,
+        ValueError,
+    ) as exc:
         console.print(f"[red]Video understanding failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
