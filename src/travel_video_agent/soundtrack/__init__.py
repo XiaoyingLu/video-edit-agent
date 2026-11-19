@@ -6,8 +6,21 @@ from .catalog import (
     SoundtrackSearchRequest,
     SoundtrackSearchResponse,
 )
+from .generation import (
+    GeneratedSoundtrackArtifact,
+    SoundtrackGenerationError,
+    generate_soundtrack_from_brief,
+    stable_audio_license,
+)
 from .licensing import evaluate_soundtrack_rights
-from .providers import SoundstripeAPIError, SoundstripeCatalogProvider
+from .providers import (
+    SoundstripeAPIError,
+    SoundstripeCatalogProvider,
+    StableAudioAPIError,
+    StableAudioGenerationProvider,
+    StableAudioGenerationRequest,
+    StableAudioGenerationResult,
+)
 from .ranking import SoundtrackCandidateRanking, rank_soundtrack_candidates
 from .review import (
     SoundtrackCandidateReview,
@@ -29,14 +42,20 @@ from .schemas import (
 )
 
 __all__ = [
+    "GeneratedSoundtrackArtifact",
     "SoundtrackBrief",
     "SoundtrackCandidate",
     "SoundtrackCandidateRanking",
     "SoundtrackCandidateReview",
     "SoundstripeAPIError",
+    "SoundtrackGenerationError",
     "SoundtrackReviewError",
     "SoundtrackSelection",
     "SoundstripeCatalogProvider",
+    "StableAudioAPIError",
+    "StableAudioGenerationProvider",
+    "StableAudioGenerationRequest",
+    "StableAudioGenerationResult",
     "SoundtrackCatalogProvider",
     "SoundtrackEnergySegment",
     "SoundtrackLicense",
@@ -48,8 +67,10 @@ __all__ = [
     "build_soundtrack_candidate_review",
     "create_soundtrack_brief",
     "evaluate_soundtrack_rights",
+    "generate_soundtrack_from_brief",
     "rank_soundtrack_candidates",
     "save_soundtrack_candidate_review",
     "search_soundstripe_catalog",
     "select_soundtrack_candidate",
+    "stable_audio_license",
 ]
