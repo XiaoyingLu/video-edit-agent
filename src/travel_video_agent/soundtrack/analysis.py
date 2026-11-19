@@ -43,9 +43,7 @@ def _project_file(root: Path, value: Path, label: str) -> Path:
     try:
         resolved.relative_to(root)
     except ValueError as exc:
-        raise SelectedSoundtrackAnalysisError(
-            f"{label} must be inside the project folder"
-        ) from exc
+        raise SelectedSoundtrackAnalysisError(f"{label} must be inside the project folder") from exc
     if not resolved.is_file():
         raise FileNotFoundError(f"Missing {label}: {resolved}")
     return resolved
@@ -72,9 +70,7 @@ def analyze_selected_soundtrack(
         raise SelectedSoundtrackAnalysisError(
             "Soundtrack selection is untracked or stale; recreate the selection before analysis"
         )
-    selection = SoundtrackSelection.model_validate_json(
-        selection_file.read_text(encoding="utf-8")
-    )
+    selection = SoundtrackSelection.model_validate_json(selection_file.read_text(encoding="utf-8"))
     if Path(selection.project_path).resolve() != root:
         raise SelectedSoundtrackAnalysisError("Soundtrack selection belongs to another project")
     if not selection.explicit_human_selection:
@@ -87,13 +83,12 @@ def analyze_selected_soundtrack(
         raise SelectedSoundtrackAnalysisError(
             "Soundtrack review is untracked or stale; recreate the review before analysis"
         )
-    report = SoundtrackCandidateReview.model_validate_json(
-        review_file.read_text(encoding="utf-8")
-    )
+    report = SoundtrackCandidateReview.model_validate_json(review_file.read_text(encoding="utf-8"))
     if Path(report.project_path).resolve() != root:
         raise SelectedSoundtrackAnalysisError("Soundtrack review belongs to another project")
     matches = [
-        item for item in report.items
+        item
+        for item in report.items
         if item.candidate.candidate_id == selection.candidate.candidate_id
     ]
     if len(matches) != 1 or matches[0].ranking.rights.status != "eligible":
@@ -108,9 +103,10 @@ def analyze_selected_soundtrack(
         selected_audio = _project_file(
             root, Path(selection.candidate.asset_path), "generated soundtrack audio"
         )
-        if music_path is not None and _project_file(
-            root, music_path, "soundtrack audio"
-        ) != selected_audio:
+        if (
+            music_path is not None
+            and _project_file(root, music_path, "soundtrack audio") != selected_audio
+        ):
             raise SelectedSoundtrackAnalysisError(
                 "Generated selections must be analyzed from their recorded audio asset"
             )
@@ -141,9 +137,7 @@ def analyze_selected_soundtrack(
     record_file = record_output_path or Path(".video-agent/selected-soundtrack-analysis.json")
     record_file = record_file.expanduser()
     record_file = (
-        (root / record_file).resolve()
-        if not record_file.is_absolute()
-        else record_file.resolve()
+        (root / record_file).resolve() if not record_file.is_absolute() else record_file.resolve()
     )
     for path, label in ((analysis_file, "analysis output"), (record_file, "provenance output")):
         try:
