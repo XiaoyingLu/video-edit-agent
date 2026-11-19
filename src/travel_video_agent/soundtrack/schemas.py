@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class SoundtrackEnergySegment(BaseModel):
@@ -52,6 +52,18 @@ class SoundtrackBrief(BaseModel):
     generation_prompt: str = Field(min_length=1, max_length=1200)
     rights_policy: SoundtrackRightsPolicy = Field(default_factory=SoundtrackRightsPolicy)
 
-    @classmethod
-    def validate_tempo_range(cls, value):
-        return value
+
+    @model_validator(mode="after")
+    def validate_brief(self) -> "SoundtrackBrief":
+        if self.tempo_min_bpm > self.tempo_max_bpm:
+            raise ValueError("minimum tempo must not exceed maximum tempo")
+        if abs(self.energy_arc[-1].end_seconds - self.target_duration_seconds) > 0.05:
+            raise ValueError("soundtrack energy arc must cover the target duration")
+        previous_end = 0.0
+        for segment in self.energy_arc:
+            if abs(segment.start_seconds - previous_end) > 0.05:
+                raise ValueError("soundtrack energy segments must be contiguous and ordered")
+            if segment.end_seconds <= segment.start_seconds:
+                raise ValueError("soundtrack energy segment end must exceed its start")
+            previous_end = segment.end_seconds
+        return self
