@@ -81,7 +81,6 @@ from .music.pipeline import MusicAnalysisError
 from .music.refinement import apply_music_sync_review
 from .music.sync import MusicSyncSuggestions, save_music_sync_suggestions, suggest_music_sync
 from .music.timeline_preview import (
-    MusicTimelinePreviewError,
     build_music_timeline_preview,
     save_music_timeline_preview,
 )
@@ -3012,9 +3011,7 @@ def review_music_timeline(
             music_analysis_path=music_analysis,
             suggestions_path=suggestions,
         )
-        json_file, html_file = save_music_timeline_preview(
-            folder, report, output_path=output
-        )
+        json_file, html_file = save_music_timeline_preview(folder, report, output_path=output)
     except (FileNotFoundError, ValueError, OSError) as exc:
         console.print(f"[red]Music timeline preview failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc

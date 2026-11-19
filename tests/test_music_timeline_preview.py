@@ -60,10 +60,10 @@ def test_html_shows_energy_beats_downbeats_and_shot_boundaries(tmp_path):
     assert "Music & Timeline Sync Review" in rendered
     assert "energy-low" in rendered
     assert "energy-high" in rendered
-    assert "class=\"beat\"" in rendered
-    assert "class=\"downbeat\"" in rendered
-    assert "class=\"boundary\"" in rendered
-    assert "class=\"recommendation\"" in rendered
+    assert 'class="beat"' in rendered
+    assert 'class="downbeat"' in rendered
+    assert 'class="boundary"' in rendered
+    assert 'class="recommendation"' in rendered
     assert 'src="../music.mp3"' in rendered
     assert "not edit, approve, or render" in rendered
 

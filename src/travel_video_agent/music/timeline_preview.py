@@ -69,9 +69,7 @@ def build_music_timeline_preview(
         (suggestions_file, "music sync suggestions"),
     ):
         resolved = (
-            (root / candidate).resolve()
-            if not candidate.is_absolute()
-            else candidate.resolve()
+            (root / candidate).resolve() if not candidate.is_absolute() else candidate.resolve()
         )
         try:
             resolved.relative_to(root)
@@ -114,15 +112,15 @@ def build_music_timeline_preview(
     elapsed = 0.0
     clips = []
     for index, clip in enumerate(timeline.clips):
-        clips.append({
-            "clip_id": clip.clip_id,
-            "start_seconds": round(elapsed, 3),
-            "end_seconds": round(elapsed + clip.duration_seconds, 3),
-            "duration_seconds": clip.duration_seconds,
-        })
-        elapsed += clip.duration_seconds - (
-            clip.transition_duration_seconds if index else 0.0
+        clips.append(
+            {
+                "clip_id": clip.clip_id,
+                "start_seconds": round(elapsed, 3),
+                "end_seconds": round(elapsed + clip.duration_seconds, 3),
+                "duration_seconds": clip.duration_seconds,
+            }
         )
+        elapsed += clip.duration_seconds - (clip.transition_duration_seconds if index else 0.0)
     boundaries = [item.model_dump(mode="json") for item in suggestions.boundaries]
     return MusicTimelinePreview(
         project_path=str(root),
@@ -163,9 +161,9 @@ def render_music_timeline_preview_html(
     for section in report.sections:
         x1, x2 = x_at(section["start_seconds"]), x_at(section["end_seconds"])
         energy_rects.append(
-            f'<rect x="{x1:.1f}" y="42" width="{max(1, x2-x1):.1f}" height="34" '
+            f'<rect x="{x1:.1f}" y="42" width="{max(1, x2 - x1):.1f}" height="34" '
             f'class="energy energy-{section["energy"]}"><title>{section["energy"]} energy '
-            f'{section["start_seconds"]:.1f}–{section["end_seconds"]:.1f}s</title></rect>'
+            f"{section['start_seconds']:.1f}–{section['end_seconds']:.1f}s</title></rect>"
         )
     beats = "".join(
         f'<line x1="{x_at(value):.1f}" x2="{x_at(value):.1f}" y1="88" y2="170" '
@@ -182,10 +180,10 @@ def render_music_timeline_preview_html(
         y = 205 + index * 38
         x1, x2 = x_at(clip["start_seconds"]), x_at(clip["end_seconds"])
         clip_rows.append(
-            f'<text x="12" y="{y+17}" class="clip-label">{html.escape(clip["clip_id"])}</text>'
-            f'<rect x="{x1:.1f}" y="{y}" width="{max(2,x2-x1):.1f}" height="23" '
+            f'<text x="12" y="{y + 17}" class="clip-label">{html.escape(clip["clip_id"])}</text>'
+            f'<rect x="{x1:.1f}" y="{y}" width="{max(2, x2 - x1):.1f}" height="23" '
             f'class="clip-bar"><title>{html.escape(clip["clip_id"])} '
-            f'{clip["start_seconds"]:.2f}–{clip["end_seconds"]:.2f}s</title></rect>'
+            f"{clip['start_seconds']:.2f}–{clip['end_seconds']:.2f}s</title></rect>"
         )
     boundary_rows = []
     for item in report.boundaries:
@@ -193,21 +191,20 @@ def render_music_timeline_preview_html(
         recommended = item.get("recommended_boundary_seconds")
         marker = (
             f'<line x1="{x_at(recommended):.1f}" x2="{x_at(recommended):.1f}" '
-            f'y1="185" y2="{205 + len(report.clips)*38}" class="recommendation">'
-            f'<title>Suggested {item["recommended_anchor"]} at {recommended:.3f}s</title></line>'
+            f'y1="185" y2="{205 + len(report.clips) * 38}" class="recommendation">'
+            f"<title>Suggested {item['recommended_anchor']} at {recommended:.3f}s</title></line>"
             if recommended is not None
             else ""
         )
         boundary_rows.append(
             f'<line x1="{x:.1f}" x2="{x:.1f}" y1="180" '
-            f'y2="{205 + len(report.clips)*38}" class="boundary">'
-            f'<title>{html.escape(item["previous_clip_id"])} → '
-            f'{html.escape(item["next_clip_id"])} at {item["boundary_seconds"]:.3f}s</title></line>'
+            f'y2="{205 + len(report.clips) * 38}" class="boundary">'
+            f"<title>{html.escape(item['previous_clip_id'])} → "
+            f"{html.escape(item['next_clip_id'])} at {item['boundary_seconds']:.3f}s</title></line>"
             + marker
         )
     ticks = "".join(
-        f'<text x="{x_at(value):.1f}" y="25" text-anchor="middle" class="tick">'
-        f'{value:.0f}s</text>'
+        f'<text x="{x_at(value):.1f}" y="25" text-anchor="middle" class="tick">{value:.0f}s</text>'
         for value in range(0, int(duration) + 1, max(1, int(duration / 10)))
     )
     svg_height = 220 + len(report.clips) * 38
@@ -216,6 +213,15 @@ def render_music_timeline_preview_html(
         f'<audio controls preload="metadata" src="{html.escape(audio_source, quote=True)}"></audio>'
         if audio_source
         else "<p>Audio path unavailable. Regenerate the preview from the project folder.</p>"
+    )
+    boundary_details = "".join(
+        f"<li>{html.escape(item['previous_clip_id'])} → {html.escape(item['next_clip_id'])}: "
+        f"{item['boundary_seconds']:.2f}s; beat delta "
+        f"{item['beat_delta_seconds'] if item['beat_delta_seconds'] is not None else '—'}; "
+        f"downbeat delta {item.get('downbeat_delta_seconds')}; "
+        f"suggestion {item['recommended_anchor']} "
+        f"{item.get('recommended_boundary_seconds')}</li>"
+        for item in report.boundaries
     )
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -246,22 +252,16 @@ beat confidence {report.beat_confidence:.2f} ·
 <div class="track"><svg viewBox="0 0 {width} {svg_height}" role="img"
 aria-label="Soundtrack energy, beat markers, and shot timeline on a shared time axis">
 {ticks}<text x="12" y="64" class="clip-label">Music energy</text>
-{''.join(energy_rects)}{beats}{downbeats}
+{"".join(energy_rects)}{beats}{downbeats}
 <text x="12" y="190" class="clip-label">Shot boundaries</text>
-{''.join(boundary_rows)}{''.join(clip_rows)}
+{"".join(boundary_rows)}{"".join(clip_rows)}
 </svg></div>
 <p class="note">All tracks share soundtrack time in seconds. Solid beat markers and stronger
 downbeat markers are signal estimates; dashed vertical lines show current shot boundaries,
 and green dashed lines show suggested anchors when available. Listen and inspect the footage:
 beat detection can be imperfect, and not every cut should land on a beat.</p>
 <h2>Boundary details</h2><ul>
-{''.join(f'<li>{html.escape(item["previous_clip_id"])} → {html.escape(item["next_clip_id"])}: '
-f'{item["boundary_seconds"]:.2f}s; beat delta '
-f'{item["beat_delta_seconds"] if item["beat_delta_seconds"] is not None else "—"}; '
-f'downbeat delta {item.get("downbeat_delta_seconds")}; '
-f'suggestion {item["recommended_anchor"]} '
-f'{item.get("recommended_boundary_seconds")}</li>'
-for item in report.boundaries)}
+{boundary_details}
 </ul>
 <p class="note">Read-only review. This page does not edit, approve, or render the timeline.
 Use the existing <code>review-music-sync</code> CLI workflow to accept or reject proposed
