@@ -300,7 +300,9 @@ def save_soundtrack_candidate_review(
     local_audio_sources: dict[str, str] = {}
     for item in report.items:
         if item.candidate.asset_path:
-            audio_file = _project_file(root, Path(item.candidate.asset_path), "local soundtrack candidate")
+            audio_file = _project_file(
+                root, Path(item.candidate.asset_path), "local soundtrack candidate"
+            )
             relative_audio = os.path.relpath(audio_file, html_path.parent).replace(os.sep, "/")
             local_audio_sources[item.candidate.candidate_id] = quote(
                 relative_audio, safe="/:@-._~"
