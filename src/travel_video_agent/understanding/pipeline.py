@@ -17,7 +17,7 @@ from .frame_sampler import extract_representative_frames
 from .scene_detection import detect_scenes
 from .schemas import FrameObservation, SceneDynamics, VideoScene, VideoUnderstanding
 from .provider import create_vision_analyzer
-from .visual_analyzer import VisionModelError
+from .visual_analyzer import OllamaVisionAnalyzer, VisionModelError
 
 _CHECKPOINT_VERSION = 1
 _CHECKPOINT_NAME = "understanding-checkpoint.json"
@@ -130,7 +130,11 @@ def understand_folder(
         if checkpoint_path is not None
         else root / ".video-agent" / _CHECKPOINT_NAME
     )
-    analyzer = create_vision_analyzer(provider, model)
+    analyzer = (
+        OllamaVisionAnalyzer(model=model or os.getenv("OLLAMA_MODEL", "qwen2.5vl:7b"))
+        if provider.strip().lower() == "ollama"
+        else create_vision_analyzer(provider, model)
+    )
     model_identity = getattr(analyzer, "model_id", getattr(analyzer, "model", model or ""))
     checkpoint = _load_checkpoint(
         checkpoint_file,
