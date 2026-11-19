@@ -52,6 +52,7 @@ def test_frame_sampler_reuses_existing_extracted_frames(monkeypatch, tmp_path: P
     frame_dir.mkdir()
     existing = frame_dir / "frame-01.jpg"
     existing.write_bytes(b"cached-frame")
+    existing.with_suffix(".timestamp").write_text("5.000000\\n", encoding="utf-8")
     monkeypatch.setattr(
         "travel_video_agent.understanding.frame_sampler.shutil.which", lambda _: "ffmpeg"
     )
