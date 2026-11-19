@@ -63,7 +63,7 @@ Generate a structured music direction from the creative brief, story treatment, 
 docker compose run --rm video-agent suggest-soundtrack ./travel-test
 ```
 
-This writes `.video-agent/soundtrack-brief.json` with mood and genre directions, instrumentation, a tempo range, an energy arc aligned to the storyboard scenes, catalog search terms, and a hosted-generation prompt. Commercial use, monetized-video use, and video synchronization rights are required by default. This is a planning artifact only: it does not download or generate audio, select a track, approve edits, or render video.
+This writes `.video-agent/soundtrack-brief.json` with mood and genre directions, instrumentation, a tempo range, an energy arc aligned to the storyboard scenes, catalog search terms, and a hosted-generation prompt. When the storyboard came from a selected story angle, each section preserves its chapter mood and explicit music-energy level; those chapter moods also inform catalog search terms and the generation prompt's timed section directions. Commercial use, monetized-video use, and video synchronization rights are required by default. This is a planning artifact only: it does not download or generate audio, select a track, approve edits, or render video.
 
 Generate original music from the project's soundtrack brief with Stable Audio 3.0. Set `STABILITY_API_KEY` in your shell or `.env` file (never in project JSON or source control):
 
