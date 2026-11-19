@@ -153,6 +153,7 @@ def create_video_project_plan(
                         "purpose": chapter.purpose,
                         "emotional_intent": chapter.mood,
                         "music_energy": chapter.music_energy,
+                        "candidate_scene_ids": chapter.candidate_scene_ids,
                         "target_duration_seconds": chapter.target_seconds,
                         "shots": shots,
                     }
