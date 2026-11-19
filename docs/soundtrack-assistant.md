@@ -50,9 +50,9 @@ Video project artifacts
 ### Core boundaries
 
 - `SoundtrackBrief` is a content-derived request, not a track selection or a claim about rights.
-- Catalog and generation providers implement narrow interfaces and return normalized candidates.
+- Catalog and generation providers implement narrow interfaces and return normalized candidates. Catalog search uses an async provider protocol and a bounded, provider-neutral search request/response contract.
 - Provider-specific HTTP clients, credentials, rate limits, and response parsing stay inside provider adapters.
-- License validation is independent of provider search and generation. Unknown or incomplete rights fail closed.
+- License validation is independent of provider search and generation. Unknown or incomplete rights fail closed. The initial evaluator treats CC BY-NC and CC BY-ND as ineligible and CC BY-SA as requiring explicit review; provider-supplied permission claims must still be backed by license evidence.
 - Ranking is explainable and separates creative fit from legal eligibility. A high creative score cannot override a failed rights check.
 - The existing FFmpeg renderer and music-analysis pipeline remain provider-agnostic. A selected track is copied/referenced as a project asset and then passed through the current analysis workflow.
 - All selection and timeline changes remain human-approved; discovery and generation never render or alter a timeline automatically.
@@ -72,12 +72,18 @@ Every candidate must retain, where available:
 
 Do not treat "royalty-free", "free", "publicly available", or a provider marketing label as sufficient proof. Reject non-commercial-only, no-derivatives, unclear, or unverifiable licenses for the default policy. Share-alike licenses require explicit review because downstream video distribution may trigger obligations. Attribution-required tracks may be eligible, but the required credit must be retained and surfaced in export metadata/documentation. Generated tracks require the same review: generation does not itself guarantee copyright ownership, exclusivity, or commercial-use permission.
 
+## Catalog contract foundation
+
+PR #63 introduces the normalized `SoundtrackCandidate` and `SoundtrackLicense` models, an async `SoundtrackCatalogProvider` protocol, bounded search request/response models, and an explainable rights decision. This is intentionally an integration-free foundation: it does not imply that any catalog has been approved, nor does it download or recommend tracks.
+
+The default rights evaluator requires explicit commercial-use, monetized-video, adaptation, and synchronization permissions, along with a canonical license URL and evidence URL. Missing permission data is not treated as permission. CC BY-NC and CC BY-ND are rejected for this default workflow; CC BY-SA is held for explicit review. Attribution-required candidates need their credit text retained. These checks are conservative software gates, not legal advice or an independent legal verification of provider claims.
+
 ## Incremental PR plan
 
 | PR | Scope | Acceptance criteria |
 |---|---|---|
 | #62 | Soundtrack brief from the existing video plan | Typed, deterministic brief; narrative energy arc; project-local artifact and dependency tracking; CLI command |
-| #63 | Catalog search contracts and normalized candidate model | Provider-neutral search interface; rights/provenance schema; strict default eligibility policy; no provider assumptions |
+| #63 | Catalog search contracts and normalized candidate model | Provider-neutral async search interface; rights/provenance schema; fail-closed eligibility evaluator; no provider assumptions |
 | #64 | First catalog provider | Official API/authorized download path only; documented provider terms; integration tests with mocked HTTP |
 | #65 | Candidate ranking | Explainable creative-fit score; rights eligibility is a hard gate; deterministic tests |
 | #66 | Preview and selection | Preview candidates against current video; explicit selection; preserve source files and timeline |
