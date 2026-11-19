@@ -662,7 +662,7 @@ def test_understanding_pipeline_attaches_temporal_scene_dynamics(monkeypatch, tm
     info = type("Info", (), {"path": "clip.mp4", "duration_seconds": 5.0})()
     analysis = type("Analysis", (), {"video_count": 1, "videos": [info]})()
     monkeypatch.setattr(pipeline, "analyze_folder", lambda root: analysis)
-    monkeypatch.setattr(pipeline, "detect_scenes", lambda *args: [(0.0, 5.0)])
+    monkeypatch.setattr(pipeline, "detect_scenes", lambda *args, **kwargs: [(0.0, 5.0)])
     frames = []
     for index, timestamp in enumerate((1.0, 4.0)):
         frame = tmp_path / f"frame-{index}.jpg"
@@ -714,7 +714,7 @@ def test_understanding_resumes_cached_frame_observations_after_interruption(
     info = type("Info", (), {"path": "clip.mp4", "duration_seconds": 5.0})()
     analysis = type("Analysis", (), {"video_count": 1, "videos": [info]})()
     monkeypatch.setattr(pipeline, "analyze_folder", lambda root: analysis)
-    monkeypatch.setattr(pipeline, "detect_scenes", lambda *args: [(0.0, 5.0)])
+    monkeypatch.setattr(pipeline, "detect_scenes", lambda *args, **kwargs: [(0.0, 5.0)])
 
     frames = []
     for index, timestamp in enumerate((1.0, 4.0)):
