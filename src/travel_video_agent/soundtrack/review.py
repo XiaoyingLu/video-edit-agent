@@ -10,8 +10,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
 from .catalog import SoundtrackSearchRequest, SoundtrackSearchResponse
-from .ranking import SoundtrackCandidateRanking, rank_soundtrack_candidates
 from .providers import SoundstripeCatalogProvider
+from .ranking import SoundtrackCandidateRanking, rank_soundtrack_candidates
 from .schemas import SoundtrackBrief, SoundtrackCandidate, SoundtrackLicense
 
 
@@ -74,7 +74,6 @@ def _project_file(root: Path, value: Path, label: str) -> Path:
     return resolved
 
 
-
 async def search_soundstripe_catalog(
     folder: Path,
     *,
@@ -115,7 +114,9 @@ async def search_soundstripe_catalog(
     response = await provider.search(request)
     destination = output_path or Path(".video-agent/soundtrack-candidates.json")
     destination = destination.expanduser()
-    destination = (root / destination).resolve() if not destination.is_absolute() else destination.resolve()
+    destination = (
+        (root / destination).resolve() if not destination.is_absolute() else destination.resolve()
+    )
     try:
         destination.relative_to(root)
     except ValueError as exc:
@@ -262,7 +263,10 @@ def save_soundtrack_candidate_review(
     json_path.parent.mkdir(parents=True, exist_ok=True)
     video_source = None
     if report.video_path:
-        video_source = quote(os.path.relpath(root / report.video_path, html_path.parent).replace(os.sep, "/"), safe="/:@-._~")
+        relative_video = os.path.relpath(root / report.video_path, html_path.parent).replace(
+            os.sep, "/"
+        )
+        video_source = quote(relative_video, safe="/:@-._~")
     html_path.write_text(
         render_soundtrack_review_html(report, video_source=video_source), encoding="utf-8"
     )
