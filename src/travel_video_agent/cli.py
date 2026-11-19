@@ -1969,7 +1969,6 @@ def create_plan(
     )
 
 
-
 @app.command("propose-story")
 def propose_story_command(
     folder: Annotated[
