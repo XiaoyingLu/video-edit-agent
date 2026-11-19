@@ -32,14 +32,26 @@ def _install_fake_mlx(monkeypatch, generated: list[str]) -> list[dict]:
         calls.append({"load": model_id})
         return object(), object()
 
-    def generate(model, processor, prompt, **kwargs):
-        calls.append({"prompt": prompt, **kwargs})
+    def generate(model, processor, prompt, images, **kwargs):
+        calls.append({"prompt": prompt, "image": images, **kwargs})
         return generated.pop(0)
 
     monkeypatch.setitem(
         sys.modules,
         "mlx_vlm",
         types.SimpleNamespace(load=load, generate=generate),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "mlx_vlm.prompt_utils",
+        types.SimpleNamespace(
+            apply_chat_template=lambda processor, config, prompt, num_images: prompt
+        ),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "mlx_vlm.utils",
+        types.SimpleNamespace(load_config=lambda model_id: {"model": model_id}),
     )
     return calls
 
@@ -54,8 +66,8 @@ def test_smolvlm2_mlx_analyzes_frame_with_shared_observation_schema(monkeypatch,
     assert result["description"] == _observation()["description"]
     assert result["visual_role"] == "establishing"
     assert calls[0]["load"] == "mlx-community/SmolVLM2-2.2B-Instruct-mlx"
-    assert calls[1]["image"] == str(frame)
-    assert calls[1]["temperature"] == 0.0
+    assert calls[1]["image"] == [str(frame)]
+    assert calls[1]["temp"] == 0.0
 
 
 def test_smolvlm2_mlx_analyzes_ordered_frames_for_temporal_dynamics(monkeypatch, tmp_path):
