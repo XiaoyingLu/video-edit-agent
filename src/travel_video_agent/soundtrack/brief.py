@@ -59,6 +59,8 @@ def _infer_moods(plan: VideoProjectPlan) -> list[str]:
 
 
 def _scene_energy(scene) -> str:
+    if scene.music_energy in {"low", "medium", "high"}:
+        return scene.music_energy
     text = f"{scene.narrative_function} {scene.emotional_intent} {scene.purpose}".lower()
     if scene.narrative_function in {"climax", "turning_point"} or any(
         word in text for word in ("action", "peak", "exciting", "climax", "energetic")
@@ -98,6 +100,7 @@ def build_soundtrack_brief(plan: VideoProjectPlan, source_plan_path: str) -> Sou
                 end_seconds=round(end, 3),
                 energy=_scene_energy(scene),
                 emotional_intent=scene.emotional_intent,
+                mood=scene.emotional_intent,
             )
         )
         cursor = end
@@ -116,14 +119,25 @@ def build_soundtrack_brief(plan: VideoProjectPlan, source_plan_path: str) -> Sou
         ]
 
     tempo_min, tempo_max = _tempo_range(plan.brief.style, plan.brief.pacing)
-    search_terms = list(dict.fromkeys([*moods, *genres, plan.brief.style, "instrumental"]))
+    chapter_moods = [
+        scene.emotional_intent.strip() for scene in plan.scenes if scene.emotional_intent.strip()
+    ]
+    search_terms = list(
+        dict.fromkeys([*moods[:3], *chapter_moods[:3], *genres, plan.brief.style, "instrumental"])
+    )
+    section_directions = "; ".join(
+        f"{segment.start_seconds:.0f}-{segment.end_seconds:.0f}s "
+        f"{segment.energy} energy" + (f", mood: {segment.mood[:48]}" if segment.mood else "")
+        for segment in segments
+    )
     generation_prompt = (
         f"Create an original {plan.brief.style} instrumental soundtrack, "
         f"{plan.brief.target_duration_seconds:.0f} seconds long. "
-        f"Mood: {', '.join(moods)}. Musical direction: {', '.join(genres)}. "
+        f"Overall mood: {', '.join(moods)}. Musical direction: {', '.join(genres)}. "
         f"Instrumentation: {', '.join(instruments)}. "
         f"Tempo around {tempo_min}-{tempo_max} BPM. "
-        "Follow the supplied narrative energy arc, with natural transitions and a resolved ending. "
+        f"Follow this ordered section arc: {section_directions}. "
+        "Use musical transitions between sections and a resolved ending. "
         "Avoid vocals, recognizable melodies, and soundalikes of existing artists or songs."
     )
     return SoundtrackBrief(

@@ -18,6 +18,7 @@ class SoundtrackEnergySegment(BaseModel):
     end_seconds: float = Field(gt=0)
     energy: Literal["low", "medium", "high"]
     emotional_intent: str = Field(default="", max_length=200)
+    mood: str = Field(default="", max_length=80)
 
 
 class SoundtrackRightsPolicy(BaseModel):
