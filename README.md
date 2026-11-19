@@ -65,6 +65,28 @@ docker compose run --rm video-agent suggest-soundtrack ./travel-test
 
 This writes `.video-agent/soundtrack-brief.json` with mood and genre directions, instrumentation, a tempo range, an energy arc aligned to the storyboard scenes, catalog search terms, and a hosted-generation prompt. Commercial use, monetized-video use, and video synchronization rights are required by default. This is a planning artifact only: it does not download or generate audio, select a track, approve edits, or render video.
 
+
+
+Search the Soundstripe catalog, then create a browser-based audition page. Set `SOUNDSTRIPE_API_KEY` in the environment (never in project JSON or source control):
+
+```bash
+docker compose run --rm video-agent search-soundtrack ./travel-test
+docker compose run --rm video-agent review-soundtrack ./travel-test \
+  --candidates ./.video-agent/soundtrack-candidates.json \
+  --video ./travel-test/draft.mp4
+```
+
+The review page places the optional project-local video beside individual candidate preview players. It displays creative-fit scores, rights status, tags, and provider details. Playback is manual; it does not change the video. Without an account-specific `--license-profile` JSON file confirmed against your Soundstripe agreement, the provider assigns unknown rights and the candidates cannot be selected. Do not set permissions to `true` unless the applicable agreement explicitly confirms them.
+
+Select an eligible candidate by its exact ID from the review JSON:
+
+```bash
+docker compose run --rm video-agent select-soundtrack ./travel-test \
+  --candidate-id "soundstripe:TRACK_ID"
+```
+
+Selection writes `.video-agent/soundtrack-selection.json`. Candidates requiring review or failing the commercial-use, monetization, adaptation, or synchronization gate are blocked. This stage does not download audio, modify the timeline, or render a video.
+
 See [the soundtrack assistant architecture](docs/soundtrack-assistant.md) for provider boundaries, license/provenance requirements, and the incremental implementation plan.
 
 ## Music-aware editing
