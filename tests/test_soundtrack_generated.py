@@ -100,9 +100,7 @@ def _analysis(audio_path):
         beat_interval_seconds=0.6494,
         beat_times_seconds=[0.1, 0.75, 1.4],
         downbeat_times_seconds=[0.1],
-        sections=[
-            {"start_seconds": 0, "end_seconds": 12, "energy": "medium", "energy_rms": 0.2}
-        ],
+        sections=[{"start_seconds": 0, "end_seconds": 12, "energy": "medium", "energy_rms": 0.2}],
         suggested_cut_points_seconds=[0.1, 0.75, 1.4],
     )
 
@@ -121,9 +119,7 @@ def test_prepare_candidates_analyzes_generated_audio_and_records_provenance(tmp_
     assert candidate.tempo_bpm == 92
     assert candidate.duration_seconds == 12
     assert candidate.asset_sha256 == hashlib.sha256(audio.read_bytes()).hexdigest()
-    manifest = json.loads(
-        (tmp_path / ".video-agent" / "artifact-manifest.json").read_text()
-    )
+    manifest = json.loads((tmp_path / ".video-agent" / "artifact-manifest.json").read_text())
     dependencies = manifest["artifacts"][destination.relative_to(tmp_path).as_posix()][
         "dependencies"
     ]
