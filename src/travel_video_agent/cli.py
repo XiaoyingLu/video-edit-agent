@@ -259,9 +259,15 @@ def understand(
 ) -> None:
     """Detect scenes, sample frames, and describe footage with a local vision model."""
     project_root = folder.expanduser().resolve()
+    selected_model = model or (
+        os.getenv("MLX_VISION_MODEL", "mlx-community/SmolVLM2-2.2B-Instruct-mlx")
+        if provider.strip().lower() == "mlx"
+        else os.getenv("OLLAMA_MODEL", "qwen2.5vl:7b")
+    )
     checkpoint = project_root / ".video-agent" / "understanding-checkpoint.json"
     if checkpoint.is_file() and not no_resume:
         console.print(f"[cyan]Resuming video understanding from {checkpoint}[/cyan]")
+    console.print(f"[dim]Vision provider: {provider} · model: {selected_model}[/dim]")
     console.print(
         "[dim]Progress is saved after each analyzed frame; rerun this command to resume.[/dim]"
     )
@@ -316,7 +322,7 @@ def understand(
 
         understanding = understand_folder(
             folder,
-            model=model,
+            model=selected_model,
             provider=provider,
             samples_per_scene=samples_per_scene,
             resume=not no_resume,
@@ -339,7 +345,7 @@ def understand(
         json.dumps(understanding.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
     )
     _track_artifact(
-        folder, destination, config={"provider": provider, "model": model, "samples_per_scene": samples_per_scene}
+        folder, destination, config={"provider": provider, "model": selected_model, "samples_per_scene": samples_per_scene}
     )
     checkpoint.unlink(missing_ok=True)
 
