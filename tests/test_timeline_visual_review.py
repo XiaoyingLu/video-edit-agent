@@ -111,6 +111,9 @@ def test_html_embeds_frames_and_exports_version_bound_decisions(tmp_path, monkey
     assert "data:image/jpeg;base64," in rendered
     assert "&lt;sunset coastline&gt;" in rendered
     assert "Export review decisions" in rendered
+    assert "Export visual edits" in rendered
+    assert "draggable = true" in rendered
+    assert "timeline_sha256:report.timeline_sha256" in rendered
     assert report.timeline_sha256 in rendered
     assert "review-timeline --decisions-file" not in rendered
 
