@@ -69,8 +69,10 @@ def stable_audio_license() -> SoundtrackLicense:
             "remains responsible for reviewing output for third-party rights."
         ),
         account_constraints=[
-            "Use is subject to the current Stability AI Terms of Service and Acceptable Use Policy.",
-            "Review generated output for third-party intellectual-property conflicts before publication.",
+            "Use is subject to the current Stability AI Terms of Service "
+            "and Acceptable Use Policy.",
+            "Review generated output for third-party intellectual-property "
+            "conflicts before publication.",
             "Commercial use is permitted by the published Stable Audio API licensing guide.",
         ],
     )
