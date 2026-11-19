@@ -66,6 +66,14 @@ def test_html_shows_energy_beats_downbeats_and_shot_boundaries(tmp_path):
     assert 'class="recommendation"' in rendered
     assert 'src="../music.mp3"' in rendered
     assert "not edit, approve, or render" in rendered
+    assert 'id="music-audio"' in rendered
+    assert 'id="music-timeline"' in rendered
+    assert 'id="playhead"' in rendered
+    assert 'id="playback-position"' in rendered
+    assert "seekFromPointer" in rendered
+    assert "updatePlaybackPosition" in rendered
+    assert "ArrowLeft" in rendered
+    assert "active-clip" in rendered
 
 
 def test_html_handles_missing_tempo(tmp_path):
