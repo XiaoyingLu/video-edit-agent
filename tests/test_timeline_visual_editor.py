@@ -164,3 +164,30 @@ def test_load_visual_edits_rejects_duplicate_clip_ids(tmp_path):
     )
     with pytest.raises(TimelineVisualEditError, match="duplicate clip IDs"):
         load_timeline_visual_edits(path)
+
+
+
+def test_visual_edits_preserve_transitions_when_order_is_unchanged(tmp_path, monkeypatch):
+    source = _timeline(tmp_path)
+    timeline = ProjectDraftTimeline.model_validate_json(source.read_text())
+    timeline.clips[1].transition_in = "crossfade"
+    timeline.clips[1].transition_duration_seconds = 0.5
+    timeline.proposed_duration_seconds = 7.5
+    source.write_text(timeline.model_dump_json(), encoding="utf-8")
+    _patch_tracking(monkeypatch)
+    edits = _export(
+        source,
+        [
+            TimelineVisualEditClip(clip_id="coast", source_start_seconds=2, source_end_seconds=6),
+            TimelineVisualEditClip(
+                clip_id="mountain", source_start_seconds=10, source_end_seconds=14
+            ),
+        ],
+    )
+
+    destination = apply_timeline_visual_edits(tmp_path, edits)
+
+    revised = ProjectDraftTimeline.model_validate_json(destination.read_text())
+    assert revised.clips[1].transition_in == "crossfade"
+    assert revised.clips[1].transition_duration_seconds == 0.5
+    assert revised.proposed_duration_seconds == 7.5
