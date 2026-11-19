@@ -164,6 +164,17 @@ def understand_folder(
                     }
                     checkpoint["scenes"][scene_id] = existing
 
+                if not isinstance(existing.get("frames"), dict):
+                    existing["frames"] = {}
+                    existing["complete"] = False
+                    existing["dynamics"] = None
+                expected_frame_keys = {
+                    frame_path.relative_to(root).as_posix() for _, frame_path in frames
+                }
+                if set(existing["frames"]) != expected_frame_keys:
+                    existing["complete"] = False
+                    existing["dynamics"] = None
+
                 observations_by_path: dict[str, FrameObservation] = {}
                 for timestamp, frame_path in frames:
                     frame_key = frame_path.relative_to(root).as_posix()
@@ -176,6 +187,8 @@ def understand_folder(
                     ):
                         observation = FrameObservation.model_validate(cached["observation"])
                     else:
+                        existing["complete"] = False
+                        existing["dynamics"] = None
                         result = analyzer.analyze_frame(frame_path)
                         observation = FrameObservation(
                             timestamp_seconds=timestamp,
