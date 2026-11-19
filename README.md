@@ -788,7 +788,7 @@ The command validates the human selection, current review, rights eligibility, p
 When creating a creative video plan, optionally pass the selected soundtrack's current `.video-agent/music-analysis.json` artifact:
 
 ```bash
-docker compose run --rm video-agent create-video-plan ./travel-test \
+docker compose run --rm video-agent create-plan ./travel-test \
   --prompt "Create a cinematic travel film" \
   --music-analysis ./.video-agent/music-analysis.json
 ```
