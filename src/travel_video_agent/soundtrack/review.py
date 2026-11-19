@@ -1,8 +1,8 @@
 """Human-reviewed soundtrack candidate preview and selection."""
 
-from datetime import UTC, datetime
 import html
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import quote
 
