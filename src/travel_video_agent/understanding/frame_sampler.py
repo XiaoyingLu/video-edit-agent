@@ -50,7 +50,7 @@ def extract_representative_frames(
                 cached = {}
             if (
                 isinstance(cached, dict)
-                and cached.get("timestamp_seconds") is not None
+                and isinstance(cached.get("timestamp_seconds"), (int, float))
                 and abs(cached["timestamp_seconds"] - timestamp) < 0.001
                 and cached.get("source") == source_fingerprint
             ):
