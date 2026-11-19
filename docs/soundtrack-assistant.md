@@ -168,7 +168,8 @@ timeline timing, approve edits, or render.
 | #65 | Candidate ranking | Explainable creative-fit score; rights eligibility is a hard gate; deterministic tests |
 | #66 | Preview and selection | Soundstripe search CLI; read-only HTML audition against optional project video; explainable ranking and rights status; explicit eligible-only selection artifact; preserve source files and timeline |
 | #67 | Hosted generation adapter | Stable Audio 3.0 API; async submit/poll/download; MP3/WAV; project-local audio and provenance sidecar; commercial and monetized-video rights evidence; no automatic selection or render |
-| #68 | Generated-track evaluation and workflow integration | Analyze generated audio with existing analyzer; compare generated and catalog alternatives; local-file audition; explicit eligible-only human selection; no auto-render |\n| #69 | Analyze the selected soundtrack | Validate explicit eligible selection; resolve generated local audio or require a licensed local catalog asset; register music-analysis and selection provenance; feed existing beat-sync workflow |
+| #68 | Generated-track evaluation and workflow integration | Analyze generated audio with existing analyzer; compare generated and catalog alternatives; local-file audition; explicit eligible-only human selection; no auto-render |
+| #69 | Analyze the selected soundtrack | Validate explicit eligible selection; resolve generated local audio or require a licensed local catalog asset; register music-analysis and selection provenance; feed existing beat-sync workflow |
 
 ## Implementation rules
 
