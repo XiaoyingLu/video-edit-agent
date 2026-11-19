@@ -148,6 +148,7 @@ class PlannedScene(BaseModel):
     ]
     target_duration_seconds: float = Field(gt=0, le=3600)
     emotional_intent: str = Field(default="", max_length=200)
+    candidate_scene_ids: list[str] = Field(default_factory=list, max_length=40)
     music_energy: Literal["low", "medium", "high", "unknown"] = "unknown"
     music_energy_sequence: list[Literal["low", "medium", "high"]] = Field(default_factory=list)
     music_section_start_seconds: float | None = Field(default=None, ge=0)
