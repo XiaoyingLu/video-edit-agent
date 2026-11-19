@@ -72,6 +72,12 @@ Every candidate must retain, where available:
 
 Do not treat "royalty-free", "free", "publicly available", or a provider marketing label as sufficient proof. Reject non-commercial-only, no-derivatives, unclear, or unverifiable licenses for the default policy. Share-alike licenses require explicit review because downstream video distribution may trigger obligations. Attribution-required tracks may be eligible, but the required credit must be retained and surfaced in export metadata/documentation. Generated tracks require the same review: generation does not itself guarantee copyright ownership, exclusivity, or commercial-use permission.
 
+## First catalog integration: Soundstripe
+
+Soundstripe publishes an official REST API for listing songs with search, duration, BPM, mood/genre/instrument tags, instrumental filtering, pagination, and related artist/audio resources. Its API offering states that licensing is handled at the integration layer and tracks delivered through the API are pre-cleared. API access is account-keyed; trial keys are watermarked and expire after 30 days, while production access is subject to the applicable agreement. The adapter therefore requires `SOUNDSTRIPE_API_KEY` and accepts an explicit `SoundtrackLicense` profile. It does not infer commercial, monetized-video, or synchronization rights from the marketing phrase “royalty-free”; populate that profile only after confirming the account-specific API agreement and distribution scope.
+
+The adapter uses the documented `/v1/songs` endpoint. It does not download audio, select tracks, or claim that an account is licensed without the supplied profile.
+
 ## Catalog contract foundation
 
 The normalized `SoundtrackCandidate` and `SoundtrackLicense` models, async `SoundtrackCatalogProvider` protocol, bounded search request/response models, and fail-closed rights evaluator are in place. This integration-free foundation does not imply that any catalog has been approved, nor does it download tracks.
