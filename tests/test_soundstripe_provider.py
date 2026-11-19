@@ -25,7 +25,7 @@ def test_api_key_is_required(monkeypatch):
 def test_search_filters_and_pagination_are_mapped():
     request = SoundtrackSearchRequest(query="cinematic trip", moods=["calm"], genres=["ambient"], search_terms=["piano"], target_duration_seconds=100, duration_tolerance_seconds=15, tempo_min_bpm=80, tempo_max_bpm=110, limit=12, cursor="3")
     params = provider()._build_params(request)
-    assert params["filter[q]"] == "cinematic trip"
+    assert params["filter[q]"] == "cinematic trip piano"
     assert params["filter[duration][min]"] == "85"
     assert params["filter[duration][max]"] == "115"
     assert params["filter[bpm][min]"] == "80"
