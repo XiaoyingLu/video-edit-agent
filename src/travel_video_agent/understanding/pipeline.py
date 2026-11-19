@@ -15,8 +15,8 @@ from pydantic import ValidationError
 from ..media import analyze_folder, discover_videos
 from .frame_sampler import extract_representative_frames
 from .scene_detection import detect_scenes
-from .schemas import FrameObservation, SceneDynamics, VideoScene, VideoUnderstanding
 from .provider import create_vision_analyzer
+from .schemas import FrameObservation, SceneDynamics, VideoScene, VideoUnderstanding
 from .visual_analyzer import OllamaVisionAnalyzer, VisionModelError
 
 _CHECKPOINT_VERSION = 1
