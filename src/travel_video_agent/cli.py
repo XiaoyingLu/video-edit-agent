@@ -3046,6 +3046,7 @@ def review_soundtrack_command(
 
     table = Table(title="Soundtrack Candidates — Human Review Required")
     table.add_column("Candidate", style="cyan")
+    table.add_column("Origin")
     table.add_column("Creator")
     table.add_column("Fit", justify="right")
     table.add_column("Rights")
@@ -3053,6 +3054,7 @@ def review_soundtrack_command(
     for item in report.items:
         table.add_row(
             item.candidate.title,
+            item.candidate.origin,
             item.candidate.creator or "—",
             f"{item.ranking.creative_score:.0%}",
             item.ranking.rights.status,
