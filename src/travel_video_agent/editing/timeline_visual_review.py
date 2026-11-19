@@ -231,6 +231,12 @@ def render_timeline_visual_review_html(report: TimelineVisualReviewReport) -> st
             f"{clip.duration_seconds:.2f}s</span></div>"
             f'<p class="source">{html.escape(clip.video_path)} · source '
             f"{clip.source_start_seconds:.2f}–{clip.source_end_seconds:.2f}s</p>"
+            f'<div class="trim"><label>In (s) <input class="trim-start" type="number" '
+            f'min="{clip.source_start_seconds:.3f}" max="{clip.source_end_seconds - 1:.3f}" '
+            f'step="0.1" value="{clip.source_start_seconds:.3f}"></label>'
+            f'<label>Out (s) <input class="trim-end" type="number" '
+            f'min="{clip.source_start_seconds + 1:.3f}" max="{clip.source_end_seconds:.3f}" '
+            f'step="0.1" value="{clip.source_end_seconds:.3f}"></label></div>'
             f"{detail_html}<fieldset><legend>Decision</legend>"
             f'<label><input type="radio" name="decision-{clip.sequence_index}" value="approved" '
             f"{'checked' if clip.decision == 'approved' else ''}> Approve</label>"
@@ -251,7 +257,10 @@ header {{ position:sticky; top:0; z-index:2; padding:1rem; background:Canvas;
           border-bottom:1px solid #8886; }}
 .clip {{ display:grid; grid-template-columns:minmax(240px,40%) 1fr; gap:1rem;
          padding:1.25rem 0; border-bottom:1px solid #8886; }}
+.clip.dragging {{ opacity:.45; }} .clip.drag-over {{ outline:2px dashed #888; }}
 .image img {{ width:100%; height:auto; display:block; border-radius:8px; }}
+.trim {{ display:flex; flex-wrap:wrap; gap:1rem; margin:.8rem 0; }}
+.trim input {{ width:7rem; padding:.35rem; }} .clip {{ cursor:grab; }}
 .heading {{ display:flex; justify-content:space-between; gap:1rem; align-items:baseline; }}
 h2 {{ margin:.2rem 0; }} p {{ margin:.45rem 0; }}
 .source {{ color:GrayText; overflow-wrap:anywhere; }}
@@ -263,29 +272,51 @@ button {{ padding:.65rem 1rem; cursor:pointer; }} .duration {{ font-variant-nume
 <header><h1>Visual Timeline Review</h1>
 <p>{len(report.clips)} shots · {report.proposed_duration_seconds:.2f}s proposed ·
 {report.target_duration_seconds:.2f}s target</p>
-<p>Review representative source frames and context. Decisions are exported to JSON;
-they are not applied until you import them with the CLI.</p>
-<button id="export">Export review decisions (.json)</button>
+<p>Drag shots to reorder them and adjust source in/out points. Changes are exported as a
+separate proposal; they are not applied until you import them with the CLI.</p>
+<button id="export">Export visual edits (.json)</button>
 <span id="status" aria-live="polite"></span></header>
 <main>{"".join(cards) if cards else "<p>No clips are present in this timeline.</p>"}</main>
 <script>
 const report = {payload_json};
+const main = document.querySelector("main");
+let dragged = null;
+for (const card of main.querySelectorAll(".clip")) {{
+  card.draggable = true;
+  card.addEventListener("dragstart", () => {{ dragged = card; card.classList.add("dragging"); }});
+  card.addEventListener("dragend", () => {{
+    card.classList.remove("dragging");
+    for (const item of main.querySelectorAll(".clip")) item.classList.remove("drag-over");
+  }});
+  card.addEventListener("dragover", event => {{
+    event.preventDefault();
+    if (dragged && dragged !== card) card.classList.add("drag-over");
+  }});
+  card.addEventListener("dragleave", () => card.classList.remove("drag-over"));
+  card.addEventListener("drop", event => {{
+    event.preventDefault();
+    if (!dragged || dragged === card) return;
+    const bounds = card.getBoundingClientRect();
+    main.insertBefore(dragged, event.clientY < bounds.top + bounds.height / 2 ? card : card.nextSibling);
+    card.classList.remove("drag-over");
+  }});
+}}
 document.getElementById("export").addEventListener("click", () => {{
-  const decisions = {{}};
-  for (const clip of report.clips) {{
-    const selector = 'input[name="decision-' + clip.sequence_index + '"]:checked';
-    const selected = document.querySelector(selector);
-    decisions[clip.clip_id] = selected ? selected.value : "pending";
-  }}
-  const output = {{schema_version:"1.0", timeline_path:report.timeline_path, decisions}};
+  const clips = Array.from(main.querySelectorAll(".clip")).map(card => ({{
+    clip_id: card.dataset.clipId,
+    source_start_seconds: Number(card.querySelector(".trim-start").value),
+    source_end_seconds: Number(card.querySelector(".trim-end").value)
+  }}));
+  const output = {{schema_version:"1.0", timeline_path:report.timeline_path,
+    timeline_sha256:report.timeline_sha256, clips}};
   const blob = new Blob([JSON.stringify(output, null, 2) + "\\n"], {{type:"application/json"}});
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "timeline-review-decisions.json";
+  link.download = "timeline-visual-edits.json";
   link.click();
   URL.revokeObjectURL(url);
-  document.getElementById("status").textContent = " Decision file exported.";
+  document.getElementById("status") .textContent = " Visual edit proposal exported.";
 }});
 </script></body></html>"""
 
