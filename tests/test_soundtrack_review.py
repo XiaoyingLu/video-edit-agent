@@ -97,7 +97,7 @@ def test_review_builds_ranked_html_audition_with_optional_video(tmp_path):
 
     page = html_path.read_text(encoding="utf-8")
     assert "<video controls" in page
-    assert '<audio controls' in page
+    assert '<audio controls preload="none" src="https://cdn.example.com/preview.mp3">' in page
     assert "&lt;Mountain &quot;Light&quot;&gt;" in page
     assert "Commercial API agreement" not in page
     assert report.items[0].ranking.rights.status == "eligible"
@@ -109,9 +109,7 @@ def test_select_requires_explicitly_eligible_candidate(tmp_path):
     report = build_soundtrack_candidate_review(tmp_path, candidates_path=candidates_path)
     save_soundtrack_candidate_review(tmp_path, report)
 
-    selection, destination = select_soundtrack_candidate(
-        tmp_path, candidate_id="track-1"
-    )
+    selection, destination = select_soundtrack_candidate(tmp_path, candidate_id="track-1")
 
     saved = json.loads(destination.read_text(encoding="utf-8"))
     assert selection.explicit_human_selection is True
@@ -143,7 +141,6 @@ def test_review_does_not_overwrite_existing_output(tmp_path):
     save_soundtrack_candidate_review(tmp_path, report)
     with pytest.raises(FileExistsError):
         save_soundtrack_candidate_review(tmp_path, report)
-
 
 
 def test_soundstripe_search_uses_brief_and_tracks_license_profile(tmp_path, monkeypatch):
@@ -181,9 +178,7 @@ def test_soundstripe_search_uses_brief_and_tracks_license_profile(tmp_path, monk
 
     monkeypatch.setattr(review, "SoundstripeCatalogProvider", FakeProvider)
     response, destination = asyncio.run(
-        review.search_soundstripe_catalog(
-            tmp_path, license_profile_path=profile_path
-        )
+        review.search_soundstripe_catalog(tmp_path, license_profile_path=profile_path)
     )
 
     assert response == expected

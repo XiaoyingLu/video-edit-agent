@@ -2,6 +2,7 @@
 
 import html
 import json
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import quote
@@ -85,9 +86,7 @@ async def search_soundstripe_catalog(
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise NotADirectoryError(f"Project folder does not exist: {root}")
-    brief_file = _project_file(
-        root, Path(".video-agent/soundtrack-brief.json"), "soundtrack brief"
-    )
+    brief_file = _project_file(root, Path(".video-agent/soundtrack-brief.json"), "soundtrack brief")
     brief = SoundtrackBrief.model_validate_json(brief_file.read_text(encoding="utf-8"))
     if Path(brief.project_path).resolve() != root:
         raise SoundtrackReviewError("Soundtrack brief belongs to a different project")
@@ -160,9 +159,7 @@ def build_soundtrack_candidate_review(
     ]
     items.sort(
         key=lambda item: (
-            {"eligible": 0, "review_required": 1, "ineligible": 2}[
-                item.ranking.rights.status
-            ],
+            {"eligible": 0, "review_required": 1, "ineligible": 2}[item.ranking.rights.status],
             -item.ranking.creative_score,
             item.candidate.candidate_id,
         )
@@ -182,18 +179,18 @@ def render_soundtrack_review_html(
 ) -> str:
     """Render a self-contained, read-only candidate audition page."""
     video_html = (
-        f'<video controls preload="metadata" src="{html.escape(video_source, quote=True)}">'
-        "</video>"
+        f'<video controls preload="metadata" src="{html.escape(video_source, quote=True)}"></video>'
         if video_source
         else (
-            "<p>No video supplied. Use --video to compare tracks alongside a project-local video.</p>"
+            "<p>No video supplied. Use --video to compare tracks alongside a "
+            "project-local video.</p>"
         )
     )
     cards = []
     for index, item in enumerate(report.items, start=1):
         candidate, ranking = item.candidate, item.ranking
         preview = (
-            f'<audio controls preload="none "
+            '<audio controls preload="none" '
             f'src="{html.escape(str(candidate.preview_url), quote=True)}">'
             "</audio>"
             if candidate.preview_url and str(candidate.preview_url).startswith("https://")
@@ -205,15 +202,15 @@ def render_soundtrack_review_html(
         tags = ", ".join(candidate.tags) or "No tags"
         cards.append(
             f'<section class="candidate"><h2>{index}. {html.escape(candidate.title)}</h2>'
-            f'<p>{html.escape(candidate.creator or "Unknown creator")} · '
-            f'{candidate.duration_seconds:.1f}s · '
-            f'{candidate.tempo_bpm if candidate.tempo_bpm is not None else "—"} BPM</p>'
-            f'<p>Creative fit: {ranking.creative_score:.0%} · '
-            f'Rights: <strong>{html.escape(ranking.rights.status)}</strong></p>'
-            f'<p>Tags: {html.escape(tags)}</p>{preview}'
+            f"<p>{html.escape(candidate.creator or 'Unknown creator')} · "
+            f"{candidate.duration_seconds:.1f}s · "
+            f"{candidate.tempo_bpm if candidate.tempo_bpm is not None else '—'} BPM</p>"
+            f"<p>Creative fit: {ranking.creative_score:.0%} · "
+            f"Rights: <strong>{html.escape(ranking.rights.status)}</strong></p>"
+            f"<p>Tags: {html.escape(tags)}</p>{preview}"
             f'<p><a href="{html.escape(str(candidate.source_url), quote=True)}" '
             'target="_blank" rel="noopener noreferrer">Provider track details</a></p>'
-            f'<ul>{rights_reasons}</ul></section>'
+            f"<ul>{rights_reasons}</ul></section>"
         )
     video_note = (
         "Play the video and one candidate preview to audition them together. "
@@ -299,10 +296,10 @@ def select_soundtrack_candidate(
         root, review_path or Path(".video-agent/soundtrack-review.json"), "soundtrack review"
     )
     if not validate_artifact(root, review_file):
-        raise SoundtrackReviewError("Soundtrack review is untracked; regenerate it before selection")
-    report = SoundtrackCandidateReview.model_validate_json(
-        review_file.read_text(encoding="utf-8")
-    )
+        raise SoundtrackReviewError(
+            "Soundtrack review is untracked; regenerate it before selection"
+        )
+    report = SoundtrackCandidateReview.model_validate_json(review_file.read_text(encoding="utf-8"))
     if Path(report.project_path).resolve() != root:
         raise SoundtrackReviewError("Soundtrack review belongs to a different project")
     matches = [item for item in report.items if item.candidate.candidate_id == candidate_id]

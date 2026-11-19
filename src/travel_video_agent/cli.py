@@ -2927,10 +2927,12 @@ def review_soundtrack_command(
         Path | None, typer.Option("--brief", help="Soundtrack brief JSON path.")
     ] = None,
     video: Annotated[
-        Path | None, typer.Option("--video", help="Optional project-local video to audition against.")
+        Path | None,
+        typer.Option("--video", help="Optional project-local video to audition against."),
     ] = None,
     output: Annotated[
-        Path | None, typer.Option("--output", "-o", help="Output base path for review JSON and HTML.")
+        Path | None,
+        typer.Option("--output", "-o", help="Output base path for review JSON and HTML."),
     ] = None,
 ) -> None:
     """Rank catalog candidates and create a read-only video/audio audition page."""
@@ -2941,9 +2943,7 @@ def review_soundtrack_command(
             brief_path=brief,
             video_path=video,
         )
-        json_file, html_file = save_soundtrack_candidate_review(
-            folder, report, output_path=output
-        )
+        json_file, html_file = save_soundtrack_candidate_review(folder, report, output_path=output)
     except (FileNotFoundError, ValueError, OSError) as exc:
         console.print(f"[red]Soundtrack review failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
