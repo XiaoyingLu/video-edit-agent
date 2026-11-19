@@ -1,5 +1,5 @@
-from datetime import UTC, datetime
 import json
+from datetime import UTC, datetime
 
 import pytest
 
@@ -10,7 +10,11 @@ from travel_video_agent.soundtrack.review import (
     save_soundtrack_candidate_review,
     select_soundtrack_candidate,
 )
-from travel_video_agent.soundtrack.schemas import SoundtrackBrief, SoundtrackCandidate, SoundtrackLicense
+from travel_video_agent.soundtrack.schemas import (
+    SoundtrackBrief,
+    SoundtrackCandidate,
+    SoundtrackLicense,
+)
 
 
 def _brief(root):
