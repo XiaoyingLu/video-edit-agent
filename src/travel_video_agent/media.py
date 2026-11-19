@@ -58,7 +58,7 @@ def probe_video(path: Path, project_root: Path) -> MediaInfo:
         "-v",
         "error",
         "-show_entries",
-        "format=duration:stream=codec_type,codec_name,width,height,avg_frame_rate",
+        "format=duration:format_tags=creation_time:stream=codec_type,codec_name,width,height,avg_frame_rate:stream_tags=creation_time",
         "-of",
         "json",
         str(path),
@@ -85,11 +85,16 @@ def probe_video(path: Path, project_root: Path) -> MediaInfo:
     streams = payload.get("streams", [])
     video_stream = next((stream for stream in streams if stream.get("codec_type") == "video"), None)
     audio_stream = next((stream for stream in streams if stream.get("codec_type") == "audio"), None)
-    duration = float(payload.get("format", {}).get("duration", 0.0) or 0.0)
+    format_info = payload.get("format", {})
+    duration = float(format_info.get("duration", 0.0) or 0.0)
+    capture_timestamp = format_info.get("tags", {}).get("creation_time")
+    if capture_timestamp is None and video_stream is not None:
+        capture_timestamp = video_stream.get("tags", {}).get("creation_time")
 
     return MediaInfo(
         path=relative_media_path(path, project_root),
         duration_seconds=duration,
+        capture_timestamp=capture_timestamp,
         width=video_stream.get("width") if video_stream else None,
         height=video_stream.get("height") if video_stream else None,
         frame_rate=_parse_frame_rate(video_stream.get("avg_frame_rate")) if video_stream else None,
