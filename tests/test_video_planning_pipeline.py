@@ -261,6 +261,13 @@ def test_create_video_project_plan_uses_music_sections_and_tracks_dependency(tmp
     assert [scene.music_energy for scene in plan.scenes] == ["low", "medium"]
     assert plan.scenes[0].music_section_start_seconds == 0
     assert plan.scenes[1].music_section_start_seconds == 60
+    assert [shot.music_energy for scene in plan.scenes for shot in scene.shots] == [
+        "low",
+        "high",
+    ]
+    assert plan.scenes[0].shots[0].music_energy_sequence == ["low", "high"]
+    assert "Energy progression: low → high." in plan.scenes[0].shots[0].music_alignment_note
+    assert plan.scenes[1].shots[0].music_section_start_seconds == 60
     assert validate_artifact(tmp_path, destination) is True
 
     analysis_path.write_text('{"changed": true}', encoding="utf-8")
@@ -314,3 +321,38 @@ def test_create_video_project_plan_cannot_overwrite_music_analysis(tmp_path):
             output_path=analysis_path,
             music_analysis_path=analysis_path,
         )
+
+
+
+def test_shot_music_annotation_tracks_multiple_energy_sections_and_uncovered_shots():
+    scenes = _generated_content().scenes
+    annotated = planning_pipeline._annotate_scenes_with_music(
+        scenes,
+        [
+            MusicSection(start_seconds=0, end_seconds=20, energy="low", energy_rms=0.1),
+            MusicSection(start_seconds=20, end_seconds=45, energy="high", energy_rms=0.4),
+        ],
+    )
+
+    first_shot = annotated[0].shots[0]
+    assert first_shot.music_energy == "high"
+    assert first_shot.music_energy_sequence == ["low", "high"]
+    assert first_shot.music_section_start_seconds == 20
+    assert "Energy progression: low → high." in first_shot.music_alignment_note
+
+    uncovered = annotated[1].shots[0]
+    assert uncovered.music_energy == "unknown"
+    assert uncovered.music_energy_sequence == []
+    assert uncovered.music_section_start_seconds is None
+
+
+def test_shot_music_annotation_does_not_force_shot_boundaries_to_beats():
+    scenes = _generated_content().scenes
+    annotated = planning_pipeline._annotate_scenes_with_music(
+        scenes,
+        [MusicSection(start_seconds=0, end_seconds=90, energy="medium", energy_rms=0.2)],
+    )
+
+    assert annotated[0].shots[0].target_duration_seconds == 45
+    assert annotated[1].shots[0].target_duration_seconds == 45
+    assert annotated[0].shots[0].music_energy == "medium"
