@@ -16,7 +16,8 @@ from ..media import analyze_folder, discover_videos
 from .frame_sampler import extract_representative_frames
 from .scene_detection import detect_scenes
 from .schemas import FrameObservation, SceneDynamics, VideoScene, VideoUnderstanding
-from .visual_analyzer import OllamaVisionAnalyzer, VisionModelError
+from .provider import create_vision_analyzer
+from .visual_analyzer import VisionModelError
 
 _CHECKPOINT_VERSION = 1
 _CHECKPOINT_NAME = "understanding-checkpoint.json"
@@ -107,8 +108,9 @@ def _save_checkpoint(path: Path, checkpoint: dict[str, Any]) -> None:
 
 def understand_folder(
     folder: Path,
-    model: str = "qwen2.5vl:7b",
+    model: str | None = None,
     samples_per_scene: int = 3,
+    provider: str = "ollama",
     *,
     checkpoint_path: Path | None = None,
     resume: bool = True,
@@ -128,15 +130,16 @@ def understand_folder(
         if checkpoint_path is not None
         else root / ".video-agent" / _CHECKPOINT_NAME
     )
+    analyzer = create_vision_analyzer(provider, model)
+    model_identity = getattr(analyzer, "model_id", getattr(analyzer, "model", model or ""))
     checkpoint = _load_checkpoint(
         checkpoint_file,
         root=root,
-        model=model,
+        model=f"{provider}:{model_identity}",
         samples_per_scene=samples_per_scene,
         sources=sources,
         resume=resume,
     )
-    analyzer = OllamaVisionAnalyzer(model=model)
     scenes: list[VideoScene] = []
 
     def report(event: str, **details: Any) -> None:
@@ -326,7 +329,7 @@ def understand_folder(
             video_count=media.video_count,
             scene_count=len(scenes),
             scenes=scenes,
-            model=model,
+            model=str(model_identity),
         )
     finally:
         if not analyzer.unload_model():
