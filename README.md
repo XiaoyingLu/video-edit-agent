@@ -467,7 +467,7 @@ docker compose run --rm video-agent review-footage ./travel-test \
   --select shot-002=2
 ```
 
-Repeat `--select SHOT_ID=CANDIDATE_NUMBER` for each shot. Use `--reject SHOT_ID` to clear an earlier assignment. Unselected shots remain unassigned. The project advances to `footage_mapped` only when every storyboard shot has an explicitly approved source interval. This stage does not approve the overall creative plan, alter source media, or render a video.
+Repeat `--select SHOT_ID=CANDIDATE_NUMBER` for each shot. Use `--reject SHOT_ID` to clear an earlier assignment. Unselected shots remain unassigned. The project advances to `footage_mapped` only when every storyboard shot has an explicitly approved source interval. This stage does not approve the overall creative plan, alter source media, or render a video. Since chapter must-include scenes are retained as candidates for every shot in that chapter, selecting the same source more than once can create repeated footage. `review-footage` and timeline compilation emit a warning when approved source intervals overlap; reuse is allowed and must be judged intentionally. This does not block approval or compilation.
 
 
 ### Declarative animated title overlays

@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from .footage_assignments import warn_for_overlapping_footage
 from .planning_schemas import VideoProjectPlan
 from .timeline_pipeline import _continuity_guidance, _pacing_guidance, save_draft_timeline
 from .timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
@@ -174,6 +175,14 @@ def build_storyboard_timeline(
                 )
             )
             previous_duration = duration
+
+    warn_for_overlapping_footage(
+        (
+            (clip.clip_id, clip.video_path, clip.source_start_seconds, clip.source_end_seconds)
+            for clip in clips
+        ),
+        stage="timeline compilation",
+    )
 
     proposed = sum(clip.duration_seconds for clip in clips) - sum(
         clip.transition_duration_seconds for clip in clips[1:]
