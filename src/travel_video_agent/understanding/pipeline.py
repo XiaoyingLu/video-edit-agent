@@ -152,6 +152,8 @@ def understand_folder(
                     video_path, start, end, frame_dir, samples_per_scene=samples_per_scene
                 )
                 existing = checkpoint["scenes"].get(scene_id, {})
+                if not isinstance(existing, dict):
+                    existing = {}
                 if (
                     existing.get("video_path") != relative_path
                     or existing.get("start_seconds") != start
@@ -183,13 +185,17 @@ def understand_folder(
                     frame_key = frame_path.relative_to(root).as_posix()
                     fingerprint = _frame_fingerprint(frame_path)
                     cached = existing["frames"].get(frame_key)
+                    observation = None
                     if (
-                        cached
+                        isinstance(cached, dict)
                         and cached.get("timestamp_seconds") == timestamp
                         and cached.get("fingerprint") == fingerprint
                     ):
-                        observation = FrameObservation.model_validate(cached["observation"])
-                    else:
+                        try:
+                            observation = FrameObservation.model_validate(cached["observation"])
+                        except (KeyError, ValidationError):
+                            observation = None
+                    if observation is None:
                         existing["complete"] = False
                         existing["dynamics"] = None
                         result = analyzer.analyze_frame(frame_path)
