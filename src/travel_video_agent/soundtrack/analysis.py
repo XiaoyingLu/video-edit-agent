@@ -1,17 +1,15 @@
 """Analyze the explicitly selected soundtrack and retain its licensing provenance."""
 
 import hashlib
-import json
 from datetime import UTC, datetime
 from pathlib import Path
-from urllib.parse import urlparse
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
-from ..music.pipeline import MusicAnalysisError, analyze_music
+from ..music.pipeline import analyze_music
 from ..music.schemas import MusicAnalysis
-from .review import SoundtrackCandidateReview, SoundtrackReviewError, SoundtrackSelection
+from .review import SoundtrackCandidateReview, SoundtrackSelection
 
 
 class SelectedSoundtrackAnalysisError(ValueError):
@@ -130,7 +128,7 @@ def analyze_selected_soundtrack(
         # Imported catalog audio is a user-provided local asset; record its exact content
         # before analysis so downstream artifacts can depend on an immutable snapshot.
         register_artifact(root, selected_audio, dependencies=[selection_file, review_file])
-    analysis_file = analysis_output_path or Path(".video-agent/selected-music-analysis.json")
+    analysis_file = analysis_output_path or Path(".video-agent/music-analysis.json")
     analysis_file = analysis_file.expanduser()
     analysis_file = (root / analysis_file).resolve() if not analysis_file.is_absolute() else analysis_file.resolve()
     record_file = record_output_path or Path(".video-agent/selected-soundtrack-analysis.json")
