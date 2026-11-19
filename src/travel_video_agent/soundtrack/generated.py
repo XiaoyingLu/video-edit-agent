@@ -122,9 +122,7 @@ def prepare_generated_soundtrack_candidates(
                     duration_seconds=analysis.duration_seconds,
                     tempo_bpm=bpm,
                     instrumental=None,
-                    tags=list(
-                        dict.fromkeys(brief.mood + brief.genre_directions + brief.instrumentation)
-                    ),
+                    tags=[],
                     source_url="https://docs.stability.ai/api-reference/stable-audio/text-to-audio",
                     asset_path=audio_file.relative_to(root).as_posix(),
                     retrieved_at=artifact.generated_at,
