@@ -151,3 +151,31 @@ def test_review_footage_rejects_unknown_shot(tmp_path):
             plan_path=plan_path,
             suggestions_path=suggestions_path,
         )
+
+def test_review_footage_warns_but_allows_duplicate_source_interval(tmp_path):
+    plan_path, suggestions_path = _artifacts(tmp_path)
+    plan = VideoProjectPlan.model_validate_json(plan_path.read_text(encoding="utf-8"))
+    second_shot = plan.scenes[0].shots[0].model_copy(
+        update={"shot_id": "shot-002", "sequence_index": 2}
+    )
+    plan.scenes[0].shots.append(second_shot)
+    plan_path.write_text(plan.model_dump_json(), encoding="utf-8")
+    register_artifact(tmp_path, plan_path)
+
+    suggestions = suggest_storyboard_footage(tmp_path)
+    suggestions_path.write_text(suggestions.model_dump_json(), encoding="utf-8")
+    register_artifact(tmp_path, suggestions_path)
+
+    with pytest.warns(UserWarning, match="reuse overlapping source footage"):
+        reviewed, _ = review_storyboard_footage(
+            tmp_path,
+            selections={"shot-001": 1, "shot-002": 1},
+            plan_path=plan_path,
+            suggestions_path=suggestions_path,
+        )
+
+    assert [shot.assignment_status for shot in reviewed.scenes[0].shots] == [
+        "approved",
+        "approved",
+    ]
+
