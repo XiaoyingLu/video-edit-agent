@@ -3,8 +3,10 @@
 import hashlib
 import json
 import os
+import time
 import warnings
 from collections import Counter
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -110,6 +112,7 @@ def understand_folder(
     *,
     checkpoint_path: Path | None = None,
     resume: bool = True,
+    progress_callback: Callable[[str, dict[str, Any]], None] | None = None,
 ) -> VideoUnderstanding:
     """Detect scenes and describe frames, checkpointing each completed vision request.
 
@@ -136,18 +139,48 @@ def understand_folder(
     analyzer = OllamaVisionAnalyzer(model=model)
     scenes: list[VideoScene] = []
 
+    def report(event: str, **details: Any) -> None:
+        if progress_callback is not None:
+            progress_callback(event, details)
+
     try:
         for video_path in videos:
             relative_path = video_path.relative_to(root).as_posix()
             video_info = next(item for item in media.videos if item.path == relative_path)
             video_key = hashlib.sha256(relative_path.encode("utf-8")).hexdigest()[:12]
             frame_root = root / ".video-agent" / "frames" / video_key
-            intervals = detect_scenes(video_path, video_info.duration_seconds)
+            report("scene_detection_started", video_path=relative_path)
+            detection_started = time.perf_counter()
+            intervals = detect_scenes(
+                video_path, video_info.duration_seconds, show_progress=progress_callback is not None
+            )
+            report(
+                "scene_detection_completed",
+                video_path=relative_path,
+                scene_count=len(intervals),
+                elapsed_seconds=time.perf_counter() - detection_started,
+            )
             for scene_index, (start, end) in enumerate(intervals, start=1):
                 scene_id = f"{video_key}-scene-{scene_index:04d}"
+                report(
+                    "scene_started",
+                    video_path=relative_path,
+                    scene_id=scene_id,
+                    scene_index=scene_index,
+                    scene_count=len(intervals),
+                    start_seconds=start,
+                    end_seconds=end,
+                )
                 frame_dir = frame_root / f"scene-{scene_index:04d}"
+                extraction_started = time.perf_counter()
                 frames = extract_representative_frames(
                     video_path, start, end, frame_dir, samples_per_scene=samples_per_scene
+                )
+                report(
+                    "frame_extraction_completed",
+                    scene_id=scene_id,
+                    frame_count=len(frames),
+                    elapsed_seconds=time.perf_counter() - extraction_started,
                 )
                 existing = checkpoint["scenes"].get(scene_id, {})
                 if not isinstance(existing, dict):
@@ -179,7 +212,7 @@ def understand_folder(
                     existing["dynamics"] = None
 
                 observations_by_path: dict[str, FrameObservation] = {}
-                for timestamp, frame_path in frames:
+                for frame_index, (timestamp, frame_path) in enumerate(frames, start=1):
                     frame_key = frame_path.relative_to(root).as_posix()
                     fingerprint = _frame_fingerprint(frame_path)
                     cached = existing["frames"].get(frame_key)
@@ -196,7 +229,16 @@ def understand_folder(
                     if observation is None:
                         existing["complete"] = False
                         existing["dynamics"] = None
+                        report(
+                            "frame_started",
+                            scene_id=scene_id,
+                            frame_index=frame_index,
+                            frame_count=len(frames),
+                            frame_path=frame_key,
+                        )
+                        frame_started = time.perf_counter()
                         result = analyzer.analyze_frame(frame_path)
+                        frame_elapsed = time.perf_counter() - frame_started
                         observation = FrameObservation(
                             timestamp_seconds=timestamp,
                             frame_path=frame_key,
@@ -208,6 +250,20 @@ def understand_folder(
                             "observation": observation.model_dump(mode="json"),
                         }
                         _save_checkpoint(checkpoint_file, checkpoint)
+                        report(
+                            "frame_completed",
+                            scene_id=scene_id,
+                            frame_index=frame_index,
+                            frame_count=len(frames),
+                            elapsed_seconds=frame_elapsed,
+                        )
+                    else:
+                        report(
+                            "frame_cached",
+                            scene_id=scene_id,
+                            frame_index=frame_index,
+                            frame_count=len(frames),
+                        )
                     observations_by_path[frame_key] = observation
 
                 observations = [
@@ -222,19 +278,35 @@ def understand_folder(
                     except ValidationError:
                         dynamics = None
                 if dynamics is None and len(frames) >= 2:
+                    report("temporal_analysis_started", scene_id=scene_id, frame_count=len(frames))
+                    temporal_started = time.perf_counter()
                     try:
                         dynamics = SceneDynamics.model_validate(analyzer.analyze_scene(frames))
+                        report(
+                            "temporal_analysis_completed",
+                            scene_id=scene_id,
+                            elapsed_seconds=time.perf_counter() - temporal_started,
+                        )
                     except (VisionModelError, ValidationError) as exc:
                         warnings.warn(
                             f"Temporal analysis failed for scene {scene_id}: {exc}",
                             RuntimeWarning,
                             stacklevel=2,
                         )
+                elif dynamics is not None:
+                    report("temporal_analysis_cached", scene_id=scene_id)
                 existing["dynamics"] = (
                     dynamics.model_dump(mode="json") if dynamics is not None else None
                 )
                 existing["complete"] = True
                 _save_checkpoint(checkpoint_file, checkpoint)
+                report(
+                    "scene_completed",
+                    scene_id=scene_id,
+                    scene_index=scene_index,
+                    scene_count=len(intervals),
+                    frame_count=len(frames),
+                )
 
                 scenes.append(
                     VideoScene(

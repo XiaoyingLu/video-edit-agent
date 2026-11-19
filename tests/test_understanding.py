@@ -175,7 +175,7 @@ def test_understanding_pipeline_builds_timestamped_scenes(monkeypatch, tmp_path:
     info = type("Info", (), {"path": "clip.mp4", "duration_seconds": 5.0})()
     analysis = type("Analysis", (), {"video_count": 1, "videos": [info]})()
     monkeypatch.setattr(pipeline, "analyze_folder", lambda root: analysis)
-    monkeypatch.setattr(pipeline, "detect_scenes", lambda *args: [(0.0, 5.0)])
+    monkeypatch.setattr(pipeline, "detect_scenes", lambda *args, **kwargs: [(0.0, 5.0)])
     frame = tmp_path / "frame.jpg"
     frame.write_bytes(b"fake")
     monkeypatch.setattr(
@@ -194,10 +194,21 @@ def test_understanding_pipeline_builds_timestamped_scenes(monkeypatch, tmp_path:
             "confidence": 0.8,
         },
     )
-    result = understand_folder(tmp_path)
+    events = []
+    result = understand_folder(
+        tmp_path, progress_callback=lambda event, details: events.append((event, details))
+    )
     assert result.scene_count == 1
     assert result.scenes[0].start_seconds == 0.0
     assert result.scenes[0].observations[0].timestamp_seconds == 2.5
+    event_names = [event for event, _ in events]
+    assert "scene_detection_started" in event_names
+    assert "scene_detection_completed" in event_names
+    assert "frame_started" in event_names
+    assert "frame_completed" in event_names
+    assert "scene_completed" in event_names
+    frame_event = next(details for event, details in events if event == "frame_completed")
+    assert frame_event["elapsed_seconds"] >= 0
 
 
 def test_ollama_analyzer_requests_json_schema(monkeypatch, tmp_path: Path) -> None:
@@ -651,7 +662,7 @@ def test_understanding_pipeline_attaches_temporal_scene_dynamics(monkeypatch, tm
     info = type("Info", (), {"path": "clip.mp4", "duration_seconds": 5.0})()
     analysis = type("Analysis", (), {"video_count": 1, "videos": [info]})()
     monkeypatch.setattr(pipeline, "analyze_folder", lambda root: analysis)
-    monkeypatch.setattr(pipeline, "detect_scenes", lambda *args: [(0.0, 5.0)])
+    monkeypatch.setattr(pipeline, "detect_scenes", lambda *args, **kwargs: [(0.0, 5.0)])
     frames = []
     for index, timestamp in enumerate((1.0, 4.0)):
         frame = tmp_path / f"frame-{index}.jpg"
@@ -703,7 +714,7 @@ def test_understanding_resumes_cached_frame_observations_after_interruption(
     info = type("Info", (), {"path": "clip.mp4", "duration_seconds": 5.0})()
     analysis = type("Analysis", (), {"video_count": 1, "videos": [info]})()
     monkeypatch.setattr(pipeline, "analyze_folder", lambda root: analysis)
-    monkeypatch.setattr(pipeline, "detect_scenes", lambda *args: [(0.0, 5.0)])
+    monkeypatch.setattr(pipeline, "detect_scenes", lambda *args, **kwargs: [(0.0, 5.0)])
 
     frames = []
     for index, timestamp in enumerate((1.0, 4.0)):

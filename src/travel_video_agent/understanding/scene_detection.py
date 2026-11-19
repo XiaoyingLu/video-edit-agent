@@ -10,6 +10,7 @@ def detect_scenes(
     duration_seconds: float,
     threshold: float = 27.0,
     min_scene_seconds: float = 1.0,
+    show_progress: bool = False,
 ) -> list[tuple[float, float]]:
     """Return scene intervals in seconds, falling back to the whole clip."""
     try:
@@ -32,7 +33,7 @@ def detect_scenes(
                 min_scene_len=max(1, round(min_scene_seconds * video.frame_rate)),
             )
         )
-        manager.detect_scenes(video=video, show_progress=False)
+        manager.detect_scenes(video=video, show_progress=show_progress)
         detected = manager.get_scene_list(start_in_scene=True)
     except Exception as exc:
         raise MediaToolError(f"Scene detection failed for {video_path}: {exc}") from exc
