@@ -64,7 +64,9 @@ def analyze_selected_soundtrack(
     if not root.is_dir():
         raise NotADirectoryError(f"Project folder does not exist: {root}")
     selection_file = _project_file(
-        root, selection_path or Path(".video-agent/soundtrack-selection.json"), "soundtrack selection"
+        root,
+        selection_path or Path(".video-agent/soundtrack-selection.json"),
+        "soundtrack selection",
     )
     if not validate_artifact(root, selection_file):
         raise SelectedSoundtrackAnalysisError(
@@ -106,7 +108,9 @@ def analyze_selected_soundtrack(
         selected_audio = _project_file(
             root, Path(selection.candidate.asset_path), "generated soundtrack audio"
         )
-        if music_path is not None and _project_file(root, music_path, "soundtrack audio") != selected_audio:
+        if music_path is not None and _project_file(
+            root, music_path, "soundtrack audio"
+        ) != selected_audio:
             raise SelectedSoundtrackAnalysisError(
                 "Generated selections must be analyzed from their recorded audio asset"
             )
@@ -114,7 +118,8 @@ def analyze_selected_soundtrack(
             raise SelectedSoundtrackAnalysisError(
                 "Generated soundtrack is missing its recorded checksum"
             )
-        if hashlib.sha256(selected_audio.read_bytes()).hexdigest() != selection.candidate.asset_sha256:
+        audio_digest = hashlib.sha256(selected_audio.read_bytes()).hexdigest()
+        if audio_digest != selection.candidate.asset_sha256:
             raise SelectedSoundtrackAnalysisError("Generated soundtrack checksum mismatch")
     else:
         if music_path is None:
@@ -130,10 +135,18 @@ def analyze_selected_soundtrack(
         register_artifact(root, selected_audio, dependencies=[selection_file, review_file])
     analysis_file = analysis_output_path or Path(".video-agent/music-analysis.json")
     analysis_file = analysis_file.expanduser()
-    analysis_file = (root / analysis_file).resolve() if not analysis_file.is_absolute() else analysis_file.resolve()
+    analysis_file = (
+        (root / analysis_file).resolve()
+        if not analysis_file.is_absolute()
+        else analysis_file.resolve()
+    )
     record_file = record_output_path or Path(".video-agent/selected-soundtrack-analysis.json")
     record_file = record_file.expanduser()
-    record_file = (root / record_file).resolve() if not record_file.is_absolute() else record_file.resolve()
+    record_file = (
+        (root / record_file).resolve()
+        if not record_file.is_absolute()
+        else record_file.resolve()
+    )
     for path, label in ((analysis_file, "analysis output"), (record_file, "provenance output")):
         try:
             path.relative_to(root)
@@ -144,7 +157,9 @@ def analyze_selected_soundtrack(
         if path.exists():
             raise FileExistsError(f"{label.capitalize()} already exists: {path}")
     if analysis_file == record_file:
-        raise SelectedSoundtrackAnalysisError("Analysis and provenance outputs must be different files")
+        raise SelectedSoundtrackAnalysisError(
+            "Analysis and provenance outputs must be different files"
+        )
 
     analysis = analyze_music(root, selected_audio)
     digest = hashlib.sha256(selected_audio.read_bytes()).hexdigest()
