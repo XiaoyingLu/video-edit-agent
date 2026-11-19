@@ -121,6 +121,7 @@ def test_prepare_candidates_analyzes_generated_audio_and_records_provenance(tmp_
     assert candidate.provider_id == "stability_stable_audio"
     assert candidate.asset_path == audio.relative_to(tmp_path).as_posix()
     assert candidate.tempo_bpm == 92
+    assert candidate.tags == []
     assert candidate.duration_seconds == 12
     assert candidate.asset_sha256 == hashlib.sha256(audio.read_bytes()).hexdigest()
     manifest = json.loads((tmp_path / ".video-agent" / "artifact-manifest.json").read_text())
