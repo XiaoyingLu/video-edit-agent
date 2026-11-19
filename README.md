@@ -639,9 +639,15 @@ transition context:
 docker compose run --rm video-agent review-timeline-visual ./travel-test
 ```
 
-Open `.video-agent/timeline-visual-review/review.html` in a browser. Drag cards to change
-shot order and adjust the source in/out points to trim a shot. Use **Export visual edits (.json)**
-to save a proposal, then import it as a separate revision:
+Open `.video-agent/timeline-visual-review/review.html` in a browser. The built-in player can
+play the current shot or the complete sequence in card order, honoring each shot's source in/out
+points. Use Previous/Next to inspect individual shots. The preview reads the original local video
+files through paths relative to the HTML page; keep the review page in its generated project
+folder. Playback uses cuts between clips, so it is a sequence/pacing preview rather than a final
+transition-accurate render.
+
+Drag cards to change shot order and adjust the source in/out points to trim a shot. Use
+**Export visual edits (.json)** to save a proposal, then import it as a separate revision:
 
 ```bash
 docker compose run --rm video-agent apply-timeline-visual-edits ./travel-test \
