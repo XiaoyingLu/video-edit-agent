@@ -796,4 +796,4 @@ def test_analyze_selected_soundtrack_command_invokes_provenance_workflow(tmp_pat
     assert captured["folder"] == tmp_path
     assert captured["music_path"] == Path(".video-agent/imported-track.mp3")
     assert captured["analysis_output_path"] == Path(".video-agent/custom-analysis.json")
-    assert "no timeline approval or rendering occurred" in result.output
+    assert "no timeline approval or rendering occurred" in " ".join(result.output.split())
