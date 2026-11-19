@@ -70,7 +70,6 @@ from .editing.timeline_visual_review import (
     save_timeline_visual_review,
 )
 from .editing.timeline_visual_editor import (
-    TimelineVisualEditError,
     apply_timeline_visual_edits,
     load_timeline_visual_edits,
 )
@@ -2627,12 +2626,7 @@ def apply_timeline_visual_edits_command(
     try:
         edits = load_timeline_visual_edits(edits_file)
         destination = apply_timeline_visual_edits(folder, edits, timeline_path=timeline)
-    except (
-        FileNotFoundError,
-        OSError,
-        ValueError,
-        TimelineVisualEditError,
-    ) as exc:
+    except (OSError, ValueError) as exc:
         console.print(f"[red]Visual timeline edits rejected:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
