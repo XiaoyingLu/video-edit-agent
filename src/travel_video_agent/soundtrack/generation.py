@@ -52,10 +52,7 @@ def stable_audio_license() -> SoundtrackLicense:
     return SoundtrackLicense(
         license_type=SoundtrackLicenseType.CUSTOM,
         license_name="Stability AI Stable Audio API commercial-use terms",
-        license_url=(
-            "https://kb.stability.ai/knowledge-base/"
-            "stable-audio-commerical-and-usage-licensing"
-        ),
+        license_url="https://kb.stability.ai/knowledge-base/stable-audio-commerical-and-usage-licensing",
         evidence_url="https://docs.stability.ai/api-reference/stable-audio/text-to-audio",
         commercial_use_allowed=True,
         monetized_video_allowed=True,
@@ -109,9 +106,7 @@ async def generate_soundtrack_from_brief(
     )
     destination = _project_path(root, destination, "Generated audio output")
     if destination.suffix.lower() != f".{output_format}":
-        raise SoundtrackGenerationError(
-            f"Output path must use the .{output_format} extension"
-        )
+        raise SoundtrackGenerationError(f"Output path must use the .{output_format} extension")
     metadata_path = destination.with_suffix(".json")
     if metadata_path.exists():
         raise FileExistsError(f"Generation metadata already exists: {metadata_path}")
