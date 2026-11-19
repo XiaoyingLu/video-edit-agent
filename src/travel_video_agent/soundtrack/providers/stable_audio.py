@@ -222,6 +222,4 @@ class StableAudioGenerationProvider:
     @staticmethod
     def _raise_http_error(exc: HTTPError) -> None:
         detail = exc.read().decode("utf-8", errors="replace")[:1000]
-        raise StableAudioAPIError(
-            f"Stable Audio API returned HTTP {exc.code}: {detail}"
-        ) from exc
+        raise StableAudioAPIError(f"Stable Audio API returned HTTP {exc.code}: {detail}") from exc
