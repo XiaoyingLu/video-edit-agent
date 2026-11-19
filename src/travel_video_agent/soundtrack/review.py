@@ -231,7 +231,8 @@ def render_soundtrack_review_html(
         tags = ", ".join(candidate.tags) or "No tags"
         cards.append(
             f'<section class="candidate"><h2>{index}. {html.escape(candidate.title)}</h2>'
-            f"<p>{html.escape(candidate.creator or 'Unknown creator')} · "
+            f"<p>Source: {html.escape(candidate.origin)} · "
+            f"{html.escape(candidate.creator or 'Unknown creator')} · "
             f"{candidate.duration_seconds:.1f}s · "
             f"{candidate.tempo_bpm if candidate.tempo_bpm is not None else '—'} BPM</p>"
             f"<p>Creative fit: {ranking.creative_score:.0%} · "
