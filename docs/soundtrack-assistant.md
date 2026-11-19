@@ -54,7 +54,7 @@ Video project artifacts
 - Provider-specific HTTP clients, credentials, rate limits, and response parsing stay inside provider adapters.
 - License validation is independent of provider search and generation. Unknown or incomplete rights fail closed. The initial evaluator treats CC BY-NC and CC BY-ND as ineligible and CC BY-SA as requiring explicit review; provider-supplied permission claims must still be backed by license evidence.
 - Ranking is explainable and separates creative fit from legal eligibility. A high creative score cannot override a failed rights check.
-- The existing FFmpeg renderer and music-analysis pipeline remain provider-agnostic. A selected track is copied/referenced as a project asset and then passed through the current analysis workflow.
+- The existing FFmpeg renderer and music-analysis pipeline remain provider-agnostic. This review stage records an explicit selection but does not download the asset or alter the timeline; a later integration stage will hand an authorized local asset to the existing analysis workflow.
 - All selection and timeline changes remain human-approved; discovery and generation never render or alter a timeline automatically.
 
 ### Candidate rights and provenance
@@ -84,6 +84,14 @@ The normalized `SoundtrackCandidate` and `SoundtrackLicense` models, async `Soun
 
 The default rights evaluator requires explicit commercial-use, monetized-video, adaptation, and synchronization permissions, along with a canonical license URL and evidence URL. Missing permission data is not treated as permission. CC BY-NC and CC BY-ND are rejected for this default workflow; CC BY-SA is held for explicit review. Attribution-required candidates need their credit text retained. These checks are conservative software gates, not legal advice or an independent legal verification of provider claims.
 
+## Candidate search, audition, and selection
+
+`search-soundtrack` uses the saved brief to query the Soundstripe catalog and writes `.video-agent/soundtrack-candidates.json`. `SOUNDSTRIPE_API_KEY` must be provided through the environment. An optional project-local `--license-profile` JSON file can supply rights claims only after the account agreement has been checked; without it, the provider uses an unknown license profile and candidates cannot pass the rights gate.
+
+`review-soundtrack` ranks the normalized response and writes a JSON report plus a read-only HTML audition page. Pass `--video` with a project-local video to show it beside candidate audio players. Playback is manual; the page does not synchronize playback automatically. The report shows creative-fit score separately from rights status and includes provider details and preview links.
+
+`select-soundtrack --candidate-id ...` records a deliberate choice only when the candidate is `eligible`. `review_required` and `ineligible` candidates are blocked. Selection is stored as `.video-agent/soundtrack-selection.json`, with provenance and rights evidence retained. This stage does not download audio, change a timeline, or render a video. Existing review artifacts are immutable; rerun search/review with a new output path if you want to preserve an earlier audition.
+
 ## Incremental PR plan
 
 | PR | Scope | Acceptance criteria |
@@ -92,7 +100,7 @@ The default rights evaluator requires explicit commercial-use, monetized-video, 
 | #63 | Catalog search contracts and normalized candidate model | Provider-neutral async search interface; rights/provenance schema; fail-closed eligibility evaluator; no provider assumptions |
 | #64 | First catalog provider | Official API/authorized download path only; documented provider terms; integration tests with mocked HTTP |
 | #65 | Candidate ranking | Explainable creative-fit score; rights eligibility is a hard gate; deterministic tests |
-| #66 | Preview and selection | Preview candidates against current video; explicit selection; preserve source files and timeline |
+| #66 | Preview and selection | Soundstripe search CLI; read-only HTML audition against optional project video; explainable ranking and rights status; explicit eligible-only selection artifact; preserve source files and timeline |
 | #67 | Hosted generation adapter | Provider selected after terms/API review; secrets via environment; async job lifecycle; rights metadata |
 | #68 | Generated-track evaluation and workflow integration | Analyze generated audio with existing analyzer; compare alternatives; human selection; no auto-render |
 

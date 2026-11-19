@@ -1,5 +1,6 @@
 """Command-line interface."""
 
+import asyncio
 import hashlib
 import json
 import os
@@ -104,6 +105,12 @@ from .rendering.title_overlays import (
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
 from .soundtrack import create_soundtrack_brief
+from .soundtrack.review import (
+    build_soundtrack_candidate_review,
+    save_soundtrack_candidate_review,
+    search_soundstripe_catalog,
+    select_soundtrack_candidate,
+)
 from .storage_cleanup import cleanup_generated_storage
 from .subtitles import SubtitleError, generate_subtitles
 from .transcription import transcribe_folder
@@ -2861,6 +2868,143 @@ def suggest_soundtrack_command(
     console.print(
         "[yellow]This is a music direction only. No track was downloaded or generated, "
         "and no timeline or video was changed.[/yellow]"
+    )
+
+
+@app.command("search-soundtrack")
+def search_soundtrack_command(
+    folder: Annotated[
+        Path, typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True)
+    ],
+    license_profile: Annotated[
+        Path | None,
+        typer.Option(
+            "--license-profile",
+            help="Project-local JSON rights profile confirmed against your Soundstripe agreement.",
+        ),
+    ] = None,
+    limit: Annotated[
+        int, typer.Option("--limit", min=1, max=100, help="Maximum candidates to retrieve.")
+    ] = 20,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Candidate response JSON output path.")
+    ] = None,
+) -> None:
+    """Search Soundstripe using the project's soundtrack brief."""
+    try:
+        response, destination = asyncio.run(
+            search_soundstripe_catalog(
+                folder,
+                license_profile_path=license_profile,
+                output_path=output,
+                limit=limit,
+            )
+        )
+    except (FileNotFoundError, ValueError, OSError, RuntimeError) as exc:
+        console.print(f"[red]Soundtrack search failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    console.print(f"Found [bold]{len(response.candidates)}[/bold] Soundstripe candidate(s).")
+    console.print(f"Candidates saved to [green]{destination}[/green]")
+    if license_profile is None:
+        console.print(
+            "[yellow]No account-specific rights profile was supplied. Candidates remain "
+            "ineligible until commercial, monetized-video, adaptation, and synchronization "
+            "permissions are explicitly documented.[/yellow]"
+        )
+    console.print("[dim]No audio was downloaded and no timeline or video was changed.[/dim]")
+
+
+@app.command("review-soundtrack")
+def review_soundtrack_command(
+    folder: Annotated[
+        Path, typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True)
+    ],
+    candidates: Annotated[
+        Path, typer.Option("--candidates", help="Normalized soundtrack search-response JSON.")
+    ],
+    brief: Annotated[
+        Path | None, typer.Option("--brief", help="Soundtrack brief JSON path.")
+    ] = None,
+    video: Annotated[
+        Path | None,
+        typer.Option("--video", help="Optional project-local video to audition against."),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Output base path for review JSON and HTML."),
+    ] = None,
+) -> None:
+    """Rank catalog candidates and create a read-only video/audio audition page."""
+    try:
+        report = build_soundtrack_candidate_review(
+            folder,
+            candidates_path=candidates,
+            brief_path=brief,
+            video_path=video,
+        )
+        json_file, html_file = save_soundtrack_candidate_review(folder, report, output_path=output)
+    except (FileNotFoundError, ValueError, OSError) as exc:
+        console.print(f"[red]Soundtrack review failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    table = Table(title="Soundtrack Candidates — Human Review Required")
+    table.add_column("Candidate", style="cyan")
+    table.add_column("Creator")
+    table.add_column("Fit", justify="right")
+    table.add_column("Rights")
+    table.add_column("Duration", justify="right")
+    for item in report.items:
+        table.add_row(
+            item.candidate.title,
+            item.candidate.creator or "—",
+            f"{item.ranking.creative_score:.0%}",
+            item.ranking.rights.status,
+            f"{item.candidate.duration_seconds:.1f}s",
+        )
+    console.print(table)
+    console.print(f"HTML audition: [green]{html_file}[/green]")
+    console.print(f"Review data: [green]{json_file}[/green]")
+    console.print(
+        "[yellow]Review only. No candidate was selected or downloaded, and no timeline or "
+        "source video was changed. Only rights-eligible candidates can be selected.[/yellow]"
+    )
+
+
+@app.command("select-soundtrack")
+def select_soundtrack_command(
+    folder: Annotated[
+        Path, typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True)
+    ],
+    candidate_id: Annotated[
+        str, typer.Option("--candidate-id", help="Exact candidate ID shown in the review JSON.")
+    ],
+    review: Annotated[
+        Path | None, typer.Option("--review", help="Soundtrack review JSON path.")
+    ] = None,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Selection JSON output path.")
+    ] = None,
+) -> None:
+    """Explicitly select one rights-eligible candidate without downloading or rendering."""
+    try:
+        selection, destination = select_soundtrack_candidate(
+            folder,
+            review_path=review,
+            candidate_id=candidate_id,
+            output_path=output,
+        )
+    except (FileNotFoundError, ValueError, OSError) as exc:
+        console.print(f"[red]Soundtrack selection failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    console.print("[bold green]Soundtrack candidate selected.[/bold green]")
+    console.print(f"Track: {selection.candidate.title}")
+    console.print(f"Provider: {selection.candidate.provider_id}")
+    console.print(f"Selection saved to [green]{destination}[/green]")
+    console.print(
+        "[yellow]The selected track has not been downloaded or added to a timeline. "
+        "No source media was changed and no video was rendered.[/yellow]"
     )
 
 
