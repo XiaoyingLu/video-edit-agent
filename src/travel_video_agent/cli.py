@@ -80,6 +80,10 @@ from .music import analyze_music
 from .music.pipeline import MusicAnalysisError
 from .music.refinement import apply_music_sync_review
 from .music.sync import MusicSyncSuggestions, save_music_sync_suggestions, suggest_music_sync
+from .music.timeline_preview import (
+    build_music_timeline_preview,
+    save_music_timeline_preview,
+)
 from .rendering import (
     DraftComparisonError,
     DraftCritiqueError,
@@ -2977,6 +2981,46 @@ def suggest_music_sync_command(
     console.print(
         "[yellow]This is a review-only report. Timeline timing and source intervals "
         "were not changed.[/yellow]"
+    )
+
+
+@app.command("review-music-timeline")
+def review_music_timeline(
+    folder: Annotated[
+        Path,
+        typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True),
+    ],
+    timeline: Annotated[
+        Path | None, typer.Option("--timeline", help="Shot timeline JSON path.")
+    ] = None,
+    music_analysis: Annotated[
+        Path | None, typer.Option("--music-analysis", help="Soundtrack analysis JSON path.")
+    ] = None,
+    suggestions: Annotated[
+        Path | None, typer.Option("--suggestions", help="Music sync suggestions JSON path.")
+    ] = None,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Output base path for JSON and HTML.")
+    ] = None,
+) -> None:
+    """Create a read-only browser view of soundtrack beats and shot boundaries."""
+    try:
+        report = build_music_timeline_preview(
+            folder,
+            timeline_path=timeline,
+            music_analysis_path=music_analysis,
+            suggestions_path=suggestions,
+        )
+        json_file, html_file = save_music_timeline_preview(folder, report, output_path=output)
+    except (FileNotFoundError, ValueError, OSError) as exc:
+        console.print(f"[red]Music timeline preview failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    console.print(f"HTML preview: [green]{html_file}[/green]")
+    console.print(f"JSON report: [green]{json_file}[/green]")
+    console.print(
+        "[yellow]This is a read-only synchronization view. Beat estimates are approximate; "
+        "no timeline timing, approval, or source media was changed.[/yellow]"
     )
 
 
