@@ -70,7 +70,9 @@ def apply_timeline_visual_edits(
     try:
         source_file.relative_to(root)
     except ValueError as exc:
-        raise TimelineVisualEditError("Source timeline must stay inside the project folder") from exc
+        raise TimelineVisualEditError(
+            "Source timeline must stay inside the project folder"
+        ) from exc
     if not source_file.is_file():
         raise FileNotFoundError(f"Missing source timeline: {source_file}")
     if not validate_artifact(root, source_file):
@@ -80,7 +82,9 @@ def apply_timeline_visual_edits(
         raise TimelineVisualEditError("Edit export targets a different timeline")
     current_hash = hashlib.sha256(source_file.read_bytes()).hexdigest()
     if current_hash != edits.timeline_sha256:
-        raise TimelineVisualEditError("Timeline changed after visual editing; regenerate the editor")
+        raise TimelineVisualEditError(
+            "Timeline changed after visual editing; regenerate the editor"
+        )
     source = ProjectDraftTimeline.model_validate_json(source_file.read_text(encoding="utf-8"))
     if Path(source.project_path).resolve() != root:
         raise TimelineVisualEditError("Timeline belongs to a different project folder")
@@ -88,7 +92,8 @@ def apply_timeline_visual_edits(
     requested_ids = [clip.clip_id for clip in edits.clips]
     if len(requested_ids) != len(original) or set(requested_ids) != set(original):
         raise TimelineVisualEditError(
-            "Edit export must contain every timeline clip exactly once; clips cannot be added or removed"
+            "Edit export must contain every timeline clip exactly once; "
+            "clips cannot be added or removed"
         )
     if minimum_clip_duration_seconds <= 0:
         raise TimelineVisualEditError("Minimum clip duration must be positive")
@@ -103,7 +108,8 @@ def apply_timeline_visual_edits(
         ):
             raise TimelineVisualEditError(
                 f"Trim for {edit.clip_id} must stay within its original source interval "
-                f"({original_clip.source_start_seconds:.3f}–{original_clip.source_end_seconds:.3f}s)"
+                f"({original_clip.source_start_seconds:.3f}–"
+                f"{original_clip.source_end_seconds:.3f}s)"
             )
         duration = round(edit.source_end_seconds - edit.source_start_seconds, 3)
         if duration < minimum_clip_duration_seconds:
