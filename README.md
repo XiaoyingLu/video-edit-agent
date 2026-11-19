@@ -643,7 +643,15 @@ Open `.video-agent/timeline-visual-review/review.html` in a browser. The built-i
 play the current shot or the complete sequence in card order, honoring each shot's source in/out
 points. Use Previous/Next to inspect individual shots. The preview reads the original local video
 files through paths relative to the HTML page; keep the review page in its generated project
-folder. Playback uses cuts between clips, so it is a sequence/pacing preview rather than a final
+folder. If your browser blocks local media access, serve the project folder on loopback:
+
+```bash
+cd ./travel-test
+python3 -m http.server 8000 --bind 127.0.0.1
+```
+
+Then open `http://127.0.0.1:8000/.video-agent/timeline-visual-review/review.html`.
+Playback uses cuts between clips, so it is a sequence/pacing preview rather than a final
 transition-accurate render.
 
 Drag cards to change shot order and adjust the source in/out points to trim a shot. Use
