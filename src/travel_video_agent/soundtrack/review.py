@@ -1,5 +1,6 @@
 """Human-reviewed soundtrack candidate preview and selection."""
 
+import asyncio
 from datetime import UTC, datetime
 import html
 import json
@@ -9,9 +10,10 @@ from urllib.parse import quote
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
-from .catalog import SoundtrackSearchResponse
+from .catalog import SoundtrackSearchRequest, SoundtrackSearchResponse
 from .ranking import SoundtrackCandidateRanking, rank_soundtrack_candidates
-from .schemas import SoundtrackBrief, SoundtrackCandidate
+from .providers import SoundstripeCatalogProvider
+from .schemas import SoundtrackBrief, SoundtrackCandidate, SoundtrackLicense
 
 
 class SoundtrackReviewError(ValueError):
@@ -71,6 +73,58 @@ def _project_file(root: Path, value: Path, label: str) -> Path:
     if not resolved.is_file():
         raise FileNotFoundError(f"Missing {label}: {resolved}")
     return resolved
+
+
+
+async def search_soundstripe_catalog(
+    folder: Path,
+    *,
+    license_profile_path: Path | None = None,
+    output_path: Path | None = None,
+    limit: int = 20,
+) -> tuple[SoundtrackSearchResponse, Path]:
+    """Search Soundstripe from the saved brief and persist normalized candidates."""
+    root = folder.expanduser().resolve()
+    if not root.is_dir():
+        raise NotADirectoryError(f"Project folder does not exist: {root}")
+    brief_file = _project_file(
+        root, Path(".video-agent/soundtrack-brief.json"), "soundtrack brief"
+    )
+    brief = SoundtrackBrief.model_validate_json(brief_file.read_text(encoding="utf-8"))
+    if Path(brief.project_path).resolve() != root:
+        raise SoundtrackReviewError("Soundtrack brief belongs to a different project")
+    license_profile = None
+    dependencies: list[Path] = [brief_file]
+    if license_profile_path:
+        profile_file = _project_file(root, license_profile_path, "Soundstripe license profile")
+        license_profile = SoundtrackLicense.model_validate_json(
+            profile_file.read_text(encoding="utf-8")
+        )
+        dependencies.append(profile_file)
+    request = SoundtrackSearchRequest(
+        query=" ".join(brief.search_terms[:3]) or brief.narrative_summary[:300],
+        search_terms=brief.search_terms,
+        moods=brief.mood,
+        genres=brief.genre_directions,
+        target_duration_seconds=brief.target_duration_seconds,
+        tempo_min_bpm=brief.tempo_min_bpm,
+        tempo_max_bpm=brief.tempo_max_bpm,
+        instrumental_preferred=brief.vocals == "instrumental_preferred",
+        limit=limit,
+    )
+    provider = SoundstripeCatalogProvider(license_profile=license_profile)
+    response = await provider.search(request)
+    destination = output_path or Path(".video-agent/soundtrack-candidates.json")
+    destination = destination.expanduser()
+    destination = (root / destination).resolve() if not destination.is_absolute() else destination.resolve()
+    try:
+        destination.relative_to(root)
+    except ValueError as exc:
+        raise SoundtrackReviewError("Candidate output must be inside the project folder") from exc
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(response.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    register_artifact(root, destination, dependencies=dependencies)
+    return response, destination
 
 
 def build_soundtrack_candidate_review(
