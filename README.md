@@ -783,6 +783,22 @@ docker compose run --rm video-agent suggest-music-sync ./travel-test
 The command validates the human selection, current review, rights eligibility, project-local audio path, and generated-track checksum. Catalog preview URLs are not treated as downloadable or renderable assets; catalog audio must be supplied as a local file obtained under the applicable account license. It records analysis and provenance dependencies without changing the timeline or rendering.
 
 
+### Build the storyboard from a selected story angle
+
+After generating story alternatives and explicitly selecting one, pass the proposal to `create-plan`:
+
+```bash
+docker compose run --rm video-agent propose-story ./travel-test --prompt "relaxed, 90 seconds"
+docker compose run --rm video-agent select-story ./travel-test --angle angle-1
+docker compose run --rm video-agent create-plan ./travel-test \\
+  --prompt "Create a relaxed cinematic travel film" \\
+  --story ./.video-agent/story-proposal.json
+```
+
+The selected angle supplies the chapter order, names, purposes, moods, narration hints, music-energy intent, candidate source scene IDs, and chapter target durations. The planner generates concrete storyboard shots within each chapter and preserves the chapter's target duration. The story proposal must be current, belong to the same project, and have an explicitly selected angle. If the prompt specifies a duration, it must match the proposal's duration.
+
+The resulting plan remains a storyboard proposal: candidate source scenes are carried forward as hints for footage review, but no footage is assigned or approved and no timeline is changed or rendered. The plan tracks the story proposal as an upstream artifact, so changing or regenerating the proposal makes the plan stale.
+
 ### Music-section-aware storyboard planning
 
 When creating a creative video plan, optionally pass the selected soundtrack's current `.video-agent/music-analysis.json` artifact:
