@@ -3,7 +3,10 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from travel_video_agent.soundtrack.catalog import SoundtrackSearchRequest
+from travel_video_agent.soundtrack.catalog import (
+    SoundtrackSearchRequest,
+    SoundtrackSearchResponse,
+)
 from travel_video_agent.soundtrack.licensing import evaluate_soundtrack_rights
 from travel_video_agent.soundtrack.schemas import (
     SoundtrackCandidate,
@@ -114,4 +117,24 @@ def test_search_request_rejects_invalid_tempo_range() -> None:
             target_duration_seconds=90,
             tempo_min_bpm=130,
             tempo_max_bpm=90,
+        )
+
+
+
+def test_catalog_response_rejects_candidates_from_another_provider() -> None:
+    with pytest.raises(ValidationError, match="response provider"):
+        SoundtrackSearchResponse(
+            provider_id="catalog-a",
+            candidates=[_candidate()],
+        )
+
+
+def test_catalog_response_rejects_generated_candidates() -> None:
+    candidate = _candidate().model_dump(mode="python")
+    candidate["origin"] = "generated"
+
+    with pytest.raises(ValidationError, match="generated candidates"):
+        SoundtrackSearchResponse(
+            provider_id="example",
+            candidates=[candidate],
         )
