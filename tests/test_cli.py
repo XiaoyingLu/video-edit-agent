@@ -111,6 +111,7 @@ def test_cli_help_is_available() -> None:
     assert "create-plan" in result.output
     assert "suggest-soundtrack" in result.output
     assert "generate-soundtrack" in result.output
+    assert "prepare-soundtrack-candidates" in result.output
     assert "search-soundtrack" in result.output
     assert "review-soundtrack" in result.output
     assert "select-soundtrack" in result.output
