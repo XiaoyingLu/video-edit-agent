@@ -47,6 +47,28 @@ def test_frame_sampler_rejects_invalid_scene(monkeypatch, tmp_path: Path) -> Non
     assert extract_representative_frames(tmp_path / "clip.mp4", 4.0, 4.0, tmp_path / "frames") == []
 
 
+def test_frame_sampler_reuses_existing_extracted_frames(monkeypatch, tmp_path: Path) -> None:
+    frame_dir = tmp_path / "frames"
+    frame_dir.mkdir()
+    existing = frame_dir / "frame-01.jpg"
+    existing.write_bytes(b"cached-frame")
+    monkeypatch.setattr(
+        "travel_video_agent.understanding.frame_sampler.shutil.which", lambda _: "ffmpeg"
+    )
+
+    def unexpected_extract(*args, **kwargs):
+        raise AssertionError("existing frame should not be extracted again")
+
+    monkeypatch.setattr(
+        "travel_video_agent.understanding.frame_sampler.subprocess.run", unexpected_extract
+    )
+    result = extract_representative_frames(
+        tmp_path / "clip.mp4", 0.0, 10.0, frame_dir, samples_per_scene=1
+    )
+
+    assert result == [(5.0, existing)]
+
+
 def test_ollama_analyzer_uses_environment_endpoint(monkeypatch) -> None:
     monkeypatch.setenv("OLLAMA_BASE_URL", "http://ollama:11434/")
     analyzer = OllamaVisionAnalyzer()
