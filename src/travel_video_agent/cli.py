@@ -246,15 +246,39 @@ def understand(
             "--samples-per-scene", min=1, max=10, help="Representative frames to inspect per scene."
         ),
     ] = 3,
+    no_resume: Annotated[
+        bool,
+        typer.Option(
+            "--no-resume", help="Ignore saved progress and start understanding from scratch."
+        ),
+    ] = False,
 ) -> None:
     """Detect scenes, sample frames, and describe footage with a local vision model."""
+    project_root = folder.expanduser().resolve()
+    checkpoint = project_root / ".video-agent" / "understanding-checkpoint.json"
+    if checkpoint.is_file() and not no_resume:
+        console.print(f"[cyan]Resuming video understanding from {checkpoint}[/cyan]")
+    console.print(
+        "[dim]Progress is saved after each analyzed frame; rerun this command to resume.[/dim]"
+    )
     try:
-        understanding = understand_folder(folder, model=model, samples_per_scene=samples_per_scene)
-    except (FileNotFoundError, NotADirectoryError, MediaToolError, VisionModelError) as exc:
+        understanding = understand_folder(
+            folder,
+            model=model,
+            samples_per_scene=samples_per_scene,
+            resume=not no_resume,
+        )
+    except (
+        FileNotFoundError,
+        NotADirectoryError,
+        MediaToolError,
+        VisionModelError,
+        ValueError,
+    ) as exc:
         console.print(f"[red]Video understanding failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
-    destination = output or folder.resolve() / ".video-agent" / "understanding.json"
+    destination = output or project_root / ".video-agent" / "understanding.json"
     destination = destination.expanduser().resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(
@@ -263,6 +287,7 @@ def understand(
     _track_artifact(
         folder, destination, config={"model": model, "samples_per_scene": samples_per_scene}
     )
+    checkpoint.unlink(missing_ok=True)
 
     table = Table(title="Video Understanding")
     table.add_column("Scene", style="cyan")

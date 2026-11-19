@@ -1,5 +1,6 @@
 """Representative frame extraction through FFmpeg."""
 
+import json
 import shutil
 import subprocess
 from pathlib import Path
@@ -26,6 +27,11 @@ def extract_representative_frames(
         return []
 
     output_dir.mkdir(parents=True, exist_ok=True)
+    source_stat = video_path.stat()
+    source_fingerprint = {
+        "size": source_stat.st_size,
+        "mtime_ns": source_stat.st_mtime_ns,
+    }
     duration = end_seconds - start_seconds
     fractions = (
         [0.5]
@@ -36,6 +42,20 @@ def extract_representative_frames(
     for index, fraction in enumerate(fractions, start=1):
         timestamp = start_seconds + duration * fraction
         destination = output_dir / f"frame-{index:02d}.jpg"
+        timestamp_file = destination.with_suffix(".timestamp")
+        if destination.is_file() and destination.stat().st_size > 0 and timestamp_file.is_file():
+            try:
+                cached = json.loads(timestamp_file.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                cached = {}
+            if (
+                isinstance(cached, dict)
+                and isinstance(cached.get("timestamp_seconds"), (int, float))
+                and abs(cached["timestamp_seconds"] - timestamp) < 0.001
+                and cached.get("source") == source_fingerprint
+            ):
+                extracted.append((timestamp, destination))
+                continue
         command = [
             executable,
             "-hide_banner",
@@ -64,5 +84,9 @@ def extract_representative_frames(
                 f"Could not extract frame at {timestamp:.2f}s from {video_path}: {detail}"
             ) from exc
         if destination.exists() and destination.stat().st_size:
+            timestamp_file.write_text(
+                json.dumps({"timestamp_seconds": timestamp, "source": source_fingerprint}) + "\n",
+                encoding="utf-8",
+            )
             extracted.append((timestamp, destination))
     return extracted
