@@ -3,6 +3,8 @@
 import json
 from pathlib import Path
 
+from .footage_assignments import warn_for_overlapping_footage
+
 from ..artifact_tracking import register_artifact, validate_artifact
 from .footage_schemas import ProjectFootageSuggestions
 from .planning_schemas import VideoProjectPlan
@@ -98,6 +100,18 @@ def review_storyboard_footage(
         shot.camera_motion = "unknown"
         shot.composition = "unknown"
         shot.assignment_status = "unassigned"
+
+    warn_for_overlapping_footage(
+        (
+            (shot.shot_id, shot.footage_path, shot.footage_start_seconds, shot.footage_end_seconds)
+            for shot in shots.values()
+            if shot.assignment_status == "approved"
+            and shot.footage_path is not None
+            and shot.footage_start_seconds is not None
+            and shot.footage_end_seconds is not None
+        ),
+        stage="review-footage",
+    )
 
     all_assigned = all(shot.assignment_status != "unassigned" for shot in shots.values())
     plan.planning_stage = "footage_mapped" if all_assigned else "storyboard_ready"
