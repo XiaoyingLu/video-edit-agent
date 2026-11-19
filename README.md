@@ -47,6 +47,46 @@ Understanding is resumable. After each successful frame-analysis request (and af
 
 These are model-assisted visual classifications, not ground truth. The prompt explicitly avoids guessing precise locations or inferring camera movement from a still frame; uncertain classifications are recorded as `unknown`. New fields have defaults so older understanding artifacts remain readable. The attributes are intended to improve later sequence planning and human review; they do not automatically change clip selection or rendering in this step.
 
+### Experimental SmolVLM2 backend (Apple Silicon)
+
+The default `understand` backend remains Ollama. An experimental SmolVLM2 adapter can run
+through MLX-VLM with native Apple Silicon acceleration. MLX must run in a native macOS Python
+process; it cannot use Apple's Metal GPU from the Linux containers managed by Docker Desktop.
+
+Install the optional dependency and the project in a native macOS environment:
+
+```bash
+python3 -m venv .venv-mlx
+source .venv-mlx/bin/activate
+python -m pip install -e ".[mlx,dev]"
+```
+
+Run understanding natively (FFmpeg and the project's other system dependencies must be
+available on the host):
+
+```bash
+VISION_PROVIDER=mlx MLX_VISION_MODEL=mlx-community/SmolVLM2-2.2B-Instruct-mlx \\
+  video-agent understand ./travel-test --provider mlx
+```
+
+You can override the model with `--model`. The default Ollama provider and Docker Compose
+workflow are unchanged. Check the selected MLX model repository and installed mlx-vlm release
+for compatibility; model identifiers are configurable because community conversions can vary.
+
+To compare both backends on the exact same extracted representative frames:
+
+```bash
+python scripts/benchmark_vision.py frame-1.jpg frame-2.jpg frame-3.jpg \\
+  --ollama-model qwen2.5vl:3b \\
+  --mlx-model mlx-community/SmolVLM2-2.2B-Instruct-mlx \\
+  --output .video-agent/vision-benchmark.json
+```
+
+The benchmark records per-frame latency and normalized observations for human quality review.
+It does not claim semantic equivalence or automatically select a winner. Run it on a small,
+representative set first. The MLX adapter also attempts multi-image temporal analysis; verify
+that your installed model conversion supports multiple images before using it for full projects.
+
 ## Cinematic sequencing and pacing
 
 The `optimize-timeline` stage uses the scene metadata to build a deterministic visual arc for cinematic and social-media edits. When reliable labels are available, it prefers an establishing view near the opening, varies action/detail/reaction beats through the middle, alternates shot scales where possible, and favors a scenic-breath or establishing shot for the ending. If scene-role metadata is missing or uncertain, it preserves the existing score-ranked order. Vlog and documentary edits, or plans with the `chronological_story` priority, retain source chronology.
