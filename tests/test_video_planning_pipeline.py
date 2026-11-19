@@ -7,7 +7,7 @@ from travel_video_agent.artifact_tracking import (
     register_artifact,
     validate_artifact,
 )
-from travel_video_agent.editing import planning_generation, planning_pipeline
+from travel_video_agent.editing import music_pacing, planning_generation, planning_pipeline
 from travel_video_agent.editing.intent_schemas import EditingPlan
 from travel_video_agent.editing.planning_generation import (
     GeneratedVideoPlanContent,
@@ -174,6 +174,10 @@ def test_planner_discards_partial_model_footage_assignments(monkeypatch):
     generated["scenes"][0]["music_energy"] = "high"
     generated["scenes"][0]["music_section_start_seconds"] = 0
     generated["scenes"][0]["music_section_end_seconds"] = 45
+    generated["scenes"][0]["shots"][0]["pacing_recommendation"] = "brisk"
+    generated["scenes"][0]["shots"][0]["pacing_rationale"] = "model supplied"
+    generated["scenes"][0]["shots"][0]["transition_recommendation"] = "soft_dissolve"
+    generated["scenes"][0]["shots"][0]["transition_rationale"] = "model supplied"
     first_shot = generated["scenes"][0]["shots"][0]
     first_shot["footage_start_seconds"] = 12.5
     first_shot["footage_path"] = "invented.mp4"
@@ -202,6 +206,10 @@ def test_planner_discards_partial_model_footage_assignments(monkeypatch):
     assert shot.assignment_status == "unassigned"
     assert result.scenes[0].music_energy == "unknown"
     assert result.scenes[0].music_section_start_seconds is None
+    assert shot.pacing_recommendation == "unknown"
+    assert shot.pacing_rationale == ""
+    assert shot.transition_recommendation == "unknown"
+    assert shot.transition_rationale == ""
 
 
 def test_create_video_project_plan_uses_music_sections_and_tracks_dependency(tmp_path, monkeypatch):
@@ -356,3 +364,82 @@ def test_shot_music_annotation_does_not_force_shot_boundaries_to_beats():
     assert annotated[0].shots[0].target_duration_seconds == 45
     assert annotated[1].shots[0].target_duration_seconds == 45
     assert annotated[0].shots[0].music_energy == "medium"
+
+
+def test_music_pacing_recommends_scenic_holds_and_brisk_action_without_changing_durations():
+    scenes = _generated_content().scenes
+    first = (
+        scenes[0]
+        .shots[0]
+        .model_copy(
+            update={
+                "music_energy": "low",
+                "visual_role": "scenic_breath",
+                "shot_scale": "extreme_wide",
+            }
+        )
+    )
+    second = (
+        scenes[1]
+        .shots[0]
+        .model_copy(
+            update={
+                "music_energy": "high",
+                "visual_role": "action",
+                "shot_scale": "medium",
+                "subject_motion": "crossing",
+            }
+        )
+    )
+    annotated = music_pacing.annotate_music_pacing(
+        [
+            scenes[0].model_copy(update={"shots": [first]}),
+            scenes[1].model_copy(update={"shots": [second]}),
+        ],
+        "moderate",
+    )
+
+    scenic, action = [scene.shots[0] for scene in annotated]
+    assert scenic.pacing_recommendation == "linger"
+    assert "Low-energy music" in scenic.pacing_rationale
+    assert scenic.transition_recommendation == "cut_on_action"
+    assert action.pacing_recommendation == "brisk"
+    assert action.transition_recommendation == "end_on_hold"
+    assert scenic.target_duration_seconds == 45
+    assert action.target_duration_seconds == 45
+
+
+def test_music_pacing_uses_match_cut_for_shared_composition():
+    scenes = _generated_content().scenes
+    first = (
+        scenes[0]
+        .shots[0]
+        .model_copy(update={"music_energy": "medium", "composition": "leading_lines"})
+    )
+    second = (
+        scenes[1]
+        .shots[0]
+        .model_copy(update={"music_energy": "medium", "composition": "leading_lines"})
+    )
+    annotated = music_pacing.annotate_music_pacing(
+        [
+            scenes[0].model_copy(update={"shots": [first]}),
+            scenes[1].model_copy(update={"shots": [second]}),
+        ],
+        "moderate",
+    )
+
+    assert annotated[0].shots[0].transition_recommendation == "match_cut"
+    assert "share a known composition" in annotated[0].shots[0].transition_rationale
+
+
+def test_music_pacing_falls_back_to_brief_when_music_energy_is_unknown():
+    shot = _generated_content().scenes[0].shots[0]
+    annotated = music_pacing.annotate_music_pacing(
+        [_generated_content().scenes[0].model_copy(update={"shots": [shot]})],
+        "slow",
+    )
+
+    assert annotated[0].shots[0].pacing_recommendation == "linger"
+    assert "requested slow pacing" in annotated[0].shots[0].pacing_rationale
+    assert annotated[0].shots[0].transition_recommendation == "end_on_hold"
