@@ -130,9 +130,10 @@ def test_analyze_selected_catalog_track_records_provenance_and_dependencies(tmp_
     assert record.origin == "catalog"
     assert record.audio_sha256 == hashlib.sha256(audio.read_bytes()).hexdigest()
     assert json.loads(analysis_path.read_text())["music_path"] == str(audio.resolve())
-    assert json.loads(record_path.read_text())["selection_path"] == selection_path.relative_to(
-        tmp_path
-    ).as_posix()
+    assert (
+        json.loads(record_path.read_text())["selection_path"]
+        == selection_path.relative_to(tmp_path).as_posix()
+    )
     manifest = json.loads((tmp_path / ".video-agent" / "artifact-manifest.json").read_text())
     analysis_dependencies = manifest["artifacts"][analysis_path.relative_to(tmp_path).as_posix()][
         "dependencies"
