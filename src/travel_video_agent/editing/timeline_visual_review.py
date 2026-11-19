@@ -4,9 +4,11 @@ import base64
 import hashlib
 import html
 import json
+import os
 import shutil
 import tempfile
 from pathlib import Path
+from urllib.parse import quote
 
 from pydantic import BaseModel, ConfigDict, Field
 
