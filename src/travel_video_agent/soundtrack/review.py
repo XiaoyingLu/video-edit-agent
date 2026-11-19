@@ -221,8 +221,7 @@ def render_soundtrack_review_html(
             else None
         )
         preview = (
-            '<audio controls preload="none" '
-            f'src="{html.escape(preview_url, quote=True)}"></audio>'
+            f'<audio controls preload="none" src="{html.escape(preview_url, quote=True)}"></audio>'
             if preview_url
             else "<p>Preview URL unavailable.</p>"
         )
@@ -306,9 +305,7 @@ def save_soundtrack_candidate_review(
             relative_audio = os.path.relpath(audio_file, html_path.parent).replace(
                 os.sep, "/"
             )
-            local_audio_sources[item.candidate.candidate_id] = quote(
-                relative_audio, safe="/:@-._~"
-            )
+            local_audio_sources[item.candidate.candidate_id] = quote(relative_audio, safe="/:@-._~")
     html_path.write_text(
         render_soundtrack_review_html(
             report,
