@@ -741,3 +741,24 @@ docker compose run --rm video-agent review-timeline ./travel-test \
 Both exports are bound to the exact timeline file hash. Approval decisions are not applied by
 the browser itself; the CLI validates and applies them. Source videos are read only for frame
 extraction and are never modified.
+
+
+## Compare generated and catalog soundtracks
+
+After creating a soundtrack brief and generating one or more Stable Audio tracks, prepare a unified candidate collection. This analyzes each generated audio file locally with the existing FFmpeg/NumPy music analyzer and combines it with saved Soundstripe results when present:
+
+```bash
+docker compose run --rm video-agent prepare-soundtrack-candidates ./travel-test
+docker compose run --rm video-agent review-soundtrack ./travel-test \
+  --candidates ./.video-agent/soundtrack-candidates-combined.json \
+  --video ./travel-test/draft.mp4
+```
+
+Generated candidates retain their provider generation ID, license evidence, checksum, local asset path, estimated tempo, and measured duration. The read-only HTML audition page plays generated files directly from the project and catalog previews from their provider URLs. Review the rights status and listen before selecting an eligible candidate:
+
+```bash
+docker compose run --rm video-agent select-soundtrack ./travel-test \
+  --candidate-id stable-audio:GENERATION_ID
+```
+
+This workflow only analyzes and compares audio and records an explicit selection. It does not change the edit timeline or render a video. If a browser blocks local audio playback, serve the project folder on loopback with `python3 -m http.server 8000 --bind 127.0.0.1` and open the review HTML through that local server.

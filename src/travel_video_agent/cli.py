@@ -105,6 +105,7 @@ from .rendering.title_overlays import (
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
 from .soundtrack import create_soundtrack_brief, generate_soundtrack_from_brief
+from .soundtrack.generated import prepare_generated_soundtrack_candidates
 from .soundtrack.review import (
     build_soundtrack_candidate_review,
     save_soundtrack_candidate_review,
@@ -2966,6 +2967,50 @@ def generate_soundtrack_command(
     )
 
 
+@app.command("prepare-soundtrack-candidates")
+def prepare_soundtrack_candidates_command(
+    folder: Annotated[
+        Path, typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True)
+    ],
+    catalog_candidates: Annotated[
+        Path | None,
+        typer.Option(
+            "--catalog-candidates",
+            help=(
+                "Optional normalized catalog response JSON "
+                "(defaults to the saved Soundstripe results)."
+            ),
+        ),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Combined candidate collection JSON output path."),
+    ] = None,
+) -> None:
+    """Analyze generated tracks and combine them with catalog candidates for review."""
+    try:
+        collection, destination = prepare_generated_soundtrack_candidates(
+            folder,
+            catalog_candidates_path=catalog_candidates,
+            output_path=output,
+        )
+    except (FileNotFoundError, ValueError, OSError, RuntimeError) as exc:
+        console.print(f"[red]Soundtrack candidate preparation failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    generated_count = sum(item.origin == "generated" for item in collection.candidates)
+    catalog_count = len(collection.candidates) - generated_count
+    console.print(
+        f"Prepared [bold]{len(collection.candidates)}[/bold] candidate(s): "
+        f"{catalog_count} catalog, {generated_count} generated."
+    )
+    console.print(f"Combined candidates saved to [green]{destination}[/green]")
+    console.print(
+        "[yellow]Generated tracks were analyzed for duration and estimated tempo. "
+        "No candidate was selected, no timeline was changed, and no video was rendered.[/yellow]"
+    )
+
+
 @app.command("review-soundtrack")
 def review_soundtrack_command(
     folder: Annotated[
@@ -2986,7 +3031,7 @@ def review_soundtrack_command(
         typer.Option("--output", "-o", help="Output base path for review JSON and HTML."),
     ] = None,
 ) -> None:
-    """Rank catalog candidates and create a read-only video/audio audition page."""
+    """Rank catalog and generated candidates in a read-only video/audio audition page."""
     try:
         report = build_soundtrack_candidate_review(
             folder,
@@ -3001,6 +3046,7 @@ def review_soundtrack_command(
 
     table = Table(title="Soundtrack Candidates — Human Review Required")
     table.add_column("Candidate", style="cyan")
+    table.add_column("Origin")
     table.add_column("Creator")
     table.add_column("Fit", justify="right")
     table.add_column("Rights")
@@ -3008,6 +3054,7 @@ def review_soundtrack_command(
     for item in report.items:
         table.add_row(
             item.candidate.title,
+            item.candidate.origin,
             item.candidate.creator or "—",
             f"{item.ranking.creative_score:.0%}",
             item.ranking.rights.status,

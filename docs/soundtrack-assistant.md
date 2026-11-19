@@ -92,7 +92,7 @@ Set `STABILITY_API_KEY` through the environment. `generate-soundtrack` uses the 
 
 Stability AI's published Stable Audio licensing guide explicitly lists monetized YouTube and social-media videos and commercial advertisements/client projects as permitted use cases. The generated artifact records this as a custom provider license with commercial use, monetized video, adaptation, and synchronization permissions. This remains subject to Stability AI's current Terms of Service and Acceptable Use Policy; the user must review output for third-party rights. The adapter does not claim legal indemnification or guarantee that every generated output is free of third-party claims.
 
-This stage generates and stores audio only. It does not create a normalized review candidate, select the track, change the timeline, or render a video. Generated-track analysis, comparison, preview, and human selection are handled in the next integration stage.
+This stage generates and stores audio only. The following evaluation workflow converts generated files into normalized candidates, analyzes their actual duration and estimated tempo, and places them alongside catalog alternatives for human audition and selection.
 
 ## Candidate search, audition, and selection
 
@@ -101,6 +101,36 @@ This stage generates and stores audio only. It does not create a normalized revi
 `review-soundtrack` ranks the normalized response and writes a JSON report plus a read-only HTML audition page. Pass `--video` with a project-local video to show it beside candidate audio players. Playback is manual; the page does not synchronize playback automatically. The report shows creative-fit score separately from rights status and includes provider details and preview links.
 
 `select-soundtrack --candidate-id ...` records a deliberate choice only when the candidate is `eligible`. `review_required` and `ineligible` candidates are blocked. Selection is stored as `.video-agent/soundtrack-selection.json`, with provenance and rights evidence retained. This stage does not download audio, change a timeline, or render a video. Existing review artifacts are immutable; rerun search/review with a new output path if you want to preserve an earlier audition.
+
+## Generated-track evaluation and combined audition
+
+After generating tracks, prepare one normalized collection from local generated audio and any saved catalog response:
+
+```bash
+docker compose run --rm video-agent prepare-soundtrack-candidates ./travel-test
+docker compose run --rm video-agent review-soundtrack ./travel-test \
+  --candidates ./.video-agent/soundtrack-candidates-combined.json \
+  --video ./travel-test/draft.mp4
+```
+
+The preparation step discovers generated audio sidecars under
+`.video-agent/generated-soundtracks/`, validates project ownership and the SHA-256 checksum,
+and analyzes each audio file with the existing local music analyzer. It records measured
+duration and estimated BPM where confidence permits; tempo remains an estimate, and the
+analyzer's notes should be reviewed. Generated candidates carry the local audio path, provider
+generation ID, checksum, and original prompt/license provenance. The workflow does not infer
+creative tags from the prompt; generated-track fit uses measured duration and estimated tempo,
+with listening left to the human reviewer.
+Catalog candidates are included when the saved Soundstripe response exists (or can be supplied
+with `--catalog-candidates`).
+
+The review builder ranks both origins with the same creative-fit and fail-closed rights rules.
+Its read-only HTML page uses the project-local audio file for generated candidates and provider
+preview URLs for catalog candidates. Local media paths are checked to remain inside the project.
+Select an eligible generated candidate with its exact ID, for example
+`select-soundtrack --candidate-id stable-audio:GENERATION_ID`. Selection records provenance
+only; it does not download, modify the timeline, or render. A generated candidate is not
+automatically selected because it scored highest.
 
 ## Incremental PR plan
 
@@ -112,7 +142,7 @@ This stage generates and stores audio only. It does not create a normalized revi
 | #65 | Candidate ranking | Explainable creative-fit score; rights eligibility is a hard gate; deterministic tests |
 | #66 | Preview and selection | Soundstripe search CLI; read-only HTML audition against optional project video; explainable ranking and rights status; explicit eligible-only selection artifact; preserve source files and timeline |
 | #67 | Hosted generation adapter | Stable Audio 3.0 API; async submit/poll/download; MP3/WAV; project-local audio and provenance sidecar; commercial and monetized-video rights evidence; no automatic selection or render |
-| #68 | Generated-track evaluation and workflow integration | Analyze generated audio with existing analyzer; compare alternatives; human selection; no auto-render |
+| #68 | Generated-track evaluation and workflow integration | Analyze generated audio with existing analyzer; compare generated and catalog alternatives; local-file audition; explicit eligible-only human selection; no auto-render |
 
 ## Implementation rules
 

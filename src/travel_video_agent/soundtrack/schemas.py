@@ -82,9 +82,22 @@ class SoundtrackCandidate(BaseModel):
     tags: list[str] = Field(default_factory=list, max_length=40)
     source_url: HttpUrl
     preview_url: HttpUrl | None = None
+    asset_path: str | None = Field(default=None, max_length=1000)
     retrieved_at: datetime
     asset_sha256: str | None = Field(default=None, pattern=r"^[a-fA-F0-9]{64}$")
     license: SoundtrackLicense
+
+
+class SoundtrackCandidateCollection(BaseModel):
+    """Project-local collection combining catalog and generated audio candidates."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal["1.0"] = "1.0"
+    project_path: str
+    brief_path: str
+    catalog_candidates_path: str | None = None
+    candidates: list[SoundtrackCandidate] = Field(default_factory=list, max_length=200)
 
 
 class SoundtrackRightsDecision(BaseModel):
