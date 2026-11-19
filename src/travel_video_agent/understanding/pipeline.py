@@ -14,8 +14,8 @@ from pydantic import ValidationError
 
 from ..media import analyze_folder, discover_videos
 from .frame_sampler import extract_representative_frames
-from .scene_detection import detect_scenes
 from .provider import create_vision_analyzer
+from .scene_detection import detect_scenes
 from .schemas import FrameObservation, SceneDynamics, VideoScene, VideoUnderstanding
 from .visual_analyzer import OllamaVisionAnalyzer, VisionModelError
 
@@ -139,7 +139,11 @@ def understand_folder(
     checkpoint = _load_checkpoint(
         checkpoint_file,
         root=root,
-        model=f"{provider}:{model_identity}",
+        model=(
+            str(model_identity)
+            if provider.strip().lower() == "ollama"
+            else f"{provider}:{model_identity}"
+        ),
         samples_per_scene=samples_per_scene,
         sources=sources,
         resume=resume,
