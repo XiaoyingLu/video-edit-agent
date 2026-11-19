@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+from datetime import datetime
 from pathlib import Path
 
 from travel_video_agent.highlights.schemas import (
@@ -235,3 +236,28 @@ def test_story_ledger_rejects_scenes_without_analyzed_source_video(tmp_path: Pat
 
     with pytest.raises(ValueError, match="absent from analysis"):
         build_story_ledger(tmp_path, understanding, analysis)
+
+
+
+def test_story_ledger_prefers_embedded_capture_timestamp(tmp_path: Path) -> None:
+    source_path = "camera.mp4"
+    analysis = _inputs(tmp_path, [source_path])
+    analysis.videos[0].capture_timestamp = "2026-06-12T09:30:00Z"
+    os.utime(tmp_path / source_path, (1_600_000_000, 1_600_000_000))
+    scene = _scene(source_path, 1, 12)
+    understanding = VideoUnderstanding(
+        project_path=str(tmp_path),
+        video_count=1,
+        scene_count=1,
+        model="test",
+        scenes=[scene],
+    )
+
+    ledger = build_story_ledger(tmp_path, understanding, analysis)
+
+    expected = datetime.fromisoformat("2026-06-12T09:30:00+00:00").astimezone()
+    assert ledger.entries[0].day_label == "day1"
+    assert ledger.entries[0].timestamp_label == (
+        datetime.fromtimestamp(expected.timestamp() + 12).astimezone().strftime("%H:%M")
+    )
+    assert "embedded media creation timestamps" in ledger.timestamp_note
