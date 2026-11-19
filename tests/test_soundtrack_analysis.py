@@ -11,7 +11,6 @@ from travel_video_agent.soundtrack.analysis import (
     SelectedSoundtrackAnalysisError,
     analyze_selected_soundtrack,
 )
-from travel_video_agent.soundtrack.catalog import SoundtrackSearchResponse
 from travel_video_agent.soundtrack.review import (
     build_soundtrack_candidate_review,
     save_soundtrack_candidate_review,
@@ -20,6 +19,7 @@ from travel_video_agent.soundtrack.review import (
 from travel_video_agent.soundtrack.schemas import (
     SoundtrackBrief,
     SoundtrackCandidate,
+    SoundtrackCandidateCollection,
     SoundtrackLicense,
 )
 
@@ -85,8 +85,10 @@ def _select(root, candidate):
     brief_path.write_text(brief.model_dump_json(), encoding="utf-8")
     candidates_path = artifact_dir / "soundtrack-candidates.json"
     candidates_path.write_text(
-        SoundtrackSearchResponse(
-            provider_id="test-provider", candidates=[candidate]
+        SoundtrackCandidateCollection(
+            project_path=str(root.resolve()),
+            brief_path=brief_path.relative_to(root).as_posix(),
+            candidates=[candidate],
         ).model_dump_json(),
         encoding="utf-8",
     )
