@@ -197,8 +197,12 @@ def build_timeline_visual_review(
     )
 
 
-def render_timeline_visual_review_html(report: TimelineVisualReviewReport) -> str:
-    """Render an offline review page that exports decisions but never applies them."""
+def render_timeline_visual_review_html(
+    report: TimelineVisualReviewReport,
+    *,
+    media_sources: dict[str, str] | None = None,
+) -> str:
+    """Render an offline review page with a browser preview and export controls."""
     payload = report.model_dump(mode="json")
     payload_json = json.dumps(payload, ensure_ascii=True).replace("<", "\\u003c")
     cards = []
@@ -222,8 +226,12 @@ def render_timeline_visual_review_html(report: TimelineVisualReviewReport) -> st
             f"<p><strong>{html.escape(label)}:</strong> {html.escape(value)}</p>"
             for label, value in details
         )
+        media_src = (media_sources or {}).get(clip.clip_id, "")
         cards.append(
-            f'<article class="clip" data-clip-id="{html.escape(clip.clip_id, quote=True)}">'
+            f'<article class="clip" data-clip-id="{html.escape(clip.clip_id, quote=True)}" '
+            f'data-video-src="{html.escape(media_src, quote=True)}" '
+            f'data-source-start="{clip.source_start_seconds:.3f}" '
+            f'data-source-end="{clip.source_end_seconds:.3f}">'
             f'<div class="image"><img src="{image}" alt="Representative frame for '
             f'{html.escape(clip.clip_id, quote=True)}"></div>'
             f'<div class="body"><div class="heading"><h2>{clip.sequence_index}. '
@@ -267,13 +275,27 @@ h2 {{ margin:.2rem 0; }} p {{ margin:.45rem 0; }}
 fieldset {{ display:flex; flex-wrap:wrap; gap:1rem; border:1px solid #8886;
             border-radius:8px; margin-top:1rem; }}
 button {{ padding:.65rem 1rem; cursor:pointer; }} .duration {{ font-variant-numeric:tabular-nums; }}
+.player {{ margin:1rem 0; max-width:900px; }}
+.player video {{ display:block; width:100%; max-height:65vh; background:#111; border-radius:8px; }}
+.player-controls {{ display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-top:.6rem; }}
+#playback-status {{ color:GrayText; }}
 @media(max-width:700px) {{ .clip {{ grid-template-columns:1fr; }} header {{ position:static; }} }}
 </style></head><body>
 <header><h1>Visual Timeline Review</h1>
 <p>{len(report.clips)} shots · {report.proposed_duration_seconds:.2f}s proposed ·
 {report.target_duration_seconds:.2f}s target</p>
-<p>Drag shots to reorder them and adjust source in/out points. Changes are exported as a
-separate proposal; they are not applied until you import them with the CLI.</p>
+<p>Preview the proposed sequence below. Playback follows the current card order and trim
+points; transitions are represented as cuts. Drag shots to reorder them or adjust source in/out
+points. Changes remain proposals until imported with the CLI.</p>
+<section class="player">
+  <video id="sequence-preview" controls playsinline preload="metadata"></video>
+  <div class="player-controls">
+    <button id="play-sequence">Play sequence</button>
+    <button id="previous-clip">Previous shot</button>
+    <button id="next-clip">Next shot</button>
+    <span id="playback-status" aria-live="polite">Ready to preview</span>
+  </div>
+</section>
 <button id="export">Export visual edits (.json)</button>
 <button id="export-decisions">Export review decisions (.json)</button>
 <span id="status" aria-live="polite"></span></header>
@@ -282,6 +304,85 @@ separate proposal; they are not applied until you import them with the CLI.</p>
 const report = {payload_json};
 const main = document.querySelector("main");
 let dragged = null;
+const player = document.getElementById("sequence-preview");
+const playbackStatus = document.getElementById("playback-status");
+let playbackIndex = -1;
+let sequencePlaying = false;
+let clipEndedHandler = null;
+function orderedCards() {{ return Array.from(main.querySelectorAll(".clip")); }}
+function currentBounds(card) {{
+  return {{
+    start: Number(card.querySelector(".trim-start").value),
+    end: Number(card.querySelector(".trim-end").value)
+  }};
+}}
+function stopSequence() {{
+  sequencePlaying = false;
+  if (clipEndedHandler) player.removeEventListener("ended", clipEndedHandler);
+  clipEndedHandler = null;
+  player.pause();
+}}
+function loadPreviewClip(index, autoplay) {{
+  const cards = orderedCards();
+  if (index < 0 || index >= cards.length) {{
+    stopSequence();
+    playbackIndex = -1;
+    playbackStatus.textContent = "Sequence preview finished";
+    return;
+  }}
+  const card = cards[index];
+  const source = card.dataset.videoSrc;
+  if (!source) {{
+    stopSequence();
+    playbackStatus.textContent = "Preview media path unavailable; regenerate the review page.";
+    return;
+  }}
+  const bounds = currentBounds(card);
+  playbackIndex = index;
+  player.pause();
+  player.src = source;
+  player.load();
+  playbackStatus.textContent = "Shot " + (index + 1) + " of " + cards.length;
+  player.onloadedmetadata = () => {{
+    player.currentTime = Math.max(0, bounds.start);
+    if (autoplay) {{
+      const playResult = player.play();
+      if (playResult && playResult.catch) {{
+        playResult.catch(() => {{
+          playbackStatus.textContent = "Playback was blocked; press Play on the video controls.";
+        }});
+      }}
+    }}
+  }};
+  player.onerror = () => {{
+    playbackStatus.textContent = "Could not load this source video in the browser.";
+  }};
+  if (clipEndedHandler) player.removeEventListener("ended", clipEndedHandler);
+  clipEndedHandler = () => loadPreviewClip(playbackIndex + 1, true);
+  player.addEventListener("ended", clipEndedHandler);
+}}
+player.addEventListener("timeupdate", () => {{
+  if (!sequencePlaying || playbackIndex < 0) return;
+  const card = orderedCards()[playbackIndex];
+  if (!card) return;
+  if (player.currentTime >= currentBounds(card).end - 0.04) {{
+    loadPreviewClip(playbackIndex + 1, true);
+  }}
+}});
+document.getElementById("play-sequence").addEventListener("click", () => {{
+  const cards = orderedCards();
+  if (!cards.length) return;
+  sequencePlaying = true;
+  loadPreviewClip(playbackIndex >= 0 ? playbackIndex : 0, true);
+}});
+document.getElementById("previous-clip").addEventListener("click", () => {{
+  stopSequence();
+  loadPreviewClip(Math.max(0, playbackIndex - 1), false);
+}});
+document.getElementById("next-clip").addEventListener("click", () => {{
+  stopSequence();
+  loadPreviewClip(playbackIndex + 1, false);
+}});
 for (const card of main.querySelectorAll(".clip")) {{
   card.draggable = true;
   card.addEventListener("dragstart", () => {{ dragged = card; card.classList.add("dragging"); }});
@@ -298,6 +399,7 @@ for (const card of main.querySelectorAll(".clip")) {{
     event.preventDefault();
     if (!dragged || dragged === card) return;
     const bounds = card.getBoundingClientRect();
+    stopSequence();
     main.insertBefore(
       dragged, event.clientY < bounds.top + bounds.height / 2 ? card : card.nextSibling
     );
@@ -362,7 +464,21 @@ def save_timeline_visual_review(
         raise FileExistsError(f"Refusing to overwrite visual timeline review: {base}")
     json_file.parent.mkdir(parents=True, exist_ok=True)
     json_file.write_text(report.model_dump_json(indent=2) + "\n", encoding="utf-8")
-    html_file.write_text(render_timeline_visual_review_html(report), encoding="utf-8")
+    media_sources = {
+        clip.clip_id: Path(
+            __import__("os").path.relpath(
+                (root / clip.video_path).resolve()
+                if not Path(clip.video_path).is_absolute()
+                else Path(clip.video_path).resolve(),
+                html_file.parent,
+            )
+        ).as_posix()
+        for clip in report.clips
+    }
+    html_file.write_text(
+        render_timeline_visual_review_html(report, media_sources=media_sources),
+        encoding="utf-8",
+    )
     dependency = root / report.timeline_path
     register_artifact(root, json_file, dependencies=[dependency])
     register_artifact(root, html_file, dependencies=[dependency, json_file])
