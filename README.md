@@ -629,6 +629,27 @@ traceable entry point for reviewing one iteration. Re-run with a different `--ou
 for subsequent cycles; existing reports are never overwritten.
 
 
+
+## Browser-based music and timeline synchronization review
+
+After analyzing the soundtrack and generating beat-alignment suggestions, create a shared-time-axis preview:
+
+```bash
+docker compose run --rm video-agent review-music-timeline ./travel-test
+```
+
+Open `.video-agent/music-timeline-preview/preview.html`. The page includes an audio player for the analyzed soundtrack, broad energy sections, estimated beat/downbeat markers, shot intervals, current transition boundaries, and suggested beat anchors. All tracks use seconds on the same horizontal time axis. The audio file is referenced in place; it is not copied into the report.
+
+Generate or refresh the inputs first when needed:
+
+```bash
+docker compose run --rm video-agent analyze-music ./travel-test --music ./travel-test/music.mp3
+docker compose run --rm video-agent suggest-music-sync ./travel-test
+docker compose run --rm video-agent review-music-timeline ./travel-test
+```
+
+Beat and downbeat positions are signal-based estimates, not ground truth. Listen to the soundtrack and inspect the footage; not every transition should be forced onto a beat. This browser page is read-only and does not alter or approve the timeline. To accept or reject proposed timing changes, use the existing `review-music-sync` workflow, which writes a separate unapproved timeline revision.
+
 ## Browser-based visual timeline review
 
 For a visual review of the proposed shot order, generate an offline HTML page with one
