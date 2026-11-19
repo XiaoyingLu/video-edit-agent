@@ -3,9 +3,8 @@
 import json
 from pathlib import Path
 
-from .footage_assignments import warn_for_overlapping_footage
-
 from ..artifact_tracking import register_artifact, validate_artifact
+from .footage_assignments import warn_for_overlapping_footage
 from .footage_schemas import ProjectFootageSuggestions
 from .planning_schemas import VideoProjectPlan
 
