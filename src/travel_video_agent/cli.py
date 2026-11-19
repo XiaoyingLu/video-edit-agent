@@ -246,10 +246,22 @@ def understand(
             "--samples-per-scene", min=1, max=10, help="Representative frames to inspect per scene."
         ),
     ] = 3,
+    no_resume: Annotated[
+        bool,
+        typer.Option("--no-resume", help="Ignore saved progress and start understanding from scratch."),
+    ] = False,
 ) -> None:
     """Detect scenes, sample frames, and describe footage with a local vision model."""
+    checkpoint = folder.resolve() / ".video-agent" / "understanding-checkpoint.json"
+    if checkpoint.is_file() and not no_resume:
+        console.print(f"[cyan]Resuming video understanding from {checkpoint}[/cyan]")
     try:
-        understanding = understand_folder(folder, model=model, samples_per_scene=samples_per_scene)
+        understanding = understand_folder(
+            folder,
+            model=model,
+            samples_per_scene=samples_per_scene,
+            resume=not no_resume,
+        )
     except (FileNotFoundError, NotADirectoryError, MediaToolError, VisionModelError) as exc:
         console.print(f"[red]Video understanding failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
@@ -263,6 +275,7 @@ def understand(
     _track_artifact(
         folder, destination, config={"model": model, "samples_per_scene": samples_per_scene}
     )
+    checkpoint.unlink(missing_ok=True)
 
     table = Table(title="Video Understanding")
     table.add_column("Scene", style="cyan")
