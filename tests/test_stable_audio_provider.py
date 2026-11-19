@@ -60,7 +60,7 @@ def test_generation_submits_multipart_and_polls_until_audio_is_ready(tmp_path, m
     assert requests[0].full_url.endswith("/audio/stable-audio/text-to-audio")
     assert requests[0].get_header("Authorization") == "Bearer test-api-key"
     assert b'name="model"\r\n\r\nstable-audio-3' in requests[0].data
-    assert b'name="duration"\r\n\r\n60' in requests[0].data
+    assert b'name="duration"\r\n\r\n60.0' in requests[0].data
     assert b'name="seed"\r\n\r\n42' in requests[0].data
     assert requests[1].full_url.endswith(f"/audio/results/{generation_id}")
     assert result.generation_id == generation_id
@@ -102,7 +102,10 @@ def test_http_error_does_not_expose_api_key(tmp_path, monkeypatch):
         None,
     )
     error.read = lambda: b'{"name":"unauthorized","errors":["Invalid API key"]}'
-    monkeypatch.setattr(stable_audio, "urlopen", lambda *args, **kwargs: (_ for _ in ()).throw(error))
+    def raise_http_error(*args, **kwargs):
+        raise error
+
+    monkeypatch.setattr(stable_audio, "urlopen", raise_http_error)
     provider = StableAudioGenerationProvider(api_key="secret-test-key")
     request = StableAudioGenerationRequest(prompt="Ambient score", duration_seconds=30)
 
