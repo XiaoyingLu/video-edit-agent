@@ -121,9 +121,14 @@ def test_prepare_candidates_analyzes_generated_audio_and_records_provenance(tmp_
     assert candidate.tempo_bpm == 92
     assert candidate.duration_seconds == 12
     assert candidate.asset_sha256 == hashlib.sha256(audio.read_bytes()).hexdigest()
-    assert metadata.relative_to(tmp_path).as_posix() in json.loads(
+    manifest = json.loads(
         (tmp_path / ".video-agent" / "artifact-manifest.json").read_text()
-    )["artifacts"]
+    )
+    dependencies = manifest["artifacts"][destination.relative_to(tmp_path).as_posix()][
+        "dependencies"
+    ]
+    assert metadata.relative_to(tmp_path).as_posix() in dependencies
+    assert audio.relative_to(tmp_path).as_posix() in dependencies
     assert json.loads(destination.read_text())["candidates"][0]["origin"] == "generated"
 
 
@@ -156,7 +161,7 @@ def test_prepare_candidates_combines_catalog_and_generated_tracks(tmp_path, monk
     from travel_video_agent.soundtrack.catalog import SoundtrackSearchResponse
 
     _write_brief(tmp_path)
-    audio, _ = _write_generated_track(tmp_path)
+    _write_generated_track(tmp_path)
     monkeypatch.setattr(generated, "analyze_music", lambda root, path: _analysis(path))
     catalog_path = tmp_path / ".video-agent" / "soundtrack-candidates.json"
     catalog_path.write_text(
