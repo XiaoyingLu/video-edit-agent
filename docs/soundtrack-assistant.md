@@ -118,7 +118,9 @@ The preparation step discovers generated audio sidecars under
 and analyzes each audio file with the existing local music analyzer. It records measured
 duration and estimated BPM where confidence permits; tempo remains an estimate, and the
 analyzer's notes should be reviewed. Generated candidates carry the local audio path, provider
-generation ID, checksum, original prompt/license provenance, and the brief's creative tags.
+generation ID, checksum, and original prompt/license provenance. The workflow does not infer
+creative tags from the prompt; generated-track fit uses measured duration and estimated tempo,
+with listening left to the human reviewer.
 Catalog candidates are included when the saved Soundstripe response exists (or can be supplied
 with `--catalog-candidates`).
 
