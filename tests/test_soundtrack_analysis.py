@@ -4,7 +4,6 @@ from datetime import UTC, datetime
 
 import pytest
 
-from travel_video_agent.artifact_tracking import register_artifact
 from travel_video_agent.music.schemas import MusicAnalysis
 from travel_video_agent.soundtrack import analysis as soundtrack_analysis
 from travel_video_agent.soundtrack.analysis import (
@@ -156,15 +155,7 @@ def test_generated_selection_uses_recorded_asset_and_checks_checksum(tmp_path, m
         asset_path=audio.relative_to(tmp_path).as_posix(),
         checksum=checksum,
     )
-    _, selection_path = _select(tmp_path, candidate)
-    register_artifact(tmp_path, audio, dependencies=[tmp_path / ".video-agent" / "soundtrack-brief.json"])
-    # Re-register the selection after the generated asset is present so its dependency
-    # chain includes the candidate collection and its local audio provenance.
-    register_artifact(
-        tmp_path,
-        selection_path,
-        dependencies=[tmp_path / ".video-agent" / "soundtrack-review.json"],
-    )
+    _select(tmp_path, candidate)
     monkeypatch.setattr(
         soundtrack_analysis, "analyze_music", lambda root, path: _analysis(root, path)
     )
