@@ -21,6 +21,7 @@ from travel_video_agent.editing.planning_schemas import (
     StoryTreatment,
 )
 from travel_video_agent.music.schemas import MusicAnalysis, MusicSection
+from travel_video_agent.story_proposal import StoryAngle, StoryChapter, StoryProposal
 
 
 def _generated_content():
@@ -443,3 +444,163 @@ def test_music_pacing_falls_back_to_brief_when_music_energy_is_unknown():
     assert annotated[0].shots[0].pacing_recommendation == "linger"
     assert "requested slow pacing" in annotated[0].shots[0].pacing_rationale
     assert annotated[0].shots[0].transition_recommendation == "end_on_hold"
+
+
+def test_create_video_project_plan_uses_selected_story_chapters_and_tracks_story_dependency(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(
+        planning_pipeline,
+        "parse_editing_intent",
+        lambda prompt, model=None, memory_override_env=None: EditingPlan(
+            source_prompt=prompt,
+            target_duration_seconds=90,
+            style="cinematic",
+            priorities=["scenic_landscapes"],
+        ),
+    )
+    captured = {}
+
+    def fake_generate(prompt, brief, model=None, music_sections=None, story_chapters=None):
+        captured["chapters"] = story_chapters
+        return _generated_content()
+
+    monkeypatch.setattr(planning_pipeline, "generate_video_plan_content", fake_generate)
+    artifact_dir = tmp_path / ".video-agent"
+    artifact_dir.mkdir()
+    story_path = artifact_dir / "story-proposal.json"
+    proposal = StoryProposal(
+        project_path=str(tmp_path.resolve()),
+        target_duration_seconds=90,
+        planner_model="qwen2.5:7b",
+        ledger_scene_count=4,
+        selected_angle_id="angle-1",
+        angles=[
+            StoryAngle(
+                angle_id="angle-1",
+                title="A Quiet Journey",
+                logline="A journey from arrival to reflection.",
+                story_angle="chronological journey",
+                chapters=[
+                    StoryChapter(
+                        chapter_id="ch-1",
+                        name="Arrival",
+                        purpose="Introduce the destination.",
+                        mood="anticipation",
+                        target_seconds=30,
+                        candidate_scene_ids=["real-scene-1", "real-scene-2"],
+                        narration_hint="We had just arrived.",
+                        music_energy="low",
+                    ),
+                    StoryChapter(
+                        chapter_id="ch-2",
+                        name="Reflection",
+                        purpose="Close on the quiet landscape.",
+                        mood="wonder",
+                        target_seconds=60,
+                        candidate_scene_ids=["real-scene-3"],
+                        music_energy="medium",
+                    ),
+                ],
+            )
+        ],
+    )
+    story_path.write_text(proposal.model_dump_json(), encoding="utf-8")
+    register_artifact(tmp_path, story_path)
+
+    plan, destination = planning_pipeline.create_video_project_plan(
+        tmp_path,
+        "Create a cinematic travel film",
+        story_path=story_path,
+    )
+
+    assert [chapter["name"] for chapter in captured["chapters"]] == ["Arrival", "Reflection"]
+    assert [scene.title for scene in plan.scenes] == ["Arrival", "Reflection"]
+    assert [scene.purpose for scene in plan.scenes] == [
+        "Introduce the destination.",
+        "Close on the quiet landscape.",
+    ]
+    assert [scene.target_duration_seconds for scene in plan.scenes] == [30, 60]
+    assert [scene.music_energy for scene in plan.scenes] == ["low", "medium"]
+    assert plan.scenes[0].shots[0].narration == "We had just arrived."
+    assert plan.story_treatment.working_title == "A Quiet Journey"
+    assert validate_artifact(tmp_path, destination) is True
+
+    story_path.write_text('{"changed": true}', encoding="utf-8")
+    with pytest.raises(StaleArtifactError):
+        validate_artifact(tmp_path, destination)
+
+
+def test_create_video_project_plan_requires_selected_story_angle(tmp_path):
+    artifact_dir = tmp_path / ".video-agent"
+    artifact_dir.mkdir()
+    story_path = artifact_dir / "story-proposal.json"
+    StoryProposal(
+        project_path=str(tmp_path.resolve()),
+        target_duration_seconds=90,
+        planner_model="qwen2.5:7b",
+        ledger_scene_count=0,
+        angles=[
+            StoryAngle(
+                angle_id="angle-1",
+                title="A Journey",
+                logline="A trip.",
+                story_angle="mood piece",
+                chapters=[
+                    StoryChapter(
+                        chapter_id="ch-1",
+                        name="Arrival",
+                        purpose="Begin.",
+                        target_seconds=45,
+                        candidate_scene_ids=["S1"],
+                    ),
+                    StoryChapter(
+                        chapter_id="ch-2",
+                        name="Return",
+                        purpose="End.",
+                        target_seconds=45,
+                        candidate_scene_ids=["S2"],
+                    ),
+                ],
+            )
+        ],
+    ).model_dump_json()
+    story_path.write_text(
+        StoryProposal(
+            project_path=str(tmp_path.resolve()),
+            target_duration_seconds=90,
+            planner_model="qwen2.5:7b",
+            ledger_scene_count=0,
+            angles=[
+                StoryAngle(
+                    angle_id="angle-1",
+                    title="A Journey",
+                    logline="A trip.",
+                    story_angle="mood piece",
+                    chapters=[
+                        StoryChapter(
+                            chapter_id="ch-1",
+                            name="Arrival",
+                            purpose="Begin.",
+                            target_seconds=45,
+                            candidate_scene_ids=["S1"],
+                        ),
+                        StoryChapter(
+                            chapter_id="ch-2",
+                            name="Return",
+                            purpose="End.",
+                            target_seconds=45,
+                            candidate_scene_ids=["S2"],
+                        ),
+                    ],
+                )
+            ],
+        ).model_dump_json(),
+        encoding="utf-8",
+    )
+    register_artifact(tmp_path, story_path)
+
+    with pytest.raises(ValueError, match="select a story angle first"):
+        planning_pipeline.create_video_project_plan(
+            tmp_path, "Create a cinematic travel film", story_path=story_path
+        )
