@@ -35,7 +35,7 @@ After generating a storyboard and running `understand`, use `suggest-footage` to
 docker compose run --rm video-agent suggest-footage ./travel-test
 ```
 
-The command writes `.video-agent/footage-suggestions.json`. It compares each shot's purpose and visual description with observed scene descriptions, subjects, objects, activities, shot scale, and editorial role. Each shot receives up to three ranked candidates with source video, source interval, an explainable score, and matching reasons. Use `--max-candidates` to change the number of candidates.
+The command writes `.video-agent/footage-suggestions.json`. It compares each shot's purpose and visual description with observed scene descriptions, subjects, objects, activities, shot scale, and editorial role. When the storyboard came from a selected story angle, chapter candidate scenes receive a ranking boost and are labeled as chapter picks; chapter must-include scenes are always retained, even when that makes the candidate list longer than `--max-candidates`. Other footage remains eligible, and a source scene already top-ranked for an earlier shot receives a reuse penalty. Each shot receives ranked candidates with source video, source interval, an explainable score, and matching reasons. Use `--max-candidates` to change the normal candidate limit.
 
 This is a deterministic first-pass matcher, not semantic embedding search or an automatic edit. Candidates remain suggestions: the command does not assign footage to storyboard shots, approve mappings, trim clips, or render video. The report is tracked against both the storyboard and video-understanding artifacts, so changed upstream inputs make the suggestions stale.
 
