@@ -81,8 +81,7 @@ class SmolVLM2MLXAnalyzer:
             from mlx_vlm.utils import load_config
         except ImportError as exc:
             raise VisionModelError(
-                "The MLX provider requires mlx-vlm. Install it with "
-                "'pip install -e ".[mlx]"' in native macOS Python."
+                'The MLX provider requires mlx-vlm. Install it with `pip install -e ".[mlx]"` in native macOS Python.'
             ) from exc
         try:
             self._model, self._processor = load(self.model_id)
