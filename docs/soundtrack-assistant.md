@@ -84,6 +84,16 @@ The normalized `SoundtrackCandidate` and `SoundtrackLicense` models, async `Soun
 
 The default rights evaluator requires explicit commercial-use, monetized-video, adaptation, and synchronization permissions, along with a canonical license URL and evidence URL. Missing permission data is not treated as permission. CC BY-NC and CC BY-ND are rejected for this default workflow; CC BY-SA is held for explicit review. Attribution-required candidates need their credit text retained. These checks are conservative software gates, not legal advice or an independent legal verification of provider claims.
 
+## Hosted generation: Stability AI Stable Audio 3.0
+
+Stable Audio 3.0 is the first hosted generation provider. The official API accepts multipart text-to-audio requests, returns an asynchronous generation ID, and exposes a result endpoint that returns HTTP 202 while processing and HTTP 200 with audio when complete. The documented duration range is 1–380 seconds; MP3 and WAV are supported. The current API documentation lists 8 credits per successful generation. The adapter uses the official REST API and stdlib HTTP client; network calls are mocked in unit tests.
+
+Set `STABILITY_API_KEY` through the environment. `generate-soundtrack` uses the saved brief's generation prompt and target duration, then writes audio under `.video-agent/generated-soundtracks/` and a JSON sidecar with the provider generation ID, prompt, requested duration, output checksum, and license evidence. Both artifacts are registered against the brief. A generation timeout or provider error is surfaced without pretending the track was completed. Existing files are never overwritten.
+
+Stability AI's published Stable Audio licensing guide explicitly lists monetized YouTube and social-media videos and commercial advertisements/client projects as permitted use cases. The generated artifact records this as a custom provider license with commercial use, monetized video, adaptation, and synchronization permissions. This remains subject to Stability AI's current Terms of Service and Acceptable Use Policy; the user must review output for third-party rights. The adapter does not claim legal indemnification or guarantee that every generated output is free of third-party claims.
+
+This stage generates and stores audio only. It does not create a normalized review candidate, select the track, change the timeline, or render a video. Generated-track analysis, comparison, preview, and human selection are handled in the next integration stage.
+
 ## Candidate search, audition, and selection
 
 `search-soundtrack` uses the saved brief to query the Soundstripe catalog and writes `.video-agent/soundtrack-candidates.json`. `SOUNDSTRIPE_API_KEY` must be provided through the environment. An optional project-local `--license-profile` JSON file can supply rights claims only after the account agreement has been checked; without it, the provider uses an unknown license profile and candidates cannot pass the rights gate.
@@ -101,7 +111,7 @@ The default rights evaluator requires explicit commercial-use, monetized-video, 
 | #64 | First catalog provider | Official API/authorized download path only; documented provider terms; integration tests with mocked HTTP |
 | #65 | Candidate ranking | Explainable creative-fit score; rights eligibility is a hard gate; deterministic tests |
 | #66 | Preview and selection | Soundstripe search CLI; read-only HTML audition against optional project video; explainable ranking and rights status; explicit eligible-only selection artifact; preserve source files and timeline |
-| #67 | Hosted generation adapter | Provider selected after terms/API review; secrets via environment; async job lifecycle; rights metadata |
+| #67 | Hosted generation adapter | Stable Audio 3.0 API; async submit/poll/download; MP3/WAV; project-local audio and provenance sidecar; commercial and monetized-video rights evidence; no automatic selection or render |
 | #68 | Generated-track evaluation and workflow integration | Analyze generated audio with existing analyzer; compare alternatives; human selection; no auto-render |
 
 ## Implementation rules
