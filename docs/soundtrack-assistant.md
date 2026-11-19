@@ -74,7 +74,7 @@ Do not treat "royalty-free", "free", "publicly available", or a provider marketi
 
 ## Catalog contract foundation
 
-PR #63 introduces the normalized `SoundtrackCandidate` and `SoundtrackLicense` models, an async `SoundtrackCatalogProvider` protocol, bounded search request/response models, and an explainable rights decision. This is intentionally an integration-free foundation: it does not imply that any catalog has been approved, nor does it download or recommend tracks.
+The normalized `SoundtrackCandidate` and `SoundtrackLicense` models, async `SoundtrackCatalogProvider` protocol, bounded search request/response models, and fail-closed rights evaluator are in place. This integration-free foundation does not imply that any catalog has been approved, nor does it download tracks.
 
 The default rights evaluator requires explicit commercial-use, monetized-video, adaptation, and synchronization permissions, along with a canonical license URL and evidence URL. Missing permission data is not treated as permission. CC BY-NC and CC BY-ND are rejected for this default workflow; CC BY-SA is held for explicit review. Attribution-required candidates need their credit text retained. These checks are conservative software gates, not legal advice or an independent legal verification of provider claims.
 
