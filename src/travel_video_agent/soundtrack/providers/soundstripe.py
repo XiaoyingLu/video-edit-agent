@@ -39,7 +39,7 @@ class SoundstripeCatalogProvider:
 
     def _build_params(self, request: SoundtrackSearchRequest) -> dict[str, str]:
         params = {
-            "filter[q]": request.query,
+            "filter[q]": " ".join([request.query, *request.search_terms]).strip(),
             "page[size]": str(request.limit),
             "filter[duration][min]": str(max(1, int(request.target_duration_seconds - request.duration_tolerance_seconds))),
             "filter[duration][max]": str(int(request.target_duration_seconds + request.duration_tolerance_seconds)),
@@ -50,7 +50,7 @@ class SoundstripeCatalogProvider:
             params["filter[bpm][max]"] = str(request.tempo_max_bpm)
         if request.instrumental_preferred:
             params["filter[instrumental]"] = "true"
-        for field, values in (("mood", request.moods), ("genre", request.genres), ("instrument", request.search_terms)):
+        for field, values in (("mood", request.moods), ("genre", request.genres)):
             normalized = [value.strip() for value in values if value.strip()]
             if normalized:
                 params[f"filter[tags][{field}]"] = ",".join(normalized)
