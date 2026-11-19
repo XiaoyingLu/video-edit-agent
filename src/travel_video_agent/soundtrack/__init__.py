@@ -8,6 +8,7 @@ from .catalog import (
 )
 from .licensing import evaluate_soundtrack_rights
 from .ranking import SoundtrackCandidateRanking, rank_soundtrack_candidates
+from .providers import SoundstripeAPIError, SoundstripeCatalogProvider
 from .schemas import (
     SoundtrackBrief,
     SoundtrackCandidate,
@@ -22,6 +23,8 @@ __all__ = [
     "SoundtrackBrief",
     "SoundtrackCandidate",
     "SoundtrackCandidateRanking",
+    "SoundstripeAPIError",
+    "SoundstripeCatalogProvider",
     "SoundtrackCatalogProvider",
     "SoundtrackEnergySegment",
     "SoundtrackLicense",
