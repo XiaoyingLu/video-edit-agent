@@ -127,7 +127,9 @@ def test_visual_edits_reject_source_interval_extension_and_short_trim(tmp_path, 
         source,
         [
             TimelineVisualEditClip(clip_id="coast", source_start_seconds=1, source_end_seconds=5),
-            TimelineVisualEditClip(clip_id="mountain", source_start_seconds=10, source_end_seconds=14),
+            TimelineVisualEditClip(
+                clip_id="mountain", source_start_seconds=10, source_end_seconds=14
+            ),
         ],
     )
     with pytest.raises(TimelineVisualEditError, match="within its original source interval"):
