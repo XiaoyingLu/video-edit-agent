@@ -93,17 +93,21 @@ class SmolVLM2MLXAnalyzer:
         self._load()
         try:
             from mlx_vlm import generate
+            from mlx_vlm.prompt_utils import apply_chat_template
+            from mlx_vlm.utils import load_config
 
-            image_input: str | list[str]
-            image_input = str(images[0]) if len(images) == 1 else [str(path) for path in images]
+            image_input = [str(path) for path in images]
+            config = load_config(self.model_id)
+            formatted_prompt = apply_chat_template(
+                self._processor, config, prompt, num_images=len(image_input)
+            )
             result = generate(
                 self._model,
                 self._processor,
-                prompt,
-                image=image_input,
+                formatted_prompt,
+                image_input,
                 max_tokens=self.max_tokens,
-                temperature=0.0,
-                verbose=False,
+                temp=0.0,
             )
         except Exception as exc:
             raise VisionModelError(
