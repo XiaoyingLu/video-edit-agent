@@ -104,7 +104,7 @@ from .rendering.title_overlays import (
 )
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
-from .soundtrack import create_soundtrack_brief
+from .soundtrack import create_soundtrack_brief, generate_soundtrack_from_brief
 from .soundtrack.review import (
     build_soundtrack_candidate_review,
     save_soundtrack_candidate_review,
@@ -2913,6 +2913,54 @@ def search_soundtrack_command(
             "permissions are explicitly documented.[/yellow]"
         )
     console.print("[dim]No audio was downloaded and no timeline or video was changed.[/dim]")
+
+
+@app.command("generate-soundtrack")
+def generate_soundtrack_command(
+    folder: Annotated[
+        Path, typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True)
+    ],
+    output_format: Annotated[
+        str, typer.Option("--format", help="Generated audio format: mp3 or wav.")
+    ] = "mp3",
+    seed: Annotated[
+        int | None, typer.Option("--seed", min=0, max=4_294_967_294, help="Optional reproducibility seed.")
+    ] = None,
+    timeout: Annotated[
+        float, typer.Option("--timeout", min=1, max=3600, help="Maximum generation wait in seconds.")
+    ] = 900,
+    poll_interval: Annotated[
+        float, typer.Option("--poll-interval", min=1, max=60, help="Seconds between status checks.")
+    ] = 10,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Project-local generated audio path.")
+    ] = None,
+) -> None:
+    """Generate original music from the saved soundtrack brief with Stable Audio 3.0."""
+    try:
+        artifact, metadata_path = asyncio.run(
+            generate_soundtrack_from_brief(
+                folder,
+                output_path=output,
+                output_format=output_format,
+                seed=seed,
+                timeout_seconds=timeout,
+                poll_interval_seconds=poll_interval,
+            )
+        )
+    except (FileNotFoundError, ValueError, OSError, RuntimeError, TimeoutError) as exc:
+        console.print(f"[red]Soundtrack generation failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    console.print("[bold green]Original soundtrack generated.[/bold green]")
+    console.print(f"Audio: [green]{folder / artifact.audio_path}[/green]")
+    console.print(f"Metadata: [green]{metadata_path}[/green]")
+    console.print(f"Provider generation ID: {artifact.provider_result.generation_id}")
+    console.print(f"SHA-256: {artifact.provider_result.sha256}")
+    console.print(
+        "[yellow]Generation is not selection or approval. Review the output before use; "
+        "no timeline was changed and no video was rendered.[/yellow]"
+    )
 
 
 @app.command("review-soundtrack")
