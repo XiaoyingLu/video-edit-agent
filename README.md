@@ -73,7 +73,7 @@ Search the Soundstripe catalog, then create a browser-based audition page. Set `
 docker compose run --rm video-agent search-soundtrack ./travel-test
 docker compose run --rm video-agent review-soundtrack ./travel-test \
   --candidates ./.video-agent/soundtrack-candidates.json \
-  --video ./travel-test/draft.mp4
+  --video draft.mp4
 ```
 
 The review page places the optional project-local video beside individual candidate preview players. It displays creative-fit scores, rights status, tags, and provider details. Playback is manual; it does not change the video. Without an account-specific `--license-profile` JSON file confirmed against your Soundstripe agreement, the provider assigns unknown rights and the candidates cannot be selected. Do not set permissions to `true` unless the applicable agreement explicitly confirms them.
