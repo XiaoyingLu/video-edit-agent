@@ -101,6 +101,7 @@ def test_http_error_does_not_expose_api_key(tmp_path, monkeypatch):
         {},
         None,
     )
+
     def fake_error_body():
         return b'{"name":"unauthorized","errors":["Invalid API key"]}'
 
