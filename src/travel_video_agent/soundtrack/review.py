@@ -313,7 +313,9 @@ def select_soundtrack_candidate(
         )
     destination = output_path or Path(".video-agent/soundtrack-selection.json")
     destination = destination.expanduser()
-    destination = (root / destination).resolve() if not destination.is_absolute() else destination.resolve()
+    destination = (
+        (root / destination).resolve() if not destination.is_absolute() else destination.resolve()
+    )
     try:
         destination.relative_to(root)
     except ValueError as exc:
