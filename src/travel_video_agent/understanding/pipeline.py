@@ -64,7 +64,10 @@ def _load_checkpoint(
         "sources": sources,
         "scenes": {},
     }
-    if not resume or not path.is_file():
+    if not resume:
+        path.unlink(missing_ok=True)
+        return empty
+    if not path.is_file():
         return empty
     try:
         checkpoint = json.loads(path.read_text(encoding="utf-8"))
