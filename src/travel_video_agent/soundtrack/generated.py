@@ -79,6 +79,10 @@ def prepare_generated_soundtrack_candidates(
                 raise GeneratedCandidateError(
                     f"Generated soundtrack metadata belongs to another project: {metadata_file.name}"
                 )
+            if (root / Path(artifact.brief_path)).resolve() != brief_file:
+                raise GeneratedCandidateError(
+                    f"Generated soundtrack was created from a different brief: {metadata_file.name}"
+                )
             if (root / Path(artifact.audio_path)).resolve() != audio_file:
                 raise GeneratedCandidateError(
                     f"Generated soundtrack metadata points to a different audio file: {metadata_file.name}"
