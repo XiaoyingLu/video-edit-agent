@@ -639,19 +639,30 @@ transition context:
 docker compose run --rm video-agent review-timeline-visual ./travel-test
 ```
 
-Open `.video-agent/timeline-visual-review/review.html` in a browser. Choose approve, reject,
-or set pending for each shot, then use **Export review decisions (.json)**. Move the downloaded
-JSON file into the project folder (for example, as
-`.video-agent/timeline-review-decisions.json`) and apply it through the existing review gate:
+Open `.video-agent/timeline-visual-review/review.html` in a browser. Drag cards to change
+shot order and adjust the source in/out points to trim a shot. Use **Export visual edits (.json)**
+to save a proposal, then import it as a separate revision:
+
+```bash
+docker compose run --rm video-agent apply-timeline-visual-edits ./travel-test \
+  --edits-file ./.video-agent/timeline-visual-edits.json
+```
+
+The CLI writes a new unapproved timeline under `.video-agent/timeline-revisions/`. It requires
+the export to contain every original clip exactly once, rejects stale timeline hashes and trims
+outside each shot's existing source interval, and enforces a one-second minimum shot duration.
+Because reordering changes shot adjacency, existing transitions are reset to cuts for review.
+The original timeline and source media remain unchanged. Review the new revision with
+`review-timeline --timeline PATH` before rendering.
+
+The page also retains **Export review decisions (.json)** for the original approval workflow.
+Move that file into the project folder and apply it through the existing gate:
 
 ```bash
 docker compose run --rm video-agent review-timeline ./travel-test \
   --decisions-file ./.video-agent/timeline-review-decisions.json
 ```
 
-The exported decisions are bound to the exact timeline file hash and rejected if the timeline
-has changed since the review page was generated. Every clip must have an explicit exported
-decision; skipped clips remain pending. The timeline is approved only when no clips remain
-pending and at least one clip is approved. The browser page itself never changes the timeline,
-and the CLI still performs the validated approval transition. Source videos are only read for
-frame extraction and are never modified.
+Both exports are bound to the exact timeline file hash. Approval decisions are not applied by
+the browser itself; the CLI validates and applies them. Source videos are read only for frame
+extraction and are never modified.
