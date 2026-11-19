@@ -145,6 +145,7 @@ def test_generated_candidate_is_playable_in_review_html(tmp_path, monkeypatch):
 
     assert '<audio controls preload="none"' in page
     assert "generated-soundtracks/track-12345678.mp3" in page
+    assert "Source: generated" in page
     assert report.items[0].ranking.rights.status == "eligible"
 
 
