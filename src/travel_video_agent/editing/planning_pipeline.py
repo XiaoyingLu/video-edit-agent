@@ -6,8 +6,8 @@ from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
 from ..music.schemas import MusicAnalysis, MusicSection
-from .music_pacing import annotate_music_pacing
 from .intent import parse_editing_intent
+from .music_pacing import annotate_music_pacing
 from .planning_generation import (
     explicit_duration_seconds,
     generate_video_plan_content,

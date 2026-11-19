@@ -366,23 +366,30 @@ def test_shot_music_annotation_does_not_force_shot_boundaries_to_beats():
     assert annotated[0].shots[0].music_energy == "medium"
 
 
-
 def test_music_pacing_recommends_scenic_holds_and_brisk_action_without_changing_durations():
     scenes = _generated_content().scenes
-    first = scenes[0].shots[0].model_copy(
-        update={
-            "music_energy": "low",
-            "visual_role": "scenic_breath",
-            "shot_scale": "extreme_wide",
-        }
+    first = (
+        scenes[0]
+        .shots[0]
+        .model_copy(
+            update={
+                "music_energy": "low",
+                "visual_role": "scenic_breath",
+                "shot_scale": "extreme_wide",
+            }
+        )
     )
-    second = scenes[1].shots[0].model_copy(
-        update={
-            "music_energy": "high",
-            "visual_role": "action",
-            "shot_scale": "medium",
-            "subject_motion": "crossing",
-        }
+    second = (
+        scenes[1]
+        .shots[0]
+        .model_copy(
+            update={
+                "music_energy": "high",
+                "visual_role": "action",
+                "shot_scale": "medium",
+                "subject_motion": "crossing",
+            }
+        )
     )
     annotated = music_pacing.annotate_music_pacing(
         [
@@ -404,11 +411,15 @@ def test_music_pacing_recommends_scenic_holds_and_brisk_action_without_changing_
 
 def test_music_pacing_uses_match_cut_for_shared_composition():
     scenes = _generated_content().scenes
-    first = scenes[0].shots[0].model_copy(
-        update={"music_energy": "medium", "composition": "leading_lines"}
+    first = (
+        scenes[0]
+        .shots[0]
+        .model_copy(update={"music_energy": "medium", "composition": "leading_lines"})
     )
-    second = scenes[1].shots[0].model_copy(
-        update={"music_energy": "medium", "composition": "leading_lines"}
+    second = (
+        scenes[1]
+        .shots[0]
+        .model_copy(update={"music_energy": "medium", "composition": "leading_lines"})
     )
     annotated = music_pacing.annotate_music_pacing(
         [

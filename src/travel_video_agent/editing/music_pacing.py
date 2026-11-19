@@ -25,7 +25,8 @@ def _pacing_for_shot(shot: StoryboardShot, overall_pacing: str) -> tuple[str, st
         if scenic:
             return (
                 "steady",
-                "High-energy music suggests momentum, while the scenic image benefits from room to read.",
+                "High-energy music suggests momentum, while the scenic image benefits "
+                "from room to read.",
             )
         return "brisk", "High-energy music supports a more concise, dynamic visual rhythm."
     fallback = {"slow": "linger", "moderate": "steady", "fast": "brisk"}.get(
@@ -33,7 +34,10 @@ def _pacing_for_shot(shot: StoryboardShot, overall_pacing: str) -> tuple[str, st
     )
     if fallback == "unknown":
         return "unknown", "No analyzed music section or overall pacing preference is available."
-    return fallback, f"No music section covers this shot; using the requested {overall_pacing} pacing."
+    return (
+        fallback,
+        f"No music section covers this shot; using the requested {overall_pacing} pacing.",
+    )
 
 
 def _transition_for_pair(
@@ -58,18 +62,29 @@ def _transition_for_pair(
         for value in (current.camera_motion, following.camera_motion)
     )
     if has_motion:
-        return "cut_on_action", "Visible subject or camera motion can carry continuity across the cut."
+        return (
+            "cut_on_action",
+            "Visible subject or camera motion can carry continuity across the cut.",
+        )
     energy_changes = (
         current.music_energy != "unknown"
         and following.music_energy != "unknown"
         and current.music_energy != following.music_energy
     )
-    scenic_breath = current.visual_role == "scenic_breath" or following.visual_role == "scenic_breath"
+    scenic_breath = (
+        current.visual_role == "scenic_breath" or following.visual_role == "scenic_breath"
+    )
     if energy_changes or (
         scenic_breath and current.music_energy == "low" and following.music_energy == "low"
     ):
-        return "soft_dissolve", "A musical energy change or quiet scenic passage can support a gentle transition."
-    return "straight_cut", "A clean cut preserves forward movement without implying beat synchronization."
+        return (
+            "soft_dissolve",
+            "A musical energy change or quiet scenic passage can support a gentle transition.",
+        )
+    return (
+        "straight_cut",
+        "A clean cut preserves forward movement without implying beat synchronization.",
+    )
 
 
 def annotate_music_pacing(
