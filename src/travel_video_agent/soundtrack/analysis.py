@@ -129,10 +129,8 @@ def analyze_selected_soundtrack(
             )
         selected_audio = _project_file(root, music_path, "licensed catalog soundtrack audio")
 
-    if not validate_artifact(root, selected_audio):
-        # Imported catalog audio is a user-provided local asset; record its exact content
-        # before analysis so downstream artifacts can depend on an immutable snapshot.
-        register_artifact(root, selected_audio, dependencies=[selection_file, review_file])
+    audio_is_tracked = validate_artifact(root, selected_audio)
+    audio_digest = hashlib.sha256(selected_audio.read_bytes()).hexdigest()
     analysis_file = analysis_output_path or Path(".video-agent/music-analysis.json")
     analysis_file = analysis_file.expanduser()
     analysis_file = (
@@ -162,7 +160,13 @@ def analyze_selected_soundtrack(
         )
 
     analysis = analyze_music(root, selected_audio)
-    digest = hashlib.sha256(selected_audio.read_bytes()).hexdigest()
+    if hashlib.sha256(selected_audio.read_bytes()).hexdigest() != audio_digest:
+        raise SelectedSoundtrackAnalysisError(
+            "Soundtrack audio changed while it was being analyzed"
+        )
+    if not audio_is_tracked:
+        # Imported catalog audio is a user-provided local asset; track its exact content.
+        register_artifact(root, selected_audio, dependencies=[selection_file, review_file])
     record = SelectedSoundtrackAnalysisRecord(
         project_path=str(root),
         selection_path=selection_file.relative_to(root).as_posix(),
@@ -172,7 +176,7 @@ def analyze_selected_soundtrack(
         provider_id=selection.candidate.provider_id,
         origin=selection.candidate.origin,
         music_path=selected_audio.relative_to(root).as_posix(),
-        audio_sha256=digest,
+        audio_sha256=audio_digest,
         analyzed_at=datetime.now(UTC),
     )
     analysis_file.parent.mkdir(parents=True, exist_ok=True)
