@@ -717,6 +717,7 @@ def test_understanding_resumes_cached_frame_observations_after_interruption(
     )
 
     calls = []
+    temporal_calls = 0
     fail_once = True
 
     class FakeAnalyzer:
@@ -737,6 +738,8 @@ def test_understanding_resumes_cached_frame_observations_after_interruption(
             }
 
         def analyze_scene(self, scene_frames):
+            nonlocal temporal_calls
+            temporal_calls += 1
             return {
                 "temporal_summary": "The scene progresses across the frames.",
                 "action_progression": ["The scene begins", "The scene continues"],
@@ -763,4 +766,5 @@ def test_understanding_resumes_cached_frame_observations_after_interruption(
     assert result.scene_count == 1
     assert len(result.scenes[0].observations) == 2
     assert result.scenes[0].dynamics is not None
+    assert temporal_calls == 1
 
