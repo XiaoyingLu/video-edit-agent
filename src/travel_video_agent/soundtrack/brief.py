@@ -120,19 +120,14 @@ def build_soundtrack_brief(plan: VideoProjectPlan, source_plan_path: str) -> Sou
 
     tempo_min, tempo_max = _tempo_range(plan.brief.style, plan.brief.pacing)
     chapter_moods = [
-        scene.emotional_intent.strip()
-        for scene in plan.scenes
-        if scene.emotional_intent.strip()
+        scene.emotional_intent.strip() for scene in plan.scenes if scene.emotional_intent.strip()
     ]
     search_terms = list(
-        dict.fromkeys(
-            [*moods[:3], *chapter_moods[:3], *genres, plan.brief.style, "instrumental"]
-        )
+        dict.fromkeys([*moods[:3], *chapter_moods[:3], *genres, plan.brief.style, "instrumental"])
     )
     section_directions = "; ".join(
         f"{segment.start_seconds:.0f}-{segment.end_seconds:.0f}s "
-        f"{segment.energy} energy"
-        + (f", mood: {segment.mood[:48]}" if segment.mood else "")
+        f"{segment.energy} energy" + (f", mood: {segment.mood[:48]}" if segment.mood else "")
         for segment in segments
     )
     generation_prompt = (

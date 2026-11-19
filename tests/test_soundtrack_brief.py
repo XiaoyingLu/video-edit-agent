@@ -149,7 +149,6 @@ def test_create_soundtrack_brief_rejects_output_outside_project(tmp_path: Path) 
         create_soundtrack_brief(tmp_path, output_path=tmp_path.parent / "outside.json")
 
 
-
 def test_build_soundtrack_brief_preserves_selected_chapter_mood_and_music_energy(
     tmp_path: Path,
 ) -> None:
