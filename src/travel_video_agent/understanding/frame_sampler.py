@@ -49,7 +49,8 @@ def extract_representative_frames(
             except (OSError, json.JSONDecodeError):
                 cached = {}
             if (
-                cached.get("timestamp_seconds") is not None
+                isinstance(cached, dict)
+                and cached.get("timestamp_seconds") is not None
                 and abs(cached["timestamp_seconds"] - timestamp) < 0.001
                 and cached.get("source") == source_fingerprint
             ):
