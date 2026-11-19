@@ -2976,7 +2976,10 @@ def prepare_soundtrack_candidates_command(
         Path | None,
         typer.Option(
             "--catalog-candidates",
-            help="Optional normalized catalog response JSON (defaults to the saved Soundstripe results).",
+            help=(
+                "Optional normalized catalog response JSON "
+                "(defaults to the saved Soundstripe results)."
+            ),
         ),
     ] = None,
     output: Annotated[
