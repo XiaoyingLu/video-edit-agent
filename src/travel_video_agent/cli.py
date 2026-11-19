@@ -262,6 +262,7 @@ def understand(
         "[dim]Progress is saved after each analyzed frame; rerun this command to resume.[/dim]"
     )
     try:
+
         def report_progress(event: str, details: dict) -> None:
             if event == "scene_detection_started":
                 console.print(f"[cyan]Detecting scene boundaries:[/cyan] {details['video_path']}")
