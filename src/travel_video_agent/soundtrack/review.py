@@ -1,6 +1,5 @@
 """Human-reviewed soundtrack candidate preview and selection."""
 
-import asyncio
 from datetime import UTC, datetime
 import html
 import json
