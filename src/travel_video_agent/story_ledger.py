@@ -14,6 +14,8 @@ from .models import ProjectAnalysis
 from .transcription.schemas import ProjectTranscription
 from .understanding.schemas import VideoScene, VideoUnderstanding
 
+MAX_LEDGER_CLUSTERS = 20
+
 
 @dataclass(frozen=True)
 class StoryLedgerEntry:
@@ -150,7 +152,7 @@ def _capture_datetime(value: str | None) -> datetime | None:
         parsed = datetime.fromisoformat(normalized)
     except ValueError:
         return None
-    return parsed.astimezone() if parsed.tzinfo is not None else parsed.astimezone()
+    return parsed.astimezone()
 
 
 def _overlap(start: float, end: float, other_start: float, other_end: float) -> bool:
@@ -282,6 +284,31 @@ def _cluster_entries(entries: list[StoryLedgerEntry]) -> list[StoryLedgerCluster
                 day_clusters.append(matching)
             matching.entries.append(entry)
         clusters.extend(day_clusters)
+    while len(clusters) > MAX_LEDGER_CLUSTERS:
+        merge_index = min(
+            range(len(clusters) - 1),
+            key=lambda index: len(clusters[index].entries) + len(clusters[index + 1].entries),
+        )
+        first = clusters[merge_index]
+        second = clusters[merge_index + 1]
+        combined_day = (
+            first.day_label
+            if first.day_label == second.day_label
+            else f"{first.day_label}–{second.day_label}"
+        )
+        combined_label = (
+            first.label
+            if first.label == second.label
+            else "mixed settings and subjects"
+        )
+        clusters[merge_index : merge_index + 2] = [
+            StoryLedgerCluster(
+                cluster_id=f"{first.cluster_id}+{second.cluster_id}",
+                day_label=combined_day,
+                label=combined_label,
+                entries=[*first.entries, *second.entries],
+            )
+        ]
     return clusters
 
 
