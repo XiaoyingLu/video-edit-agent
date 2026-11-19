@@ -1,7 +1,5 @@
 """Explainable soundtrack candidate ranking with rights as a hard gate."""
 
-from typing import Literal
-
 from pydantic import BaseModel, ConfigDict, Field
 
 from .licensing import evaluate_soundtrack_rights
