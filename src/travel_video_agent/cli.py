@@ -237,7 +237,7 @@ def understand(
         ),
     ] = None,
     model: Annotated[
-        str,
+        str | None,
         typer.Option("--model", help="Provider-specific vision model identifier."),
     ] = None,
     provider: Annotated[
@@ -345,7 +345,13 @@ def understand(
         json.dumps(understanding.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
     )
     _track_artifact(
-        folder, destination, config={"provider": provider, "model": selected_model, "samples_per_scene": samples_per_scene}
+        folder,
+        destination,
+        config={
+            "provider": provider,
+            "model": selected_model,
+            "samples_per_scene": samples_per_scene,
+        },
     )
     checkpoint.unlink(missing_ok=True)
 
