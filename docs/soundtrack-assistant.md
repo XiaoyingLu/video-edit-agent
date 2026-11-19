@@ -132,6 +132,32 @@ Select an eligible generated candidate with its exact ID, for example
 only; it does not download, modify the timeline, or render. A generated candidate is not
 automatically selected because it scored highest.
 
+## Analyze the selected soundtrack
+
+Once an eligible candidate has been explicitly selected, analyze that exact local asset:
+
+```bash
+# Generated Stable Audio selection: use the project-local generated asset.
+docker compose run --rm video-agent analyze-selected-soundtrack ./travel-test
+
+# Catalog selection: obtain the licensed audio through the provider/account's
+# authorized workflow and save it inside the project first.
+docker compose run --rm video-agent analyze-selected-soundtrack ./travel-test \
+  --music ./.video-agent/licensed-assets/selected-track.mp3
+
+# The resulting .video-agent/music-analysis.json feeds the existing beat workflow.
+docker compose run --rm video-agent suggest-music-sync ./travel-test
+```
+
+The command validates the tracked human selection and review, confirms the selected candidate
+is rights-eligible, checks project ownership, and verifies the SHA-256 checksum for generated
+audio. Catalog search currently exposes preview URLs, not an authorized full-track download
+contract; a preview is never substituted for a render asset. For a catalog selection, the user
+must provide the licensed local audio file obtained through their account's permitted download
+workflow. The command registers the selected analysis against the selection, review, and exact
+audio file so downstream music-sync suggestions can detect stale inputs. It does not change
+timeline timing, approve edits, or render.
+
 ## Incremental PR plan
 
 | PR | Scope | Acceptance criteria |
@@ -142,7 +168,7 @@ automatically selected because it scored highest.
 | #65 | Candidate ranking | Explainable creative-fit score; rights eligibility is a hard gate; deterministic tests |
 | #66 | Preview and selection | Soundstripe search CLI; read-only HTML audition against optional project video; explainable ranking and rights status; explicit eligible-only selection artifact; preserve source files and timeline |
 | #67 | Hosted generation adapter | Stable Audio 3.0 API; async submit/poll/download; MP3/WAV; project-local audio and provenance sidecar; commercial and monetized-video rights evidence; no automatic selection or render |
-| #68 | Generated-track evaluation and workflow integration | Analyze generated audio with existing analyzer; compare generated and catalog alternatives; local-file audition; explicit eligible-only human selection; no auto-render |
+| #68 | Generated-track evaluation and workflow integration | Analyze generated audio with existing analyzer; compare generated and catalog alternatives; local-file audition; explicit eligible-only human selection; no auto-render |\n| #69 | Analyze the selected soundtrack | Validate explicit eligible selection; resolve generated local audio or require a licensed local catalog asset; register music-analysis and selection provenance; feed existing beat-sync workflow |
 
 ## Implementation rules
 
