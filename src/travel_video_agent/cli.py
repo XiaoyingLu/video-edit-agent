@@ -2614,7 +2614,9 @@ def apply_timeline_visual_edits_command(
     ],
     edits_file: Annotated[
         Path,
-        typer.Option("--edits-file", help="JSON proposal exported from the visual timeline editor."),
+        typer.Option(
+            "--edits-file", help="JSON proposal exported from the visual timeline editor."
+        ),
     ],
     timeline: Annotated[
         Path | None,
