@@ -15,6 +15,7 @@ from .review import (
     SoundtrackSelection,
     build_soundtrack_candidate_review,
     save_soundtrack_candidate_review,
+    search_soundstripe_catalog,
     select_soundtrack_candidate,
 )
 from .schemas import (
@@ -49,5 +50,6 @@ __all__ = [
     "evaluate_soundtrack_rights",
     "rank_soundtrack_candidates",
     "save_soundtrack_candidate_review",
+    "search_soundstripe_catalog",
     "select_soundtrack_candidate",
 ]
