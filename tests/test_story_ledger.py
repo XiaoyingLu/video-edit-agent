@@ -127,9 +127,7 @@ def test_story_ledger_joins_visual_speech_and_highlight_context(tmp_path: Path) 
                 end_seconds=5,
                 duration_seconds=5,
                 score=81,
-                signals=HighlightSignals(
-                    motion=0.2, sharpness=0.9, exposure=0.8, saturation=0.5
-                ),
+                signals=HighlightSignals(motion=0.2, sharpness=0.9, exposure=0.8, saturation=0.5),
             )
         ],
     )
@@ -238,7 +236,6 @@ def test_story_ledger_rejects_scenes_without_analyzed_source_video(tmp_path: Pat
         build_story_ledger(tmp_path, understanding, analysis)
 
 
-
 def test_story_ledger_prefers_embedded_capture_timestamp(tmp_path: Path) -> None:
     source_path = "camera.mp4"
     analysis = _inputs(tmp_path, [source_path])
@@ -288,8 +285,6 @@ def test_story_ledger_caps_clusters_without_dropping_or_reordering_scenes(
     ledger = build_story_ledger(tmp_path, understanding, analysis)
 
     assert len(ledger.clusters) == 20
-    flattened_ids = [
-        scene_id for cluster in ledger.clusters for scene_id in cluster.scene_ids
-    ]
+    flattened_ids = [scene_id for cluster in ledger.clusters for scene_id in cluster.scene_ids]
     assert flattened_ids == [entry.scene_id for entry in ledger.entries]
     assert len(flattened_ids) == len(scenes)

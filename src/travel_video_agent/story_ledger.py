@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import hashlib
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable
 
 from .highlights.schemas import ProjectHighlights
 from .models import ProjectAnalysis
@@ -43,9 +43,7 @@ class StoryLedgerEntry:
         mood = self.mood or "unknown"
         role = self.editorial_role or "unknown"
         motion = self.motion or "unknown"
-        highlight = (
-            f"{self.highlight_score:.2f}" if self.highlight_score is not None else "n/a"
-        )
+        highlight = f"{self.highlight_score:.2f}" if self.highlight_score is not None else "n/a"
         speech = " ".join(self.speech)
         speech = speech.replace('"', "'").replace("\n", " ").strip()
         if len(speech) > 180:
@@ -124,9 +122,7 @@ def _scene_attributes(scene: VideoScene) -> tuple[str, str, str, str]:
     setting = _first_known(item.setting for item in observations)
     subject = _first_known(item.primary_subject for item in observations)
     scales = list(
-        dict.fromkeys(
-            item.shot_scale for item in observations if item.shot_scale != "unknown"
-        )
+        dict.fromkeys(item.shot_scale for item in observations if item.shot_scale != "unknown")
     )
     scale = "→".join(scales) if scales else "unknown"
     motion_parts: list[str] = []
@@ -167,9 +163,7 @@ def _build_entries(
     analysis: ProjectAnalysis,
 ) -> list[StoryLedgerEntry]:
     media_by_key = {_video_key(item.path): item for item in analysis.videos}
-    transcript_by_path = (
-        {item.path: item for item in transcription.videos} if transcription else {}
-    )
+    transcript_by_path = {item.path: item for item in transcription.videos} if transcription else {}
     candidates_by_path: dict[str, list] = defaultdict(list)
     if highlights is not None:
         for candidate in highlights.candidates:
@@ -297,9 +291,7 @@ def _cluster_entries(entries: list[StoryLedgerEntry]) -> list[StoryLedgerCluster
             else f"{first.day_label}–{second.day_label}"
         )
         combined_label = (
-            first.label
-            if first.label == second.label
-            else "mixed settings and subjects"
+            first.label if first.label == second.label else "mixed settings and subjects"
         )
         clusters[merge_index : merge_index + 2] = [
             StoryLedgerCluster(
