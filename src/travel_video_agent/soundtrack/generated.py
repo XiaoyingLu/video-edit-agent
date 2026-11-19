@@ -3,8 +3,6 @@
 import hashlib
 from pathlib import Path
 
-from pydantic import ValidationError
-
 from ..artifact_tracking import register_artifact
 from ..music import analyze_music
 from ..music.pipeline import MusicAnalysisError
@@ -81,7 +79,7 @@ def prepare_generated_soundtrack_candidates(
                 raise GeneratedCandidateError(
                     f"Generated soundtrack metadata belongs to another project: {metadata_file.name}"
                 )
-            if Path(artifact.audio_path).resolve() != audio_file:
+            if (root / Path(artifact.audio_path)).resolve() != audio_file:
                 raise GeneratedCandidateError(
                     f"Generated soundtrack metadata points to a different audio file: {metadata_file.name}"
                 )
