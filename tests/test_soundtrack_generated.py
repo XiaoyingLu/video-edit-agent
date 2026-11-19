@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 
 import pytest
 
+from travel_video_agent.artifact_tracking import register_artifact
 from travel_video_agent.music.schemas import MusicAnalysis
 from travel_video_agent.soundtrack import generated
 from travel_video_agent.soundtrack.generated import (
@@ -86,6 +87,9 @@ def _write_generated_track(root):
     )
     metadata = audio.with_suffix(".json")
     metadata.write_text(artifact.model_dump_json(), encoding="utf-8")
+    brief_path = root / ".video-agent" / "soundtrack-brief.json"
+    register_artifact(root, audio, dependencies=[brief_path])
+    register_artifact(root, metadata, dependencies=[brief_path, audio])
     return audio, metadata
 
 
