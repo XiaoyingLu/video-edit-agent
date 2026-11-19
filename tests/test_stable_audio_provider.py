@@ -101,7 +101,11 @@ def test_http_error_does_not_expose_api_key(tmp_path, monkeypatch):
         {},
         None,
     )
-    error.read = lambda: b'{"name":"unauthorized","errors":["Invalid API key"]}'
+    def fake_error_body():
+        return b'{"name":"unauthorized","errors":["Invalid API key"]}'
+
+    error.read = fake_error_body
+
     def raise_http_error(*args, **kwargs):
         raise error
 
