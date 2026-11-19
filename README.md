@@ -65,8 +65,6 @@ docker compose run --rm video-agent suggest-soundtrack ./travel-test
 
 This writes `.video-agent/soundtrack-brief.json` with mood and genre directions, instrumentation, a tempo range, an energy arc aligned to the storyboard scenes, catalog search terms, and a hosted-generation prompt. Commercial use, monetized-video use, and video synchronization rights are required by default. This is a planning artifact only: it does not download or generate audio, select a track, approve edits, or render video.
 
-
-
 Search the Soundstripe catalog, then create a browser-based audition page. Set `SOUNDSTRIPE_API_KEY` in the environment (never in project JSON or source control):
 
 ```bash
