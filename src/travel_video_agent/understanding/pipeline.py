@@ -217,11 +217,13 @@ def understand_folder(
                     for _, frame_path in frames
                 ]
                 dynamics = None
-                if existing.get("complete"):
-                    cached_dynamics = existing.get("dynamics")
-                    if cached_dynamics is not None:
+                cached_dynamics = existing.get("dynamics") if existing.get("complete") else None
+                if cached_dynamics is not None:
+                    try:
                         dynamics = SceneDynamics.model_validate(cached_dynamics)
-                elif len(frames) >= 2:
+                    except ValidationError:
+                        dynamics = None
+                if dynamics is None and len(frames) >= 2:
                     try:
                         dynamics = SceneDynamics.model_validate(analyzer.analyze_scene(frames))
                     except (VisionModelError, ValidationError) as exc:
