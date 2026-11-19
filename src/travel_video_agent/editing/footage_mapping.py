@@ -17,6 +17,11 @@ from .footage_schemas import (
 )
 from .planning_schemas import VideoProjectPlan
 
+_CHAPTER_PICK_BOOST = 18.0
+_MUST_INCLUDE_BOOST = 40.0
+_REUSE_PENALTY = 18.0
+
+
 _STOP_WORDS = {
     "a",
     "an",
@@ -183,6 +188,19 @@ def suggest_storyboard_footage(
         if video_path is not None and source_scene.end_seconds > source_scene.start_seconds:
             scenes.append((video_path, source_scene))
 
+    available_scene_ids = {source_scene.scene_id for _, source_scene in scenes}
+    required_scene_ids = {
+        scene_id
+        for planned_scene in plan.scenes
+        for scene_id in planned_scene.must_include_scene_ids
+    }
+    missing_required = sorted(required_scene_ids - available_scene_ids)
+    if missing_required:
+        raise ValueError(
+            "chapter must-include scenes are missing from analyzed source footage: "
+            + ", ".join(missing_required)
+        )
+
     shot_items = [shot for planned_scene in plan.scenes for shot in planned_scene.shots]
     semantic_scores: dict[tuple[str, str], float] = {}
     if embedding_model:
@@ -216,7 +234,10 @@ def suggest_storyboard_footage(
     suggestions = []
     candidate_count = 0
     matched_shot_count = 0
+    previously_recommended: set[str] = set()
     for planned_scene in plan.scenes:
+        chapter_candidates = set(planned_scene.candidate_scene_ids)
+        chapter_must_include = set(planned_scene.must_include_scene_ids)
         for shot in planned_scene.shots:
             ranked = []
             for video_path, source_scene in scenes:
@@ -224,6 +245,18 @@ def suggest_storyboard_footage(
                 score, reasons, lexical_score = _candidate_score(
                     shot, source_scene, semantic_similarity
                 )
+                if source_scene.scene_id in chapter_candidates:
+                    score += _CHAPTER_PICK_BOOST
+                    reasons.append("Chapter pick: suggested for this story chapter.")
+                if source_scene.scene_id in chapter_must_include:
+                    score += _MUST_INCLUDE_BOOST
+                    reasons.append("Chapter pick: must-include scene for this story chapter.")
+                if source_scene.scene_id in previously_recommended:
+                    score -= _REUSE_PENALTY
+                    reasons.append(
+                        "Reuse discouraged: this source scene was top-ranked for an earlier shot."
+                    )
+                score = round(max(0.0, min(100.0, score)), 1)
                 ranked.append(
                     FootageMatchCandidate(
                         video_path=video_path,
@@ -277,6 +310,15 @@ def suggest_storyboard_footage(
                 )
             )
             candidates = ranked[:max_candidates_per_shot]
+            included_ids = {candidate.source_scene_id for candidate in candidates}
+            candidates.extend(
+                candidate
+                for candidate in ranked
+                if candidate.source_scene_id in chapter_must_include
+                and candidate.source_scene_id not in included_ids
+            )
+            if ranked:
+                previously_recommended.add(ranked[0].source_scene_id)
             candidate_count += len(candidates)
             matched_shot_count += bool(candidates)
             suggestions.append(

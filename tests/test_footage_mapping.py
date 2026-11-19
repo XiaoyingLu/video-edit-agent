@@ -257,3 +257,128 @@ def test_footage_candidates_include_temporal_and_composition_evidence(tmp_path):
     assert candidate.subject_motion == "approaching"
     assert candidate.camera_motion == "static"
     assert candidate.primary_subject == "mountain lake"
+
+
+def _write_footage_artifacts(tmp_path, plan, understanding):
+    (tmp_path / "clip.mp4").write_bytes(b"test video placeholder")
+    artifact_dir = tmp_path / ".video-agent"
+    artifact_dir.mkdir(exist_ok=True)
+    plan_path = artifact_dir / "video-project-plan.json"
+    understanding_path = artifact_dir / "understanding.json"
+    plan_path.write_text(json.dumps(plan.model_dump(mode="json")), encoding="utf-8")
+    understanding_path.write_text(
+        json.dumps(understanding.model_dump(mode="json")), encoding="utf-8"
+    )
+    register_artifact(tmp_path, plan_path)
+    register_artifact(tmp_path, understanding_path)
+
+
+def test_suggest_storyboard_footage_boosts_chapter_picks_but_keeps_outside_matches(
+    tmp_path,
+):
+    plan = _project_plan(tmp_path)
+    source_scenes = _understanding(tmp_path).scenes
+    chapter_pick = source_scenes[1].scene_id
+    plan = plan.model_copy(
+        update={
+            "scenes": [plan.scenes[0].model_copy(update={"candidate_scene_ids": [chapter_pick]})]
+        }
+    )
+    understanding = _understanding(tmp_path)
+    _write_footage_artifacts(tmp_path, plan, understanding)
+
+    report = suggest_storyboard_footage(tmp_path, max_candidates_per_shot=2)
+
+    candidates = report.suggestions[0].candidates
+    chapter_candidate = next(item for item in candidates if item.source_scene_id == chapter_pick)
+    outside_candidate = next(item for item in candidates if item.source_scene_id != chapter_pick)
+    assert "Chapter pick" in " ".join(chapter_candidate.reasons)
+    assert chapter_candidate.score > chapter_candidate.lexical_score
+    assert outside_candidate.source_scene_id == source_scenes[0].scene_id
+
+
+def test_suggest_storyboard_footage_always_includes_must_include_scenes(
+    tmp_path,
+):
+    plan = _project_plan(tmp_path)
+    source_scenes = _understanding(tmp_path).scenes
+    must_include = source_scenes[1].scene_id
+    plan = plan.model_copy(
+        update={
+            "scenes": [
+                plan.scenes[0].model_copy(
+                    update={
+                        "candidate_scene_ids": [source_scenes[0].scene_id],
+                        "must_include_scene_ids": [must_include],
+                    }
+                )
+            ]
+        }
+    )
+    _write_footage_artifacts(tmp_path, plan, _understanding(tmp_path))
+
+    report = suggest_storyboard_footage(tmp_path, max_candidates_per_shot=1)
+
+    candidates = report.suggestions[0].candidates
+    assert len(candidates) == 2
+    required = next(item for item in candidates if item.source_scene_id == must_include)
+    assert "must-include" in " ".join(required.reasons).lower()
+
+
+def test_suggest_storyboard_footage_discourages_reusing_previous_top_pick(tmp_path):
+    plan = _project_plan(tmp_path)
+    first_scene = plan.scenes[0]
+    first_shot = first_scene.shots[0].model_copy(update={"target_duration_seconds": 4})
+    first_scene = first_scene.model_copy(
+        update={"target_duration_seconds": 4, "shots": [first_shot]}
+    )
+    second_shot = first_shot.model_copy(
+        update={"shot_id": "shot-002", "scene_id": "scene-02", "sequence_index": 1}
+    )
+    second_scene = first_scene.model_copy(
+        update={
+            "scene_id": "scene-02",
+            "sequence_index": 2,
+            "title": "A second reveal",
+            "target_duration_seconds": 4,
+            "shots": [second_shot],
+        }
+    )
+    plan = plan.model_copy(update={"scenes": [first_scene, second_scene]})
+
+    understanding = _understanding(tmp_path)
+    first_source = understanding.scenes[0]
+    alternative = first_source.model_copy(
+        update={
+            "scene_id": first_source.scene_id.rsplit("-", 1)[0] + "-0002",
+            "start_seconds": 12,
+            "end_seconds": 20,
+        }
+    )
+    understanding = understanding.model_copy(update={"scenes": [first_source, alternative]})
+    _write_footage_artifacts(tmp_path, plan, understanding)
+
+    report = suggest_storyboard_footage(tmp_path, max_candidates_per_shot=2)
+
+    first_pick = report.suggestions[0].candidates[0].source_scene_id
+    second_candidates = report.suggestions[1].candidates
+    assert second_candidates[0].source_scene_id != first_pick
+    reused = next(item for item in second_candidates if item.source_scene_id == first_pick)
+    assert "Reuse discouraged" in " ".join(reused.reasons)
+
+
+def test_suggest_storyboard_footage_fails_if_must_include_scene_is_unavailable(tmp_path):
+    plan = _project_plan(tmp_path)
+    plan = plan.model_copy(
+        update={
+            "scenes": [
+                plan.scenes[0].model_copy(
+                    update={"must_include_scene_ids": ["missing-source-scene"]}
+                )
+            ]
+        }
+    )
+    _write_footage_artifacts(tmp_path, plan, _understanding(tmp_path))
+
+    with pytest.raises(ValueError, match="must-include scenes are missing"):
+        suggest_storyboard_footage(tmp_path)
