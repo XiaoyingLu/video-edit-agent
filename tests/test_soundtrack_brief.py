@@ -147,3 +147,56 @@ def test_create_soundtrack_brief_rejects_output_outside_project(tmp_path: Path) 
 
     with pytest.raises(ValueError, match="inside the project"):
         create_soundtrack_brief(tmp_path, output_path=tmp_path.parent / "outside.json")
+
+
+
+def test_build_soundtrack_brief_preserves_selected_chapter_mood_and_music_energy(
+    tmp_path: Path,
+) -> None:
+    plan = _plan(tmp_path)
+    plan = plan.model_copy(
+        update={
+            "scenes": [
+                plan.scenes[0].model_copy(
+                    update={"emotional_intent": "quiet anticipation", "music_energy": "low"}
+                ),
+                plan.scenes[1].model_copy(
+                    update={"emotional_intent": "triumphant discovery", "music_energy": "high"}
+                ),
+                plan.scenes[2].model_copy(
+                    update={"emotional_intent": "peaceful reflection", "music_energy": "low"}
+                ),
+            ]
+        }
+    )
+
+    brief = build_soundtrack_brief(plan, ".video-agent/video-project-plan.json")
+
+    assert [segment.mood for segment in brief.energy_arc] == [
+        "quiet anticipation",
+        "triumphant discovery",
+        "peaceful reflection",
+    ]
+    assert [segment.energy for segment in brief.energy_arc] == ["low", "high", "low"]
+    assert "quiet anticipation" in brief.search_terms
+    assert "triumphant discovery" in brief.search_terms
+    assert "0-10s low energy, mood: quiet anticipation" in brief.generation_prompt
+    assert "10-20s high energy, mood: triumphant discovery" in brief.generation_prompt
+
+
+def test_build_soundtrack_brief_falls_back_when_story_music_energy_is_unknown(
+    tmp_path: Path,
+) -> None:
+    plan = _plan(tmp_path)
+    plan = plan.model_copy(
+        update={
+            "scenes": [
+                plan.scenes[0].model_copy(update={"music_energy": "unknown"}),
+                *plan.scenes[1:],
+            ]
+        }
+    )
+
+    brief = build_soundtrack_brief(plan, ".video-agent/video-project-plan.json")
+
+    assert brief.energy_arc[0].energy == "medium"
