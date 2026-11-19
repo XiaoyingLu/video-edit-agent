@@ -210,7 +210,8 @@ def render_music_timeline_preview_html(
     svg_height = 220 + len(report.clips) * 38
     payload = json.dumps(report.model_dump(mode="json"), ensure_ascii=True).replace("<", "\\u003c")
     audio_html = (
-        f'<audio id="music-audio" controls preload="metadata" src="{html.escape(audio_source, quote=True)}"></audio>'
+        f'<audio id="music-audio" controls preload="metadata" '
+        f'src="{html.escape(audio_source, quote=True)}"></audio>'
         if audio_source
         else "<p>Audio path unavailable. Regenerate the preview from the project folder.</p>"
     )
@@ -262,7 +263,8 @@ aria-valuemin="0" aria-valuemax="{duration:.2f}" aria-valuenow="0">
 <line id="playhead" x1="{left}" x2="{left}" y1="34" y2="{svg_height - 8}" class="playhead"/>
 <text id="playhead-label" x="{left + 6}" y="40" class="playhead-label">0.0s</text>
 </svg></div>
-<p id="playback-position" aria-live="off">00:00 / {int(duration // 60):02d}:{int(duration % 60):02d}</p>
+<p id="playback-position" aria-live="off">00:00 /
+{int(duration // 60):02d}:{int(duration % 60):02d}</p>
 <p class="note">All tracks share soundtrack time in seconds. Solid beat markers and stronger
 downbeat markers are signal estimates; dashed vertical lines show current shot boundaries,
 and green dashed lines show suggested anchors when available. Listen and inspect the footage:
