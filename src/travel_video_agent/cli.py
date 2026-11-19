@@ -1934,6 +1934,13 @@ def create_plan(
             help="Optional music-analysis JSON from analyze-music.",
         ),
     ] = None,
+    story: Annotated[
+        Path | None,
+        typer.Option(
+            "--story",
+            help="Selected story-proposal JSON (select an angle first with select-story).",
+        ),
+    ] = None,
 ) -> None:
     """Generate a creative brief, story treatment, and storyboard."""
     try:
@@ -1943,6 +1950,7 @@ def create_plan(
             model=model,
             output_path=output,
             music_analysis_path=music_analysis,
+            story_path=story,
         )
     except (FileNotFoundError, IntentParsingError, VideoPlanningError, ValueError) as exc:
         console.print(f"[red]Video planning failed:[/red] {exc}")

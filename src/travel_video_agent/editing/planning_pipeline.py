@@ -6,6 +6,7 @@ from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
 from ..music.schemas import MusicAnalysis, MusicSection
+from ..story_proposal import StoryProposal
 from .intent import parse_editing_intent
 from .music_pacing import annotate_music_pacing
 from .planning_generation import (
@@ -23,6 +24,7 @@ def create_video_project_plan(
     model: str | None = None,
     output_path: Path | None = None,
     music_analysis_path: Path | None = None,
+    story_path: Path | None = None,
 ) -> tuple[VideoProjectPlan, Path]:
     """Generate a creative brief, narrative treatment, and storyboard without editing media."""
     root = folder.expanduser().resolve()
@@ -60,6 +62,41 @@ def create_video_project_plan(
                 f"Analyzed soundtrack no longer exists: {music_analysis.music_path}"
             )
 
+    story_file = None
+    selected_story = None
+    proposal = None
+    if story_path is not None:
+        story_file = story_path.expanduser().resolve()
+        if destination == story_file:
+            raise ValueError("video project plan output cannot overwrite the story proposal")
+        try:
+            story_file.relative_to(root)
+        except ValueError as exc:
+            raise ValueError("story proposal must be inside the project folder") from exc
+        if not story_file.is_file():
+            raise FileNotFoundError(f"Story proposal does not exist: {story_file}")
+        validate_artifact(root, story_file)
+        proposal = StoryProposal.model_validate_json(story_file.read_text(encoding="utf-8"))
+        if Path(proposal.project_path).expanduser().resolve() != root:
+            raise ValueError("story proposal belongs to a different project folder")
+        if proposal.selected_angle_id is None:
+            raise ValueError("select a story angle first with 'select-story --angle'")
+        selected_story = next(
+            (angle for angle in proposal.angles if angle.angle_id == proposal.selected_angle_id),
+            None,
+        )
+        if selected_story is None:
+            raise ValueError("selected story angle is missing from the proposal")
+        prompt_duration = explicit_duration_seconds(prompt)
+        if (
+            prompt_duration is not None
+            and abs(proposal.target_duration_seconds - prompt_duration) > 0.05
+        ):
+            raise ValueError(
+                "prompt duration conflicts with selected story duration; "
+                "use the story's target duration"
+            )
+
     planner_model = model or os.getenv("VIDEO_PLANNER_MODEL", "qwen2.5:1.5b")
     editing_plan = parse_editing_intent(
         prompt,
@@ -72,6 +109,8 @@ def create_video_project_plan(
         if explicit_duration > 3600:
             raise ValueError("requested video duration cannot exceed 3600 seconds")
         updates["target_duration_seconds"] = explicit_duration
+    if selected_story is not None:
+        updates["target_duration_seconds"] = proposal.target_duration_seconds
     editing_plan = editing_plan.model_copy(update=updates)
 
     brief = CreativeBrief(
@@ -94,7 +133,52 @@ def create_video_project_plan(
         brief.model_dump(mode="json"),
         model=planner_model,
         music_sections=music_sections,
+        story_chapters=(
+            [chapter.model_dump(mode="json") for chapter in selected_story.chapters]
+            if selected_story is not None
+            else None
+        ),
     )
+    if selected_story is not None:
+        if len(generated.scenes) != len(selected_story.chapters):
+            raise ValueError("generated storyboard does not match selected story chapter count")
+        mapped_scenes = []
+        for scene, chapter in zip(generated.scenes, selected_story.chapters, strict=True):
+            shots = [
+                shot.model_copy(
+                    update={"narration": shot.narration or chapter.narration_hint or None}
+                )
+                for shot in scene.shots
+            ]
+            mapped_scenes.append(
+                scene.model_copy(
+                    update={
+                        "title": chapter.name,
+                        "purpose": chapter.purpose,
+                        "emotional_intent": chapter.mood,
+                        "music_energy": chapter.music_energy,
+                        "candidate_scene_ids": chapter.candidate_scene_ids,
+                        "target_duration_seconds": chapter.target_seconds,
+                        "shots": shots,
+                    }
+                )
+            )
+        generated = generated.model_copy(
+            update={
+                "story_treatment": generated.story_treatment.model_copy(
+                    update={
+                        "working_title": selected_story.title,
+                        "logline": selected_story.logline,
+                        "narrative_arc": [chapter.name for chapter in selected_story.chapters],
+                        "emotional_journey": " ".join(
+                            chapter.mood for chapter in selected_story.chapters if chapter.mood
+                        )
+                        or generated.story_treatment.emotional_journey,
+                    }
+                ),
+                "scenes": mapped_scenes,
+            }
+        )
     scenes = (
         annotate_music_pacing(
             _annotate_scenes_with_music(generated.scenes, music_analysis.sections),
@@ -132,6 +216,8 @@ def create_video_project_plan(
     dependencies = [editing_path]
     if music_analysis_file is not None:
         dependencies.append(music_analysis_file)
+    if story_file is not None:
+        dependencies.append(story_file)
     register_artifact(root, destination, dependencies=dependencies)
     return project_plan, destination
 
