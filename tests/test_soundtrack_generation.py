@@ -84,9 +84,7 @@ def test_generation_persists_audio_metadata_and_artifact_dependencies(tmp_path, 
 
     monkeypatch.setattr(generation, "StableAudioGenerationProvider", FakeProvider)
 
-    artifact, metadata_path = asyncio.run(
-        generate_soundtrack_from_brief(tmp_path, seed=7)
-    )
+    artifact, metadata_path = asyncio.run(generate_soundtrack_from_brief(tmp_path, seed=7))
 
     audio_path = tmp_path / artifact.audio_path
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
@@ -132,9 +130,7 @@ def test_generation_rejects_output_paths_outside_project(tmp_path, monkeypatch):
 
     with pytest.raises(SoundtrackGenerationError, match="inside the project"):
         asyncio.run(
-            generate_soundtrack_from_brief(
-                tmp_path, output_path=tmp_path.parent / "outside.mp3"
-            )
+            generate_soundtrack_from_brief(tmp_path, output_path=tmp_path.parent / "outside.mp3")
         )
 
 
