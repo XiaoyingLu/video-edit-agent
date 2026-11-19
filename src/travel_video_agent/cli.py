@@ -69,6 +69,11 @@ from .editing.timeline_visual_review import (
     load_timeline_visual_review_decisions,
     save_timeline_visual_review,
 )
+from .editing.timeline_visual_editor import (
+    TimelineVisualEditError,
+    apply_timeline_visual_edits,
+    load_timeline_visual_edits,
+)
 from .editing.workflow import create_video_draft
 from .highlights import find_highlights_folder
 from .media import MediaToolError, analyze_folder
@@ -2598,6 +2603,41 @@ def review_timeline_visual(
     console.print(
         "[yellow]Open the HTML file in a browser, export decisions, then apply them with "
         "review-timeline --decisions-file. No decisions are applied by this command.[/yellow]"
+    )
+
+
+@app.command("apply-timeline-visual-edits")
+def apply_timeline_visual_edits_command(
+    folder: Annotated[
+        Path,
+        typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True),
+    ],
+    edits_file: Annotated[
+        Path,
+        typer.Option("--edits-file", help="JSON proposal exported from the visual timeline editor."),
+    ],
+    timeline: Annotated[
+        Path | None,
+        typer.Option("--timeline", help="Source timeline path; defaults to the export's timeline."),
+    ] = None,
+) -> None:
+    """Create a separate unapproved revision from browser-authored order and trim edits."""
+    try:
+        edits = load_timeline_visual_edits(edits_file)
+        destination = apply_timeline_visual_edits(folder, edits, timeline_path=timeline)
+    except (
+        FileNotFoundError,
+        OSError,
+        ValueError,
+        TimelineVisualEditError,
+    ) as exc:
+        console.print(f"[red]Visual timeline edits rejected:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    console.print(f"Unapproved timeline revision: [green]{destination}[/green]")
+    console.print(
+        "[yellow]Review the new revision with review-timeline before rendering. "
+        "The original timeline and source media are unchanged.[/yellow]"
     )
 
 
