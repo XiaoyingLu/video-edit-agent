@@ -1,8 +1,10 @@
 """Validated soundtrack requirements and rights policy."""
 
+from datetime import datetime
+from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
 
 class SoundtrackEnergySegment(BaseModel):
@@ -28,6 +30,70 @@ class SoundtrackRightsPolicy(BaseModel):
     attribution_acceptable: bool = True
     derivatives_and_video_sync_required: bool = True
     exclude_unclear_licenses: bool = True
+
+
+class SoundtrackLicenseType(StrEnum):
+    """Recognized license families; custom terms still require explicit evidence."""
+
+    PUBLIC_DOMAIN = "public_domain"
+    CC0 = "cc0"
+    CC_BY = "cc_by"
+    CC_BY_SA = "cc_by_sa"
+    CC_BY_NC = "cc_by_nc"
+    CC_BY_ND = "cc_by_nd"
+    CUSTOM = "custom"
+    UNKNOWN = "unknown"
+
+
+class SoundtrackLicense(BaseModel):
+    """License claims and evidence supplied by a catalog or generation provider."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    license_type: SoundtrackLicenseType = SoundtrackLicenseType.UNKNOWN
+    license_name: str | None = Field(default=None, max_length=200)
+    license_url: HttpUrl | None = None
+    license_version: str | None = Field(default=None, max_length=80)
+    evidence_url: HttpUrl | None = None
+    commercial_use_allowed: bool | None = None
+    monetized_video_allowed: bool | None = None
+    derivatives_allowed: bool | None = None
+    synchronization_allowed: bool | None = None
+    attribution_required: bool = False
+    attribution_text: str | None = Field(default=None, max_length=1000)
+    terms_snapshot: str | None = Field(default=None, max_length=2000)
+    account_constraints: list[str] = Field(default_factory=list, max_length=20)
+
+
+class SoundtrackCandidate(BaseModel):
+    """Normalized audio candidate with source provenance and license evidence."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    candidate_id: str = Field(min_length=1, max_length=200)
+    origin: Literal["catalog", "generated"]
+    provider_id: str = Field(min_length=1, max_length=80)
+    provider_asset_id: str = Field(min_length=1, max_length=200)
+    title: str = Field(min_length=1, max_length=200)
+    creator: str | None = Field(default=None, max_length=200)
+    duration_seconds: float = Field(gt=0, le=7200)
+    tags: list[str] = Field(default_factory=list, max_length=40)
+    source_url: HttpUrl
+    preview_url: HttpUrl | None = None
+    retrieved_at: datetime
+    asset_sha256: str | None = Field(default=None, pattern=r"^[a-fA-F0-9]{64}$")
+    license: SoundtrackLicense
+
+
+class SoundtrackRightsDecision(BaseModel):
+    """Explainable result of evaluating a candidate against an active policy."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    candidate_id: str
+    status: Literal["eligible", "ineligible", "review_required"]
+    reasons: list[str] = Field(default_factory=list)
+    checked_policy: SoundtrackRightsPolicy
 
 
 class SoundtrackBrief(BaseModel):
