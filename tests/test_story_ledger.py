@@ -261,3 +261,35 @@ def test_story_ledger_prefers_embedded_capture_timestamp(tmp_path: Path) -> None
         datetime.fromtimestamp(expected.timestamp() + 12).astimezone().strftime("%H:%M")
     )
     assert "embedded media creation timestamps" in ledger.timestamp_note
+
+
+def test_story_ledger_caps_clusters_without_dropping_or_reordering_scenes(
+    tmp_path: Path,
+) -> None:
+    analysis = _inputs(tmp_path, ["long-day.mp4"])
+    scenes = [
+        _scene(
+            "long-day.mp4",
+            index,
+            float(index * 6),
+            setting=f"location {index}",
+            subject=f"subject {index}",
+        )
+        for index in range(1, 26)
+    ]
+    understanding = VideoUnderstanding(
+        project_path=str(tmp_path),
+        video_count=1,
+        scene_count=len(scenes),
+        model="test",
+        scenes=scenes,
+    )
+
+    ledger = build_story_ledger(tmp_path, understanding, analysis)
+
+    assert len(ledger.clusters) == 20
+    flattened_ids = [
+        scene_id for cluster in ledger.clusters for scene_id in cluster.scene_ids
+    ]
+    assert flattened_ids == [entry.scene_id for entry in ledger.entries]
+    assert len(flattened_ids) == len(scenes)
