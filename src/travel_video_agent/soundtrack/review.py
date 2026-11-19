@@ -13,7 +13,12 @@ from ..artifact_tracking import register_artifact, validate_artifact
 from .catalog import SoundtrackSearchRequest, SoundtrackSearchResponse
 from .providers import SoundstripeCatalogProvider
 from .ranking import SoundtrackCandidateRanking, rank_soundtrack_candidates
-from .schemas import SoundtrackBrief, SoundtrackCandidate, SoundtrackLicense
+from .schemas import (
+    SoundtrackBrief,
+    SoundtrackCandidate,
+    SoundtrackCandidateCollection,
+    SoundtrackLicense,
+)
 
 
 class SoundtrackReviewError(ValueError):
@@ -145,17 +150,32 @@ def build_soundtrack_candidate_review(
     brief = SoundtrackBrief.model_validate_json(brief_file.read_text(encoding="utf-8"))
     if Path(brief.project_path).resolve() != root:
         raise SoundtrackReviewError("Soundtrack brief belongs to a different project")
-    response = SoundtrackSearchResponse.model_validate_json(
-        candidates_file.read_text(encoding="utf-8")
-    )
-    candidate_ids = [item.candidate_id for item in response.candidates]
+    raw_candidates = json.loads(candidates_file.read_text(encoding="utf-8"))
+    if "project_path" in raw_candidates:
+        collection = SoundtrackCandidateCollection.model_validate(raw_candidates)
+        if Path(collection.project_path).resolve() != root:
+            raise SoundtrackReviewError("Candidate collection belongs to a different project")
+        if Path(collection.brief_path).resolve() != brief_file:
+            raise SoundtrackReviewError("Candidate collection was created from a different brief")
+        candidates = collection.candidates
+    else:
+        response = SoundtrackSearchResponse.model_validate(raw_candidates)
+        candidates = response.candidates
+    for candidate in candidates:
+        if candidate.asset_path:
+            _project_file(root, Path(candidate.asset_path), "local soundtrack candidate")
+        elif candidate.origin == "generated":
+            raise SoundtrackReviewError(
+                f"Generated candidate '{candidate.candidate_id}' is missing its local audio path"
+            )
+    candidate_ids = [item.candidate_id for item in candidates]
     if len(candidate_ids) != len(set(candidate_ids)):
         raise SoundtrackReviewError("Candidate IDs must be unique")
-    rankings = rank_soundtrack_candidates(brief, response.candidates)
+    rankings = rank_soundtrack_candidates(brief, candidates)
     ranking_by_id = {item.candidate_id: item for item in rankings}
     items = [
         SoundtrackReviewItem(candidate=candidate, ranking=ranking_by_id[candidate.candidate_id])
-        for candidate in response.candidates
+        for candidate in candidates
     ]
     items.sort(
         key=lambda item: (
@@ -175,7 +195,10 @@ def build_soundtrack_candidate_review(
 
 
 def render_soundtrack_review_html(
-    report: SoundtrackCandidateReview, *, video_source: str | None = None
+    report: SoundtrackCandidateReview,
+    *,
+    video_source: str | None = None,
+    local_audio_sources: dict[str, str] | None = None,
 ) -> str:
     """Render a self-contained, read-only candidate audition page."""
     video_html = (
@@ -189,11 +212,18 @@ def render_soundtrack_review_html(
     cards = []
     for index, item in enumerate(report.items, start=1):
         candidate, ranking = item.candidate, item.ranking
+        local_source = (local_audio_sources or {}).get(candidate.candidate_id)
+        preview_url = (
+            local_source
+            if local_source
+            else str(candidate.preview_url)
+            if candidate.preview_url and str(candidate.preview_url).startswith("https://")
+            else None
+        )
         preview = (
             '<audio controls preload="none" '
-            f'src="{html.escape(str(candidate.preview_url), quote=True)}">'
-            "</audio>"
-            if candidate.preview_url and str(candidate.preview_url).startswith("https://")
+            f'src="{html.escape(preview_url, quote=True)}"></audio>'
+            if preview_url
             else "<p>Preview URL unavailable.</p>"
         )
         rights_reasons = "".join(
@@ -267,8 +297,21 @@ def save_soundtrack_candidate_review(
             os.sep, "/"
         )
         video_source = quote(relative_video, safe="/:@-._~")
+    local_audio_sources: dict[str, str] = {}
+    for item in report.items:
+        if item.candidate.asset_path:
+            audio_file = _project_file(root, Path(item.candidate.asset_path), "local soundtrack candidate")
+            relative_audio = os.path.relpath(audio_file, html_path.parent).replace(os.sep, "/")
+            local_audio_sources[item.candidate.candidate_id] = quote(
+                relative_audio, safe="/:@-._~"
+            )
     html_path.write_text(
-        render_soundtrack_review_html(report, video_source=video_source), encoding="utf-8"
+        render_soundtrack_review_html(
+            report,
+            video_source=video_source,
+            local_audio_sources=local_audio_sources,
+        ),
+        encoding="utf-8",
     )
     json_path.write_text(
         json.dumps(report.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
