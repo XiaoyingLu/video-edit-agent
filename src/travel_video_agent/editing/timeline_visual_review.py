@@ -360,15 +360,26 @@ function loadPreviewClip(index, autoplay) {{
     playbackStatus.textContent = "Could not load this source video in the browser.";
   }};
   if (clipEndedHandler) player.removeEventListener("ended", clipEndedHandler);
-  clipEndedHandler = () => loadPreviewClip(playbackIndex + 1, true);
+  clipEndedHandler = () => {{
+    if (sequencePlaying) {{
+      loadPreviewClip(playbackIndex + 1, true);
+    }} else {{
+      playbackStatus.textContent = "Shot preview finished";
+    }}
+  }};
   player.addEventListener("ended", clipEndedHandler);
 }}
 player.addEventListener("timeupdate", () => {{
-  if (!sequencePlaying || playbackIndex < 0) return;
+  if (playbackIndex < 0) return;
   const card = orderedCards()[playbackIndex];
   if (!card) return;
   if (player.currentTime >= currentBounds(card).end - 0.04) {{
-    loadPreviewClip(playbackIndex + 1, true);
+    if (sequencePlaying) {{
+      loadPreviewClip(playbackIndex + 1, true);
+    }} else {{
+      player.pause();
+      playbackStatus.textContent = "Shot preview finished";
+    }}
   }}
 }});
 document.getElementById("play-sequence").addEventListener("click", () => {{
