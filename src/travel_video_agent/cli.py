@@ -114,6 +114,11 @@ from .soundtrack.review import (
     select_soundtrack_candidate,
 )
 from .storage_cleanup import cleanup_generated_storage
+from .story_proposal import (
+    StoryProposalError,
+    propose_story,
+    select_story_angle,
+)
 from .subtitles import SubtitleError, generate_subtitles
 from .transcription import transcribe_folder
 from .transcription.whisper_backend import TranscriptionError
@@ -1962,6 +1967,107 @@ def create_plan(
         "[yellow]Storyboard shots are creative proposals only; music energy is advisory, "
         "no source footage was assigned, and no video was rendered.[/yellow]"
     )
+
+
+
+@app.command("propose-story")
+def propose_story_command(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder with analyzed footage (run analyze and understand first).",
+        ),
+    ],
+    prompt: Annotated[
+        str | None,
+        typer.Option(
+            "--prompt",
+            "-p",
+            help="Optional tone or focus hint; an explicit duration here sets the target.",
+        ),
+    ] = None,
+    target_seconds: Annotated[
+        float | None,
+        typer.Option("--target-seconds", help="Target video length (default: 90)."),
+    ] = None,
+    angles: Annotated[
+        int,
+        typer.Option("--angles", min=1, max=4, help="Number of alternative story angles."),
+    ] = 2,
+    model: Annotated[
+        str | None,
+        typer.Option("--model", help="Story model (default: VIDEO_PLANNER_MODEL or qwen2.5:1.5b)."),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help="JSON output path (default: <folder>/.video-agent/story-proposal.json).",
+        ),
+    ] = None,
+) -> None:
+    """Propose story angles from the footage you actually shot; nothing is assigned or rendered."""
+    try:
+        proposal, destination = propose_story(
+            folder,
+            prompt=prompt,
+            target_seconds=target_seconds,
+            angle_count=angles,
+            model=model,
+            output_path=output,
+        )
+    except (FileNotFoundError, StoryProposalError, ValueError) as exc:
+        console.print(f"[red]Story proposal failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    console.print("[bold green]Story angles proposed from your footage.[/bold green]")
+    console.print(
+        f"{proposal.ledger_scene_count} scene(s) | target {proposal.target_duration_seconds:g}s"
+    )
+    for angle in proposal.angles:
+        console.print(f"\n[bold]{angle.angle_id}[/bold]: {angle.title} ({angle.story_angle})")
+        console.print(f"  {angle.logline}")
+        for chapter in angle.chapters:
+            console.print(
+                f"  - {chapter.name}: {chapter.target_seconds:.1f}s, "
+                f"{len(chapter.candidate_scene_ids)} candidate scene(s)"
+            )
+        for gap in angle.gaps:
+            console.print(f"  [yellow]gap:[/yellow] {gap}")
+        for warning in angle.warnings:
+            console.print(f"  [yellow]warning:[/yellow] {warning}")
+    console.print(f"\nProposal saved to [green]{destination}[/green]")
+    console.print(
+        "[yellow]Proposals are advisory: pick one with select-story; no footage was assigned "
+        "and no video was rendered.[/yellow]"
+    )
+
+
+@app.command("select-story")
+def select_story_command(
+    folder: Annotated[
+        Path,
+        typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True),
+    ],
+    angle_id: Annotated[
+        str, typer.Option("--angle", help="Angle ID to select, for example angle-1.")
+    ],
+) -> None:
+    """Record which proposed story angle you want to develop."""
+    try:
+        proposal, destination = select_story_angle(folder, angle_id)
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[red]Story selection failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    chosen = next(angle for angle in proposal.angles if angle.angle_id == angle_id)
+    console.print(f"Selected [bold]{chosen.angle_id}[/bold]: {chosen.title}")
+    console.print(f"Saved to [green]{destination}[/green]")
 
 
 @app.command("suggest-footage")
