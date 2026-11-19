@@ -250,9 +250,9 @@ beat detection can be imperfect, and not every cut should land on a beat.</p>
 {''.join(f'<li>{html.escape(item["previous_clip_id"])} → {html.escape(item["next_clip_id"])}: '
 f'{item["boundary_seconds"]:.2f}s; beat delta '
 f'{item["beat_delta_seconds"] if item["beat_delta_seconds"] is not None else "—"}; '
-f'downbeat delta {item["downbeat_delta_seconds"] if item["downbeat_delta_seconds"] is not None else "—"}; '
+f'downbeat delta {item.get("downbeat_delta_seconds")}; '
 f'suggestion {item["recommended_anchor"]} '
-f'{item["recommended_boundary_seconds"] if item["recommended_boundary_seconds"] is not None else "—"}</li>'
+f'{item.get("recommended_boundary_seconds")}</li>'
 for item in report.boundaries)}
 </ul>
 <p class="note">Read-only review. This page does not edit, approve, or render the timeline.
