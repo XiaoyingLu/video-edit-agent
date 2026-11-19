@@ -272,7 +272,8 @@ def understand(
                 )
             elif event == "scene_started":
                 console.print(
-                    f"[bold cyan]Scene {details['scene_index']}/{details['scene_count']}[/bold cyan] "
+                    f"[bold cyan]Scene {details['scene_index']}/"
+                    f"{details['scene_count']}[/bold cyan] "
                     f"({details['start_seconds']:.1f}s–{details['end_seconds']:.1f}s)"
                 )
             elif event == "frame_extraction_completed":
