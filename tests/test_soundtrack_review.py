@@ -148,8 +148,7 @@ def test_soundstripe_search_uses_brief_and_tracks_license_profile(tmp_path, monk
     from travel_video_agent.soundtrack import review
     from travel_video_agent.soundtrack.schemas import SoundtrackLicense
 
-    candidates_path = _write_inputs(tmp_path, _candidate())
-    brief_path = tmp_path / ".video-agent" / "soundtrack-brief.json"
+    _write_inputs(tmp_path, _candidate())
     profile_path = tmp_path / ".video-agent" / "soundstripe-license.json"
     profile_path.write_text(
         SoundtrackLicense(
