@@ -796,3 +796,10 @@ docker compose run --rm video-agent create-plan ./travel-test \
 The planner receives the broad low/medium/high energy sections as creative context, then the application annotates every scene and storyboard shot against its actual output-time interval. Each annotation records the dominant energy, the ordered energy progression when an interval crosses multiple sections, the matching section bounds, and an explanatory note. This helps distinguish a quiet scenic hold from a build or high-energy passage without pretending the analyzer has identified a chorus, drop, or musical phrase.
 
 Energy annotations are advisory: they do not change shot durations, force cuts onto beats, reorder footage, approve the storyboard, modify a timeline, or render. The generated plan tracks the exact music-analysis artifact as a dependency; regenerate the plan if the analysis or selected soundtrack changes.
+
+
+### Music-aware pacing and transition suggestions
+
+When `create-plan` receives `--music-analysis`, each storyboard shot also receives advisory `pacing_recommendation` and `transition_recommendation` fields with short rationales. Low-energy scenic passages can suggest a linger; energetic action passages can suggest a brisk rhythm; adjacent shots with compatible composition or visible motion can suggest a match cut or cut on action. Other cases use a clean cut or a gentle dissolve where an energy change supports it. If no music section covers a shot, the planner falls back to the brief's overall pacing preference.
+
+These are editorial suggestions, not edit instructions: they never change shot durations, add transition effects to the timeline, snap cuts to beats, approve footage, or trigger rendering. The final storyboard and timeline remain subject to human review.
