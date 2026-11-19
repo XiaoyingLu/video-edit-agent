@@ -77,7 +77,8 @@ def prepare_generated_soundtrack_candidates(
             )
             if Path(artifact.project_path).resolve() != root:
                 raise GeneratedCandidateError(
-                    f"Generated soundtrack metadata belongs to another project: {metadata_file.name}"
+                    f"Generated soundtrack metadata belongs to another "
+                    f"project: {metadata_file.name}"
                 )
             if (root / Path(artifact.brief_path)).resolve() != brief_file:
                 raise GeneratedCandidateError(
@@ -85,7 +86,8 @@ def prepare_generated_soundtrack_candidates(
                 )
             if (root / Path(artifact.audio_path)).resolve() != audio_file:
                 raise GeneratedCandidateError(
-                    f"Generated soundtrack metadata points to a different audio file: {metadata_file.name}"
+                    f"Generated soundtrack metadata points to a different "
+                    f"audio file: {metadata_file.name}"
                 )
             digest = hashlib.sha256(audio_file.read_bytes()).hexdigest()
             if digest != artifact.provider_result.sha256:
@@ -112,7 +114,11 @@ def prepare_generated_soundtrack_candidates(
                     duration_seconds=analysis.duration_seconds,
                     tempo_bpm=bpm,
                     instrumental=None,
-                    tags=list(dict.fromkeys(brief.mood + brief.genre_directions + brief.instrumentation)),
+                    tags=list(
+                        dict.fromkeys(
+                            brief.mood + brief.genre_directions + brief.instrumentation
+                        )
+                    ),
                     source_url="https://docs.stability.ai/api-reference/stable-audio/text-to-audio",
                     asset_path=audio_file.relative_to(root).as_posix(),
                     retrieved_at=artifact.generated_at,
@@ -124,18 +130,24 @@ def prepare_generated_soundtrack_candidates(
 
     ids = [candidate.candidate_id for candidate in candidates]
     if len(ids) != len(set(ids)):
-        raise GeneratedCandidateError("Candidate IDs must be unique across catalog and generated tracks")
+        raise GeneratedCandidateError(
+            "Candidate IDs must be unique across catalog and generated tracks"
+        )
     if not candidates:
         raise GeneratedCandidateError(
             "No soundtrack candidates found. Search the catalog or generate a track first."
         )
     destination = output_path or Path(".video-agent/soundtrack-candidates-combined.json")
     destination = destination.expanduser()
-    destination = (root / destination).resolve() if not destination.is_absolute() else destination.resolve()
+    destination = (
+        (root / destination).resolve() if not destination.is_absolute() else destination.resolve()
+    )
     try:
         destination.relative_to(root)
     except ValueError as exc:
-        raise GeneratedCandidateError("Combined candidate output must be inside the project folder") from exc
+        raise GeneratedCandidateError(
+            "Combined candidate output must be inside the project folder"
+        ) from exc
     if destination.exists():
         raise FileExistsError(f"Combined candidate file already exists: {destination}")
     collection = SoundtrackCandidateCollection(
