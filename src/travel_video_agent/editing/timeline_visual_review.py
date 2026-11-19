@@ -479,14 +479,15 @@ def save_timeline_visual_review(
     json_file.parent.mkdir(parents=True, exist_ok=True)
     json_file.write_text(report.model_dump_json(indent=2) + "\n", encoding="utf-8")
     media_sources = {
-        clip.clip_id: Path(
-            __import__("os").path.relpath(
+        clip.clip_id: quote(
+            os.path.relpath(
                 (root / clip.video_path).resolve()
                 if not Path(clip.video_path).is_absolute()
                 else Path(clip.video_path).resolve(),
                 html_file.parent,
-            )
-        ).as_posix()
+            ).replace(os.sep, "/"),
+            safe="/:@-._~",
+        )
         for clip in report.clips
     }
     html_file.write_text(
