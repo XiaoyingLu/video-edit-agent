@@ -12,6 +12,7 @@ class MediaInfo(BaseModel):
 
     path: str
     duration_seconds: float = Field(ge=0)
+    capture_timestamp: str | None = None
     width: int | None = Field(default=None, gt=0)
     height: int | None = Field(default=None, gt=0)
     frame_rate: float | None = Field(default=None, gt=0)
