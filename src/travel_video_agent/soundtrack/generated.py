@@ -115,9 +115,7 @@ def prepare_generated_soundtrack_candidates(
                     tempo_bpm=bpm,
                     instrumental=None,
                     tags=list(
-                        dict.fromkeys(
-                            brief.mood + brief.genre_directions + brief.instrumentation
-                        )
+                        dict.fromkeys(brief.mood + brief.genre_directions + brief.instrumentation)
                     ),
                     source_url="https://docs.stability.ai/api-reference/stable-audio/text-to-audio",
                     asset_path=audio_file.relative_to(root).as_posix(),
