@@ -93,7 +93,7 @@ def test_create_video_project_plan_generates_storyboard_and_registers_dependency
     monkeypatch.setattr(
         planning_pipeline,
         "generate_video_plan_content",
-        lambda prompt, brief, model=None, music_sections=None: _generated_content(),
+        lambda prompt, brief, model=None, music_sections=None, story_chapters=None: _generated_content(),
     )
 
     plan, destination = planning_pipeline.create_video_project_plan(
@@ -226,7 +226,7 @@ def test_create_video_project_plan_uses_music_sections_and_tracks_dependency(tmp
     )
     captured = {}
 
-    def fake_generate(prompt, brief, model=None, music_sections=None):
+    def fake_generate(prompt, brief, model=None, music_sections=None, story_chapters=None):
         captured["sections"] = music_sections
         return _generated_content()
 
