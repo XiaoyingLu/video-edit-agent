@@ -74,9 +74,7 @@ def test_frame_sampler_reuses_existing_extracted_frames(monkeypatch, tmp_path: P
     monkeypatch.setattr(
         "travel_video_agent.understanding.frame_sampler.subprocess.run", unexpected_extract
     )
-    result = extract_representative_frames(
-        video, 0.0, 10.0, frame_dir, samples_per_scene=1
-    )
+    result = extract_representative_frames(video, 0.0, 10.0, frame_dir, samples_per_scene=1)
 
     assert result == [(5.0, existing)]
 
@@ -712,9 +710,7 @@ def test_understanding_resumes_cached_frame_observations_after_interruption(
         frame = tmp_path / f"frame-{index}.jpg"
         frame.write_bytes(f"frame-{index}".encode())
         frames.append((timestamp, frame))
-    monkeypatch.setattr(
-        pipeline, "extract_representative_frames", lambda *args, **kwargs: frames
-    )
+    monkeypatch.setattr(pipeline, "extract_representative_frames", lambda *args, **kwargs: frames)
 
     calls = []
     temporal_calls = 0
@@ -767,4 +763,3 @@ def test_understanding_resumes_cached_frame_observations_after_interruption(
     assert len(result.scenes[0].observations) == 2
     assert result.scenes[0].dynamics is not None
     assert temporal_calls == 1
-

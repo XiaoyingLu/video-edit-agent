@@ -119,9 +119,7 @@ def understand_folder(
     root = folder.expanduser().resolve()
     media = analyze_folder(root)
     videos = discover_videos(root)
-    sources = {
-        path.relative_to(root).as_posix(): _source_fingerprint(path) for path in videos
-    }
+    sources = {path.relative_to(root).as_posix(): _source_fingerprint(path) for path in videos}
     checkpoint_file = (
         checkpoint_path.expanduser().resolve()
         if checkpoint_path is not None

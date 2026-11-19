@@ -85,10 +85,7 @@ def extract_representative_frames(
             ) from exc
         if destination.exists() and destination.stat().st_size:
             timestamp_file.write_text(
-                json.dumps(
-                    {"timestamp_seconds": timestamp, "source": source_fingerprint}
-                )
-                + "\n",
+                json.dumps({"timestamp_seconds": timestamp, "source": source_fingerprint}) + "\n",
                 encoding="utf-8",
             )
             extracted.append((timestamp, destination))
