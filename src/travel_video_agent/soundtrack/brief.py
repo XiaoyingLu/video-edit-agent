@@ -1,4 +1,4 @@
-"""Build a deterministic soundtrack brief from an approved creative plan."""
+"""Build a deterministic soundtrack brief from a video project plan."""
 
 import json
 from pathlib import Path
@@ -51,11 +51,13 @@ def _infer_moods(plan: VideoProjectPlan) -> list[str]:
             *(scene.purpose for scene in plan.scenes),
         ]
     ).lower()
-    matches = [
-        mood for mood, terms in _MOOD_TERMS.items() if any(term in text for term in terms)
-    ]
+    matches = [mood for mood, terms in _MOOD_TERMS.items() if any(term in text for term in terms)]
     if not matches:
-        matches = ["cinematic", "uplifting"] if plan.brief.style != "documentary" else ["reflective"]
+        matches = (
+            ["cinematic", "uplifting"]
+            if plan.brief.style != "documentary"
+            else ["reflective"]
+        )
     return matches[:4]
 
 
@@ -159,7 +161,9 @@ def create_soundtrack_brief(
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise FileNotFoundError(f"Project folder does not exist: {root}")
-    source = (plan_path or root / ".video-agent" / "video-project-plan.json").expanduser().resolve()
+    source = (
+        plan_path or root / ".video-agent" / "video-project-plan.json"
+    ).expanduser().resolve()
     destination = (
         output_path or root / ".video-agent" / "soundtrack-brief.json"
     ).expanduser().resolve()
