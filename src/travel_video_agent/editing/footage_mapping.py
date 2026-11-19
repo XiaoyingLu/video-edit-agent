@@ -188,6 +188,19 @@ def suggest_storyboard_footage(
         if video_path is not None and source_scene.end_seconds > source_scene.start_seconds:
             scenes.append((video_path, source_scene))
 
+    available_scene_ids = {source_scene.scene_id for _, source_scene in scenes}
+    required_scene_ids = {
+        scene_id
+        for planned_scene in plan.scenes
+        for scene_id in planned_scene.must_include_scene_ids
+    }
+    missing_required = sorted(required_scene_ids - available_scene_ids)
+    if missing_required:
+        raise ValueError(
+            "chapter must-include scenes are missing from analyzed source footage: "
+            + ", ".join(missing_required)
+        )
+
     shot_items = [shot for planned_scene in plan.scenes for shot in planned_scene.shots]
     semantic_scores: dict[tuple[str, str], float] = {}
     if embedding_model:
