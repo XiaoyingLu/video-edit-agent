@@ -185,13 +185,16 @@ def render_soundtrack_review_html(
         f'<video controls preload="metadata" src="{html.escape(video_source, quote=True)}">'
         "</video>"
         if video_source
-        else "<p>No video supplied. Use --video to compare tracks alongside a project-local video.</p>"
+        else (
+            "<p>No video supplied. Use --video to compare tracks alongside a project-local video.</p>"
+        )
     )
     cards = []
     for index, item in enumerate(report.items, start=1):
         candidate, ranking = item.candidate, item.ranking
         preview = (
-            f'<audio controls preload="none" src="{html.escape(str(candidate.preview_url), quote=True)}">'
+            f'<audio controls preload="none "
+            f'src="{html.escape(str(candidate.preview_url), quote=True)}">'
             "</audio>"
             if candidate.preview_url and str(candidate.preview_url).startswith("https://")
             else "<p>Preview URL unavailable.</p>"
