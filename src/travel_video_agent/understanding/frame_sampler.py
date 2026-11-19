@@ -36,6 +36,9 @@ def extract_representative_frames(
     for index, fraction in enumerate(fractions, start=1):
         timestamp = start_seconds + duration * fraction
         destination = output_dir / f"frame-{index:02d}.jpg"
+        if destination.is_file() and destination.stat().st_size > 0:
+            extracted.append((timestamp, destination))
+            continue
         command = [
             executable,
             "-hide_banner",
