@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 
 import pytest
 
+from travel_video_agent.artifact_tracking import register_artifact
 from travel_video_agent.music.schemas import MusicAnalysis
 from travel_video_agent.soundtrack import analysis as soundtrack_analysis
 from travel_video_agent.soundtrack.analysis import (
