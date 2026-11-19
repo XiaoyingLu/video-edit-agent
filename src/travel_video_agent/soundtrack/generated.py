@@ -3,7 +3,7 @@
 import hashlib
 from pathlib import Path
 
-from ..artifact_tracking import register_artifact
+from ..artifact_tracking import register_artifact, validate_artifact
 from ..music import analyze_music
 from ..music.pipeline import MusicAnalysisError
 from .catalog import SoundtrackSearchResponse
@@ -93,6 +93,14 @@ def prepare_generated_soundtrack_candidates(
             if digest != artifact.provider_result.sha256:
                 raise GeneratedCandidateError(
                     f"Generated soundtrack checksum mismatch: {audio_file.name}"
+                )
+            if not validate_artifact(root, metadata_file):
+                raise GeneratedCandidateError(
+                    f"Generated soundtrack metadata is not tracked: {metadata_file.name}"
+                )
+            if not validate_artifact(root, audio_file):
+                raise GeneratedCandidateError(
+                    f"Generated soundtrack audio is not tracked: {audio_file.name}"
                 )
             try:
                 analysis = analyze_music(root, audio_file)
