@@ -36,9 +36,15 @@ def extract_representative_frames(
     for index, fraction in enumerate(fractions, start=1):
         timestamp = start_seconds + duration * fraction
         destination = output_dir / f"frame-{index:02d}.jpg"
-        if destination.is_file() and destination.stat().st_size > 0:
-            extracted.append((timestamp, destination))
-            continue
+        timestamp_file = destination.with_suffix(".timestamp")
+        if destination.is_file() and destination.stat().st_size > 0 and timestamp_file.is_file():
+            try:
+                cached_timestamp = float(timestamp_file.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                cached_timestamp = -1.0
+            if abs(cached_timestamp - timestamp) < 0.001:
+                extracted.append((timestamp, destination))
+                continue
         command = [
             executable,
             "-hide_banner",
@@ -67,5 +73,6 @@ def extract_representative_frames(
                 f"Could not extract frame at {timestamp:.2f}s from {video_path}: {detail}"
             ) from exc
         if destination.exists() and destination.stat().st_size:
+            timestamp_file.write_text(f"{timestamp:.6f}\\n", encoding="utf-8")
             extracted.append((timestamp, destination))
     return extracted
