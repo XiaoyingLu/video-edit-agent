@@ -7,7 +7,6 @@ from ..artifact_tracking import register_artifact, validate_artifact
 from ..editing.planning_schemas import VideoProjectPlan
 from .schemas import SoundtrackBrief, SoundtrackEnergySegment
 
-
 _STYLE_DIRECTIONS = {
     "cinematic": (
         ["cinematic", "ambient", "post-rock", "orchestral"],
@@ -54,9 +53,7 @@ def _infer_moods(plan: VideoProjectPlan) -> list[str]:
     matches = [mood for mood, terms in _MOOD_TERMS.items() if any(term in text for term in terms)]
     if not matches:
         matches = (
-            ["cinematic", "uplifting"]
-            if plan.brief.style != "documentary"
-            else ["reflective"]
+            ["cinematic", "uplifting"] if plan.brief.style != "documentary" else ["reflective"]
         )
     return matches[:4]
 
@@ -88,11 +85,7 @@ def build_soundtrack_brief(plan: VideoProjectPlan, source_plan_path: str) -> Sou
     """Derive music direction from narrative, style, and ordered scene intent."""
     genres, instruments = _STYLE_DIRECTIONS[plan.brief.style]
     moods = _infer_moods(plan)
-    summary = (
-        plan.story_treatment.logline
-        if plan.story_treatment
-        else plan.brief.source_prompt
-    )
+    summary = plan.story_treatment.logline if plan.story_treatment else plan.brief.source_prompt
     segments = []
     cursor = 0.0
     for scene in plan.scenes:
@@ -161,12 +154,10 @@ def create_soundtrack_brief(
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise FileNotFoundError(f"Project folder does not exist: {root}")
-    source = (
-        plan_path or root / ".video-agent" / "video-project-plan.json"
-    ).expanduser().resolve()
+    source = (plan_path or root / ".video-agent" / "video-project-plan.json").expanduser().resolve()
     destination = (
-        output_path or root / ".video-agent" / "soundtrack-brief.json"
-    ).expanduser().resolve()
+        (output_path or root / ".video-agent" / "soundtrack-brief.json").expanduser().resolve()
+    )
     for candidate, label in ((source, "video plan"), (destination, "soundtrack brief")):
         try:
             candidate.relative_to(root)

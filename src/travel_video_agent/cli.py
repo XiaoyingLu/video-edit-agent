@@ -101,9 +101,9 @@ from .rendering.title_overlays import (
     save_title_overlays,
     suggest_narrative_title_sequences,
 )
-from .soundtrack import create_soundtrack_brief
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
+from .soundtrack import create_soundtrack_brief
 from .storage_cleanup import cleanup_generated_storage
 from .subtitles import SubtitleError, generate_subtitles
 from .transcription import transcribe_folder
