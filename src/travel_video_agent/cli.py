@@ -248,13 +248,19 @@ def understand(
     ] = 3,
     no_resume: Annotated[
         bool,
-        typer.Option("--no-resume", help="Ignore saved progress and start understanding from scratch."),
+        typer.Option(
+            "--no-resume", help="Ignore saved progress and start understanding from scratch."
+        ),
     ] = False,
 ) -> None:
     """Detect scenes, sample frames, and describe footage with a local vision model."""
-    checkpoint = folder.resolve() / ".video-agent" / "understanding-checkpoint.json"
+    project_root = folder.expanduser().resolve()
+    checkpoint = project_root / ".video-agent" / "understanding-checkpoint.json"
     if checkpoint.is_file() and not no_resume:
         console.print(f"[cyan]Resuming video understanding from {checkpoint}[/cyan]")
+    console.print(
+        "[dim]Progress is saved after each analyzed frame; rerun this command to resume.[/dim]"
+    )
     try:
         understanding = understand_folder(
             folder,
