@@ -1,5 +1,6 @@
 """Command-line interface."""
 
+import asyncio
 import hashlib
 import json
 import os
@@ -104,6 +105,12 @@ from .rendering.title_overlays import (
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
 from .soundtrack import create_soundtrack_brief
+from .soundtrack.review import (
+    build_soundtrack_candidate_review,
+    save_soundtrack_candidate_review,
+    search_soundstripe_catalog,
+    select_soundtrack_candidate,
+)
 from .soundtrack.review import (
     build_soundtrack_candidate_review,
     save_soundtrack_candidate_review,
@@ -2867,6 +2874,50 @@ def suggest_soundtrack_command(
         "[yellow]This is a music direction only. No track was downloaded or generated, "
         "and no timeline or video was changed.[/yellow]"
     )
+
+
+@app.command("search-soundtrack")
+def search_soundtrack_command(
+    folder: Annotated[
+        Path, typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True)
+    ],
+    license_profile: Annotated[
+        Path | None,
+        typer.Option(
+            "--license-profile",
+            help="Project-local JSON rights profile confirmed against your Soundstripe agreement.",
+        ),
+    ] = None,
+    limit: Annotated[
+        int, typer.Option("--limit", min=1, max=100, help="Maximum candidates to retrieve.")
+    ] = 20,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Candidate response JSON output path.")
+    ] = None,
+) -> None:
+    """Search Soundstripe using the project's soundtrack brief."""
+    try:
+        response, destination = asyncio.run(
+            search_soundstripe_catalog(
+                folder,
+                license_profile_path=license_profile,
+                output_path=output,
+                limit=limit,
+            )
+        )
+    except (FileNotFoundError, ValueError, OSError, RuntimeError) as exc:
+        console.print(f"[red]Soundtrack search failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    console.print(f"Found [bold]{len(response.candidates)}[/bold] Soundstripe candidate(s).")
+    console.print(f"Candidates saved to [green]{destination}[/green]")
+    if license_profile is None:
+        console.print(
+            "[yellow]No account-specific rights profile was supplied. Candidates remain "
+            "ineligible until commercial, monetized-video, adaptation, and synchronization "
+            "permissions are explicitly documented.[/yellow]"
+        )
+    console.print("[dim]No audio was downloaded and no timeline or video was changed.[/dim]")
 
 
 @app.command("review-soundtrack")
