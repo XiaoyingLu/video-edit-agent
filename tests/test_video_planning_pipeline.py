@@ -263,10 +263,11 @@ def test_create_video_project_plan_uses_music_sections_and_tracks_dependency(tmp
     assert plan.scenes[1].music_section_start_seconds == 60
     assert [shot.music_energy for scene in plan.scenes for shot in scene.shots] == [
         "low",
-        "high",
+        "medium",
     ]
     assert plan.scenes[0].shots[0].music_energy_sequence == ["low", "high"]
     assert "Energy progression: low → high." in plan.scenes[0].shots[0].music_alignment_note
+    assert plan.scenes[1].shots[0].music_energy_sequence == ["high", "medium"]
     assert plan.scenes[1].shots[0].music_section_start_seconds == 60
     assert validate_artifact(tmp_path, destination) is True
 
@@ -321,7 +322,6 @@ def test_create_video_project_plan_cannot_overwrite_music_analysis(tmp_path):
             output_path=analysis_path,
             music_analysis_path=analysis_path,
         )
-
 
 
 def test_shot_music_annotation_tracks_multiple_energy_sections_and_uncovered_shots():
