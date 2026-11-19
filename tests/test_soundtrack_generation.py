@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 from datetime import UTC, datetime
 
@@ -76,7 +77,7 @@ def test_generation_persists_audio_metadata_and_artifact_dependencies(tmp_path, 
                 output_format="mp3",
                 requested_duration_seconds=60,
                 seed=7,
-                sha256=__import__("hashlib").sha256(audio_bytes).hexdigest(),
+                sha256=hashlib.sha256(audio_bytes).hexdigest(),
                 generated_at=datetime.now(UTC),
                 prompt=request.prompt,
             )
