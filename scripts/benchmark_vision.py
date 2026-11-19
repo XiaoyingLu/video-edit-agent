@@ -47,7 +47,9 @@ def run_provider(provider: str, model: str | None, frames: list[Path]) -> dict[s
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("frames", nargs="+", type=Path, help="Same representative frames for each provider")
+    parser.add_argument(
+        "frames", nargs="+", type=Path, help="Same representative frames for each provider"
+    )
     parser.add_argument("--ollama-model", default="qwen2.5vl:3b")
     parser.add_argument("--mlx-model", default="mlx-community/SmolVLM2-2.2B-Instruct-mlx")
     parser.add_argument("--skip-ollama", action="store_true")
