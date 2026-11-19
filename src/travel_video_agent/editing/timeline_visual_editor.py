@@ -133,11 +133,27 @@ def apply_timeline_visual_edits(
         revised_clips.append(clip)
 
     # Reordering changes adjacency, so old transition choices are no longer trustworthy.
+    order_changed = requested_ids != [clip.clip_id for clip in source.clips]
     for index, clip in enumerate(revised_clips):
-        if index == 0 or clip.transition_in != "cut":
+        if index == 0 or order_changed:
             clip.transition_in = "cut"
             clip.transition_duration_seconds = 0
-    proposed_duration = round(sum(clip.duration_seconds for clip in revised_clips), 3)
+        elif clip.transition_in != "cut":
+            overlap_limit = min(
+                clip.duration_seconds * 0.25,
+                revised_clips[index - 1].duration_seconds * 0.25,
+            )
+            clip.transition_duration_seconds = round(
+                min(clip.transition_duration_seconds, overlap_limit), 3
+            )
+            if clip.transition_duration_seconds <= 0:
+                clip.transition_in = "cut"
+                clip.transition_duration_seconds = 0
+    proposed_duration = round(
+        sum(clip.duration_seconds for clip in revised_clips)
+        - sum(clip.transition_duration_seconds for clip in revised_clips[1:]),
+        3,
+    )
     if proposed_duration > source.target_duration_seconds + 0.02:
         raise TimelineVisualEditError(
             "Edited sequence exceeds the requested target duration; shorten one or more clips"
