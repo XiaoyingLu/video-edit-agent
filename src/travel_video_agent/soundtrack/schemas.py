@@ -39,7 +39,9 @@ class SoundtrackBrief(BaseModel):
     project_path: str
     source_video_plan: str
     target_duration_seconds: float = Field(gt=0, le=3600)
-    video_style: Literal["cinematic", "vlog", "documentary", "highlight_reel", "social_media"]
+    video_style: Literal[
+        "cinematic", "vlog", "documentary", "highlight_reel", "social_media"
+    ]
     narrative_summary: str = Field(min_length=1, max_length=600)
     mood: list[str] = Field(min_length=1, max_length=8)
     genre_directions: list[str] = Field(min_length=1, max_length=6)
@@ -51,7 +53,6 @@ class SoundtrackBrief(BaseModel):
     search_terms: list[str] = Field(min_length=1, max_length=12)
     generation_prompt: str = Field(min_length=1, max_length=1200)
     rights_policy: SoundtrackRightsPolicy = Field(default_factory=SoundtrackRightsPolicy)
-
 
     @model_validator(mode="after")
     def validate_brief(self) -> "SoundtrackBrief":
