@@ -3015,7 +3015,7 @@ def review_music_timeline(
         json_file, html_file = save_music_timeline_preview(
             folder, report, output_path=output
         )
-    except (FileNotFoundError, ValueError, OSError, MusicTimelinePreviewError) as exc:
+    except (FileNotFoundError, ValueError, OSError) as exc:
         console.print(f"[red]Music timeline preview failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
