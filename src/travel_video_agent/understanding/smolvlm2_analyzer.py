@@ -71,12 +71,14 @@ class SmolVLM2MLXAnalyzer:
         self.max_tokens = max_tokens
         self._model: Any = None
         self._processor: Any = None
+        self._config: Any = None
 
     def _load(self) -> None:
         if self._model is not None:
             return
         try:
             from mlx_vlm import load
+            from mlx_vlm.utils import load_config
         except ImportError as exc:
             raise VisionModelError(
                 "The MLX provider requires mlx-vlm. Install it with "
@@ -84,6 +86,7 @@ class SmolVLM2MLXAnalyzer:
             ) from exc
         try:
             self._model, self._processor = load(self.model_id)
+            self._config = load_config(self.model_id)
         except Exception as exc:
             raise VisionModelError(
                 f"Could not load MLX vision model '{self.model_id}': {exc}"
@@ -94,12 +97,10 @@ class SmolVLM2MLXAnalyzer:
         try:
             from mlx_vlm import generate
             from mlx_vlm.prompt_utils import apply_chat_template
-            from mlx_vlm.utils import load_config
 
             image_input = [str(path) for path in images]
-            config = load_config(self.model_id)
             formatted_prompt = apply_chat_template(
-                self._processor, config, prompt, num_images=len(image_input)
+                self._processor, self._config, prompt, num_images=len(image_input)
             )
             result = generate(
                 self._model,
@@ -149,6 +150,7 @@ class SmolVLM2MLXAnalyzer:
         """Release model references and clear the MLX Metal cache."""
         self._model = None
         self._processor = None
+        self._config = None
         gc.collect()
         try:
             import mlx.core as mx
