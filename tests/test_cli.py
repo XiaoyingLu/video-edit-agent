@@ -115,6 +115,7 @@ def test_cli_help_is_available() -> None:
     assert "search-soundtrack" in result.output
     assert "review-soundtrack" in result.output
     assert "select-soundtrack" in result.output
+    assert "analyze-selected-soundtrack" in result.output
     assert "review-footage" in result.output
     assert "review-storyboard" in result.output
     assert "validate-artifacts" in result.output
@@ -758,3 +759,41 @@ def test_suggest_soundtrack_command_writes_brief(tmp_path: Path, monkeypatch) ->
     assert result.exit_code == 0, result.output
     assert "Soundtrack brief created" in result.output
     assert "No track was downloaded or generated" in result.output
+
+
+def test_analyze_selected_soundtrack_command_invokes_provenance_workflow(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from travel_video_agent import cli
+
+    expected = (
+        SimpleNamespace(bpm=92.0, duration_seconds=60.0, beat_confidence=0.8),
+        SimpleNamespace(candidate_id="track-1", provider_id="test-provider"),
+        tmp_path / ".video-agent" / "music-analysis.json",
+        tmp_path / ".video-agent" / "selected-soundtrack-analysis.json",
+    )
+    captured = {}
+
+    def fake_analyze(folder, **kwargs):
+        captured["folder"] = folder
+        captured.update(kwargs)
+        return expected
+
+    monkeypatch.setattr(cli, "analyze_selected_soundtrack", fake_analyze)
+    result = runner.invoke(
+        app,
+        [
+            "analyze-selected-soundtrack",
+            str(tmp_path),
+            "--music",
+            ".video-agent/imported-track.mp3",
+            "--output",
+            ".video-agent/custom-analysis.json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert captured["folder"] == tmp_path
+    assert captured["music_path"] == Path(".video-agent/imported-track.mp3")
+    assert captured["analysis_output_path"] == Path(".video-agent/custom-analysis.json")
+    assert "no timeline approval or rendering occurred" in result.output
