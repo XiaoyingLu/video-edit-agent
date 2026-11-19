@@ -25,6 +25,11 @@ def run_provider(provider: str, model: str | None, frames: list[Path]) -> dict[s
             observation = analyzer.analyze_frame(frame)
             durations.append(time.perf_counter() - started)
             observations.append({"frame": str(frame), "observation": observation})
+        temporal_started = time.perf_counter()
+        temporal = analyzer.analyze_scene(
+            [(float(index), frame) for index, frame in enumerate(frames)]
+        )
+        temporal_seconds = time.perf_counter() - temporal_started
     finally:
         analyzer.unload_model()
     return {
@@ -35,6 +40,8 @@ def run_provider(provider: str, model: str | None, frames: list[Path]) -> dict[s
         "mean_seconds_per_frame": round(statistics.mean(durations), 3),
         "durations_seconds": [round(value, 3) for value in durations],
         "observations": observations,
+        "temporal_analysis_seconds": round(temporal_seconds, 3),
+        "temporal_analysis": temporal,
     }
 
 
