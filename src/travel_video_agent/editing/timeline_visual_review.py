@@ -275,6 +275,7 @@ button {{ padding:.65rem 1rem; cursor:pointer; }} .duration {{ font-variant-nume
 <p>Drag shots to reorder them and adjust source in/out points. Changes are exported as a
 separate proposal; they are not applied until you import them with the CLI.</p>
 <button id="export">Export visual edits (.json)</button>
+<button id="export-decisions">Export review decisions (.json)</button>
 <span id="status" aria-live="polite"></span></header>
 <main>{"".join(cards) if cards else "<p>No clips are present in this timeline.</p>"}</main>
 <script>
@@ -299,7 +300,19 @@ for (const card of main.querySelectorAll(".clip")) {{
     const bounds = card.getBoundingClientRect();
     main.insertBefore(dragged, event.clientY < bounds.top + bounds.height / 2 ? card : card.nextSibling);
     card.classList.remove("drag-over");
+    Array.from(main.querySelectorAll(".clip")).forEach((item, index) => {{
+      item.querySelector("h2").textContent = (index + 1) + ". " + item.dataset.clipId;
+    }});
   }});
+}}
+function downloadJson(payload, filename) {{
+  const blob = new Blob([JSON.stringify(payload, null, 2) + "\\n"], {{type:"application/json"}});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }}
 document.getElementById("export").addEventListener("click", () => {{
   const clips = Array.from(main.querySelectorAll(".clip")).map(card => ({{
@@ -307,16 +320,19 @@ document.getElementById("export").addEventListener("click", () => {{
     source_start_seconds: Number(card.querySelector(".trim-start").value),
     source_end_seconds: Number(card.querySelector(".trim-end").value)
   }}));
-  const output = {{schema_version:"1.0", timeline_path:report.timeline_path,
-    timeline_sha256:report.timeline_sha256, clips}};
-  const blob = new Blob([JSON.stringify(output, null, 2) + "\\n"], {{type:"application/json"}});
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "timeline-visual-edits.json";
-  link.click();
-  URL.revokeObjectURL(url);
-  document.getElementById("status") .textContent = " Visual edit proposal exported.";
+  downloadJson({{schema_version:"1.0", timeline_path:report.timeline_path,
+    timeline_sha256:report.timeline_sha256, clips}}, "timeline-visual-edits.json");
+  document.getElementById("status").textContent = " Visual edit proposal exported.";
+}});
+document.getElementById("export-decisions").addEventListener("click", () => {{
+  const decisions = {{}};
+  for (const clip of report.clips) {{
+    const selected = document.querySelector('input[name="decision-' + clip.sequence_index + '"]:checked');
+    decisions[clip.clip_id] = selected ? selected.value : "pending";
+  }}
+  downloadJson({{schema_version:"1.0", timeline_path:report.timeline_path,
+    timeline_sha256:report.timeline_sha256, decisions}}, "timeline-review-decisions.json");
+  document.getElementById("status").textContent = " Review decisions exported.";
 }});
 </script></body></html>"""
 
