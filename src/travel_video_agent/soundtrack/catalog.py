@@ -44,6 +44,15 @@ class SoundtrackSearchResponse(BaseModel):
     candidates: list[SoundtrackCandidate] = Field(default_factory=list, max_length=100)
     next_cursor: str | None = Field(default=None, max_length=500)
 
+    @model_validator(mode="after")
+    def validate_candidate_provenance(self) -> "SoundtrackSearchResponse":
+        for candidate in self.candidates:
+            if candidate.provider_id != self.provider_id:
+                raise ValueError("all candidates must belong to the response provider")
+            if candidate.origin != "catalog":
+                raise ValueError("catalog search responses cannot contain generated candidates")
+        return self
+
 
 class SoundtrackCatalogProvider(Protocol):
     """Async interface implemented by an authorized catalog integration."""
