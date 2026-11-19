@@ -6,6 +6,7 @@ from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
 from ..music.schemas import MusicAnalysis, MusicSection
+from .music_pacing import annotate_music_pacing
 from .intent import parse_editing_intent
 from .planning_generation import (
     explicit_duration_seconds,
@@ -95,7 +96,10 @@ def create_video_project_plan(
         music_sections=music_sections,
     )
     scenes = (
-        _annotate_scenes_with_music(generated.scenes, music_analysis.sections)
+        annotate_music_pacing(
+            _annotate_scenes_with_music(generated.scenes, music_analysis.sections),
+            brief.pacing,
+        )
         if music_analysis is not None
         else generated.scenes
     )
