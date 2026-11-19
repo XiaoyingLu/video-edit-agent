@@ -110,6 +110,9 @@ def test_cli_help_is_available() -> None:
     assert "create-video" in result.output
     assert "create-plan" in result.output
     assert "suggest-soundtrack" in result.output
+    assert "search-soundtrack" in result.output
+    assert "review-soundtrack" in result.output
+    assert "select-soundtrack" in result.output
     assert "review-footage" in result.output
     assert "review-storyboard" in result.output
     assert "validate-artifacts" in result.output
