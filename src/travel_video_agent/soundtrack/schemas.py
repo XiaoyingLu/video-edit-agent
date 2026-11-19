@@ -77,6 +77,8 @@ class SoundtrackCandidate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     creator: str | None = Field(default=None, max_length=200)
     duration_seconds: float = Field(gt=0, le=7200)
+    tempo_bpm: int | None = Field(default=None, ge=40, le=240)
+    instrumental: bool | None = None
     tags: list[str] = Field(default_factory=list, max_length=40)
     source_url: HttpUrl
     preview_url: HttpUrl | None = None

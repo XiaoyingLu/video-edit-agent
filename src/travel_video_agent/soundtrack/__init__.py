@@ -7,6 +7,7 @@ from .catalog import (
     SoundtrackSearchResponse,
 )
 from .licensing import evaluate_soundtrack_rights
+from .ranking import SoundtrackCandidateRanking, rank_soundtrack_candidates
 from .schemas import (
     SoundtrackBrief,
     SoundtrackCandidate,
@@ -20,6 +21,7 @@ from .schemas import (
 __all__ = [
     "SoundtrackBrief",
     "SoundtrackCandidate",
+    "SoundtrackCandidateRanking",
     "SoundtrackCatalogProvider",
     "SoundtrackEnergySegment",
     "SoundtrackLicense",
@@ -30,4 +32,5 @@ __all__ = [
     "SoundtrackSearchResponse",
     "create_soundtrack_brief",
     "evaluate_soundtrack_rights",
+    "rank_soundtrack_candidates",
 ]
