@@ -52,8 +52,12 @@ def build_music_timeline_preview(
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise NotADirectoryError(f"Project folder does not exist: {root}")
-    timeline_file = (timeline_path or root / ".video-agent" / "optimized-timeline.json").expanduser()
-    analysis_file = (music_analysis_path or root / ".video-agent" / "music-analysis.json").expanduser()
+    timeline_file = (
+        timeline_path or root / ".video-agent" / "optimized-timeline.json"
+    ).expanduser()
+    analysis_file = (
+        music_analysis_path or root / ".video-agent" / "music-analysis.json"
+    ).expanduser()
     suggestions_file = (
         suggestions_path or root / ".video-agent" / "music-sync-suggestions.json"
     ).expanduser()
@@ -63,7 +67,11 @@ def build_music_timeline_preview(
         (analysis_file, "music analysis"),
         (suggestions_file, "music sync suggestions"),
     ):
-        resolved = (root / candidate).resolve() if not candidate.is_absolute() else candidate.resolve()
+        resolved = (
+            (root / candidate).resolve()
+            if not candidate.is_absolute()
+            else candidate.resolve()
+        )
         try:
             resolved.relative_to(root)
         except ValueError as exc:
@@ -85,11 +93,16 @@ def build_music_timeline_preview(
         raise MusicTimelinePreviewError("Music sync suggestions belong to a different project")
     if Path(suggestions.timeline_path).as_posix() != timeline_file.relative_to(root).as_posix():
         raise MusicTimelinePreviewError("Music sync suggestions reference a different timeline")
-    if Path(suggestions.music_analysis_path).as_posix() != analysis_file.relative_to(root).as_posix():
+    if (
+        Path(suggestions.music_analysis_path).as_posix()
+        != analysis_file.relative_to(root).as_posix()
+    ):
         raise MusicTimelinePreviewError("Music sync suggestions reference different music analysis")
     soundtrack = Path(music.music_path).expanduser().resolve()
     if not soundtrack.is_file() or soundtrack != Path(suggestions.music_path).resolve():
-        raise MusicTimelinePreviewError("Analyzed soundtrack is missing or does not match suggestions")
+        raise MusicTimelinePreviewError(
+            "Analyzed soundtrack is missing or does not match suggestions"
+        )
 
     elapsed = 0.0
     clips = []
@@ -197,7 +210,8 @@ def render_music_timeline_preview_html(
         else "<p>Audio path unavailable. Regenerate the preview from the project folder.</p>"
     )
     return f"""<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Music & Timeline Sync Review</title>
 <style>
 :root {{ color-scheme:light dark; font-family:system-ui,sans-serif; }}
@@ -214,7 +228,8 @@ svg {{ min-width:850px; width:100%; height:auto; }}
 audio {{ width:min(100%,700px); }} .note {{ color:GrayText; }}
 </style></head><body>
 <h1>Music & Timeline Sync Review</h1>
-<p>{(f"{report.bpm:.1f} BPM" if report.bpm is not None else "Tempo undetected")} · beat confidence {report.beat_confidence:.2f} ·
+<p>{(f"{report.bpm:.1f} BPM" if report.bpm is not None else "Tempo undetected")} ·
+beat confidence {report.beat_confidence:.2f} ·
 {len(report.beat_times_seconds)} beats · {len(report.downbeat_times_seconds)} downbeats</p>
 {audio_html}
 <div class="legend"><span>■ Energy (low / medium / high)</span><span>│ Beat</span>
@@ -255,7 +270,9 @@ def save_music_timeline_preview(
 ) -> tuple[Path, Path]:
     """Save a version-bound JSON report and HTML preview without overwriting prior output."""
     root = folder.expanduser().resolve()
-    base = (output_path or root / ".video-agent" / "music-timeline-preview" / "preview").expanduser()
+    base = (
+        output_path or root / ".video-agent" / "music-timeline-preview" / "preview"
+    ).expanduser()
     base = (root / base).resolve() if not base.is_absolute() else base.resolve()
     try:
         base.relative_to(root)
@@ -270,7 +287,9 @@ def save_music_timeline_preview(
     html_path.write_text(
         render_music_timeline_preview_html(report, audio_source=audio_source), encoding="utf-8"
     )
-    json_path.write_text(json.dumps(report.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8")
+    json_path.write_text(
+        json.dumps(report.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
+    )
     register_artifact(
         root,
         json_path,
