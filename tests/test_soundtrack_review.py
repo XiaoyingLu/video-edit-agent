@@ -139,3 +139,50 @@ def test_review_does_not_overwrite_existing_output(tmp_path):
     save_soundtrack_candidate_review(tmp_path, report)
     with pytest.raises(FileExistsError):
         save_soundtrack_candidate_review(tmp_path, report)
+
+
+
+def test_soundstripe_search_uses_brief_and_tracks_license_profile(tmp_path, monkeypatch):
+    import asyncio
+
+    from travel_video_agent.soundtrack import review
+    from travel_video_agent.soundtrack.schemas import SoundtrackLicense
+
+    candidates_path = _write_inputs(tmp_path, _candidate())
+    brief_path = tmp_path / ".video-agent" / "soundtrack-brief.json"
+    profile_path = tmp_path / ".video-agent" / "soundstripe-license.json"
+    profile_path.write_text(
+        SoundtrackLicense(
+            license_type="custom",
+            license_name="Verified account agreement",
+            license_url="https://example.com/license",
+            evidence_url="https://example.com/terms",
+            commercial_use_allowed=True,
+            monetized_video_allowed=True,
+            derivatives_allowed=True,
+            synchronization_allowed=True,
+        ).model_dump_json(),
+        encoding="utf-8",
+    )
+    expected = SoundtrackSearchResponse(provider_id="soundstripe", candidates=[])
+
+    class FakeProvider:
+        def __init__(self, *, license_profile=None):
+            assert license_profile.license_name == "Verified account agreement"
+
+        async def search(self, request):
+            assert request.target_duration_seconds == 60
+            assert request.moods == ["calm", "wonder"]
+            assert request.tempo_min_bpm == 70
+            return expected
+
+    monkeypatch.setattr(review, "SoundstripeCatalogProvider", FakeProvider)
+    response, destination = asyncio.run(
+        review.search_soundstripe_catalog(
+            tmp_path, license_profile_path=profile_path
+        )
+    )
+
+    assert response == expected
+    assert destination == tmp_path / ".video-agent" / "soundtrack-candidates.json"
+    assert json.loads(destination.read_text(encoding="utf-8")) == expected.model_dump(mode="json")
