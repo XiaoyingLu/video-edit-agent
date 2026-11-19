@@ -55,6 +55,18 @@ Cinematic sequencing also uses temporal action progression when available: clips
 
 Adjacent-shot continuity checks flag repeated subject/scale/composition combinations and potentially abrupt motion-direction changes. These are review notes only: they never change source intervals or apply trims. All sequencing recommendations remain reviewable, and human approval is still required before rendering.
 
+## Soundtrack assistant
+
+Generate a structured music direction from the creative brief, story treatment, and storyboard:
+
+```bash
+docker compose run --rm video-agent suggest-soundtrack ./travel-test
+```
+
+This writes `.video-agent/soundtrack-brief.json` with mood and genre directions, instrumentation, a tempo range, an energy arc aligned to the storyboard scenes, catalog search terms, and a hosted-generation prompt. Commercial use, monetized-video use, and video synchronization rights are required by default. This is a planning artifact only: it does not download or generate audio, select a track, approve edits, or render video.
+
+See [the soundtrack assistant architecture](docs/soundtrack-assistant.md) for provider boundaries, license/provenance requirements, and the incremental implementation plan.
+
 ## Music-aware editing
 
 Analyze an explicit soundtrack independently of the video clips:

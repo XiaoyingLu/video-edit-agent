@@ -109,6 +109,7 @@ def test_cli_help_is_available() -> None:
     assert "draft-edit" in result.output
     assert "create-video" in result.output
     assert "create-plan" in result.output
+    assert "suggest-soundtrack" in result.output
     assert "review-footage" in result.output
     assert "review-storyboard" in result.output
     assert "validate-artifacts" in result.output
@@ -710,3 +711,45 @@ def test_review_music_sync_command_interactively_prompts_for_each_pending_bounda
     assert captured["reject_ids"] == set()
     assert "Current boundary: 4.000s" in result.output
     assert "Suggested: 4.200s" in result.output
+
+
+def test_suggest_soundtrack_command_writes_brief(tmp_path: Path, monkeypatch) -> None:
+    from travel_video_agent import cli
+    from travel_video_agent.soundtrack.schemas import SoundtrackBrief, SoundtrackEnergySegment
+
+    expected = SoundtrackBrief(
+        project_path=str(tmp_path.resolve()),
+        source_video_plan=".video-agent/video-project-plan.json",
+        target_duration_seconds=12,
+        video_style="cinematic",
+        narrative_summary="A quiet journey through the mountains.",
+        mood=["wonder", "calm"],
+        genre_directions=["ambient", "cinematic"],
+        instrumentation=["piano", "strings"],
+        vocals="instrumental_preferred",
+        tempo_min_bpm=75,
+        tempo_max_bpm=120,
+        energy_arc=[
+            SoundtrackEnergySegment(
+                scene_id="scene-1",
+                scene_title="Arrival",
+                start_seconds=0,
+                end_seconds=12,
+                energy="low",
+            )
+        ],
+        search_terms=["wonder", "ambient", "instrumental"],
+        generation_prompt="Create a calm instrumental soundtrack.",
+    )
+    destination = tmp_path / ".video-agent" / "soundtrack-brief.json"
+    monkeypatch.setattr(
+        cli,
+        "create_soundtrack_brief",
+        lambda folder, *, plan_path=None, output_path=None: (expected, destination),
+    )
+
+    result = runner.invoke(app, ["suggest-soundtrack", str(tmp_path)])
+
+    assert result.exit_code == 0, result.output
+    assert "Soundtrack brief created" in result.output
+    assert "No track was downloaded or generated" in result.output
