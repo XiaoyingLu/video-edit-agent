@@ -155,3 +155,20 @@ def test_save_storyboard_timeline_tracks_plan_and_editing_dependencies(tmp_path:
 
     restored = ProjectDraftTimeline.model_validate_json(output.read_text(encoding="utf-8"))
     assert restored == timeline
+
+
+def test_compile_storyboard_warns_but_allows_overlapping_source_intervals(tmp_path: Path) -> None:
+    plan_path = _write_plan(tmp_path)
+    plan = VideoProjectPlan.model_validate_json(plan_path.read_text(encoding="utf-8"))
+    second_shot = plan.scenes[0].shots[1]
+    second_shot.footage_start_seconds = 0
+    second_shot.footage_end_seconds = 8
+    plan_path.write_text(plan.model_dump_json(), encoding="utf-8")
+    register_artifact(tmp_path, plan_path)
+
+    approve_storyboard(tmp_path, plan_path=plan_path)
+    with pytest.warns(UserWarning, match="reuse overlapping source footage"):
+        timeline = build_storyboard_timeline(tmp_path, plan_path=plan_path)
+
+    assert len(timeline.clips) == 2
+
