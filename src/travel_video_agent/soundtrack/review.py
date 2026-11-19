@@ -3,13 +3,12 @@
 from datetime import UTC, datetime
 import html
 import json
-import os
 from pathlib import Path
 from urllib.parse import quote
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..artifact_tracking import register_artifact
+from ..artifact_tracking import register_artifact, validate_artifact
 from .catalog import SoundtrackSearchResponse
 from .ranking import SoundtrackCandidateRanking, rank_soundtrack_candidates
 from .schemas import SoundtrackBrief, SoundtrackCandidate
@@ -239,11 +238,7 @@ def select_soundtrack_candidate(
     review_file = _project_file(
         root, review_path or Path(".video-agent/soundtrack-review.json"), "soundtrack review"
     )
-    if not os.path.samefile(review_file, review_file):  # pragma: no cover - defensive filesystem guard
-        raise SoundtrackReviewError("Invalid soundtrack review path")
-    if not __import__("..artifact_tracking", fromlist=["validate_artifact"]).validate_artifact(
-        root, review_file
-    ):
+    if not validate_artifact(root, review_file):
         raise SoundtrackReviewError("Soundtrack review is untracked; regenerate it before selection")
     report = SoundtrackCandidateReview.model_validate_json(
         review_file.read_text(encoding="utf-8")
