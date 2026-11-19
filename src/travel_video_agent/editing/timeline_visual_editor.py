@@ -61,9 +61,7 @@ def apply_timeline_visual_edits(
 ) -> Path:
     """Create a new unapproved timeline with validated ordering and trims."""
     root = folder.expanduser().resolve()
-    source_file = (
-        timeline_path or root / edits.timeline_path
-    ).expanduser()
+    source_file = (timeline_path or root / edits.timeline_path).expanduser()
     source_file = (
         (root / source_file).resolve() if not source_file.is_absolute() else source_file.resolve()
     )

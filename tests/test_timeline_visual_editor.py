@@ -139,7 +139,9 @@ def test_visual_edits_reject_source_interval_extension_and_short_trim(tmp_path, 
         source,
         [
             TimelineVisualEditClip(clip_id="coast", source_start_seconds=2, source_end_seconds=2.5),
-            TimelineVisualEditClip(clip_id="mountain", source_start_seconds=10, source_end_seconds=14),
+            TimelineVisualEditClip(
+                clip_id="mountain", source_start_seconds=10, source_end_seconds=14
+            ),
         ],
     )
     with pytest.raises(TimelineVisualEditError, match="minimum"):
@@ -166,7 +168,6 @@ def test_load_visual_edits_rejects_duplicate_clip_ids(tmp_path):
         load_timeline_visual_edits(path)
 
 
-
 def test_visual_edits_preserve_transitions_when_order_is_unchanged(tmp_path, monkeypatch):
     source = _timeline(tmp_path)
     timeline = ProjectDraftTimeline.model_validate_json(source.read_text())
@@ -178,9 +179,7 @@ def test_visual_edits_preserve_transitions_when_order_is_unchanged(tmp_path, mon
     edits = _export(
         source,
         [
-            TimelineVisualEditClip(
-                clip_id="coast", source_start_seconds=2, source_end_seconds=6
-            ),
+            TimelineVisualEditClip(clip_id="coast", source_start_seconds=2, source_end_seconds=6),
             TimelineVisualEditClip(
                 clip_id="mountain", source_start_seconds=10, source_end_seconds=14
             ),

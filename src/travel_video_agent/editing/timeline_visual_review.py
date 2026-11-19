@@ -298,7 +298,9 @@ for (const card of main.querySelectorAll(".clip")) {{
     event.preventDefault();
     if (!dragged || dragged === card) return;
     const bounds = card.getBoundingClientRect();
-    main.insertBefore(dragged, event.clientY < bounds.top + bounds.height / 2 ? card : card.nextSibling);
+    main.insertBefore(
+      dragged, event.clientY < bounds.top + bounds.height / 2 ? card : card.nextSibling
+    );
     card.classList.remove("drag-over");
     Array.from(main.querySelectorAll(".clip")).forEach((item, index) => {{
       item.querySelector("h2").textContent = (index + 1) + ". " + item.dataset.clipId;
@@ -327,7 +329,9 @@ document.getElementById("export").addEventListener("click", () => {{
 document.getElementById("export-decisions").addEventListener("click", () => {{
   const decisions = {{}};
   for (const clip of report.clips) {{
-    const selected = document.querySelector('input[name="decision-' + clip.sequence_index + '"]:checked');
+    const selected = document.querySelector(
+      'input[name="decision-' + clip.sequence_index + '"]:checked'
+    );
     decisions[clip.clip_id] = selected ? selected.value : "pending";
   }}
   downloadJson({{schema_version:"1.0", timeline_path:report.timeline_path,
