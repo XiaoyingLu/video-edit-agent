@@ -179,6 +179,11 @@ class OllamaVideoPlanner:
                 scene.pop("music_section_end_seconds", None)
                 scene.pop("music_alignment_note", None)
                 for shot in scene.get("shots", []):
+                    shot.pop("music_energy", None)
+                    shot.pop("music_energy_sequence", None)
+                    shot.pop("music_section_start_seconds", None)
+                    shot.pop("music_section_end_seconds", None)
+                    shot.pop("music_alignment_note", None)
                     shot.pop("footage_path", None)
                     shot.pop("footage_start_seconds", None)
                     shot.pop("footage_end_seconds", None)
