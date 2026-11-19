@@ -155,7 +155,7 @@ def build_soundtrack_candidate_review(
         collection = SoundtrackCandidateCollection.model_validate(raw_candidates)
         if Path(collection.project_path).resolve() != root:
             raise SoundtrackReviewError("Candidate collection belongs to a different project")
-        if Path(collection.brief_path).resolve() != brief_file:
+        if (root / Path(collection.brief_path)).resolve() != brief_file:
             raise SoundtrackReviewError("Candidate collection was created from a different brief")
         candidates = collection.candidates
     else:
