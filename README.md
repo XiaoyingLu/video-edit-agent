@@ -762,3 +762,22 @@ docker compose run --rm video-agent select-soundtrack ./travel-test \
 ```
 
 This workflow only analyzes and compares audio and records an explicit selection. It does not change the edit timeline or render a video. If a browser blocks local audio playback, serve the project folder on loopback with `python3 -m http.server 8000 --bind 127.0.0.1` and open the review HTML through that local server.
+
+
+## Analyze the selected soundtrack
+
+After explicitly selecting an eligible candidate, analyze that exact track to create the standard `.video-agent/music-analysis.json` artifact consumed by `suggest-music-sync`:
+
+```bash
+# Generated Stable Audio candidate: uses its recorded project-local audio file.
+docker compose run --rm video-agent analyze-selected-soundtrack ./travel-test
+
+# Soundstripe/catalog candidate: first save the licensed audio using your account's
+# authorized download workflow inside the project, then provide that local file.
+docker compose run --rm video-agent analyze-selected-soundtrack ./travel-test \
+  --music ./.video-agent/licensed-assets/selected-track.mp3
+
+docker compose run --rm video-agent suggest-music-sync ./travel-test
+```
+
+The command validates the human selection, current review, rights eligibility, project-local audio path, and generated-track checksum. Catalog preview URLs are not treated as downloadable or renderable assets; catalog audio must be supplied as a local file obtained under the applicable account license. It records analysis and provenance dependencies without changing the timeline or rendering.
