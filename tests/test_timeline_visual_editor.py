@@ -178,7 +178,9 @@ def test_visual_edits_preserve_transitions_when_order_is_unchanged(tmp_path, mon
     edits = _export(
         source,
         [
-            TimelineVisualEditClip(clip_id="coast", source_start_seconds=2, source_end_seconds=6),
+            TimelineVisualEditClip(
+                clip_id="coast", source_start_seconds=2, source_end_seconds=6
+            ),
             TimelineVisualEditClip(
                 clip_id="mountain", source_start_seconds=10, source_end_seconds=14
             ),
