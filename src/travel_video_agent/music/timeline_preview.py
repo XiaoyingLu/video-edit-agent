@@ -83,9 +83,9 @@ def build_music_timeline_preview(
         raise MusicTimelinePreviewError("Input artifacts belong to a different project")
     if Path(suggestions.project_path).resolve() != root:
         raise MusicTimelinePreviewError("Music sync suggestions belong to a different project")
-    if Path(suggestions.timeline_path).resolve() != timeline_file.relative_to(root).resolve():
+    if Path(suggestions.timeline_path).as_posix() != timeline_file.relative_to(root).as_posix():
         raise MusicTimelinePreviewError("Music sync suggestions reference a different timeline")
-    if Path(suggestions.music_analysis_path).resolve() != analysis_file.relative_to(root).resolve():
+    if Path(suggestions.music_analysis_path).as_posix() != analysis_file.relative_to(root).as_posix():
         raise MusicTimelinePreviewError("Music sync suggestions reference different music analysis")
     soundtrack = Path(music.music_path).expanduser().resolve()
     if not soundtrack.is_file() or soundtrack != Path(suggestions.music_path).resolve():
@@ -214,7 +214,7 @@ svg {{ min-width:850px; width:100%; height:auto; }}
 audio {{ width:min(100%,700px); }} .note {{ color:GrayText; }}
 </style></head><body>
 <h1>Music & Timeline Sync Review</h1>
-<p>{report.bpm:.1f} BPM · beat confidence {report.beat_confidence:.2f} ·
+<p>{(f"{report.bpm:.1f} BPM" if report.bpm is not None else "Tempo undetected")} · beat confidence {report.beat_confidence:.2f} ·
 {len(report.beat_times_seconds)} beats · {len(report.downbeat_times_seconds)} downbeats</p>
 {audio_html}
 <div class="legend"><span>■ Energy (low / medium / high)</span><span>│ Beat</span>
