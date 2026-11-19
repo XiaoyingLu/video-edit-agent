@@ -52,7 +52,18 @@ def test_frame_sampler_reuses_existing_extracted_frames(monkeypatch, tmp_path: P
     frame_dir.mkdir()
     existing = frame_dir / "frame-01.jpg"
     existing.write_bytes(b"cached-frame")
-    existing.with_suffix(".timestamp").write_text("5.000000\\n", encoding="utf-8")
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"source-video")
+    source_stat = video.stat()
+    existing.with_suffix(".timestamp").write_text(
+        json.dumps(
+            {
+                "timestamp_seconds": 5.0,
+                "source": {"size": source_stat.st_size, "mtime_ns": source_stat.st_mtime_ns},
+            }
+        ),
+        encoding="utf-8",
+    )
     monkeypatch.setattr(
         "travel_video_agent.understanding.frame_sampler.shutil.which", lambda _: "ffmpeg"
     )
@@ -64,7 +75,7 @@ def test_frame_sampler_reuses_existing_extracted_frames(monkeypatch, tmp_path: P
         "travel_video_agent.understanding.frame_sampler.subprocess.run", unexpected_extract
     )
     result = extract_representative_frames(
-        tmp_path / "clip.mp4", 0.0, 10.0, frame_dir, samples_per_scene=1
+        video, 0.0, 10.0, frame_dir, samples_per_scene=1
     )
 
     assert result == [(5.0, existing)]
