@@ -210,7 +210,7 @@ def render_music_timeline_preview_html(
     svg_height = 220 + len(report.clips) * 38
     payload = json.dumps(report.model_dump(mode="json"), ensure_ascii=True).replace("<", "\\u003c")
     audio_html = (
-        f'<audio controls preload="metadata" src="{html.escape(audio_source, quote=True)}"></audio>'
+        f'<audio id="music-audio" controls preload="metadata" src="{html.escape(audio_source, quote=True)}"></audio>'
         if audio_source
         else "<p>Audio path unavailable. Regenerate the preview from the project folder.</p>"
     )
@@ -240,6 +240,9 @@ svg {{ min-width:850px; width:100%; height:auto; }}
 .clip-bar {{ fill:#688bb5; rx:5; }} .clip-label {{ fill:CanvasText; font-size:12px; }}
 .tick {{ fill:GrayText; font-size:11px; }} .legend {{ display:flex; flex-wrap:wrap; gap:1rem; }}
 audio {{ width:min(100%,700px); }} .note {{ color:GrayText; }}
+.active-clip {{ stroke:CanvasText; stroke-width:3; filter:brightness(1.2); }}
+.playhead {{ stroke:#e04444; stroke-width:2.5; pointer-events:none; }}
+.playhead-label {{ fill:#e04444; font-size:12px; font-weight:700; }}
 </style></head><body>
 <h1>Music & Timeline Sync Review</h1>
 <p>{(f"{report.bpm:.1f} BPM" if report.bpm is not None else "Tempo undetected")} ·
@@ -249,13 +252,17 @@ beat confidence {report.beat_confidence:.2f} ·
 <div class="legend"><span>■ Energy (low / medium / high)</span><span>│ Beat</span>
 <span>│ Downbeat</span><span>┆ Current shot boundary</span>
 <span>┆ Suggested boundary</span></div>
-<div class="track"><svg viewBox="0 0 {width} {svg_height}" role="img"
-aria-label="Soundtrack energy, beat markers, and shot timeline on a shared time axis">
+<div class="track"><svg id="music-timeline" viewBox="0 0 {width} {svg_height}" role="slider"
+tabindex="0" aria-label="Music timeline. Use left and right arrow keys to seek."
+aria-valuemin="0" aria-valuemax="{duration:.2f}" aria-valuenow="0">
 {ticks}<text x="12" y="64" class="clip-label">Music energy</text>
 {"".join(energy_rects)}{beats}{downbeats}
 <text x="12" y="190" class="clip-label">Shot boundaries</text>
 {"".join(boundary_rows)}{"".join(clip_rows)}
+<line id="playhead" x1="{left}" x2="{left}" y1="34" y2="{svg_height - 8}" class="playhead"/>
+<text id="playhead-label" x="{left + 6}" y="40" class="playhead-label">0.0s</text>
 </svg></div>
+<p id="playback-position" aria-live="off">00:00 / {int(duration // 60):02d}:{int(duration % 60):02d}</p>
 <p class="note">All tracks share soundtrack time in seconds. Solid beat markers and stronger
 downbeat markers are signal estimates; dashed vertical lines show current shot boundaries,
 and green dashed lines show suggested anchors when available. Listen and inspect the footage:
@@ -266,7 +273,69 @@ beat detection can be imperfect, and not every cut should land on a beat.</p>
 <p class="note">Read-only review. This page does not edit, approve, or render the timeline.
 Use the existing <code>review-music-sync</code> CLI workflow to accept or reject proposed
 timing changes; accepted changes create a separate unapproved timeline revision.</p>
-<script>const previewData = {payload};</script>
+<script>
+const previewData = {payload};
+const audio = document.getElementById("music-audio");
+const timeline = document.getElementById("music-timeline");
+const playhead = document.getElementById("playhead");
+const playheadLabel = document.getElementById("playhead-label");
+const positionLabel = document.getElementById("playback-position");
+const clipRects = Array.from(timeline.querySelectorAll(".clip-bar"));
+const timelineLeft = {left};
+const timelineWidth = {plot_width};
+const timelineDuration = {duration};
+function formatTime(seconds) {{
+  const safe = Math.max(0, Math.floor(seconds));
+  return String(Math.floor(safe / 60)).padStart(2, "0") + ":" +
+    String(safe % 60).padStart(2, "0");
+}}
+function updatePlaybackPosition() {{
+  if (!audio || !Number.isFinite(audio.currentTime)) return;
+  const current = Math.max(0, Math.min(timelineDuration, audio.currentTime));
+  const x = timelineLeft + current / timelineDuration * timelineWidth;
+  playhead.setAttribute("x1", x.toFixed(1));
+  playhead.setAttribute("x2", x.toFixed(1));
+  playheadLabel.setAttribute("x", Math.min(x + 6, timelineLeft + timelineWidth - 42).toFixed(1));
+  playheadLabel.textContent = current.toFixed(1) + "s";
+  positionLabel.textContent = formatTime(current) + " / " + formatTime(timelineDuration);
+  timeline.setAttribute("aria-valuenow", current.toFixed(2));
+  let activeIndex = -1;
+  previewData.clips.forEach((clip, index) => {{
+    if (current >= clip.start_seconds &&
+        (current < clip.end_seconds || index === previewData.clips.length - 1)) {{
+      activeIndex = index;
+    }}
+  }});
+  clipRects.forEach((rect, index) => rect.classList.toggle("active-clip", index === activeIndex));
+}}
+function seekFromPointer(event) {{
+  if (!audio || !Number.isFinite(audio.duration)) return;
+  const point = timeline.createSVGPoint();
+  point.x = event.clientX;
+  point.y = event.clientY;
+  const local = point.matrixTransform(timeline.getScreenCTM().inverse());
+  const fraction = Math.max(0, Math.min(1, (local.x - timelineLeft) / timelineWidth));
+  audio.currentTime = fraction * Math.min(timelineDuration, audio.duration);
+  updatePlaybackPosition();
+}}
+if (audio) {{
+  audio.addEventListener("timeupdate", updatePlaybackPosition);
+  audio.addEventListener("seeked", updatePlaybackPosition);
+  audio.addEventListener("loadedmetadata", updatePlaybackPosition);
+  timeline.addEventListener("click", seekFromPointer);
+  timeline.addEventListener("keydown", event => {{
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    const step = event.shiftKey ? 5 : 1;
+    audio.currentTime = Math.max(0, Math.min(
+      Math.min(timelineDuration, audio.duration || timelineDuration),
+      audio.currentTime + (event.key === "ArrowRight" ? step : -step)
+    ));
+    updatePlaybackPosition();
+  }});
+  updatePlaybackPosition();
+}}
+</script>
 </body></html>"""
 
 
