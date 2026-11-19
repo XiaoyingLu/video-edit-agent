@@ -132,48 +132,67 @@ def create_video_project_plan(
     return project_plan, destination
 
 
+def _music_alignment_for_interval(
+    start_seconds: float,
+    end_seconds: float,
+    sections: list[MusicSection],
+) -> dict:
+    """Describe the dominant energy and ordered energy changes in a timeline interval."""
+    overlaps = []
+    for section in sorted(sections, key=lambda item: item.start_seconds):
+        overlap = min(end_seconds, section.end_seconds) - max(start_seconds, section.start_seconds)
+        if overlap > 0:
+            overlaps.append((overlap, section))
+    if not overlaps:
+        return {
+            "music_energy": "unknown",
+            "music_energy_sequence": [],
+            "music_section_start_seconds": None,
+            "music_section_end_seconds": None,
+            "music_alignment_note": "No analyzed soundtrack section covers this interval.",
+        }
+
+    overlap, dominant = max(
+        overlaps,
+        key=lambda item: (item[0], -item[1].start_seconds),
+    )
+    energy_sequence = []
+    for _, section in overlaps:
+        if not energy_sequence or energy_sequence[-1] != section.energy:
+            energy_sequence.append(section.energy)
+    coverage = overlap / max(end_seconds - start_seconds, 1e-9)
+    note = (
+        f"Dominant {dominant.energy}-energy section covers {coverage:.0%} "
+        f"({overlap:.1f}s) of this interval."
+    )
+    if len(energy_sequence) > 1:
+        note += " Energy progression: " + " → ".join(energy_sequence) + "."
+    return {
+        "music_energy": dominant.energy,
+        "music_energy_sequence": energy_sequence,
+        "music_section_start_seconds": dominant.start_seconds,
+        "music_section_end_seconds": dominant.end_seconds,
+        "music_alignment_note": note,
+    }
+
+
 def _annotate_scenes_with_music(
     scenes: list,
     sections: list[MusicSection],
 ) -> list:
-    """Attach the dominant overlapping soundtrack energy section to each planned scene."""
-    ordered_sections = sorted(sections, key=lambda section: section.start_seconds)
+    """Attach scene- and shot-level soundtrack context using their output-time intervals."""
     scene_start = 0.0
     annotated = []
     for scene in scenes:
         scene_end = scene_start + scene.target_duration_seconds
-        overlaps = []
-        for section in ordered_sections:
-            overlap = min(scene_end, section.end_seconds) - max(scene_start, section.start_seconds)
-            if overlap > 0:
-                overlaps.append((overlap, section))
-        if overlaps:
-            overlap, dominant = max(
-                overlaps,
-                key=lambda item: (item[0], -item[1].start_seconds),
-            )
-            energy_label = f"{dominant.energy}-energy"
-            note = f"Dominant {energy_label} section overlaps {overlap:.1f}s of this scene."
-            annotated.append(
-                scene.model_copy(
-                    update={
-                        "music_energy": dominant.energy,
-                        "music_section_start_seconds": dominant.start_seconds,
-                        "music_section_end_seconds": dominant.end_seconds,
-                        "music_alignment_note": note,
-                    }
-                )
-            )
-        else:
-            annotated.append(
-                scene.model_copy(
-                    update={
-                        "music_energy": "unknown",
-                        "music_section_start_seconds": None,
-                        "music_section_end_seconds": None,
-                        "music_alignment_note": "No analyzed soundtrack section covers this scene.",
-                    }
-                )
-            )
+        scene_alignment = _music_alignment_for_interval(scene_start, scene_end, sections)
+        shot_start = scene_start
+        shots = []
+        for shot in scene.shots:
+            shot_end = shot_start + shot.target_duration_seconds
+            shot_alignment = _music_alignment_for_interval(shot_start, shot_end, sections)
+            shots.append(shot.model_copy(update=shot_alignment))
+            shot_start = shot_end
+        annotated.append(scene.model_copy(update={**scene_alignment, "shots": shots}))
         scene_start = scene_end
     return annotated
