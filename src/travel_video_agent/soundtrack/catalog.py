@@ -2,7 +2,7 @@
 
 from typing import Protocol
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .schemas import SoundtrackCandidate
 
@@ -24,6 +24,7 @@ class SoundtrackSearchRequest(BaseModel):
     limit: int = Field(default=20, ge=1, le=100)
     cursor: str | None = Field(default=None, max_length=500)
 
+    @model_validator(mode="after")
     def validate_tempo_range(self) -> "SoundtrackSearchRequest":
         if (
             self.tempo_min_bpm is not None
@@ -50,8 +51,10 @@ class SoundtrackCatalogProvider(Protocol):
     @property
     def provider_id(self) -> str:
         """Stable provider identifier."""
+        ...
 
     async def search(
         self, request: SoundtrackSearchRequest
     ) -> SoundtrackSearchResponse:
         """Search provider catalog and return normalized candidate metadata."""
+        ...
