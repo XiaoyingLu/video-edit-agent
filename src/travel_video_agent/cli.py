@@ -101,6 +101,7 @@ from .rendering.title_overlays import (
     save_title_overlays,
     suggest_narrative_title_sequences,
 )
+from .soundtrack import create_soundtrack_brief
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
 from .storage_cleanup import cleanup_generated_storage
@@ -2816,6 +2817,51 @@ def compare_timelines(
     )
     if not comparison.changes:
         console.print("[dim]No source-interval or transition changes were found.[/dim]")
+
+
+@app.command("suggest-soundtrack")
+def suggest_soundtrack_command(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder containing video-project-plan.json.",
+        ),
+    ],
+    plan: Annotated[
+        Path | None, typer.Option("--plan", help="Video project plan JSON path.")
+    ] = None,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Soundtrack brief output JSON path.")
+    ] = None,
+) -> None:
+    """Derive a soundtrack brief from the project's narrative and storyboard."""
+    try:
+        brief, destination = create_soundtrack_brief(
+            folder,
+            plan_path=plan,
+            output_path=output,
+        )
+    except (FileNotFoundError, ValueError, OSError) as exc:
+        console.print(f"[red]Soundtrack brief failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    console.print("[bold green]Soundtrack brief created.[/bold green]")
+    console.print(f"Style: {brief.video_style} | Duration: {brief.target_duration_seconds:.1f}s")
+    console.print(f"Mood: {', '.join(brief.mood)}")
+    console.print(f"Genres: {', '.join(brief.genre_directions)}")
+    console.print(f"Tempo: {brief.tempo_min_bpm}-{brief.tempo_max_bpm} BPM")
+    console.print(f"Energy sections: {len(brief.energy_arc)}")
+    console.print(f"Search terms: {', '.join(brief.search_terms)}")
+    console.print(f"Brief saved to [green]{destination}[/green]")
+    console.print(
+        "[yellow]This is a music direction only. No track was downloaded or generated, "
+        "and no timeline or video was changed.[/yellow]"
+    )
 
 
 @app.command("analyze-music")
