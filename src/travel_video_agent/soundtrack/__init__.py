@@ -9,6 +9,14 @@ from .catalog import (
 from .licensing import evaluate_soundtrack_rights
 from .providers import SoundstripeAPIError, SoundstripeCatalogProvider
 from .ranking import SoundtrackCandidateRanking, rank_soundtrack_candidates
+from .review import (
+    SoundtrackCandidateReview,
+    SoundtrackReviewError,
+    SoundtrackSelection,
+    build_soundtrack_candidate_review,
+    save_soundtrack_candidate_review,
+    select_soundtrack_candidate,
+)
 from .schemas import (
     SoundtrackBrief,
     SoundtrackCandidate,
@@ -23,7 +31,10 @@ __all__ = [
     "SoundtrackBrief",
     "SoundtrackCandidate",
     "SoundtrackCandidateRanking",
+    "SoundtrackCandidateReview",
     "SoundstripeAPIError",
+    "SoundtrackReviewError",
+    "SoundtrackSelection",
     "SoundstripeCatalogProvider",
     "SoundtrackCatalogProvider",
     "SoundtrackEnergySegment",
@@ -33,7 +44,10 @@ __all__ = [
     "SoundtrackRightsPolicy",
     "SoundtrackSearchRequest",
     "SoundtrackSearchResponse",
+    "build_soundtrack_candidate_review",
     "create_soundtrack_brief",
     "evaluate_soundtrack_rights",
     "rank_soundtrack_candidates",
+    "save_soundtrack_candidate_review",
+    "select_soundtrack_candidate",
 ]
