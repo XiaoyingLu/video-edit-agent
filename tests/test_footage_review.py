@@ -156,8 +156,9 @@ def test_review_footage_rejects_unknown_shot(tmp_path):
 def test_review_footage_warns_but_allows_duplicate_source_interval(tmp_path):
     plan_path, suggestions_path = _artifacts(tmp_path)
     plan = VideoProjectPlan.model_validate_json(plan_path.read_text(encoding="utf-8"))
-    second_shot = plan.scenes[0].shots[0].model_copy(
-        update={"shot_id": "shot-002", "sequence_index": 2}
+    plan.scenes[0].shots[0].target_duration_seconds /= 2
+    second_shot = (
+        plan.scenes[0].shots[0].model_copy(update={"shot_id": "shot-002", "sequence_index": 2})
     )
     plan.scenes[0].shots.append(second_shot)
     plan_path.write_text(plan.model_dump_json(), encoding="utf-8")
@@ -179,4 +180,3 @@ def test_review_footage_warns_but_allows_duplicate_source_interval(tmp_path):
         "approved",
         "approved",
     ]
-

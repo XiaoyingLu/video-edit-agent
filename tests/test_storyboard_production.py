@@ -171,4 +171,3 @@ def test_compile_storyboard_warns_but_allows_overlapping_source_intervals(tmp_pa
         timeline = build_storyboard_timeline(tmp_path, plan_path=plan_path)
 
     assert len(timeline.clips) == 2
-
