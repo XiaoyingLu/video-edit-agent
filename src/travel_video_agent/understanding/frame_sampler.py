@@ -87,7 +87,7 @@ def extract_representative_frames(
                 json.dumps(
                     {"timestamp_seconds": timestamp, "source": source_fingerprint}
                 )
-                + "\\n",
+                + "\n",
                 encoding="utf-8",
             )
             extracted.append((timestamp, destination))
