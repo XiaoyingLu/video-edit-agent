@@ -658,3 +658,74 @@ def test_understanding_pipeline_attaches_temporal_scene_dynamics(monkeypatch, tm
     assert dynamics.subject_motion == "receding"
     assert dynamics.camera_motion == "static"
     assert dynamics.action_progression[0] == "Hiker walks uphill"
+
+def test_understanding_resumes_cached_frame_observations_after_interruption(
+    monkeypatch, tmp_path: Path
+) -> None:
+    from travel_video_agent.understanding import pipeline
+    from travel_video_agent.understanding.visual_analyzer import VisionModelError
+
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"source-video")
+    info = type("Info", (), {"path": "clip.mp4", "duration_seconds": 5.0})()
+    analysis = type("Analysis", (), {"video_count": 1, "videos": [info]})()
+    monkeypatch.setattr(pipeline, "analyze_folder", lambda root: analysis)
+    monkeypatch.setattr(pipeline, "detect_scenes", lambda *args: [(0.0, 5.0)])
+
+    frames = []
+    for index, timestamp in enumerate((1.0, 4.0)):
+        frame = tmp_path / f"frame-{index}.jpg"
+        frame.write_bytes(f"frame-{index}".encode())
+        frames.append((timestamp, frame))
+    monkeypatch.setattr(
+        pipeline, "extract_representative_frames", lambda *args, **kwargs: frames
+    )
+
+    calls = []
+    fail_once = True
+
+    class FakeAnalyzer:
+        def __init__(self, model):
+            self.model = model
+
+        def analyze_frame(self, frame_path):
+            nonlocal fail_once
+            calls.append(frame_path.name)
+            if frame_path.name == "frame-1.jpg" and fail_once:
+                fail_once = False
+                raise VisionModelError("simulated interruption during frame analysis")
+            return {
+                "description": f"Description for {frame_path.name}",
+                "objects": [],
+                "activities": [],
+                "confidence": 0.9,
+            }
+
+        def analyze_scene(self, scene_frames):
+            return {
+                "temporal_summary": "The scene progresses across the frames.",
+                "action_progression": ["The scene begins", "The scene continues"],
+                "subject_motion": "unknown",
+                "camera_motion": "static",
+                "confidence": 0.8,
+            }
+
+        def unload_model(self):
+            return True
+
+    monkeypatch.setattr(pipeline, "OllamaVisionAnalyzer", FakeAnalyzer)
+
+    with pytest.raises(VisionModelError, match="simulated interruption"):
+        understand_folder(tmp_path, samples_per_scene=2)
+
+    checkpoint = tmp_path / ".video-agent" / "understanding-checkpoint.json"
+    saved = json.loads(checkpoint.read_text(encoding="utf-8"))
+    assert len(next(iter(saved["scenes"].values()))["frames"]) == 1
+
+    result = understand_folder(tmp_path, samples_per_scene=2)
+
+    assert calls == ["frame-0.jpg", "frame-1.jpg", "frame-1.jpg"]
+    assert result.scene_count == 1
+    assert len(result.scenes[0].observations) == 2
+    assert result.scenes[0].dynamics is not None
+
