@@ -19,7 +19,7 @@ A local-first Python CLI for editing personal travel footage. Media stays on you
 The `create-plan` command generates a creative brief, narrative treatment, and structured storyboard using a dedicated lightweight text model. By default it uses `qwen2.5:1.5b`, independently of the multimodal vision model configured by `OLLAMA_MODEL`:
 
 ```bash
-docker compose run --rm video-agent create-plan ./travel-test \
+docker compose run --rm video-agent create-plan ./travel-test \\
   --prompt "Create a 90-second cinematic Banff travel film focused on mountain scenery and memorable moments"
 ```
 
@@ -82,7 +82,7 @@ python scripts/benchmark_vision.py frame-1.jpg frame-2.jpg frame-3.jpg \
   --output .video-agent/vision-benchmark.json
 ```
 
-The benchmark records per-frame latency and normalized observations for human quality review.
+The benchmark records per-frame and temporal-analysis latency plus normalized observations for human quality review.
 It does not claim semantic equivalence or automatically select a winner. Run it on a small,
 representative set first. The MLX adapter also attempts multi-image temporal analysis; verify
 that your installed model conversion supports multiple images before using it for full projects.
@@ -143,7 +143,7 @@ Analyze an explicit soundtrack independently of the video clips:
 
 ```bash
 docker compose run --rm video-agent analyze-music ./travel-test --music ./travel-test/music/travel-score.mp3
-docker compose run --rm video-agent create-plan ./travel-test \
+docker compose run --rm video-agent create-plan ./travel-test \\
   --prompt "Create a 90-second cinematic mountain film" \
   --music-analysis ./travel-test/.video-agent/music-analysis.json
 ```
@@ -832,8 +832,8 @@ After generating story alternatives and explicitly selecting one, pass the propo
 ```bash
 docker compose run --rm video-agent propose-story ./travel-test --prompt "relaxed, 90 seconds"
 docker compose run --rm video-agent select-story ./travel-test --angle angle-1
-docker compose run --rm video-agent create-plan ./travel-test \
-  --prompt "Create a relaxed cinematic travel film" \
+docker compose run --rm video-agent create-plan ./travel-test \\
+  --prompt "Create a relaxed cinematic travel film" \\
   --story ./.video-agent/story-proposal.json
 ```
 
@@ -846,7 +846,7 @@ The resulting plan remains a storyboard proposal: candidate source scenes are ca
 When creating a creative video plan, optionally pass the selected soundtrack's current `.video-agent/music-analysis.json` artifact:
 
 ```bash
-docker compose run --rm video-agent create-plan ./travel-test \
+docker compose run --rm video-agent create-plan ./travel-test \\
   --prompt "Create a cinematic travel film" \
   --music-analysis ./.video-agent/music-analysis.json
 ```
