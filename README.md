@@ -638,7 +638,7 @@ After analyzing the soundtrack and generating beat-alignment suggestions, create
 docker compose run --rm video-agent review-music-timeline ./travel-test
 ```
 
-Open `.video-agent/music-timeline-preview/preview.html`. The page includes an audio player for the analyzed soundtrack, broad energy sections, estimated beat/downbeat markers, shot intervals, current transition boundaries, and suggested beat anchors. All tracks use seconds on the same horizontal time axis. The audio file is referenced in place; it is not copied into the report.
+Open `.video-agent/music-timeline-preview/preview.html`. The page includes an audio player for the analyzed soundtrack, broad energy sections, estimated beat/downbeat markers, shot intervals, current transition boundaries, and suggested beat anchors. The playhead follows audio playback, the active shot is highlighted, and clicking the timeline or using the left/right arrow keys seeks the soundtrack. All tracks use seconds on the same horizontal time axis. The audio file is referenced in place; it is not copied into the report.
 
 Generate or refresh the inputs first when needed:
 
