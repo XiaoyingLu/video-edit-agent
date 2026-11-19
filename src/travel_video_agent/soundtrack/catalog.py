@@ -62,8 +62,6 @@ class SoundtrackCatalogProvider(Protocol):
         """Stable provider identifier."""
         ...
 
-    async def search(
-        self, request: SoundtrackSearchRequest
-    ) -> SoundtrackSearchResponse:
+    async def search(self, request: SoundtrackSearchRequest) -> SoundtrackSearchResponse:
         """Search provider catalog and return normalized candidate metadata."""
         ...

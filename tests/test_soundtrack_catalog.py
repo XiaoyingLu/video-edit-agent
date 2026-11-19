@@ -120,7 +120,6 @@ def test_search_request_rejects_invalid_tempo_range() -> None:
         )
 
 
-
 def test_catalog_response_rejects_candidates_from_another_provider() -> None:
     with pytest.raises(ValidationError, match="response provider"):
         SoundtrackSearchResponse(
