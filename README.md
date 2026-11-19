@@ -781,3 +781,18 @@ docker compose run --rm video-agent suggest-music-sync ./travel-test
 ```
 
 The command validates the human selection, current review, rights eligibility, project-local audio path, and generated-track checksum. Catalog preview URLs are not treated as downloadable or renderable assets; catalog audio must be supplied as a local file obtained under the applicable account license. It records analysis and provenance dependencies without changing the timeline or rendering.
+
+
+### Music-section-aware storyboard planning
+
+When creating a creative video plan, optionally pass the selected soundtrack's current `.video-agent/music-analysis.json` artifact:
+
+```bash
+docker compose run --rm video-agent create-video-plan ./travel-test \
+  --prompt "Create a cinematic travel film" \
+  --music-analysis ./.video-agent/music-analysis.json
+```
+
+The planner receives the broad low/medium/high energy sections as creative context, then the application annotates every scene and storyboard shot against its actual output-time interval. Each annotation records the dominant energy, the ordered energy progression when an interval crosses multiple sections, the matching section bounds, and an explanatory note. This helps distinguish a quiet scenic hold from a build or high-energy passage without pretending the analyzer has identified a chorus, drop, or musical phrase.
+
+Energy annotations are advisory: they do not change shot durations, force cuts onto beats, reorder footage, approve the storyboard, modify a timeline, or render. The generated plan tracks the exact music-analysis artifact as a dependency; regenerate the plan if the analysis or selected soundtrack changes.
