@@ -79,6 +79,12 @@ class StoryboardShot(BaseModel):
     music_section_start_seconds: float | None = Field(default=None, ge=0)
     music_section_end_seconds: float | None = Field(default=None, gt=0)
     music_alignment_note: str = Field(default="", max_length=240)
+    pacing_recommendation: Literal["linger", "steady", "brisk", "unknown"] = "unknown"
+    pacing_rationale: str = Field(default="", max_length=240)
+    transition_recommendation: Literal[
+        "soft_dissolve", "match_cut", "cut_on_action", "straight_cut", "end_on_hold", "unknown"
+    ] = "unknown"
+    transition_rationale: str = Field(default="", max_length=240)
     primary_subject: str = Field(default="", max_length=100)
     temporal_summary: str = Field(default="", max_length=300)
     action_progression: list[str] = Field(default_factory=list, max_length=6)
