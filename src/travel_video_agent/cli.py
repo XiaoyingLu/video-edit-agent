@@ -2924,13 +2924,22 @@ def generate_soundtrack_command(
         str, typer.Option("--format", help="Generated audio format: mp3 or wav.")
     ] = "mp3",
     seed: Annotated[
-        int | None, typer.Option("--seed", min=0, max=4_294_967_294, help="Optional reproducibility seed.")
+        int | None,
+        typer.Option(
+            "--seed", min=0, max=4_294_967_294, help="Optional reproducibility seed."
+        ),
     ] = None,
     timeout: Annotated[
-        float, typer.Option("--timeout", min=1, max=3600, help="Maximum generation wait in seconds.")
+        float,
+        typer.Option(
+            "--timeout", min=1, max=3600, help="Maximum generation wait in seconds."
+        ),
     ] = 900,
     poll_interval: Annotated[
-        float, typer.Option("--poll-interval", min=1, max=60, help="Seconds between status checks.")
+        float,
+        typer.Option(
+            "--poll-interval", min=1, max=60, help="Seconds between status checks."
+        ),
     ] = 10,
     output: Annotated[
         Path | None, typer.Option("--output", "-o", help="Project-local generated audio path.")
