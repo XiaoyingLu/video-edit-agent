@@ -23,7 +23,13 @@ class SoundstripeCatalogProvider:
     provider_id = "soundstripe"
     api_base_url = "https://api.soundstripe.com/v1"
 
-    def __init__(self, api_key: str | None = None, *, license_profile: SoundtrackLicense | None = None, timeout_seconds: float = 20.0) -> None:
+    def __init__(
+        self,
+        api_key: str | None = None,
+        *,
+        license_profile: SoundtrackLicense | None = None,
+        timeout_seconds: float = 20.0,
+    ) -> None:
         self._api_key = api_key or os.getenv("SOUNDSTRIPE_API_KEY")
         if not self._api_key:
             raise ValueError("Set SOUNDSTRIPE_API_KEY or pass api_key explicitly")
@@ -41,8 +47,12 @@ class SoundstripeCatalogProvider:
         params = {
             "filter[q]": " ".join([request.query, *request.search_terms]).strip(),
             "page[size]": str(request.limit),
-            "filter[duration][min]": str(max(1, int(request.target_duration_seconds - request.duration_tolerance_seconds))),
-            "filter[duration][max]": str(int(request.target_duration_seconds + request.duration_tolerance_seconds)),
+            "filter[duration][min]": str(
+                max(1, int(request.target_duration_seconds - request.duration_tolerance_seconds))
+            ),
+            "filter[duration][max]": str(
+                int(request.target_duration_seconds + request.duration_tolerance_seconds)
+            ),
         }
         if request.tempo_min_bpm is not None:
             params["filter[bpm][min]"] = str(request.tempo_min_bpm)
@@ -66,13 +76,21 @@ class SoundstripeCatalogProvider:
 
     def _request_json(self, params: dict[str, str]) -> dict[str, Any]:
         url = f"{self.api_base_url}/songs?{urlencode(params)}"
-        request = Request(url, headers={"Authorization": f"Token {self._api_key}", "Accept": "application/vnd.api+json"})
+        request = Request(
+            url,
+            headers={
+                "Authorization": f"Token {self._api_key}",
+                "Accept": "application/vnd.api+json",
+            },
+        )
         try:
             with urlopen(request, timeout=self._timeout_seconds) as response:
                 payload = json.loads(response.read().decode("utf-8"))
         except HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")[:500]
-            raise SoundstripeAPIError(f"Soundstripe API returned HTTP {exc.code}: {detail}") from exc
+            raise SoundstripeAPIError(
+                f"Soundstripe API returned HTTP {exc.code}: {detail}"
+            ) from exc
         except (URLError, TimeoutError) as exc:
             raise SoundstripeAPIError(f"Soundstripe API request failed: {exc}") from exc
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -85,7 +103,11 @@ class SoundstripeCatalogProvider:
         data, included = payload.get("data", []), payload.get("included", [])
         if not isinstance(data, list) or not isinstance(included, list):
             raise SoundstripeAPIError("Soundstripe response has invalid data/included fields")
-        resources = {(item.get("type"), str(item.get("id"))): item for item in included if isinstance(item, dict)}
+        resources = {
+            (item.get("type"), str(item.get("id"))): item
+            for item in included
+            if isinstance(item, dict)
+        }
         candidates = []
         retrieved_at = datetime.now(UTC)
         for song in data:
@@ -104,15 +126,29 @@ class SoundstripeCatalogProvider:
             if not song_id or duration is None:
                 continue
             tag_data = attributes.get("tags") or {}
-            tags = sorted({str(tag) for values in tag_data.values() if isinstance(values, list) for tag in values})
+            tags = sorted(
+                {
+                    str(tag)
+                    for values in tag_data.values()
+                    if isinstance(values, list)
+                    for tag in values
+                }
+            )
             candidate = SoundtrackCandidate(
-                candidate_id=f"soundstripe:{song_id}", origin="catalog", provider_id=self.provider_id,
-                provider_asset_id=song_id, title=str(attributes.get("title") or f"Soundstripe track {song_id}"),
-                creator=artist_attributes.get("name"), duration_seconds=float(duration),
-                tempo_bpm=attributes.get("bpm"), instrumental=audio_attributes.get("instrumental"),
-                tags=tags[:40], source_url=f"{self.api_base_url}/songs/{song_id}",
+                candidate_id=f"soundstripe:{song_id}",
+                origin="catalog",
+                provider_id=self.provider_id,
+                provider_asset_id=song_id,
+                title=str(attributes.get("title") or f"Soundstripe track {song_id}"),
+                creator=artist_attributes.get("name"),
+                duration_seconds=float(duration),
+                tempo_bpm=attributes.get("bpm"),
+                instrumental=audio_attributes.get("instrumental"),
+                tags=tags[:40],
+                source_url=f"{self.api_base_url}/songs/{song_id}",
                 preview_url=(audio_attributes.get("versions") or {}).get("mp3"),
-                retrieved_at=retrieved_at, license=self._license_profile.model_copy(deep=True),
+                retrieved_at=retrieved_at,
+                license=self._license_profile.model_copy(deep=True),
             )
             candidates.append(candidate)
         next_cursor = None
@@ -121,7 +157,9 @@ class SoundstripeCatalogProvider:
             pages = parse_qs(urlparse(next_url).query).get("page[number]", [])
             if pages:
                 next_cursor = pages[0]
-        return SoundtrackSearchResponse(provider_id=self.provider_id, candidates=candidates, next_cursor=next_cursor)
+        return SoundtrackSearchResponse(
+            provider_id=self.provider_id, candidates=candidates, next_cursor=next_cursor
+        )
 
     @staticmethod
     def _related_resource(resources: dict, references: list, resource_type: str) -> dict | None:

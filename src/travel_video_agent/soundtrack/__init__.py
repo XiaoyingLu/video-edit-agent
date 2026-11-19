@@ -7,8 +7,8 @@ from .catalog import (
     SoundtrackSearchResponse,
 )
 from .licensing import evaluate_soundtrack_rights
-from .ranking import SoundtrackCandidateRanking, rank_soundtrack_candidates
 from .providers import SoundstripeAPIError, SoundstripeCatalogProvider
+from .ranking import SoundtrackCandidateRanking, rank_soundtrack_candidates
 from .schemas import (
     SoundtrackBrief,
     SoundtrackCandidate,
