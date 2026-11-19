@@ -238,8 +238,12 @@ def understand(
     ] = None,
     model: Annotated[
         str,
-        typer.Option("--model", help="Ollama vision model (default: qwen2.5vl:7b)."),
-    ] = os.getenv("OLLAMA_MODEL", "qwen2.5vl:7b"),
+        typer.Option("--model", help="Provider-specific vision model identifier."),
+    ] = None,
+    provider: Annotated[
+        str,
+        typer.Option("--provider", help="Vision backend: ollama or mlx."),
+    ] = os.getenv("VISION_PROVIDER", "ollama"),
     samples_per_scene: Annotated[
         int,
         typer.Option(
@@ -313,6 +317,7 @@ def understand(
         understanding = understand_folder(
             folder,
             model=model,
+            provider=provider,
             samples_per_scene=samples_per_scene,
             resume=not no_resume,
             progress_callback=report_progress,
@@ -334,7 +339,7 @@ def understand(
         json.dumps(understanding.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
     )
     _track_artifact(
-        folder, destination, config={"model": model, "samples_per_scene": samples_per_scene}
+        folder, destination, config={"provider": provider, "model": model, "samples_per_scene": samples_per_scene}
     )
     checkpoint.unlink(missing_ok=True)
 
