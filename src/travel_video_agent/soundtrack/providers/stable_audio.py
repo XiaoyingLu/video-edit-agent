@@ -9,11 +9,11 @@ import secrets
 import time
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Literal
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from pydantic import BaseModel, ConfigDict, Field
-from typing import Literal
 
 
 class StableAudioAPIError(RuntimeError):
@@ -152,9 +152,12 @@ class StableAudioGenerationProvider:
                 f"Stable Audio expected HTTP 202 when starting generation, received {status}"
             )
         try:
-            generation_id = json.loads(payload.decode("utf-8"))["id"]
+            response_payload = json.loads(payload.decode("utf-8"))
+            generation_id = response_payload["id"]
         except (UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError) as exc:
-            raise StableAudioAPIError("Stable Audio returned an invalid generation response") from exc
+            raise StableAudioAPIError(
+                "Stable Audio returned an invalid generation response"
+            ) from exc
         if not isinstance(generation_id, str) or not re.fullmatch(
             r"[a-fA-F0-9]{64}", generation_id
         ):
