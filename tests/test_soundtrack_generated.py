@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 import pytest
 
 from travel_video_agent.music.schemas import MusicAnalysis
+from travel_video_agent.soundtrack import generated
 from travel_video_agent.soundtrack.generated import (
     GeneratedCandidateError,
     prepare_generated_soundtrack_candidates,
@@ -16,7 +17,6 @@ from travel_video_agent.soundtrack.review import (
     save_soundtrack_candidate_review,
 )
 from travel_video_agent.soundtrack.schemas import SoundtrackBrief
-from travel_video_agent.soundtrack import generated
 
 
 def _write_brief(root):
