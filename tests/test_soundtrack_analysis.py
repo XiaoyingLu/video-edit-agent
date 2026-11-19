@@ -85,7 +85,9 @@ def _select(root, candidate):
     brief_path.write_text(brief.model_dump_json(), encoding="utf-8")
     candidates_path = artifact_dir / "soundtrack-candidates.json"
     candidates_path.write_text(
-        SoundtrackSearchResponse(provider_id="test-provider", candidates=[candidate]).model_dump_json(),
+        SoundtrackSearchResponse(
+            provider_id="test-provider", candidates=[candidate]
+        ).model_dump_json(),
         encoding="utf-8",
     )
     register_artifact(root, candidates_path, dependencies=[brief_path])
