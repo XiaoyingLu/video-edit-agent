@@ -8,12 +8,11 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable
-from zoneinfo import ZoneInfo
 
-from ..highlights.schemas import ProjectHighlights
-from ..models import ProjectAnalysis
-from ..transcription.schemas import ProjectTranscription
-from ..understanding.schemas import VideoScene, VideoUnderstanding
+from .highlights.schemas import ProjectHighlights
+from .models import ProjectAnalysis
+from .transcription.schemas import ProjectTranscription
+from .understanding.schemas import VideoScene, VideoUnderstanding
 
 
 @dataclass(frozen=True)
@@ -83,8 +82,8 @@ class StoryLedger:
     entries: list[StoryLedgerEntry]
     clusters: list[StoryLedgerCluster]
     timestamp_note: str = (
-        "Day/time labels use source-file modification timestamps plus scene offsets; "
-        "they are an ordering hint, not guaranteed camera capture metadata."
+        "Day/time labels use embedded media creation timestamps when available, otherwise "
+        "source-file modification timestamps, plus scene offsets; verify if files were copied."
     )
 
     @property
@@ -140,6 +139,20 @@ def _scene_attributes(scene: VideoScene) -> tuple[str, str, str, str]:
     return setting, subject, scale, motion
 
 
+def _capture_datetime(value: str | None) -> datetime | None:
+    """Parse ffprobe creation_time metadata, falling back to filesystem mtime if absent."""
+    if not value:
+        return None
+    normalized = value.strip()
+    if normalized.endswith("Z"):
+        normalized = normalized[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    return parsed.astimezone() if parsed.tzinfo is not None else parsed.astimezone()
+
+
 def _overlap(start: float, end: float, other_start: float, other_end: float) -> bool:
     return start < other_end and other_start < end
 
@@ -152,7 +165,6 @@ def _build_entries(
     analysis: ProjectAnalysis,
 ) -> list[StoryLedgerEntry]:
     media_by_key = {_video_key(item.path): item for item in analysis.videos}
-    media_by_path = {item.path: item for item in analysis.videos}
     transcript_by_path = (
         {item.path: item for item in transcription.videos} if transcription else {}
     )
@@ -168,10 +180,12 @@ def _build_entries(
         if media is None:
             continue
         source_path = project_root / media.path
-        try:
-            modified = datetime.fromtimestamp(source_path.stat().st_mtime).astimezone()
-        except OSError:
-            modified = datetime.fromtimestamp(0, tz=ZoneInfo("UTC"))
+        modified = _capture_datetime(media.capture_timestamp)
+        if modified is None:
+            try:
+                modified = datetime.fromtimestamp(source_path.stat().st_mtime).astimezone()
+            except OSError:
+                modified = datetime.fromtimestamp(0).astimezone()
         scene_time = modified.timestamp() + scene.start_seconds
         timestamp = datetime.fromtimestamp(scene_time).astimezone()
         timed_scenes.append((timestamp, media.path, scene, timestamp.strftime("%H:%M")))
