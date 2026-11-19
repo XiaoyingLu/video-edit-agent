@@ -4,7 +4,6 @@ import base64
 import hashlib
 import html
 import json
-import os
 import shutil
 import tempfile
 from pathlib import Path
@@ -94,10 +93,23 @@ def _frame(ffmpeg: str, video: Path, timestamp: float, destination: Path) -> str
     try:
         result = _run(
             [
-                ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin",
-                "-ss", f"{timestamp:.3f}", "-i", str(video), "-frames:v", "1",
-                "-vf", "scale=720:-2:force_original_aspect_ratio=decrease",
-                "-q:v", "4", "-y", str(destination),
+                ffmpeg,
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-nostdin",
+                "-ss",
+                f"{timestamp:.3f}",
+                "-i",
+                str(video),
+                "-frames:v",
+                "1",
+                "-vf",
+                "scale=720:-2:force_original_aspect_ratio=decrease",
+                "-q:v",
+                "4",
+                "-y",
+                str(destination),
             ],
             timeout=60,
         )
@@ -135,9 +147,7 @@ def build_timeline_visual_review(
         raise FileNotFoundError(f"Missing timeline: {timeline_file}")
     if not validate_artifact(root, timeline_file):
         raise TimelineVisualReviewError("Timeline is stale or untracked; regenerate it first")
-    timeline = ProjectDraftTimeline.model_validate_json(
-        timeline_file.read_text(encoding="utf-8")
-    )
+    timeline = ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root:
         raise TimelineVisualReviewError("Timeline belongs to a different project folder")
     ffmpeg = shutil.which("ffmpeg")
@@ -218,17 +228,17 @@ def render_timeline_visual_review_html(report: TimelineVisualReviewReport) -> st
             f'{html.escape(clip.clip_id, quote=True)}"></div>'
             f'<div class="body"><div class="heading"><h2>{clip.sequence_index}. '
             f'{html.escape(clip.clip_id)}</h2><span class="duration">'
-            f'{clip.duration_seconds:.2f}s</span></div>'
+            f"{clip.duration_seconds:.2f}s</span></div>"
             f'<p class="source">{html.escape(clip.video_path)} · source '
-            f'{clip.source_start_seconds:.2f}–{clip.source_end_seconds:.2f}s</p>'
-            f'{detail_html}<fieldset><legend>Decision</legend>'
+            f"{clip.source_start_seconds:.2f}–{clip.source_end_seconds:.2f}s</p>"
+            f"{detail_html}<fieldset><legend>Decision</legend>"
             f'<label><input type="radio" name="decision-{clip.sequence_index}" value="approved" '
-            f'{"checked" if clip.decision == "approved" else ""}> Approve</label>'
+            f"{'checked' if clip.decision == 'approved' else ''}> Approve</label>"
             f'<label><input type="radio" name="decision-{clip.sequence_index}" value="rejected" '
-            f'{"checked" if clip.decision == "rejected" else ""}> Reject</label>'
+            f"{'checked' if clip.decision == 'rejected' else ''}> Reject</label>"
             f'<label><input type="radio" name="decision-{clip.sequence_index}" value="pending" '
-            f'{"checked" if clip.decision == "pending" else ""}> Skip / pending</label>'
-            f'</fieldset></div></article>'
+            f"{'checked' if clip.decision == 'pending' else ''}> Skip / pending</label>"
+            f"</fieldset></div></article>"
         )
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -237,12 +247,16 @@ def render_timeline_visual_review_html(report: TimelineVisualReviewReport) -> st
 <style>
 :root {{ color-scheme: light dark; font-family:system-ui,sans-serif; }}
 body {{ max-width:1200px; margin:2rem auto; padding:0 1rem; }}
-header {{ position:sticky; top:0; z-index:2; padding:1rem; background:Canvas; border-bottom:1px solid #8886; }}
-.clip {{ display:grid; grid-template-columns:minmax(240px,40%) 1fr; gap:1rem; padding:1.25rem 0; border-bottom:1px solid #8886; }}
+header {{ position:sticky; top:0; z-index:2; padding:1rem; background:Canvas;
+          border-bottom:1px solid #8886; }}
+.clip {{ display:grid; grid-template-columns:minmax(240px,40%) 1fr; gap:1rem;
+         padding:1.25rem 0; border-bottom:1px solid #8886; }}
 .image img {{ width:100%; height:auto; display:block; border-radius:8px; }}
 .heading {{ display:flex; justify-content:space-between; gap:1rem; align-items:baseline; }}
-h2 {{ margin:.2rem 0; }} p {{ margin:.45rem 0; }} .source {{ color:GrayText; overflow-wrap:anywhere; }}
-fieldset {{ display:flex; flex-wrap:wrap; gap:1rem; border:1px solid #8886; border-radius:8px; margin-top:1rem; }}
+h2 {{ margin:.2rem 0; }} p {{ margin:.45rem 0; }}
+.source {{ color:GrayText; overflow-wrap:anywhere; }}
+fieldset {{ display:flex; flex-wrap:wrap; gap:1rem; border:1px solid #8886;
+            border-radius:8px; margin-top:1rem; }}
 button {{ padding:.65rem 1rem; cursor:pointer; }} .duration {{ font-variant-numeric:tabular-nums; }}
 @media(max-width:700px) {{ .clip {{ grid-template-columns:1fr; }} header {{ position:static; }} }}
 </style></head><body>
@@ -284,9 +298,7 @@ def save_timeline_visual_review(
 ) -> tuple[Path, Path]:
     """Save review metadata and HTML without overwriting earlier review artifacts."""
     root = folder.expanduser().resolve()
-    base = (
-        output_path or root / ".video-agent" / "timeline-visual-review" / "review"
-    ).expanduser()
+    base = (output_path or root / ".video-agent" / "timeline-visual-review" / "review").expanduser()
     base = (root / base).resolve() if not base.is_absolute() else base.resolve()
     try:
         base.relative_to(root)
