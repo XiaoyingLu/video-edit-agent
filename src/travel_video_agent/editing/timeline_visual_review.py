@@ -279,7 +279,8 @@ fieldset {{ display:flex; flex-wrap:wrap; gap:1rem; border:1px solid #8886;
 button {{ padding:.65rem 1rem; cursor:pointer; }} .duration {{ font-variant-numeric:tabular-nums; }}
 .player {{ margin:1rem 0; max-width:900px; }}
 .player video {{ display:block; width:100%; max-height:65vh; background:#111; border-radius:8px; }}
-.player-controls {{ display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-top:.6rem; }}
+.player-controls {{ display:flex; flex-wrap:wrap; align-items:center;
+                   gap:.5rem; margin-top:.6rem; }}
 #playback-status {{ color:GrayText; }}
 @media(max-width:700px) {{ .clip {{ grid-template-columns:1fr; }} header {{ position:static; }} }}
 </style></head><body>
