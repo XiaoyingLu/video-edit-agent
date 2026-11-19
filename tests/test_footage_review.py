@@ -152,6 +152,7 @@ def test_review_footage_rejects_unknown_shot(tmp_path):
             suggestions_path=suggestions_path,
         )
 
+
 def test_review_footage_warns_but_allows_duplicate_source_interval(tmp_path):
     plan_path, suggestions_path = _artifacts(tmp_path)
     plan = VideoProjectPlan.model_validate_json(plan_path.read_text(encoding="utf-8"))
