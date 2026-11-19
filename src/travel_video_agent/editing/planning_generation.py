@@ -115,6 +115,7 @@ class OllamaVideoPlanner:
         prompt: str,
         brief: dict,
         music_sections: list[dict] | None = None,
+        story_chapters: list[dict] | None = None,
     ) -> GeneratedVideoPlanContent:
         schema = GeneratedVideoPlanContent.model_json_schema()
         system_prompt = (
@@ -136,7 +137,11 @@ class OllamaVideoPlanner:
             "energy sections are supplied, shape the scene progression to complement their "
             "low, medium, and high energy changes where editorially appropriate. Treat these "
             "as broad loudness cues, not semantic labels such as chorus or drop. Do not force "
-            "every shot to end on a beat, and do not invent soundtrack events."
+            "every shot to end on a beat, and do not invent soundtrack events. When selected "
+            "story chapters are supplied, create exactly one storyboard scene per chapter in "
+            "the same order. Preserve each chapter name, purpose, mood, narration hint and "
+            "music energy; distribute concrete shots within that chapter and make each scene "
+            "duration match its chapter target."
         )
         payload = json.dumps(
             {
@@ -153,6 +158,7 @@ class OllamaVideoPlanner:
                                 "request": prompt,
                                 "brief": brief,
                                 "soundtrack_energy_sections": music_sections or [],
+                                "selected_story_chapters": story_chapters or [],
                             }
                         ),
                     },
@@ -246,11 +252,14 @@ def generate_video_plan_content(
     brief: dict,
     model: str | None = None,
     music_sections: list[dict] | None = None,
+    story_chapters: list[dict] | None = None,
 ) -> GeneratedVideoPlanContent:
     """Generate structured story content and fit shot durations to the validated brief."""
     planner = OllamaVideoPlanner(model=model)
     try:
-        content = planner.generate(prompt, brief, music_sections=music_sections)
+        content = planner.generate(
+            prompt, brief, music_sections=music_sections, story_chapters=story_chapters
+        )
     finally:
         planner.unload_model()
 
@@ -261,10 +270,30 @@ def generate_video_plan_content(
         raise VideoPlanningError("Generated storyboard has no positive shot duration.")
 
     target = float(brief["target_duration_seconds"])
-    factor = target / total
-    durations = [round(shot.target_duration_seconds * factor, 2) for shot in all_shots]
-    if durations:
-        durations[-1] = round(target - sum(durations[:-1]), 2)
+    if story_chapters is not None:
+        if len(content.scenes) != len(story_chapters):
+            raise VideoPlanningError(
+                "Planner must return exactly one storyboard scene for each selected story chapter."
+            )
+        durations = []
+        for scene, chapter in zip(content.scenes, story_chapters, strict=True):
+            scene_total = sum(shot.target_duration_seconds for shot in scene.shots)
+            if scene_total <= 0:
+                raise VideoPlanningError("Generated chapter has no positive shot duration.")
+            chapter_target = float(chapter["target_seconds"])
+            chapter_durations = [
+                round(shot.target_duration_seconds * chapter_target / scene_total, 2)
+                for shot in scene.shots
+            ]
+            chapter_durations[-1] = round(chapter_target - sum(chapter_durations[:-1]), 2)
+            durations.extend(chapter_durations)
+        if abs(sum(float(item["target_seconds"]) for item in story_chapters) - target) > 0.05:
+            raise VideoPlanningError("Selected story chapter durations do not match the creative brief.")
+    else:
+        factor = target / total
+        durations = [round(shot.target_duration_seconds * factor, 2) for shot in all_shots]
+        if durations:
+            durations[-1] = round(target - sum(durations[:-1]), 2)
     if any(duration <= 0 or duration > 60 for duration in durations):
         raise VideoPlanningError(
             "Generated storyboard cannot fit the requested duration within shot limits."
