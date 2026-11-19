@@ -105,6 +105,7 @@ from .rendering.title_overlays import (
 from .silence import analyze_silence_folder
 from .silence.ffmpeg_detector import SilenceDetectionError
 from .soundtrack import create_soundtrack_brief, generate_soundtrack_from_brief
+from .soundtrack.analysis import analyze_selected_soundtrack
 from .soundtrack.generated import prepare_generated_soundtrack_candidates
 from .soundtrack.review import (
     build_soundtrack_candidate_review,
@@ -3103,6 +3104,68 @@ def select_soundtrack_command(
     console.print(
         "[yellow]The selected track has not been downloaded or added to a timeline. "
         "No source media was changed and no video was rendered.[/yellow]"
+    )
+
+
+@app.command("analyze-selected-soundtrack")
+def analyze_selected_soundtrack_command(
+    folder: Annotated[
+        Path,
+        typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True),
+    ],
+    music: Annotated[
+        Path | None,
+        typer.Option(
+            "--music",
+            help=(
+                "Project-local licensed audio file for a catalog selection. "
+                "Generated selections use their recorded local asset."
+            ),
+        ),
+    ] = None,
+    selection: Annotated[
+        Path | None, typer.Option("--selection", help="Explicit soundtrack selection JSON path.")
+    ] = None,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Music analysis JSON output path.")
+    ] = None,
+    provenance_output: Annotated[
+        Path | None,
+        typer.Option("--provenance-output", help="Selected-track provenance JSON output path."),
+    ] = None,
+) -> None:
+    """Analyze the explicitly selected, rights-eligible local soundtrack."""
+    try:
+        report, provenance, analysis_file, provenance_file = analyze_selected_soundtrack(
+            folder,
+            selection_path=selection,
+            music_path=music,
+            analysis_output_path=output,
+            record_output_path=provenance_output,
+        )
+    except (FileNotFoundError, ValueError, OSError, MusicAnalysisError) as exc:
+        console.print(f"[red]Selected soundtrack analysis failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    table = Table(title="Selected Soundtrack Analysis")
+    table.add_column("Candidate")
+    table.add_column("Provider")
+    table.add_column("Duration", justify="right")
+    table.add_column("Tempo", justify="right")
+    table.add_column("Beat confidence", justify="right")
+    table.add_row(
+        provenance.candidate_id,
+        provenance.provider_id,
+        f"{report.duration_seconds:.1f}s",
+        f"{report.bpm:.1f} BPM" if report.bpm is not None else "Undetected",
+        f"{report.beat_confidence:.2f}",
+    )
+    console.print(table)
+    console.print(f"Music analysis saved to [green]{analysis_file}[/green]")
+    console.print(f"Selection provenance saved to [green]{provenance_file}[/green]")
+    console.print(
+        "[yellow]Analysis only. The selected track was not added to the timeline; "
+        "no timeline approval or rendering occurred.[/yellow]"
     )
 
 
