@@ -290,7 +290,8 @@ def understand(
                 )
             elif event == "frame_cached":
                 console.print(
-                    f"  [dim]Reused cached frame {details['frame_index']}/{details['frame_count']}[/dim]"
+                    "  [dim]Reused cached frame "
+                    f"{details['frame_index']}/{details['frame_count']}[/dim]"
                 )
             elif event == "temporal_analysis_started":
                 console.print("  Analyzing temporal action and camera movement...")
@@ -303,7 +304,8 @@ def understand(
                 console.print("  [dim]Reused cached temporal analysis[/dim]")
             elif event == "scene_completed":
                 console.print(
-                    f"[green]Completed scene {details['scene_index']}/{details['scene_count']}[/green]"
+                    "[green]Completed scene "
+                    f"{details['scene_index']}/{details['scene_count']}[/green]"
                 )
 
         understanding = understand_folder(
