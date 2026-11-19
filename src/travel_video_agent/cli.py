@@ -262,11 +262,56 @@ def understand(
         "[dim]Progress is saved after each analyzed frame; rerun this command to resume.[/dim]"
     )
     try:
+        def report_progress(event: str, details: dict) -> None:
+            if event == "scene_detection_started":
+                console.print(f"[cyan]Detecting scene boundaries:[/cyan] {details['video_path']}")
+            elif event == "scene_detection_completed":
+                console.print(
+                    f"[green]Scene detection complete:[/green] {details['scene_count']} scenes "
+                    f"in {details['elapsed_seconds']:.1f}s"
+                )
+            elif event == "scene_started":
+                console.print(
+                    f"[bold cyan]Scene {details['scene_index']}/{details['scene_count']}[/bold cyan] "
+                    f"({details['start_seconds']:.1f}s–{details['end_seconds']:.1f}s)"
+                )
+            elif event == "frame_extraction_completed":
+                console.print(
+                    f"  Prepared {details['frame_count']} representative frame(s) "
+                    f"in {details['elapsed_seconds']:.1f}s"
+                )
+            elif event == "frame_started":
+                console.print(
+                    f"  Analyzing frame {details['frame_index']}/{details['frame_count']}..."
+                )
+            elif event == "frame_completed":
+                console.print(
+                    f"  [green]Frame analyzed[/green] in {details['elapsed_seconds']:.1f}s"
+                )
+            elif event == "frame_cached":
+                console.print(
+                    f"  [dim]Reused cached frame {details['frame_index']}/{details['frame_count']}[/dim]"
+                )
+            elif event == "temporal_analysis_started":
+                console.print("  Analyzing temporal action and camera movement...")
+            elif event == "temporal_analysis_completed":
+                console.print(
+                    f"  [green]Temporal analysis complete[/green] "
+                    f"in {details['elapsed_seconds']:.1f}s"
+                )
+            elif event == "temporal_analysis_cached":
+                console.print("  [dim]Reused cached temporal analysis[/dim]")
+            elif event == "scene_completed":
+                console.print(
+                    f"[green]Completed scene {details['scene_index']}/{details['scene_count']}[/green]"
+                )
+
         understanding = understand_folder(
             folder,
             model=model,
             samples_per_scene=samples_per_scene,
             resume=not no_resume,
+            progress_callback=report_progress,
         )
     except (
         FileNotFoundError,
