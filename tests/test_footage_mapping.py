@@ -259,7 +259,6 @@ def test_footage_candidates_include_temporal_and_composition_evidence(tmp_path):
     assert candidate.primary_subject == "mountain lake"
 
 
-
 def _write_footage_artifacts(tmp_path, plan, understanding):
     (tmp_path / "clip.mp4").write_bytes(b"test video placeholder")
     artifact_dir = tmp_path / ".video-agent"
@@ -374,3 +373,21 @@ def test_suggest_storyboard_footage_discourages_reusing_previous_top_pick(tmp_pa
     assert second_candidates[0].source_scene_id != first_pick
     reused = next(item for item in second_candidates if item.source_scene_id == first_pick)
     assert "Reuse discouraged" in " ".join(reused.reasons)
+
+
+
+def test_suggest_storyboard_footage_fails_if_must_include_scene_is_unavailable(tmp_path):
+    plan = _project_plan(tmp_path)
+    plan = plan.model_copy(
+        update={
+            "scenes": [
+                plan.scenes[0].model_copy(
+                    update={"must_include_scene_ids": ["missing-source-scene"]}
+                )
+            ]
+        }
+    )
+    _write_footage_artifacts(tmp_path, plan, _understanding(tmp_path))
+
+    with pytest.raises(ValueError, match="must-include scenes are missing"):
+        suggest_storyboard_footage(tmp_path)
