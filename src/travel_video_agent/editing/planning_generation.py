@@ -175,6 +175,7 @@ class OllamaVideoPlanner:
             for scene in parsed.get("scenes", []):
                 # Music-section annotations are derived from the analyzed timeline, not the LLM.
                 scene.pop("music_energy", None)
+                scene.pop("music_energy_sequence", None)
                 scene.pop("music_section_start_seconds", None)
                 scene.pop("music_section_end_seconds", None)
                 scene.pop("music_alignment_note", None)
