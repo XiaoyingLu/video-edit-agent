@@ -693,6 +693,7 @@ def test_understanding_pipeline_attaches_temporal_scene_dynamics(monkeypatch, tm
     assert dynamics.camera_motion == "static"
     assert dynamics.action_progression[0] == "Hiker walks uphill"
 
+
 def test_understanding_resumes_cached_frame_observations_after_interruption(
     monkeypatch, tmp_path: Path
 ) -> None:
