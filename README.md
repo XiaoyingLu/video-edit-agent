@@ -65,7 +65,7 @@ Run understanding natively (FFmpeg and the project's other system dependencies m
 available on the host):
 
 ```bash
-VISION_PROVIDER=mlx MLX_VISION_MODEL=mlx-community/SmolVLM2-2.2B-Instruct-mlx \\
+VISION_PROVIDER=mlx MLX_VISION_MODEL=mlx-community/SmolVLM2-2.2B-Instruct-mlx \
   video-agent understand ./travel-test --provider mlx
 ```
 
@@ -76,9 +76,9 @@ for compatibility; model identifiers are configurable because community conversi
 To compare both backends on the exact same extracted representative frames:
 
 ```bash
-python scripts/benchmark_vision.py frame-1.jpg frame-2.jpg frame-3.jpg \\
-  --ollama-model qwen2.5vl:3b \\
-  --mlx-model mlx-community/SmolVLM2-2.2B-Instruct-mlx \\
+python scripts/benchmark_vision.py frame-1.jpg frame-2.jpg frame-3.jpg \
+  --ollama-model qwen2.5vl:3b \
+  --mlx-model mlx-community/SmolVLM2-2.2B-Instruct-mlx \
   --output .video-agent/vision-benchmark.json
 ```
 
@@ -832,8 +832,8 @@ After generating story alternatives and explicitly selecting one, pass the propo
 ```bash
 docker compose run --rm video-agent propose-story ./travel-test --prompt "relaxed, 90 seconds"
 docker compose run --rm video-agent select-story ./travel-test --angle angle-1
-docker compose run --rm video-agent create-plan ./travel-test \\
-  --prompt "Create a relaxed cinematic travel film" \\
+docker compose run --rm video-agent create-plan ./travel-test \
+  --prompt "Create a relaxed cinematic travel film" \
   --story ./.video-agent/story-proposal.json
 ```
 
