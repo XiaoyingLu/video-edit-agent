@@ -289,7 +289,9 @@ def generate_video_plan_content(
             chapter_durations[-1] = round(chapter_target - sum(chapter_durations[:-1]), 2)
             durations.extend(chapter_durations)
         if abs(sum(float(item["target_seconds"]) for item in story_chapters) - target) > 0.05:
-            raise VideoPlanningError("Selected story chapter durations do not match the creative brief.")
+            raise VideoPlanningError(
+                "Selected story chapter durations do not match the creative brief."
+            )
     else:
         factor = target / total
         durations = [round(shot.target_duration_seconds * factor, 2) for shot in all_shots]

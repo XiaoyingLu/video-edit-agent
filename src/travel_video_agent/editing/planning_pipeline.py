@@ -5,8 +5,8 @@ import os
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
-from ..story_proposal import StoryProposal
 from ..music.schemas import MusicAnalysis, MusicSection
+from ..story_proposal import StoryProposal
 from .intent import parse_editing_intent
 from .music_pacing import annotate_music_pacing
 from .planning_generation import (
@@ -88,9 +88,13 @@ def create_video_project_plan(
         if selected_story is None:
             raise ValueError("selected story angle is missing from the proposal")
         prompt_duration = explicit_duration_seconds(prompt)
-        if prompt_duration is not None and abs(proposal.target_duration_seconds - prompt_duration) > 0.05:
+        if (
+            prompt_duration is not None
+            and abs(proposal.target_duration_seconds - prompt_duration) > 0.05
+        ):
             raise ValueError(
-                "prompt duration conflicts with selected story duration; use the story's target duration"
+                "prompt duration conflicts with selected story duration; "
+                "use the story's target duration"
             )
 
     planner_model = model or os.getenv("VIDEO_PLANNER_MODEL", "qwen2.5:1.5b")
@@ -168,7 +172,8 @@ def create_video_project_plan(
                         "narrative_arc": [chapter.name for chapter in selected_story.chapters],
                         "emotional_journey": " ".join(
                             chapter.mood for chapter in selected_story.chapters if chapter.mood
-                        ) or generated.story_treatment.emotional_journey,
+                        )
+                        or generated.story_treatment.emotional_journey,
                     }
                 ),
                 "scenes": mapped_scenes,

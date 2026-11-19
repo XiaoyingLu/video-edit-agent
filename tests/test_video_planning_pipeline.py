@@ -93,7 +93,9 @@ def test_create_video_project_plan_generates_storyboard_and_registers_dependency
     monkeypatch.setattr(
         planning_pipeline,
         "generate_video_plan_content",
-        lambda prompt, brief, model=None, music_sections=None, story_chapters=None: _generated_content(),
+        lambda prompt, brief, model=None, music_sections=None, story_chapters=None: (
+            _generated_content()
+        ),
     )
 
     plan, destination = planning_pipeline.create_video_project_plan(
@@ -463,7 +465,18 @@ def test_create_video_project_plan_uses_selected_story_chapters_and_tracks_story
 
     def fake_generate(prompt, brief, model=None, music_sections=None, story_chapters=None):
         captured["chapters"] = story_chapters
-        return _generated_content()
+        content = _generated_content()
+        scenes = []
+        for scene, chapter in zip(content.scenes, story_chapters, strict=True):
+            duration = chapter["target_seconds"]
+            shots = [
+                shot.model_copy(update={"target_duration_seconds": duration})
+                for shot in scene.shots
+            ]
+            scenes.append(
+                scene.model_copy(update={"target_duration_seconds": duration, "shots": shots})
+            )
+        return content.model_copy(update={"scenes": scenes})
 
     monkeypatch.setattr(planning_pipeline, "generate_video_plan_content", fake_generate)
     artifact_dir = tmp_path / ".video-agent"
@@ -521,6 +534,7 @@ def test_create_video_project_plan_uses_selected_story_chapters_and_tracks_story
         "Close on the quiet landscape.",
     ]
     assert [scene.target_duration_seconds for scene in plan.scenes] == [30, 60]
+    assert [scene.shots[0].target_duration_seconds for scene in plan.scenes] == [30, 60]
     assert [scene.music_energy for scene in plan.scenes] == ["low", "medium"]
     assert plan.scenes[0].candidate_scene_ids == ["real-scene-1", "real-scene-2"]
     assert plan.scenes[1].candidate_scene_ids == ["real-scene-3"]
