@@ -502,6 +502,7 @@ def test_create_video_project_plan_uses_selected_story_chapters_and_tracks_story
                         mood="anticipation",
                         target_seconds=30,
                         candidate_scene_ids=["real-scene-1", "real-scene-2"],
+                        must_include_scene_ids=["real-scene-2"],
                         narration_hint="We had just arrived.",
                         music_energy="low",
                     ),
@@ -537,6 +538,7 @@ def test_create_video_project_plan_uses_selected_story_chapters_and_tracks_story
     assert [scene.shots[0].target_duration_seconds for scene in plan.scenes] == [30, 60]
     assert [scene.music_energy for scene in plan.scenes] == ["low", "medium"]
     assert plan.scenes[0].candidate_scene_ids == ["real-scene-1", "real-scene-2"]
+    assert plan.scenes[0].must_include_scene_ids == ["real-scene-2"]
     assert plan.scenes[1].candidate_scene_ids == ["real-scene-3"]
     assert plan.scenes[0].shots[0].narration == "We had just arrived."
     assert plan.story_treatment.working_title == "A Quiet Journey"
