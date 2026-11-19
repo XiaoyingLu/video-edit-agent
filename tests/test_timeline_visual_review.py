@@ -113,6 +113,10 @@ def test_html_embeds_frames_and_exports_version_bound_decisions(tmp_path, monkey
     assert "Export review decisions" in rendered
     assert "Export visual edits" in rendered
     assert "draggable = true" in rendered
+    assert "sequence-preview" in rendered
+    assert "Play sequence" in rendered
+    assert "currentBounds(card).end" in rendered
+    assert "transitions are represented as cuts" in rendered
     assert "timeline_sha256:report.timeline_sha256" in rendered
     assert report.timeline_sha256 in rendered
     assert "review-timeline --decisions-file" not in rendered
@@ -128,6 +132,9 @@ def test_save_review_writes_html_and_metadata_without_overwrite(tmp_path, monkey
     assert json_file.is_file()
     assert html_file.is_file()
     assert json.loads(json_file.read_text())["timeline_sha256"] == report.timeline_sha256
+    saved_html = html_file.read_text(encoding="utf-8")
+    assert 'data-video-src="../../coast.mp4"' in saved_html
+    assert "sequence-preview" in saved_html
     with pytest.raises(FileExistsError):
         save_timeline_visual_review(tmp_path, report)
 
