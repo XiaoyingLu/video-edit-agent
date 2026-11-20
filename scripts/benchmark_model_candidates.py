@@ -340,8 +340,8 @@ def main() -> None:
         "frames": [str(path) for path in frames],
         "notes": [
             "Use the same ordered frames for every candidate.",
-            "Frame timestamps in this benchmark are ordinal placeholders, not source-video timestamps.",
-            "Model load time includes first-time checkpoint loading but excludes downloads already cached.",
+            "Frame timestamps are ordinal placeholders, not source-video timestamps.",
+            "Model load time includes uncached checkpoint downloads.",
             "Memory values are backend-reported allocations, not total system memory.",
             "Raw outputs require human quality review; JSON validity is not schema validity.",
         ],
