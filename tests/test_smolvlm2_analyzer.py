@@ -118,3 +118,17 @@ def test_provider_factory_selects_mlx_without_loading_optional_runtime():
 
     assert isinstance(analyzer, SmolVLM2MLXAnalyzer)
     assert analyzer.model_id == "test/model"
+
+
+def test_smolvlm2_mlx_retries_incomplete_frame_json(monkeypatch, tmp_path):
+    frame = tmp_path / "frame.jpg"
+    frame.write_bytes(b"image")
+    calls = _install_fake_mlx(
+        monkeypatch, ['{"description": "A parade", "objects": [', json.dumps(_observation())]
+    )
+
+    result = SmolVLM2MLXAnalyzer().analyze_frame(frame)
+
+    assert result["description"] == _observation()["description"]
+    assert len([call for call in calls if "prompt" in call]) == 2
+    assert calls[-1]["max_tokens"] >= 1024
