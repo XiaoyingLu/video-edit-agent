@@ -8,20 +8,16 @@ from typing import Any
 from .schemas import SceneDynamics
 from .visual_analyzer import VisionModelError, _parse_observation
 
-_FRAME_PROMPT = """Act as a careful travel-film editor analyzing one representative video frame.
-Return only a JSON object with these fields:
-description (one factual sentence, <=200 characters), objects (up to 8 strings),
-activities (up to 4 strings), confidence (0..1), shot_scale (extreme_wide, wide,
-medium, close_up, extreme_close_up, aerial, unknown), camera_angle (eye_level,
-low_angle, high_angle, birds_eye, worms_eye, unknown), composition (centered,
-rule_of_thirds, leading_lines, symmetrical, layered_depth, negative_space, unknown),
-lighting (golden_hour, blue_hour, daylight, overcast, low_light, artificial, backlit,
-mixed, unknown), mood (serene, energetic, dramatic, romantic, mysterious, joyful,
-contemplative, tense, unknown), visual_role (establishing, action, detail, reaction,
-transition, portrait, scenic_breath, unknown), setting (broad visual setting),
-primary_subject (broad visible subject). Describe visible evidence only. Never guess
-a precise location, identity, event, or camera movement. Use unknown when uncertain.
-Do not include Markdown fences or commentary."""
+_FRAME_PROMPT = """Analyze this image as a travel-film editor. Return exactly one compact JSON object.
+Use exactly these keys and no others:
+{"description":"one short factual sentence","objects":["up to 5 important visible things"],"activities":["up to 2 visible actions"],"confidence":0.0,"shot_scale":"wide","camera_angle":"eye_level","composition":"unknown","lighting":"daylight","mood":"unknown","visual_role":"unknown","setting":"broad setting","primary_subject":"main visible subject"}
+Allowed shot_scale: extreme_wide, wide, medium, close_up, extreme_close_up, aerial, unknown.
+Allowed camera_angle: eye_level, low_angle, high_angle, birds_eye, worms_eye, unknown.
+Allowed composition: centered, rule_of_thirds, leading_lines, symmetrical, layered_depth, negative_space, unknown.
+Allowed lighting: golden_hour, blue_hour, daylight, overcast, low_light, artificial, backlit, mixed, unknown.
+Allowed mood: serene, energetic, dramatic, romantic, mysterious, joyful, contemplative, tense, unknown.
+Allowed visual_role: establishing, action, detail, reaction, transition, portrait, scenic_breath, unknown.
+Use short values. Describe visible evidence only; never guess a precise location, identity, event, or camera movement. Use unknown when uncertain. Output valid JSON only, on one line. No Markdown or commentary."""
 
 _TEMPORAL_PROMPT = """Analyze these ordered frames from one continuous travel-video scene.
 The frames are supplied in chronological order. Describe only changes supported by
@@ -64,7 +60,7 @@ class SmolVLM2MLXAnalyzer:
         self,
         model: str = "mlx-community/SmolVLM2-2.2B-Instruct-mlx",
         *,
-        max_tokens: int = 768,
+        max_tokens: int = 1024,
     ) -> None:
         self.model_id = model
         self.max_tokens = max_tokens
@@ -136,12 +132,15 @@ class SmolVLM2MLXAnalyzer:
                 "Do not add any text before or after the JSON."
             )
             retry_content = self._generate(
-                retry_prompt, [frame_path], max_tokens=max(self.max_tokens * 2, 1024)
+                retry_prompt, [frame_path], max_tokens=max(self.max_tokens * 2, 2048)
             )
             try:
                 return _parse_observation(retry_content, frame_path)
-            except VisionModelError:
-                raise first_error from first_error.__cause__
+            except VisionModelError as retry_error:
+                raise VisionModelError(
+                    f"SmolVLM2 returned invalid frame output after retry for {frame_path}. "
+                    f"First attempt: {first_error} Retry attempt: {retry_error}"
+                ) from retry_error
 
     def analyze_scene(self, frames: list[tuple[float, Path]]) -> dict[str, Any]:
         """Analyze ordered scene frames together to infer bounded temporal dynamics."""
@@ -169,10 +168,11 @@ class SmolVLM2MLXAnalyzer:
             try:
                 dynamics = _json_object(retry_content, label="temporal analysis")
                 return SceneDynamics.model_validate(dynamics).model_dump()
-            except Exception:
+            except Exception as retry_error:
                 raise VisionModelError(
-                    f"SmolVLM2 returned invalid temporal output after retry: {first_error}"
-                ) from first_error
+                    "SmolVLM2 returned invalid temporal output after retry. "
+                    f"First attempt: {first_error} Retry attempt: {retry_error}"
+                ) from retry_error
 
     def unload_model(self) -> bool:
         """Release model references and clear the MLX Metal cache."""
