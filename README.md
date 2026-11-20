@@ -861,3 +861,42 @@ Energy annotations are advisory: they do not change shot durations, force cuts o
 When `create-plan` receives `--music-analysis`, each storyboard shot also receives advisory `pacing_recommendation` and `transition_recommendation` fields with short rationales. Low-energy scenic passages can suggest a linger; energetic action passages can suggest a brisk rhythm; adjacent shots with compatible composition or visible motion can suggest a match cut or cut on action. Other cases use a clean cut or a gentle dissolve where an energy change supports it. If no music section covers a shot, the planner falls back to the brief's overall pacing preference.
 
 These are editorial suggestions, not edit instructions: they never change shot durations, add transition effects to the timeline, snap cuts to beats, approve footage, or trigger rendering. The final storyboard and timeline remain subject to human review.
+
+
+### Experimental model-candidate benchmark
+
+After installing the optional MLX dependencies in native macOS Python, compare the current
+SmolVLM2 baseline with Qwen3-VL 4B using the same ordered frame images:
+
+```bash
+python scripts/benchmark_model_candidates.py frame-1.jpg frame-2.jpg frame-3.jpg \
+  --providers smolvlm2 qwen3-vl \
+  --output .video-agent/model-candidate-benchmark.json
+```
+
+The default Qwen checkpoint is
+`mlx-community/Qwen3-VL-4B-Instruct-4bit`. The benchmark uses MLX-VLM and records
+model-load time, per-frame latency, multi-image temporal latency, backend-reported memory,
+raw outputs, and basic JSON validity. It preserves outputs for human quality review rather
+than choosing a winner automatically.
+
+VideoChat3 is available as an opt-in candidate:
+
+```bash
+python scripts/benchmark_model_candidates.py frame-1.jpg frame-2.jpg frame-3.jpg \
+  --providers videochat3 --videochat3-device mps
+```
+
+VideoChat3 uses its published Transformers interface and requires `torch`,
+`transformers`, `accelerate`, and `qwen-vl-utils`. Its published checkpoint is about
+9 GB on disk; loading it on a 16 GB unified-memory Mac may cause memory pressure or fail.
+MPS compatibility is experimental and is not claimed by the upstream project. Use
+`--videochat3-device cpu` only as a compatibility fallback, not as a performance comparison.
+
+The benchmark expects already-extracted representative frames, in chronological order.
+It uses ordinal placeholder timestamps for the multi-image prompt because standalone frame
+paths do not contain source-video timestamps. Use identical frame files and order for each
+candidate. The script records failed candidates without discarding successful runs.
+
+This is an isolated experiment: it does not add production providers, alter the default
+understanding model, change frame sampling, or modify temporal-analysis behavior.
