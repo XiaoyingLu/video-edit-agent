@@ -41,6 +41,23 @@ stationary, interacting, mixed, unknown), camera_motion (static, pan, tilt, zoom
 tracking, handheld, mixed, unknown), and confidence (0..1)."""
 
 
+def _string_array(value: Any) -> list[str]:
+    """Normalize common small-model scalar substitutions for array fields."""
+    if isinstance(value, list):
+        return [item for item in value if isinstance(item, str)]
+    if isinstance(value, str) and value.strip().lower() not in {"", "unknown", "none", "n/a"}:
+        return [value.strip()]
+    return []
+
+
+def _normalize_frame_arrays(content: str) -> str:
+    """Repair scalar array fields without weakening observation validation."""
+    data = _json_object(content, label="frame analysis")
+    for field in ("objects", "activities"):
+        data[field] = _string_array(data.get(field))
+    return json.dumps(data)
+
+
 def _json_object(text: str, *, label: str) -> dict[str, Any]:
     """Parse model JSON, tolerating a surrounding Markdown fence or short preamble."""
     candidate = text.strip()
@@ -134,7 +151,7 @@ class SmolVLM2MLXAnalyzer:
             raise VisionModelError(f"Frame does not exist: {frame_path}")
         content = self._generate(_FRAME_PROMPT, [frame_path])
         try:
-            return _parse_observation(content, frame_path)
+            return _parse_observation(_normalize_frame_arrays(content), frame_path)
         except VisionModelError as first_error:
             retry_prompt = (
                 f"{_FRAME_PROMPT}\nIMPORTANT: Your previous response was incomplete or "
@@ -146,7 +163,7 @@ class SmolVLM2MLXAnalyzer:
                 retry_prompt, [frame_path], max_tokens=max(self.max_tokens * 2, 2048)
             )
             try:
-                return _parse_observation(retry_content, frame_path)
+                return _parse_observation(_normalize_frame_arrays(retry_content), frame_path)
             except VisionModelError as retry_error:
                 raise VisionModelError(
                     f"SmolVLM2 returned invalid frame output after retry for {frame_path}. "
@@ -167,6 +184,7 @@ class SmolVLM2MLXAnalyzer:
         content = self._generate(prompt, paths)
         try:
             dynamics = _json_object(content, label="temporal analysis")
+            dynamics["action_progression"] = _string_array(dynamics.get("action_progression"))
             return SceneDynamics.model_validate(dynamics).model_dump()
         except Exception as first_error:
             retry_prompt = (
@@ -178,6 +196,9 @@ class SmolVLM2MLXAnalyzer:
             )
             try:
                 dynamics = _json_object(retry_content, label="temporal analysis")
+                dynamics["action_progression"] = _string_array(
+                    dynamics.get("action_progression")
+                )
                 return SceneDynamics.model_validate(dynamics).model_dump()
             except Exception as retry_error:
                 raise VisionModelError(
