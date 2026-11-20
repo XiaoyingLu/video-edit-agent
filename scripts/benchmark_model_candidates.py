@@ -104,7 +104,13 @@ def run_mlx_candidate(
     load_seconds = time.perf_counter() - load_started
     _reset_mlx_peak_memory()
 
-    def infer(prompt: str, image_paths: list[Path]) -> str:
+    def infer(
+        prompt: str,
+        image_paths: list[Path],
+        model: Any = model,
+        processor: Any = processor,
+        config: Any = config,
+    ) -> str:
         formatted = apply_chat_template(
             processor, config, prompt, num_images=len(image_paths)
         )
@@ -168,8 +174,8 @@ def run_videochat3_candidate(
 ) -> dict[str, Any]:
     """Run VideoChat3 through its published Transformers/processor interface."""
     import torch
-    from transformers import AutoModelForCausalLM, AutoProcessor
     from qwen_vl_utils import process_vision_info
+    from transformers import AutoModelForCausalLM, AutoProcessor
 
     if device == "mps" and not torch.backends.mps.is_available():
         raise RuntimeError("PyTorch MPS is not available on this machine.")
@@ -186,7 +192,12 @@ def run_videochat3_candidate(
     processor = AutoProcessor.from_pretrained(model_id, trust_remote_code=True)
     load_seconds = time.perf_counter() - load_started
 
-    def infer(prompt: str, image_paths: list[Path]) -> str:
+    def infer(
+        prompt: str,
+        image_paths: list[Path],
+        model: Any = model,
+        processor: Any = processor,
+    ) -> str:
         content = [
             {"type": "image", "image": str(path)} for path in image_paths
         ]
@@ -203,7 +214,7 @@ def run_videochat3_candidate(
         )
         video_metadata = None
         if videos is not None:
-            videos, video_metadata = zip(*videos)
+            videos, video_metadata = zip(*videos, strict=True)
             videos, video_metadata = list(videos), list(video_metadata)
         inputs = processor(
             text=text,
@@ -222,7 +233,7 @@ def run_videochat3_candidate(
             )
         trimmed = [
             output_ids[len(input_ids) :]
-            for input_ids, output_ids in zip(inputs.input_ids, generated)
+            for input_ids, output_ids in zip(inputs.input_ids, generated, strict=True)
         ]
         return processor.tokenizer.batch_decode(
             trimmed,
