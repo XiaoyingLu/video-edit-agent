@@ -263,6 +263,8 @@ def run_smol_baseline(model_id: str, frames: list[Path]) -> dict[str, Any]:
     """Run the merged production SmolVLM2 analyzer as the baseline."""
     analyzer = SmolVLM2MLXAnalyzer(model=model_id)
     load_started = time.perf_counter()
+    analyzer._load()
+    load_seconds = time.perf_counter() - load_started
     frame_results = []
     frame_durations = []
     try:
@@ -282,7 +284,7 @@ def run_smol_baseline(model_id: str, frames: list[Path]) -> dict[str, Any]:
             "provider": "smolvlm2",
             "model": model_id,
             "device": "mlx-metal",
-            "model_load_seconds": round(time.perf_counter() - load_started, 3),
+            "model_load_seconds": round(load_seconds, 3),
             "frame_durations_seconds": [round(value, 3) for value in frame_durations],
             "frame_total_seconds": round(sum(frame_durations), 3),
             "frame_mean_seconds": round(statistics.mean(frame_durations), 3),
