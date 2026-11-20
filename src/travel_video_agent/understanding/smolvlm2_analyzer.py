@@ -52,7 +52,10 @@ def _string_array(value: Any) -> list[str]:
 
 def _normalize_frame_arrays(content: str) -> str:
     """Repair scalar array fields without weakening observation validation."""
-    data = _json_object(content, label="frame analysis")
+    try:
+        data = _json_object(content, label="frame analysis")
+    except VisionModelError:
+        return content
     for field in ("objects", "activities"):
         data[field] = _string_array(data.get(field))
     return json.dumps(data)
@@ -196,9 +199,7 @@ class SmolVLM2MLXAnalyzer:
             )
             try:
                 dynamics = _json_object(retry_content, label="temporal analysis")
-                dynamics["action_progression"] = _string_array(
-                    dynamics.get("action_progression")
-                )
+                dynamics["action_progression"] = _string_array(dynamics.get("action_progression"))
                 return SceneDynamics.model_validate(dynamics).model_dump()
             except Exception as retry_error:
                 raise VisionModelError(

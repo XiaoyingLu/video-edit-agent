@@ -108,6 +108,20 @@ def test_smolvlm2_mlx_rejects_non_json_output(monkeypatch, tmp_path):
     assert len([call for call in calls if "prompt" in call]) == 2
 
 
+def test_smolvlm2_mlx_preserves_truncated_json_diagnostics(monkeypatch, tmp_path):
+    frame = tmp_path / "frame.jpg"
+    frame.write_bytes(b"image")
+    _install_fake_mlx(monkeypatch, ['{"description": "incomplete"', ""])
+
+    with pytest.raises(VisionModelError) as error:
+        SmolVLM2MLXAnalyzer().analyze_frame(frame)
+
+    assert "First attempt: The vision model returned invalid JSON" in str(error.value)
+    assert "Response preview:" in str(error.value)
+    assert "response ending:" in str(error.value)
+    assert "Retry attempt: The vision model returned empty or non-text output" in str(error.value)
+
+
 def test_smolvlm2_mlx_reports_missing_optional_dependency(monkeypatch, tmp_path):
     frame = tmp_path / "frame.jpg"
     frame.write_bytes(b"image")
@@ -139,7 +153,6 @@ def test_smolvlm2_mlx_retries_incomplete_frame_json(monkeypatch, tmp_path):
     assert len([call for call in calls if "prompt" in call]) == 2
     assert calls[1]["max_tokens"] == 1024
     assert calls[-1]["max_tokens"] >= 2048
-
 
 
 def test_smolvlm2_mlx_normalizes_scalar_frame_arrays(monkeypatch, tmp_path):
