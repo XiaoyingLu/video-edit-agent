@@ -98,7 +98,7 @@ def test_smolvlm2_mlx_rejects_non_json_output(monkeypatch, tmp_path):
     frame.write_bytes(b"image")
     _install_fake_mlx(monkeypatch, ["I cannot analyze this image."])
 
-    with pytest.raises(VisionModelError, match="no JSON object"):
+    with pytest.raises(VisionModelError, match="invalid JSON"):
         SmolVLM2MLXAnalyzer().analyze_frame(frame)
 
 
