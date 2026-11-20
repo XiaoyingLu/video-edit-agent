@@ -163,7 +163,7 @@ class SmolVLM2MLXAnalyzer:
                 "Use short values, obey all array limits, and close every bracket."
             )
             retry_content = self._generate(
-                retry_prompt, paths, max_tokens=max(self.max_tokens * 2, 1024)
+                retry_prompt, paths, max_tokens=max(self.max_tokens * 2, 2048)
             )
             try:
                 dynamics = _json_object(retry_content, label="temporal analysis")
