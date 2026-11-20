@@ -8,16 +8,27 @@ from typing import Any
 from .schemas import SceneDynamics
 from .visual_analyzer import VisionModelError, _parse_observation
 
-_FRAME_PROMPT = """Analyze this image as a travel-film editor. Return exactly one compact JSON object.
-Use exactly these keys and no others:
-{"description":"one short factual sentence","objects":["up to 5 important visible things"],"activities":["up to 2 visible actions"],"confidence":0.0,"shot_scale":"wide","camera_angle":"eye_level","composition":"unknown","lighting":"daylight","mood":"unknown","visual_role":"unknown","setting":"broad setting","primary_subject":"main visible subject"}
-Allowed shot_scale: extreme_wide, wide, medium, close_up, extreme_close_up, aerial, unknown.
-Allowed camera_angle: eye_level, low_angle, high_angle, birds_eye, worms_eye, unknown.
-Allowed composition: centered, rule_of_thirds, leading_lines, symmetrical, layered_depth, negative_space, unknown.
-Allowed lighting: golden_hour, blue_hour, daylight, overcast, low_light, artificial, backlit, mixed, unknown.
-Allowed mood: serene, energetic, dramatic, romantic, mysterious, joyful, contemplative, tense, unknown.
-Allowed visual_role: establishing, action, detail, reaction, transition, portrait, scenic_breath, unknown.
-Use short values. Describe visible evidence only; never guess a precise location, identity, event, or camera movement. Use unknown when uncertain. Output valid JSON only, on one line. No Markdown or commentary."""
+_FRAME_PROMPT = (
+    "Analyze this image as a travel-film editor. Return exactly one compact JSON object.\n"
+    "Use exactly these keys and no others:\n"
+    '{"description":"one short factual sentence","objects":["up to 5 important visible things"],'
+    '"activities":["up to 2 visible actions"],"confidence":0.0,"shot_scale":"wide",'
+    '"camera_angle":"eye_level","composition":"unknown","lighting":"daylight","mood":"unknown",'
+    '"visual_role":"unknown","setting":"broad setting","primary_subject":"main visible subject"}\n'
+    "Allowed shot_scale: extreme_wide, wide, medium, close_up, extreme_close_up, aerial, unknown.\n"
+    "Allowed camera_angle: eye_level, low_angle, high_angle, birds_eye, worms_eye, unknown.\n"
+    "Allowed composition: centered, rule_of_thirds, leading_lines, symmetrical, layered_depth, "
+    "negative_space, unknown.\n"
+    "Allowed lighting: golden_hour, blue_hour, daylight, overcast, low_light, artificial, "
+    "backlit, mixed, unknown.\n"
+    "Allowed mood: serene, energetic, dramatic, romantic, mysterious, joyful, contemplative, "
+    "tense, unknown.\n"
+    "Allowed visual_role: establishing, action, detail, reaction, transition, portrait, "
+    "scenic_breath, unknown.\n"
+    "Use short values. Describe visible evidence only; never guess a precise location, identity, "
+    "event, or camera movement. Use unknown when uncertain. Output valid JSON only, on one line. "
+    "No Markdown or commentary."
+)
 
 _TEMPORAL_PROMPT = """Analyze these ordered frames from one continuous travel-video scene.
 The frames are supplied in chronological order. Describe only changes supported by

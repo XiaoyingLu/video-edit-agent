@@ -101,7 +101,10 @@ def test_smolvlm2_mlx_rejects_non_json_output(monkeypatch, tmp_path):
     with pytest.raises(VisionModelError, match="invalid JSON") as error:
         SmolVLM2MLXAnalyzer().analyze_frame(frame)
 
-    assert isinstance(error.value.__cause__, json.JSONDecodeError)
+    assert "First attempt: The vision model returned invalid JSON" in str(error.value)
+    assert "Retry attempt: The vision model returned empty or non-text output" in str(error.value)
+    assert isinstance(error.value.__cause__, VisionModelError)
+    assert "empty or non-text output" in str(error.value.__cause__)
     assert len([call for call in calls if "prompt" in call]) == 2
 
 
