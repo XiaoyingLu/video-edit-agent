@@ -139,3 +139,39 @@ def test_smolvlm2_mlx_retries_incomplete_frame_json(monkeypatch, tmp_path):
     assert len([call for call in calls if "prompt" in call]) == 2
     assert calls[1]["max_tokens"] == 1024
     assert calls[-1]["max_tokens"] >= 2048
+
+
+
+def test_smolvlm2_mlx_normalizes_scalar_frame_arrays(monkeypatch, tmp_path):
+    frame = tmp_path / "frame.jpg"
+    frame.write_bytes(b"image")
+    observation = _observation()
+    observation["objects"] = "unknown"
+    observation["activities"] = "walking"
+    _install_fake_mlx(monkeypatch, [json.dumps(observation)])
+
+    result = SmolVLM2MLXAnalyzer().analyze_frame(frame)
+
+    assert result["objects"] == []
+    assert result["activities"] == ["walking"]
+
+
+def test_smolvlm2_mlx_normalizes_scalar_temporal_progression(monkeypatch, tmp_path):
+    frames = []
+    for index in range(2):
+        frame = tmp_path / f"frame-{index}.jpg"
+        frame.write_bytes(b"image")
+        frames.append((float(index), frame))
+    temporal = {
+        "temporal_summary": "A parade moves through the street.",
+        "action_progression": "unknown",
+        "subject_motion": "mixed",
+        "camera_motion": "unknown",
+        "confidence": 0.7,
+    }
+    _install_fake_mlx(monkeypatch, [json.dumps(temporal)])
+
+    result = SmolVLM2MLXAnalyzer().analyze_scene(frames)
+
+    assert result["action_progression"] == []
+    assert result["subject_motion"] == "mixed"
