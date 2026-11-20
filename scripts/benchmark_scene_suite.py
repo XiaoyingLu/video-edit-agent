@@ -85,6 +85,7 @@ def validate_frame_output(raw: str | dict[str, Any], frame: dict[str, Any]) -> d
     payload["frame_path"] = str(frame["path"])
     normalized = _parse_observation(json.dumps(payload), frame["path"])
     normalized["timestamp_seconds"] = frame["timestamp_seconds"]
+    normalized["frame_path"] = str(frame["path"])
     return FrameObservation.model_validate(normalized).model_dump()
 
 
