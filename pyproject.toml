@@ -22,6 +22,9 @@ dependencies = [
 transcription = [
   "faster-whisper>=1.1,<2",
 ]
+mlx = [
+  "mlx-vlm>=0.1.0",
+]
 dev = [
   "pytest>=8,<9",
   "pytest-cov>=5,<7",

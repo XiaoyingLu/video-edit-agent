@@ -19,7 +19,7 @@ A local-first Python CLI for editing personal travel footage. Media stays on you
 The `create-plan` command generates a creative brief, narrative treatment, and structured storyboard using a dedicated lightweight text model. By default it uses `qwen2.5:1.5b`, independently of the multimodal vision model configured by `OLLAMA_MODEL`:
 
 ```bash
-docker compose run --rm video-agent create-plan ./travel-test \
+docker compose run --rm video-agent create-plan ./travel-test \\
   --prompt "Create a 90-second cinematic Banff travel film focused on mountain scenery and memorable moments"
 ```
 
@@ -46,6 +46,46 @@ The `understand` command analyzes representative frames with the local Ollama vi
 Understanding is resumable. After each successful frame-analysis request (and after each scene's temporal analysis), progress is atomically saved to `.video-agent/understanding-checkpoint.json`. Rerunning `understand` automatically reuses compatible frame observations and temporal results, so an interruption does not require repeating completed vision work. Extracted frames are also reused when their recorded sample timestamps still match the current sampling settings. The checkpoint is tied to the source-video size/modified time, vision model, and samples-per-scene setting; changing any of these starts a fresh run. Use `understand ./travel-test --no-resume` to deliberately discard saved progress and start over. The checkpoint is removed after the final `understanding.json` has been written successfully.
 
 These are model-assisted visual classifications, not ground truth. The prompt explicitly avoids guessing precise locations or inferring camera movement from a still frame; uncertain classifications are recorded as `unknown`. New fields have defaults so older understanding artifacts remain readable. The attributes are intended to improve later sequence planning and human review; they do not automatically change clip selection or rendering in this step.
+
+### Experimental SmolVLM2 backend (Apple Silicon)
+
+The default `understand` backend remains Ollama. An experimental SmolVLM2 adapter can run
+through MLX-VLM with native Apple Silicon acceleration. MLX must run in a native macOS Python
+process; it cannot use Apple's Metal GPU from the Linux containers managed by Docker Desktop.
+
+Install the optional dependency and the project in a native macOS environment:
+
+```bash
+python3 -m venv .venv-mlx
+source .venv-mlx/bin/activate
+python -m pip install -e ".[mlx,dev]"
+```
+
+Run understanding natively (FFmpeg and the project's other system dependencies must be
+available on the host):
+
+```bash
+VISION_PROVIDER=mlx MLX_VISION_MODEL=mlx-community/SmolVLM2-2.2B-Instruct-mlx \
+  video-agent understand ./travel-test --provider mlx
+```
+
+You can override the model with `--model`. The default Ollama provider and Docker Compose
+workflow are unchanged. Check the selected MLX model repository and installed mlx-vlm release
+for compatibility; model identifiers are configurable because community conversions can vary.
+
+To compare both backends on the exact same extracted representative frames:
+
+```bash
+python scripts/benchmark_vision.py frame-1.jpg frame-2.jpg frame-3.jpg \
+  --ollama-model qwen2.5vl:3b \
+  --mlx-model mlx-community/SmolVLM2-2.2B-Instruct-mlx \
+  --output .video-agent/vision-benchmark.json
+```
+
+The benchmark records per-frame and temporal-analysis latency plus normalized observations for human quality review.
+It does not claim semantic equivalence or automatically select a winner. Run it on a small,
+representative set first. The MLX adapter also attempts multi-image temporal analysis; verify
+that your installed model conversion supports multiple images before using it for full projects.
 
 ## Cinematic sequencing and pacing
 
@@ -103,7 +143,7 @@ Analyze an explicit soundtrack independently of the video clips:
 
 ```bash
 docker compose run --rm video-agent analyze-music ./travel-test --music ./travel-test/music/travel-score.mp3
-docker compose run --rm video-agent create-plan ./travel-test \
+docker compose run --rm video-agent create-plan ./travel-test \\
   --prompt "Create a 90-second cinematic mountain film" \
   --music-analysis ./travel-test/.video-agent/music-analysis.json
 ```
@@ -806,7 +846,7 @@ The resulting plan remains a storyboard proposal: candidate source scenes are ca
 When creating a creative video plan, optionally pass the selected soundtrack's current `.video-agent/music-analysis.json` artifact:
 
 ```bash
-docker compose run --rm video-agent create-plan ./travel-test \
+docker compose run --rm video-agent create-plan ./travel-test \\
   --prompt "Create a cinematic travel film" \
   --music-analysis ./.video-agent/music-analysis.json
 ```
