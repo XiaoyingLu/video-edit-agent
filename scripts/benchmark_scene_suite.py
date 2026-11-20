@@ -26,8 +26,8 @@ from travel_video_agent.understanding.schemas import FrameObservation, SceneDyna
 from travel_video_agent.understanding.smolvlm2_analyzer import (
     _FRAME_PROMPT,
     _TEMPORAL_PROMPT,
-    _json_object,
     SmolVLM2MLXAnalyzer,
+    _json_object,
 )
 from travel_video_agent.understanding.visual_analyzer import _parse_observation
 
@@ -180,10 +180,10 @@ def run_smol_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any
 
 
 def run_qwen_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any]:
+    import mlx.core as mx
     from mlx_vlm import generate, load
     from mlx_vlm.prompt_utils import apply_chat_template
     from mlx_vlm.utils import load_config
-    import mlx.core as mx
 
     load_started = time.perf_counter()
     model, processor = load(model_id)
@@ -191,7 +191,13 @@ def run_qwen_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any
     load_seconds = time.perf_counter() - load_started
     mx.reset_peak_memory()
 
-    def infer(prompt: str, paths: list[Path]) -> str:
+    def infer(
+        prompt: str,
+        paths: list[Path],
+        model: Any = model,
+        processor: Any = processor,
+        config: Any = config,
+    ) -> str:
         formatted = apply_chat_template(processor, config, prompt, num_images=len(paths))
         result = generate(model, processor, formatted, [str(p) for p in paths],
                           max_tokens=1024, temp=0.0)
@@ -278,9 +284,14 @@ def _suite_result(provider: str, model_id: str, load_seconds: float,
         "frame_latency": latency_summary(frame_latencies),
         "temporal_latency": latency_summary(temporal_latencies),
         "frame_schema_valid_count": sum(frame_valid),
-        "frame_schema_valid_rate": round(sum(frame_valid) / len(frame_valid), 4) if frame_valid else 0,
+        "frame_schema_valid_rate": (
+            round(sum(frame_valid) / len(frame_valid), 4) if frame_valid else 0
+        ),
         "temporal_schema_valid_count": sum(temporal_valid),
-        "temporal_schema_valid_rate": round(sum(temporal_valid) / len(temporal_valid), 4) if temporal_valid else 0,
+        "temporal_schema_valid_rate": (
+            round(sum(temporal_valid) / len(temporal_valid), 4)
+            if temporal_valid else 0
+        ),
         "scenes": scenes,
     }
 
@@ -292,7 +303,11 @@ def main() -> None:
                         default=["smolvlm2", "qwen3-vl"])
     parser.add_argument("--smol-model", default=DEFAULT_SMOL_MODEL)
     parser.add_argument("--qwen-model", default=DEFAULT_QWEN_MODEL)
-    parser.add_argument("--output", type=Path, default=Path(".video-agent/scene-suite-benchmark.json"))
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path(".video-agent/scene-suite-benchmark.json"),
+    )
     args = parser.parse_args()
     scenes = load_manifest(args.manifest.expanduser().resolve())
     results: dict[str, Any] = {
@@ -302,9 +317,18 @@ def main() -> None:
         "scene_count": len(scenes),
         "notes": [
             "Each candidate loads once and stays resident for the complete scene suite.",
-            "Schema validity uses the production FrameObservation and SceneDynamics Pydantic models.",
-            "Schema validity does not establish semantic accuracy; review raw scene outputs and annotations.",
-            "Expected events and review notes are human-review aids, not automatically scored ground truth.",
+            (
+                "Schema validity uses the production FrameObservation and "
+                "SceneDynamics Pydantic models."
+            ),
+            (
+                "Schema validity does not establish semantic accuracy; "
+                "review raw scene outputs and annotations."
+            ),
+            (
+                "Expected events and review notes are human-review aids, "
+                "not automatically scored ground truth."
+            ),
             "Memory is backend-reported MLX allocation, not total macOS unified-memory pressure.",
         ],
         "runs": [],
