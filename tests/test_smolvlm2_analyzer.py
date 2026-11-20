@@ -134,4 +134,5 @@ def test_smolvlm2_mlx_retries_incomplete_frame_json(monkeypatch, tmp_path):
 
     assert result["description"] == _observation()["description"]
     assert len([call for call in calls if "prompt" in call]) == 2
-    assert calls[-1]["max_tokens"] >= 1024
+    assert calls[1]["max_tokens"] == 1024
+    assert calls[-1]["max_tokens"] >= 2048
