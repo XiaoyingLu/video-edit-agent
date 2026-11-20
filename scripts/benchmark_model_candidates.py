@@ -56,12 +56,22 @@ def _is_json_object(value: Any) -> bool:
         return False
 
 
+def _reset_mlx_peak_memory() -> None:
+    try:
+        import mlx.core as mx
+
+        mx.reset_peak_memory()
+    except (ImportError, AttributeError):
+        pass
+
+
 def _mlx_memory_mb() -> dict[str, float]:
     try:
         import mlx.core as mx
 
         return {
             "active_mb": round(mx.get_active_memory() / 1024**2, 1),
+            "cache_mb": round(mx.get_cache_memory() / 1024**2, 1),
             "peak_mb": round(mx.get_peak_memory() / 1024**2, 1),
         }
     except (ImportError, AttributeError):
@@ -92,6 +102,7 @@ def run_mlx_candidate(
     model, processor = load(model_id)
     config = load_config(model_id)
     load_seconds = time.perf_counter() - load_started
+    _reset_mlx_peak_memory()
 
     def infer(prompt: str, image_paths: list[Path]) -> str:
         formatted = apply_chat_template(
@@ -262,12 +273,13 @@ def run_videochat3_candidate(
 def run_smol_baseline(model_id: str, frames: list[Path]) -> dict[str, Any]:
     """Run the merged production SmolVLM2 analyzer as the baseline."""
     analyzer = SmolVLM2MLXAnalyzer(model=model_id)
-    load_started = time.perf_counter()
-    analyzer._load()
-    load_seconds = time.perf_counter() - load_started
     frame_results = []
     frame_durations = []
     try:
+        load_started = time.perf_counter()
+        analyzer._load()
+        load_seconds = time.perf_counter() - load_started
+        _reset_mlx_peak_memory()
         for frame in frames:
             started = time.perf_counter()
             observation = analyzer.analyze_frame(frame)
