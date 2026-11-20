@@ -27,7 +27,6 @@ from travel_video_agent.understanding.smolvlm2_analyzer import (
     _FRAME_PROMPT,
     _TEMPORAL_PROMPT,
     _json_object,
-    _normalize_frame_arrays,
     SmolVLM2MLXAnalyzer,
 )
 from travel_video_agent.understanding.visual_analyzer import _parse_observation
@@ -132,17 +131,17 @@ def run_smol_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any
             scene_started = time.perf_counter()
             for frame in scene["frames"]:
                 started = time.perf_counter()
-                raw = analyzer._generate(_FRAME_PROMPT, [frame["path"]])
-                elapsed = time.perf_counter() - started
-                frame_latencies.append(elapsed)
                 try:
-                    parsed = validate_frame_output(
-                        _normalize_frame_arrays(raw), frame
-                    )
+                    observation = analyzer.analyze_frame(frame["path"])
+                    observation["timestamp_seconds"] = frame["timestamp_seconds"]
+                    observation["frame_path"] = str(frame["path"])
+                    parsed = FrameObservation.model_validate(observation).model_dump()
                     validation = {"valid": True, "errors": []}
                 except Exception as exc:
-                    parsed = {"raw": raw}
+                    parsed = {"error": str(exc)}
                     validation = {"valid": False, "errors": [str(exc)]}
+                elapsed = time.perf_counter() - started
+                frame_latencies.append(elapsed)
                 frame_results.append({
                     "frame": str(frame["path"]),
                     "timestamp_seconds": frame["timestamp_seconds"],
@@ -151,19 +150,15 @@ def run_smol_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any
                     "observation": parsed,
                 })
             temporal_started = time.perf_counter()
-            raw_temporal = analyzer._generate(
-                f"{_TEMPORAL_PROMPT}\nFrame timestamps: "
-                + ", ".join(f'{f["timestamp_seconds"]:.2f}s' for f in scene["frames"])
-                + ".",
-                [f["path"] for f in scene["frames"]],
-            )
+            temporal = analyzer.analyze_scene([
+                (frame["timestamp_seconds"], frame["path"]) for frame in scene["frames"]
+            ])
             temporal_elapsed = time.perf_counter() - temporal_started
             temporal_latencies.append(temporal_elapsed)
             try:
-                temporal = validate_temporal_output(raw_temporal)
+                temporal = validate_temporal_output(temporal)
                 temporal_validation = {"valid": True, "errors": []}
             except Exception as exc:
-                temporal = {"raw": raw_temporal}
                 temporal_validation = {"valid": False, "errors": [str(exc)]}
             scene_results.append({
                 "scene_id": scene["scene_id"],
