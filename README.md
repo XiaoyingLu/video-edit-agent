@@ -865,8 +865,12 @@ These are editorial suggestions, not edit instructions: they never change shot d
 
 ### Experimental model-candidate benchmark
 
-After installing the optional MLX dependencies in native macOS Python, compare the current
+Install the optional MLX dependency in native macOS Python, then compare the current
 SmolVLM2 baseline with Qwen3-VL 4B using the same ordered frame images:
+
+```bash
+python -m pip install -e ".[mlx]"
+```
 
 ```bash
 python scripts/benchmark_model_candidates.py frame-1.jpg frame-2.jpg frame-3.jpg \
@@ -887,8 +891,14 @@ python scripts/benchmark_model_candidates.py frame-1.jpg frame-2.jpg frame-3.jpg
   --providers videochat3 --videochat3-device mps
 ```
 
-VideoChat3 uses its published Transformers interface and requires `torch`,
-`transformers`, `accelerate`, and `qwen-vl-utils`. Its published checkpoint is about
+VideoChat3 uses its published Transformers interface. Install its additional dependencies
+in the same environment (install a PyTorch build compatible with your macOS version separately):
+
+```bash
+python -m pip install transformers accelerate qwen-vl-utils
+```
+
+Its published checkpoint is about
 9 GB on disk; loading it on a 16 GB unified-memory Mac may cause memory pressure or fail.
 MPS compatibility is experimental and is not claimed by the upstream project. Use
 `--videochat3-device cpu` only as a compatibility fallback, not as a performance comparison.
