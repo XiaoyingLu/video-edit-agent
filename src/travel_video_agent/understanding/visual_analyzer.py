@@ -157,9 +157,11 @@ def _parse_observation(content: Any, frame_path: Path) -> dict[str, Any]:
         observation = json.loads(text)
     except json.JSONDecodeError as exc:
         preview = " ".join(content.split())[:240]
+        ending = " ".join(content.split())[-240:]
         raise VisionModelError(
             f"The vision model returned invalid JSON for {frame_path} "
-            f"(line {exc.lineno}, column {exc.colno}). Response preview: {preview!r}"
+            f"({exc.msg}, line {exc.lineno}, column {exc.colno}). "
+            f"Response preview: {preview!r}; response ending: {ending!r}"
         ) from exc
 
     if not isinstance(observation, dict):
