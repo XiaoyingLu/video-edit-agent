@@ -91,9 +91,7 @@ class SmolVLM2MLXAnalyzer:
                 f"Could not load MLX vision model '{self.model_id}': {exc}"
             ) from exc
 
-    def _generate(
-        self, prompt: str, images: list[Path], *, max_tokens: int | None = None
-    ) -> str:
+    def _generate(self, prompt: str, images: list[Path], *, max_tokens: int | None = None) -> str:
         self._load()
         try:
             from mlx_vlm import generate
@@ -143,7 +141,7 @@ class SmolVLM2MLXAnalyzer:
             try:
                 return _parse_observation(retry_content, frame_path)
             except VisionModelError:
-                raise first_error
+                raise first_error from first_error.__cause__
 
     def analyze_scene(self, frames: list[tuple[float, Path]]) -> dict[str, Any]:
         """Analyze ordered scene frames together to infer bounded temporal dynamics."""

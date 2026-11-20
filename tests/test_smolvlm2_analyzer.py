@@ -96,10 +96,13 @@ def test_smolvlm2_mlx_analyzes_ordered_frames_for_temporal_dynamics(monkeypatch,
 def test_smolvlm2_mlx_rejects_non_json_output(monkeypatch, tmp_path):
     frame = tmp_path / "frame.jpg"
     frame.write_bytes(b"image")
-    _install_fake_mlx(monkeypatch, ["I cannot analyze this image."])
+    calls = _install_fake_mlx(monkeypatch, ["I cannot analyze this image.", ""])
 
-    with pytest.raises(VisionModelError, match="invalid JSON"):
+    with pytest.raises(VisionModelError, match="invalid JSON") as error:
         SmolVLM2MLXAnalyzer().analyze_frame(frame)
+
+    assert isinstance(error.value.__cause__, json.JSONDecodeError)
+    assert len([call for call in calls if "prompt" in call]) == 2
 
 
 def test_smolvlm2_mlx_reports_missing_optional_dependency(monkeypatch, tmp_path):
