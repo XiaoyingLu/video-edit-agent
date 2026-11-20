@@ -64,7 +64,7 @@ class SmolVLM2MLXAnalyzer:
         self,
         model: str = "mlx-community/SmolVLM2-2.2B-Instruct-mlx",
         *,
-        max_tokens: int = 384,
+        max_tokens: int = 768,
     ) -> None:
         self.model_id = model
         self.max_tokens = max_tokens
@@ -91,7 +91,9 @@ class SmolVLM2MLXAnalyzer:
                 f"Could not load MLX vision model '{self.model_id}': {exc}"
             ) from exc
 
-    def _generate(self, prompt: str, images: list[Path]) -> str:
+    def _generate(
+        self, prompt: str, images: list[Path], *, max_tokens: int | None = None
+    ) -> str:
         self._load()
         try:
             from mlx_vlm import generate
@@ -106,7 +108,7 @@ class SmolVLM2MLXAnalyzer:
                 self._processor,
                 formatted_prompt,
                 image_input,
-                max_tokens=self.max_tokens,
+                max_tokens=max_tokens or self.max_tokens,
                 temp=0.0,
             )
         except Exception as exc:
@@ -126,7 +128,22 @@ class SmolVLM2MLXAnalyzer:
         if not frame_path.is_file():
             raise VisionModelError(f"Frame does not exist: {frame_path}")
         content = self._generate(_FRAME_PROMPT, [frame_path])
-        return _parse_observation(content, frame_path)
+        try:
+            return _parse_observation(content, frame_path)
+        except VisionModelError as first_error:
+            retry_prompt = (
+                f"{_FRAME_PROMPT}\nIMPORTANT: Your previous response was incomplete or "
+                "invalid. Return one complete, syntactically valid JSON object. Keep arrays "
+                "within the stated limits, use short values, and close every bracket. "
+                "Do not add any text before or after the JSON."
+            )
+            retry_content = self._generate(
+                retry_prompt, [frame_path], max_tokens=max(self.max_tokens * 2, 1024)
+            )
+            try:
+                return _parse_observation(retry_content, frame_path)
+            except VisionModelError:
+                raise first_error
 
     def analyze_scene(self, frames: list[tuple[float, Path]]) -> dict[str, Any]:
         """Analyze ordered scene frames together to infer bounded temporal dynamics."""
@@ -139,11 +156,25 @@ class SmolVLM2MLXAnalyzer:
         paths = [path for _, path in selected]
         timestamps = ", ".join(f"{timestamp:.2f}s" for timestamp, _ in selected)
         prompt = f"{_TEMPORAL_PROMPT}\nFrame timestamps: {timestamps}."
-        dynamics = _json_object(self._generate(prompt, paths), label="temporal analysis")
+        content = self._generate(prompt, paths)
         try:
+            dynamics = _json_object(content, label="temporal analysis")
             return SceneDynamics.model_validate(dynamics).model_dump()
-        except Exception as exc:
-            raise VisionModelError(f"SmolVLM2 returned invalid temporal fields: {exc}") from exc
+        except Exception as first_error:
+            retry_prompt = (
+                f"{prompt}\nIMPORTANT: Return a complete, valid JSON object only. "
+                "Use short values, obey all array limits, and close every bracket."
+            )
+            retry_content = self._generate(
+                retry_prompt, paths, max_tokens=max(self.max_tokens * 2, 1024)
+            )
+            try:
+                dynamics = _json_object(retry_content, label="temporal analysis")
+                return SceneDynamics.model_validate(dynamics).model_dump()
+            except Exception:
+                raise VisionModelError(
+                    f"SmolVLM2 returned invalid temporal output after retry: {first_error}"
+                ) from first_error
 
     def unload_model(self) -> bool:
         """Release model references and clear the MLX Metal cache."""
@@ -154,7 +185,7 @@ class SmolVLM2MLXAnalyzer:
         try:
             import mlx.core as mx
 
-            mx.metal.clear_cache()
+            mx.clear_cache()
         except (ImportError, AttributeError):
             pass
         return True
