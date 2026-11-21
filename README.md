@@ -37,16 +37,14 @@ For Apple Silicon MLX vision, install `.[mlx,dev]` in a native macOS environment
 
 ## Command overview
 
-| Area | Commands |
-|---|---|
-| Ingest & understand | `analyze`, `understand`, `transcribe`, `detect-silence` |
-| Story & planning | `find-highlights`, `propose-story`, `select-story`, `create-plan`, `suggest-footage`, `review-storyboard` |
-| Editing & timeline | `propose-edits`, `review-edits`, `build-timeline`, `plan`, `draft-edit`, `optimize-timeline`, `review-timeline`, `revise-timeline` |
-| Rendering & review | `render`, `render-draft`, `critique-draft`, `compare-drafts`, `subtitles`, `init-title-overlays`, `review-title-overlays` |
-| Soundtrack & music | `suggest-soundtrack`, `search-soundtrack`, `generate-soundtrack`, `analyze-music`, `suggest-music-sync`, `review-music-sync` |
-| Project maintenance | `validate-artifacts`, `clean`, `report-revision-cycle` |
+- **Ingest & understand:** `analyze`, `understand`, `transcribe`, `detect-silence`, `propose-edits`, `review-edits`, `build-timeline`, `subtitles`
+- **Story & planning:** `find-highlights`, `create-video`, `plan`, `create-plan`, `propose-story`, `select-story`, `suggest-footage`, `approve-storyboard`, `build-storyboard-timeline`, `review-storyboard`, `review-footage`
+- **Editing & revisions:** `draft-edit`, `optimize-timeline`, `review-timeline`, `review-timeline-visual`, `apply-timeline-visual-edits`, `revise-timeline`, `review-timeline-revision`, `compare-timelines`
+- **Rendering & visual review:** `render`, `init-title-overlays`, `suggest-title-sequences`, `review-title-overlays`, `render-revision-preview`, `render-draft`, `critique-draft`, `suggest-revisions`, `review-revision-suggestions`, `compare-drafts`
+- **Soundtrack & music:** `suggest-soundtrack`, `search-soundtrack`, `generate-soundtrack`, `prepare-soundtrack-candidates`, `review-soundtrack`, `select-soundtrack`, `analyze-selected-soundtrack`, `analyze-music`, `suggest-music-sync`, `review-music-timeline`, `review-music-sync`
+- **Project maintenance:** `validate-artifacts`, `clean`, `report-revision-cycle`
 
-Run `video-agent --help` for the complete list and per-command options.
+Run `video-agent --help` for per-command options.
 
 ## Pipeline
 
@@ -63,7 +61,7 @@ flowchart LR
 ## Project layout
 
 - `src/travel_video_agent/` — Python import namespace (retained for compatibility).
-- `docs/` — architecture, model setup, feature guides, and operational notes.
+- `docs/` — architecture, model setup, feature guides, maintainer notes, and release instructions.
 - `.video-agent/` — project-local analysis, plans, review decisions, and generated outputs.
 
 The distribution and CLI are named `video-edit-agent` / `video-agent`; the Python import namespace remains `travel_video_agent` to avoid breaking existing integrations.
