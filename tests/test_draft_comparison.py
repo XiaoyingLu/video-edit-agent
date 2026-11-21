@@ -69,7 +69,7 @@ def _mock_tools(monkeypatch, before, after):
         },
     }
     monkeypatch.setattr(
-        "video_edit_agent.rendering.comparison.validate_artifact", lambda *_: False
+        "video_edit_agent.rendering.comparison.validate_artifact", lambda *_: False,
     )
     monkeypatch.setattr("video_edit_agent.rendering.comparison.shutil.which", lambda name: name)
     monkeypatch.setattr(
