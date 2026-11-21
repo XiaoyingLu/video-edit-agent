@@ -114,7 +114,9 @@ def test_qwen3_vl_retries_invalid_temporal_output(monkeypatch, tmp_path):
     calls = _install_fake_mlx(
         monkeypatch,
         [
-            json.dumps({"subject_motion": ["unclassified"], "camera_motion": "unknown"}),
+            json.dumps(
+                {"subject_motion": ["unclassified"], "camera_motion": "unknown", "confidence": 1.5}
+            ),
             json.dumps(valid),
         ],
     )
