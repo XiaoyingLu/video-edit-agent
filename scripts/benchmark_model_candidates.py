@@ -90,9 +90,7 @@ def _torch_memory_mb(torch: Any, device: str) -> dict[str, float]:
         return {}
 
 
-def run_mlx_candidate(
-    provider: str, model_id: str, frames: list[Path]
-) -> dict[str, Any]:
+def run_mlx_candidate(provider: str, model_id: str, frames: list[Path]) -> dict[str, Any]:
     """Run a MLX-VLM model using the same single-frame and ordered multi-image prompts."""
     from mlx_vlm import generate, load
     from mlx_vlm.prompt_utils import apply_chat_template
@@ -111,9 +109,7 @@ def run_mlx_candidate(
         processor: Any = processor,
         config: Any = config,
     ) -> str:
-        formatted = apply_chat_template(
-            processor, config, prompt, num_images=len(image_paths)
-        )
+        formatted = apply_chat_template(processor, config, prompt, num_images=len(image_paths))
         return _as_text(
             generate(
                 model,
@@ -169,9 +165,7 @@ def run_mlx_candidate(
             pass
 
 
-def run_videochat3_candidate(
-    model_id: str, frames: list[Path], device: str
-) -> dict[str, Any]:
+def run_videochat3_candidate(model_id: str, frames: list[Path], device: str) -> dict[str, Any]:
     """Run VideoChat3 through its published Transformers/processor interface."""
     import torch
     from qwen_vl_utils import process_vision_info
@@ -198,14 +192,10 @@ def run_videochat3_candidate(
         model: Any = model,
         processor: Any = processor,
     ) -> str:
-        content = [
-            {"type": "image", "image": str(path)} for path in image_paths
-        ]
+        content = [{"type": "image", "image": str(path)} for path in image_paths]
         content.append({"type": "text", "text": prompt})
         messages = [{"role": "user", "content": content}]
-        text = processor.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True
-        )
+        text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         images, videos, video_kwargs = process_vision_info(
             messages,
             image_patch_size=14,
@@ -228,9 +218,7 @@ def run_videochat3_candidate(
         if hasattr(model, "dtype"):
             inputs = inputs.to(model.dtype)
         with torch.inference_mode():
-            generated = model.generate(
-                **inputs, max_new_tokens=1024, do_sample=False
-            )
+            generated = model.generate(**inputs, max_new_tokens=1024, do_sample=False)
         trimmed = [
             output_ids[len(input_ids) :]
             for input_ids, output_ids in zip(inputs.input_ids, generated, strict=True)

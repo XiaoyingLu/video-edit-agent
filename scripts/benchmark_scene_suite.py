@@ -64,12 +64,14 @@ def load_manifest(path: Path) -> list[dict[str, Any]]:
                 raise ValueError(f"Frame does not exist: {frame_path}")
             previous_timestamp = timestamp
             frames.append({"path": frame_path, "timestamp_seconds": timestamp})
-        scenes.append({
-            "scene_id": scene_id,
-            "frames": frames,
-            "review_notes": str(raw.get("review_notes", "")),
-            "expected_events": raw.get("expected_events", []),
-        })
+        scenes.append(
+            {
+                "scene_id": scene_id,
+                "frames": frames,
+                "review_notes": str(raw.get("review_notes", "")),
+                "expected_events": raw.get("expected_events", []),
+            }
+        )
     if not scenes:
         raise ValueError("Manifest must contain at least one scene.")
     return scenes
@@ -97,12 +99,23 @@ def normalize_temporal_payload(
     changed_fields: list[str] = []
     allowed = {
         "subject_motion": {
-            "approaching", "receding", "crossing", "stationary",
-            "interacting", "mixed", "unknown",
+            "approaching",
+            "receding",
+            "crossing",
+            "stationary",
+            "interacting",
+            "mixed",
+            "unknown",
         },
         "camera_motion": {
-            "static", "pan", "tilt", "zoom", "tracking",
-            "handheld", "mixed", "unknown",
+            "static",
+            "pan",
+            "tilt",
+            "zoom",
+            "tracking",
+            "handheld",
+            "mixed",
+            "unknown",
         },
     }
 
@@ -144,8 +157,10 @@ def normalize_temporal_payload(
             values = {classify(item, field) for item in original}
             values.discard("unknown")
             normalized_value = (
-                next(iter(values)) if len(values) == 1
-                else "mixed" if len(values) > 1
+                next(iter(values))
+                if len(values) == 1
+                else "mixed"
+                if len(values) > 1
                 else "unknown"
             )
         else:
@@ -187,6 +202,7 @@ def latency_summary(values: list[float]) -> dict[str, float]:
 def _mlx_memory() -> dict[str, float]:
     try:
         import mlx.core as mx
+
         return {
             "active_mb": round(mx.get_active_memory() / 1024**2, 1),
             "cache_mb": round(mx.get_cache_memory() / 1024**2, 1),
@@ -221,39 +237,44 @@ def run_smol_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any
                     validation = {"valid": False, "errors": [str(exc)]}
                 elapsed = time.perf_counter() - started
                 frame_latencies.append(elapsed)
-                frame_results.append({
-                    "frame": str(frame["path"]),
-                    "timestamp_seconds": frame["timestamp_seconds"],
-                    "latency_seconds": round(elapsed, 3),
-                    "schema_validation": validation,
-                    "observation": parsed,
-                })
+                frame_results.append(
+                    {
+                        "frame": str(frame["path"]),
+                        "timestamp_seconds": frame["timestamp_seconds"],
+                        "latency_seconds": round(elapsed, 3),
+                        "schema_validation": validation,
+                        "observation": parsed,
+                    }
+                )
             temporal_started = time.perf_counter()
-            temporal = analyzer.analyze_scene([
-                (frame["timestamp_seconds"], frame["path"]) for frame in scene["frames"]
-            ])
+            temporal = analyzer.analyze_scene(
+                [(frame["timestamp_seconds"], frame["path"]) for frame in scene["frames"]]
+            )
             temporal_elapsed = time.perf_counter() - temporal_started
             temporal_latencies.append(temporal_elapsed)
             # SmolVLM2's analyzer already parses, normalizes, and validates
             # SceneDynamics internally; unlike the Qwen runner, it does not
             # expose the pre-validation raw generation.
             temporal_validation = {"valid": True, "errors": []}
-            scene_results.append({
-                "scene_id": scene["scene_id"],
-                "elapsed_seconds": round(time.perf_counter() - scene_started, 3),
-                "review_notes": scene["review_notes"],
-                "expected_events": scene["expected_events"],
-                "frames": frame_results,
-                "temporal": {
-                    "latency_seconds": round(temporal_elapsed, 3),
-                    "schema_validation": temporal_validation,
-                    "normalization_applied": [],
-                    "output": temporal,
-                },
-                "memory_after_scene": _mlx_memory(),
-            })
-        return _suite_result("smolvlm2", model_id, load_seconds, scene_results,
-                             frame_latencies, temporal_latencies)
+            scene_results.append(
+                {
+                    "scene_id": scene["scene_id"],
+                    "elapsed_seconds": round(time.perf_counter() - scene_started, 3),
+                    "review_notes": scene["review_notes"],
+                    "expected_events": scene["expected_events"],
+                    "frames": frame_results,
+                    "temporal": {
+                        "latency_seconds": round(temporal_elapsed, 3),
+                        "schema_validation": temporal_validation,
+                        "normalization_applied": [],
+                        "output": temporal,
+                    },
+                    "memory_after_scene": _mlx_memory(),
+                }
+            )
+        return _suite_result(
+            "smolvlm2", model_id, load_seconds, scene_results, frame_latencies, temporal_latencies
+        )
     finally:
         analyzer.unload_model()
 
@@ -281,8 +302,9 @@ def run_qwen_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any
         formatted = apply_chat_template(processor, config, prompt, num_images=len(paths))
         prompt_format_seconds = time.perf_counter() - prompt_started
         generate_started = time.perf_counter()
-        result = generate(model, processor, formatted, [str(p) for p in paths],
-                          max_tokens=1024, temp=0.0)
+        result = generate(
+            model, processor, formatted, [str(p) for p in paths], max_tokens=1024, temp=0.0
+        )
         generate_call_seconds = time.perf_counter() - generate_started
         if isinstance(result, str):
             output = result
@@ -290,9 +312,7 @@ def run_qwen_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any
             output = getattr(result, "text", None)
             if not isinstance(output, str):
                 raise RuntimeError(f"Unsupported MLX-VLM result: {type(result).__name__}")
-        return output, inference_timing(
-            prompt_format_seconds, generate_call_seconds, output
-        )
+        return output, inference_timing(prompt_format_seconds, generate_call_seconds, output)
 
     scene_results = []
     frame_latencies: list[float] = []
@@ -312,18 +332,20 @@ def run_qwen_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any
                 except Exception as exc:
                     parsed = {"raw": raw}
                     validation = {"valid": False, "errors": [str(exc)]}
-                frame_results.append({
-                    "frame": str(frame["path"]),
-                    "timestamp_seconds": frame["timestamp_seconds"],
-                    "latency_seconds": round(elapsed, 3),
-                    "inference_timing": inference_metrics,
-                    "schema_validation": validation,
-                    "observation": parsed,
-                })
+                frame_results.append(
+                    {
+                        "frame": str(frame["path"]),
+                        "timestamp_seconds": frame["timestamp_seconds"],
+                        "latency_seconds": round(elapsed, 3),
+                        "inference_timing": inference_metrics,
+                        "schema_validation": validation,
+                        "observation": parsed,
+                    }
+                )
             temporal_started = time.perf_counter()
             raw_temporal, temporal_inference_metrics = infer(
                 f"{_TEMPORAL_PROMPT}\nFrame timestamps: "
-                + ", ".join(f'{f["timestamp_seconds"]:.2f}s' for f in scene["frames"])
+                + ", ".join(f"{f['timestamp_seconds']:.2f}s" for f in scene["frames"])
                 + ".",
                 [f["path"] for f in scene["frames"]],
             )
@@ -336,31 +358,39 @@ def run_qwen_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any
             except Exception as exc:
                 temporal = {"raw": raw_temporal}
                 temporal_validation = {"valid": False, "errors": [str(exc)]}
-            scene_results.append({
-                "scene_id": scene["scene_id"],
-                "elapsed_seconds": round(time.perf_counter() - scene_started, 3),
-                "review_notes": scene["review_notes"],
-                "expected_events": scene["expected_events"],
-                "frames": frame_results,
-                "temporal": {
-                    "latency_seconds": round(temporal_elapsed, 3),
-                    "inference_timing": temporal_inference_metrics,
-                    "schema_validation": temporal_validation,
-                    "output": temporal,
-                },
-                "memory_after_scene": _mlx_memory(),
-            })
-        return _suite_result("qwen3-vl", model_id, load_seconds, scene_results,
-                             frame_latencies, temporal_latencies)
+            scene_results.append(
+                {
+                    "scene_id": scene["scene_id"],
+                    "elapsed_seconds": round(time.perf_counter() - scene_started, 3),
+                    "review_notes": scene["review_notes"],
+                    "expected_events": scene["expected_events"],
+                    "frames": frame_results,
+                    "temporal": {
+                        "latency_seconds": round(temporal_elapsed, 3),
+                        "inference_timing": temporal_inference_metrics,
+                        "schema_validation": temporal_validation,
+                        "output": temporal,
+                    },
+                    "memory_after_scene": _mlx_memory(),
+                }
+            )
+        return _suite_result(
+            "qwen3-vl", model_id, load_seconds, scene_results, frame_latencies, temporal_latencies
+        )
     finally:
         del model, processor, config
         gc.collect()
         mx.clear_cache()
 
 
-def _suite_result(provider: str, model_id: str, load_seconds: float,
-                  scenes: list[dict[str, Any]], frame_latencies: list[float],
-                  temporal_latencies: list[float]) -> dict[str, Any]:
+def _suite_result(
+    provider: str,
+    model_id: str,
+    load_seconds: float,
+    scenes: list[dict[str, Any]],
+    frame_latencies: list[float],
+    temporal_latencies: list[float],
+) -> dict[str, Any]:
     frame_valid = [f["schema_validation"]["valid"] for s in scenes for f in s["frames"]]
     temporal_valid = [s["temporal"]["schema_validation"]["valid"] for s in scenes]
     return {
@@ -378,8 +408,7 @@ def _suite_result(provider: str, model_id: str, load_seconds: float,
         ),
         "temporal_schema_valid_count": sum(temporal_valid),
         "temporal_schema_valid_rate": (
-            round(sum(temporal_valid) / len(temporal_valid), 4)
-            if temporal_valid else 0
+            round(sum(temporal_valid) / len(temporal_valid), 4) if temporal_valid else 0
         ),
         "scenes": scenes,
     }
@@ -388,8 +417,9 @@ def _suite_result(provider: str, model_id: str, load_seconds: float,
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("manifest", type=Path, help="JSON manifest describing multiple scenes.")
-    parser.add_argument("--providers", nargs="+", choices=("smolvlm2", "qwen3-vl"),
-                        default=["smolvlm2", "qwen3-vl"])
+    parser.add_argument(
+        "--providers", nargs="+", choices=("smolvlm2", "qwen3-vl"), default=["smolvlm2", "qwen3-vl"]
+    )
     parser.add_argument("--smol-model", default=DEFAULT_SMOL_MODEL)
     parser.add_argument("--qwen-model", default=DEFAULT_QWEN_MODEL)
     parser.add_argument(
@@ -431,8 +461,11 @@ def main() -> None:
         try:
             result = runners[provider]()
         except Exception as exc:
-            result = {"provider": provider, "status": "failed",
-                      "error": f"{type(exc).__name__}: {exc}"}
+            result = {
+                "provider": provider,
+                "status": "failed",
+                "error": f"{type(exc).__name__}: {exc}",
+            }
         results["runs"].append(result)
         print(f"{provider}: {result['status']}")
     args.output.parent.mkdir(parents=True, exist_ok=True)
