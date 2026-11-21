@@ -93,6 +93,17 @@ def validate_temporal_output(raw: str | dict[str, Any]) -> dict[str, Any]:
     return SceneDynamics.model_validate(_json_payload(raw)).model_dump()
 
 
+def inference_timing(
+    prompt_format_seconds: float, generate_call_seconds: float, output: str
+) -> dict[str, float | int]:
+    """Expose the phases measurable through MLX-VLM's high-level generate API."""
+    return {
+        "prompt_format_seconds": round(prompt_format_seconds, 4),
+        "generate_call_seconds": round(generate_call_seconds, 4),
+        "output_characters": len(output),
+    }
+
+
 def latency_summary(values: list[float]) -> dict[str, float]:
     if not values:
         return {"count": 0, "mean_seconds": 0.0, "p50_seconds": 0.0, "p95_seconds": 0.0}
@@ -147,6 +158,7 @@ def run_smol_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any
                     "frame": str(frame["path"]),
                     "timestamp_seconds": frame["timestamp_seconds"],
                     "latency_seconds": round(elapsed, 3),
+                    "inference_timing": inference_metrics,
                     "schema_validation": validation,
                     "observation": parsed,
                 })
@@ -169,6 +181,7 @@ def run_smol_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any
                 "frames": frame_results,
                 "temporal": {
                     "latency_seconds": round(temporal_elapsed, 3),
+                    "inference_timing": temporal_inference_metrics,
                     "schema_validation": temporal_validation,
                     "output": temporal,
                 },
@@ -199,15 +212,22 @@ def run_qwen_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any
         processor: Any = processor,
         config: Any = config,
     ) -> str:
+        prompt_started = time.perf_counter()
         formatted = apply_chat_template(processor, config, prompt, num_images=len(paths))
+        prompt_format_seconds = time.perf_counter() - prompt_started
+        generate_started = time.perf_counter()
         result = generate(model, processor, formatted, [str(p) for p in paths],
                           max_tokens=1024, temp=0.0)
+        generate_call_seconds = time.perf_counter() - generate_started
         if isinstance(result, str):
-            return result
-        text = getattr(result, "text", None)
-        if isinstance(text, str):
-            return text
-        raise RuntimeError(f"Unsupported MLX-VLM result: {type(result).__name__}")
+            output = result
+        else:
+            output = getattr(result, "text", None)
+            if not isinstance(output, str):
+                raise RuntimeError(f"Unsupported MLX-VLM result: {type(result).__name__}")
+        return output, inference_timing(
+            prompt_format_seconds, generate_call_seconds, output
+        )
 
     scene_results = []
     frame_latencies: list[float] = []
@@ -218,7 +238,7 @@ def run_qwen_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any
             scene_started = time.perf_counter()
             for frame in scene["frames"]:
                 started = time.perf_counter()
-                raw = infer(_FRAME_PROMPT, [frame["path"]])
+                raw, inference_metrics = infer(_FRAME_PROMPT, [frame["path"]])
                 elapsed = time.perf_counter() - started
                 frame_latencies.append(elapsed)
                 try:
@@ -235,7 +255,7 @@ def run_qwen_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any
                     "observation": parsed,
                 })
             temporal_started = time.perf_counter()
-            raw_temporal = infer(
+            raw_temporal, temporal_inference_metrics = infer(
                 f"{_TEMPORAL_PROMPT}\nFrame timestamps: "
                 + ", ".join(f'{f["timestamp_seconds"]:.2f}s' for f in scene["frames"])
                 + ".",
