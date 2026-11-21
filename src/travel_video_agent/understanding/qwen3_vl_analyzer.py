@@ -106,7 +106,7 @@ class Qwen3VLMLXAnalyzer(SmolVLM2MLXAnalyzer):
         content = self._generate(prompt, paths)
         try:
             return SceneDynamics.model_validate(_normalize_temporal_output(content)).model_dump()
-        except (ValueError, TypeError, KeyError) as first_error:
+        except (VisionModelError, ValueError, TypeError, KeyError) as first_error:
             retry_prompt = (
                 f"{prompt}\nIMPORTANT: Return one complete valid JSON object only. "
                 "subject_motion and camera_motion must each be a single allowed enum value, "
@@ -119,7 +119,7 @@ class Qwen3VLMLXAnalyzer(SmolVLM2MLXAnalyzer):
                 return SceneDynamics.model_validate(
                     _normalize_temporal_output(retry_content)
                 ).model_dump()
-            except (ValueError, TypeError, KeyError) as retry_error:
+            except (VisionModelError, ValueError, TypeError, KeyError) as retry_error:
                 raise VisionModelError(
                     "Qwen3-VL returned invalid temporal output after retry. "
                     f"First attempt: {first_error} Retry attempt: {retry_error}"
