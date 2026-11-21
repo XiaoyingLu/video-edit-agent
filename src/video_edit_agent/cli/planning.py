@@ -1295,4 +1295,3 @@ def compare_timelines(
     )
     if not comparison.changes:
         console.print("[dim]No source-interval or transition changes were found.[/dim]")
-
