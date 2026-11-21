@@ -121,7 +121,7 @@ def test_understand_create_plan_suggest_footage_smoke(tmp_path: Path, monkeypatc
                             target_duration_seconds=5,
                         )
                     ],
-                )
+                ),
             ],
         )
 
