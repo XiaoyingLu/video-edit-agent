@@ -679,4 +679,3 @@ def subtitles_command(
     console.print(
         "[yellow]Subtitle timestamps follow the concatenated, reviewed timeline.[/yellow]"
     )
-
