@@ -211,7 +211,7 @@ def run_qwen_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any
         model: Any = model,
         processor: Any = processor,
         config: Any = config,
-    ) -> str:
+    ) -> tuple[str, dict[str, float | int]]:
         prompt_started = time.perf_counter()
         formatted = apply_chat_template(processor, config, prompt, num_images=len(paths))
         prompt_format_seconds = time.perf_counter() - prompt_started
