@@ -672,4 +672,3 @@ def review_music_sync(
         "--timeline to approve it before rendering. No video was rendered and "
         "source media/original timeline were not modified.[/yellow]"
     )
-
