@@ -60,11 +60,11 @@ def test_frame_sampler_uses_jpeg_compatible_pixel_format(monkeypatch, tmp_path: 
         captured["command"] = command
         Path(command[-1]).write_bytes(b"jpeg-frame")
 
-    monkeypatch.setattr(
-        "travel_video_agent.understanding.frame_sampler.subprocess.run", fake_run
-    )
+    monkeypatch.setattr("travel_video_agent.understanding.frame_sampler.subprocess.run", fake_run)
 
-    result = extract_representative_frames(video, 0.0, 10.0, tmp_path / "frames", samples_per_scene=1)
+    result = extract_representative_frames(
+        video, 0.0, 10.0, tmp_path / "frames", samples_per_scene=1
+    )
 
     command = captured["command"]
     assert command[command.index("-pix_fmt") + 1] == "yuvj420p"
