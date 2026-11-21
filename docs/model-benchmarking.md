@@ -80,5 +80,6 @@ human-review aids; the tool does not calculate semantic accuracy automatically.
 - Repeat the suite if results vary materially. Do not reduce frame samples or disable
   temporal analysis to improve a candidate's score.
 
-This is an isolated experiment. It does not change production provider selection,
-sampling, checkpoints, or understanding behavior.
+The benchmark harness remains isolated from production provider selection. Qwen3-VL is
+separately available as an opt-in production provider; see [qwen3-vl.md](qwen3-vl.md).
+The benchmark does not change sampling, checkpoints, or understanding behavior.

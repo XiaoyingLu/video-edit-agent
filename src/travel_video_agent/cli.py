@@ -242,7 +242,7 @@ def understand(
     ] = None,
     provider: Annotated[
         str,
-        typer.Option("--provider", help="Vision backend: ollama or mlx."),
+        typer.Option("--provider", help="Vision backend: ollama, mlx (SmolVLM2), or qwen3-vl."),
     ] = os.getenv("VISION_PROVIDER", "ollama"),
     samples_per_scene: Annotated[
         int,
@@ -259,11 +259,14 @@ def understand(
 ) -> None:
     """Detect scenes, sample frames, and describe footage with a local vision model."""
     project_root = folder.expanduser().resolve()
-    selected_model = model or (
-        os.getenv("MLX_VISION_MODEL", "mlx-community/SmolVLM2-2.2B-Instruct-mlx")
-        if provider.strip().lower() == "mlx"
-        else os.getenv("OLLAMA_MODEL", "qwen2.5vl:7b")
-    )
+    selected_provider = provider.strip().lower()
+    if selected_provider == "mlx":
+        default_model = os.getenv("MLX_VISION_MODEL", "mlx-community/SmolVLM2-2.2B-Instruct-mlx")
+    elif selected_provider == "qwen3-vl":
+        default_model = os.getenv("QWEN3_VL_MODEL", "mlx-community/Qwen3-VL-4B-Instruct-4bit")
+    else:
+        default_model = os.getenv("OLLAMA_MODEL", "qwen2.5vl:7b")
+    selected_model = model or default_model
     checkpoint = project_root / ".video-agent" / "understanding-checkpoint.json"
     if checkpoint.is_file() and not no_resume:
         console.print(f"[cyan]Resuming video understanding from {checkpoint}[/cyan]")
