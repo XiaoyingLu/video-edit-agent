@@ -1,7 +1,6 @@
 """Maintenance and reporting commands."""
 
 # ruff: noqa: F403,F405
-from .common import app, console
 from .common import *  # noqa: F403
 
 
