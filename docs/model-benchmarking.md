@@ -50,8 +50,11 @@ python scripts/benchmark_scene_suite.py ./benchmark-scenes/manifest.json \
 The model is loaded once per candidate and remains resident while all scenes are
 processed. The report includes per-frame and per-scene timings, mean/p50/p95 latency,
 schema-validation rates, per-scene memory snapshots, raw model outputs, and human-review
-annotations. Failed schema validation is recorded per output instead of discarding the
-rest of the suite.
+annotations. Qwen records prompt-template formatting time separately from the high-level
+MLX-VLM generation call, plus output character count, for each frame and temporal request.
+The generation-call duration includes image preprocessing and token generation; the current
+high-level API does not expose a reliable split between those internal phases. Failed schema
+validation is recorded per output instead of discarding the rest of the suite.
 
 ## 3. Review quality separately from schema validity
 
