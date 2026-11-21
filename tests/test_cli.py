@@ -815,7 +815,7 @@ def test_suggest_soundtrack_command_writes_brief(tmp_path: Path, monkeypatch) ->
     destination = tmp_path / ".video-agent" / "soundtrack-brief.json"
     monkeypatch.setattr(
         cli.music, "create_soundtrack_brief",
-        lambda folder, *, plan_path=None, output_path=None: (expected, destination),,
+        lambda folder, *, plan_path=None, output_path=None: (expected, destination),
     )
 
     result = runner.invoke(app, ["suggest-soundtrack", str(tmp_path)])
