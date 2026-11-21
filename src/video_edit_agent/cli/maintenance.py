@@ -175,4 +175,3 @@ def report_revision_cycle(
         "[yellow]This report links evidence; it does not approve edits or modify timelines, "
         "source media, or rendered videos.[/yellow]"
     )
-
