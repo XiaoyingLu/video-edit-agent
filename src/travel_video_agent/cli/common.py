@@ -133,6 +133,8 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
+DEFAULT_VISION_PROVIDER = os.getenv("VISION_PROVIDER", "ollama")
+DEFAULT_FOOTAGE_EMBEDDING_MODEL = os.getenv("FOOTAGE_EMBEDDING_MODEL")
 _MUSIC_ANALYSIS_OPTION = typer.Option(
     None, "--music-analysis", help="Optional soundtrack energy analysis JSON path."
 )
