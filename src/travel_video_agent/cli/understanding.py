@@ -1,8 +1,8 @@
 """Analysis and ingestion commands."""
 
 # ruff: noqa: F403,F405
+from .common import _track_artifact, app, console
 from .common import *  # noqa: F403
-from .common import _MUSIC_ANALYSIS_OPTION, _track_artifact, app, console
 
 
 
@@ -94,7 +94,7 @@ def understand(
     provider: Annotated[
         str,
         typer.Option("--provider", help="Vision backend: ollama, mlx (SmolVLM2), or qwen3-vl."),
-    ] = os.getenv("VISION_PROVIDER", "ollama"),
+    ] = DEFAULT_VISION_PROVIDER,
     samples_per_scene: Annotated[
         int,
         typer.Option(
