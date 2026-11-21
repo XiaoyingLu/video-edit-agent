@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from travel_video_agent.media import discover_videos
+from video_edit_agent.media import discover_videos
 
 
 def test_discover_videos_is_recursive_and_case_insensitive(tmp_path: Path) -> None:
@@ -25,13 +25,13 @@ def test_probe_video_reads_embedded_creation_timestamp(tmp_path: Path, monkeypat
     import json
     from types import SimpleNamespace
 
-    from travel_video_agent.media import probe_video
+    from video_edit_agent.media import probe_video
 
     video = tmp_path / "clip.mp4"
     video.touch()
-    monkeypatch.setattr("travel_video_agent.media.shutil.which", lambda name: "/usr/bin/ffprobe")
+    monkeypatch.setattr("video_edit_agent.media.shutil.which", lambda name: "/usr/bin/ffprobe")
     monkeypatch.setattr(
-        "travel_video_agent.media.subprocess.run",
+        "video_edit_agent.media.subprocess.run",
         lambda *args, **kwargs: SimpleNamespace(
             stdout=json.dumps(
                 {

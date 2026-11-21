@@ -3,17 +3,17 @@ from pathlib import Path
 
 import pytest
 
-from travel_video_agent.editing.intent_schemas import EditingPlan
-from travel_video_agent.editing.planning_schemas import (
+from video_edit_agent.editing.intent_schemas import EditingPlan
+from video_edit_agent.editing.planning_schemas import (
     CreativeBrief,
     StoryTreatment,
     VideoProjectPlan,
 )
-from travel_video_agent.editing.timeline_schemas import (
+from video_edit_agent.editing.timeline_schemas import (
     DraftTimelineClip,
     ProjectDraftTimeline,
 )
-from travel_video_agent.rendering import title_overlays
+from video_edit_agent.rendering import title_overlays
 
 
 def _write_inputs(root: Path, *, approved=True, include_story=True):

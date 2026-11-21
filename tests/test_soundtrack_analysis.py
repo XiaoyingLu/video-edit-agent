@@ -4,19 +4,19 @@ from datetime import UTC, datetime
 
 import pytest
 
-from travel_video_agent.artifact_tracking import register_artifact
-from travel_video_agent.music.schemas import MusicAnalysis
-from travel_video_agent.soundtrack import analysis as soundtrack_analysis
-from travel_video_agent.soundtrack.analysis import (
+from video_edit_agent.artifact_tracking import register_artifact
+from video_edit_agent.music.schemas import MusicAnalysis
+from video_edit_agent.soundtrack import analysis as soundtrack_analysis
+from video_edit_agent.soundtrack.analysis import (
     SelectedSoundtrackAnalysisError,
     analyze_selected_soundtrack,
 )
-from travel_video_agent.soundtrack.review import (
+from video_edit_agent.soundtrack.review import (
     build_soundtrack_candidate_review,
     save_soundtrack_candidate_review,
     select_soundtrack_candidate,
 )
-from travel_video_agent.soundtrack.schemas import (
+from video_edit_agent.soundtrack.schemas import (
     SoundtrackBrief,
     SoundtrackCandidate,
     SoundtrackCandidateCollection,

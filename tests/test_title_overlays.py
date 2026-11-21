@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from travel_video_agent.rendering.shot_renderer import _build_shot_render_command
-from travel_video_agent.rendering.title_overlays import (
+from video_edit_agent.rendering.shot_renderer import _build_shot_render_command
+from video_edit_agent.rendering.title_overlays import (
     TitleOverlay,
     TitleOverlayDocument,
     review_title_overlays,

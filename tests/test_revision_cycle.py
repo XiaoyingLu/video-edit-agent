@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from travel_video_agent.cli import app
-from travel_video_agent.editing.revision_cycle import (
+from video_edit_agent.cli import app
+from video_edit_agent.editing.revision_cycle import (
     RevisionCycleError,
     build_revision_cycle_report,
     render_revision_cycle_html,
@@ -39,7 +39,7 @@ def _artifacts(root: Path) -> dict[str, Path]:
 
 def _build(root, paths, monkeypatch, timeline_review=None, *, valid_artifact=True):
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_cycle.validate_artifact", lambda *_: valid_artifact
+        "video_edit_agent.editing.revision_cycle.validate_artifact", lambda *_: valid_artifact
     )
     return build_revision_cycle_report(
         root,
@@ -91,7 +91,7 @@ def test_revision_cycle_rejects_stale_or_untracked_artifact(tmp_path, monkeypatc
 
 
 def test_revision_cycle_html_escapes_paths_and_summaries(tmp_path):
-    from travel_video_agent.editing.revision_cycle import (
+    from video_edit_agent.editing.revision_cycle import (
         RevisionCycleArtifact,
         RevisionCycleReport,
     )
@@ -117,7 +117,7 @@ def test_revision_cycle_saves_json_and_html_with_dependencies(tmp_path, monkeypa
     report = _build(tmp_path, paths, monkeypatch)
     registered = []
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_cycle.register_artifact",
+        "video_edit_agent.editing.revision_cycle.register_artifact",
         lambda root, path, dependencies: registered.append((path, dependencies)),
     )
 
@@ -139,10 +139,10 @@ def test_revision_cycle_saves_json_and_html_with_dependencies(tmp_path, monkeypa
 def test_revision_cycle_cli_writes_report(tmp_path, monkeypatch):
     paths = _artifacts(tmp_path)
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_cycle.validate_artifact", lambda *_: True
+        "video_edit_agent.editing.revision_cycle.validate_artifact", lambda *_: True
     )
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_cycle.register_artifact",
+        "video_edit_agent.editing.revision_cycle.register_artifact",
         lambda *_args, **_kwargs: None,
     )
     runner = CliRunner()

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from travel_video_agent.rendering.renderer import (
+from video_edit_agent.rendering.renderer import (
     _build_ffmpeg_command,
     _subtitle_force_style,
 )

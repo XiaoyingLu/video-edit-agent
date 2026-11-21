@@ -2,10 +2,10 @@ from pathlib import Path
 
 import pytest
 
-from travel_video_agent.silence.ffmpeg_detector import FFmpegSilenceDetector
-from travel_video_agent.silence.pipeline import _speech_free_candidates
-from travel_video_agent.silence.schemas import SilenceInterval
-from travel_video_agent.transcription.schemas import TranscriptSegment
+from video_edit_agent.silence.ffmpeg_detector import FFmpegSilenceDetector
+from video_edit_agent.silence.pipeline import _speech_free_candidates
+from video_edit_agent.silence.schemas import SilenceInterval
+from video_edit_agent.transcription.schemas import TranscriptSegment
 
 
 def test_parse_ffmpeg_silencedetect_intervals_and_trailing_silence() -> None:
@@ -44,8 +44,8 @@ def test_speech_overlap_excludes_quiet_interval_and_padding() -> None:
 
 
 def test_no_transcript_means_no_cut_candidates(tmp_path: Path, monkeypatch) -> None:
-    from travel_video_agent.models import MediaInfo, ProjectAnalysis
-    from travel_video_agent.silence import pipeline
+    from video_edit_agent.models import MediaInfo, ProjectAnalysis
+    from video_edit_agent.silence import pipeline
 
     video = tmp_path / "clip.mp4"
     video.touch()
@@ -78,9 +78,9 @@ def test_no_transcript_means_no_cut_candidates(tmp_path: Path, monkeypatch) -> N
 
 
 def test_transcript_speech_excludes_silence_candidate(tmp_path: Path, monkeypatch) -> None:
-    from travel_video_agent.models import MediaInfo, ProjectAnalysis
-    from travel_video_agent.silence import pipeline
-    from travel_video_agent.transcription.schemas import ProjectTranscription, VideoTranscript
+    from video_edit_agent.models import MediaInfo, ProjectAnalysis
+    from video_edit_agent.silence import pipeline
+    from video_edit_agent.transcription.schemas import ProjectTranscription, VideoTranscript
 
     video = tmp_path / "clip.mp4"
     video.touch()
@@ -152,9 +152,9 @@ def test_rejects_stale_or_out_of_bounds_transcription(
     segment_end: float,
     message: str,
 ) -> None:
-    from travel_video_agent.models import MediaInfo, ProjectAnalysis
-    from travel_video_agent.silence import pipeline
-    from travel_video_agent.transcription.schemas import ProjectTranscription, VideoTranscript
+    from video_edit_agent.models import MediaInfo, ProjectAnalysis
+    from video_edit_agent.silence import pipeline
+    from video_edit_agent.transcription.schemas import ProjectTranscription, VideoTranscript
 
     video = tmp_path / "clip.mp4"
     video.touch()

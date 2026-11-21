@@ -2,10 +2,10 @@ from pathlib import Path
 
 import pytest
 
-from travel_video_agent.editing.intent_schemas import EditingPlan
-from travel_video_agent.editing.planning_schemas import VideoProjectPlan
-from travel_video_agent.editing.storyboard_review import generate_storyboard_review
-from travel_video_agent.understanding.schemas import VideoUnderstanding
+from video_edit_agent.editing.intent_schemas import EditingPlan
+from video_edit_agent.editing.planning_schemas import VideoProjectPlan
+from video_edit_agent.editing.storyboard_review import generate_storyboard_review
+from video_edit_agent.understanding.schemas import VideoUnderstanding
 
 
 def _artifacts(root: Path) -> None:

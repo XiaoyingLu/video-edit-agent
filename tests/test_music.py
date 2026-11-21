@@ -3,14 +3,14 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from travel_video_agent.music.pipeline import (
+from video_edit_agent.music.pipeline import (
     _beat_grid,
     _energy_sections,
     _estimate_tempo,
     _onset_envelope,
     analyze_music,
 )
-from travel_video_agent.music.schemas import MusicAnalysis
+from video_edit_agent.music.schemas import MusicAnalysis
 
 
 def test_estimates_regular_120_bpm_onset_train():

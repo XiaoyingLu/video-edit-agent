@@ -1,6 +1,6 @@
 import pytest
 
-from travel_video_agent import resource_manager as resources
+from video_edit_agent import resource_manager as resources
 
 
 def test_vision_model_memory_estimates_and_override(monkeypatch):

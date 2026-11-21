@@ -7,16 +7,16 @@ from pathlib import Path
 
 import pytest
 
-from travel_video_agent.models import MediaInfo, ProjectAnalysis
-from travel_video_agent.story_ledger import build_story_ledger
-from travel_video_agent.story_proposal import (
+from video_edit_agent.models import MediaInfo, ProjectAnalysis
+from video_edit_agent.story_ledger import build_story_ledger
+from video_edit_agent.story_proposal import (
     StoryProposal,
     StoryProposalError,
     generate_story_angles,
     propose_story,
     select_story_angle,
 )
-from travel_video_agent.understanding.schemas import (
+from video_edit_agent.understanding.schemas import (
     FrameObservation,
     SceneDynamics,
     VideoScene,

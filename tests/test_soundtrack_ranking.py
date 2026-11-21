@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
-from travel_video_agent.soundtrack.ranking import rank_soundtrack_candidates
-from travel_video_agent.soundtrack.schemas import (
+from video_edit_agent.soundtrack.ranking import rank_soundtrack_candidates
+from video_edit_agent.soundtrack.schemas import (
     SoundtrackBrief,
     SoundtrackCandidate,
     SoundtrackLicense,

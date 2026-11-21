@@ -3,10 +3,10 @@ from pathlib import Path
 
 import pytest
 
-from travel_video_agent.artifact_tracking import register_artifact
-from travel_video_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
-from travel_video_agent.music.schemas import MusicAnalysis
-from travel_video_agent.music.sync import MusicSyncError, suggest_music_sync
+from video_edit_agent.artifact_tracking import register_artifact
+from video_edit_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
+from video_edit_agent.music.schemas import MusicAnalysis
+from video_edit_agent.music.sync import MusicSyncError, suggest_music_sync
 
 
 def _write_inputs(

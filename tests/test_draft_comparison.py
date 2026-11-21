@@ -8,14 +8,14 @@ import pytest
 from rich.text import Text
 from typer.testing import CliRunner
 
-from travel_video_agent.cli import app
-from travel_video_agent.rendering.comparison import (
+from video_edit_agent.cli import app
+from video_edit_agent.rendering.comparison import (
     DraftComparisonError,
     DraftComparisonReport,
     compare_rendered_drafts,
     render_comparison_html,
 )
-from travel_video_agent.rendering.critique import AudioQualitySummary
+from video_edit_agent.rendering.critique import AudioQualitySummary
 
 runner = CliRunner()
 
@@ -69,11 +69,12 @@ def _mock_tools(monkeypatch, before, after):
         },
     }
     monkeypatch.setattr(
-        "travel_video_agent.rendering.comparison.validate_artifact", lambda *_: False
+        "video_edit_agent.rendering.comparison.validate_artifact",
+        lambda *_: False,
     )
-    monkeypatch.setattr("travel_video_agent.rendering.comparison.shutil.which", lambda name: name)
+    monkeypatch.setattr("video_edit_agent.rendering.comparison.shutil.which", lambda name: name)
     monkeypatch.setattr(
-        "travel_video_agent.rendering.comparison._analyze_audio",
+        "video_edit_agent.rendering.comparison._analyze_audio",
         lambda _ffmpeg, video, _has_audio: _audio(-18 if video == before else -16),
     )
 
@@ -85,7 +86,7 @@ def _mock_tools(monkeypatch, before, after):
         assert cv2.imwrite(command[-1], image)
         return subprocess.CompletedProcess(command, 0, "", "")
 
-    monkeypatch.setattr("travel_video_agent.rendering.comparison._run", fake_run)
+    monkeypatch.setattr("video_edit_agent.rendering.comparison._run", fake_run)
 
 
 def test_comparison_pairs_samples_by_normalized_position_and_reports_deltas(tmp_path, monkeypatch):
@@ -116,9 +117,7 @@ def test_comparison_pairs_samples_by_normalized_position_and_reports_deltas(tmp_
 
 def test_comparison_rejects_same_video_and_paths_outside_project(tmp_path, monkeypatch):
     before, _ = _media(tmp_path)
-    monkeypatch.setattr(
-        "travel_video_agent.rendering.comparison.validate_artifact", lambda *_: False
-    )
+    monkeypatch.setattr("video_edit_agent.rendering.comparison.validate_artifact", lambda *_: False)
     with pytest.raises(DraftComparisonError, match="different files"):
         compare_rendered_drafts(tmp_path, before_video=before, after_video=before)
     with pytest.raises(DraftComparisonError, match="inside the project"):
@@ -158,7 +157,10 @@ def test_html_contains_paired_visual_evidence_and_caveat(tmp_path, monkeypatch):
 def test_cli_writes_json_and_standalone_html(tmp_path, monkeypatch):
     before, after = _media(tmp_path)
     _mock_tools(monkeypatch, before, after)
-    monkeypatch.setattr("travel_video_agent.cli.register_artifact", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        "video_edit_agent.cli.rendering.register_artifact",
+        lambda *_args, **_kwargs: None,
+    )
 
     result = runner.invoke(
         app,

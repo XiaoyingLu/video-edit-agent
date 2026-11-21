@@ -4,20 +4,20 @@ from datetime import UTC, datetime
 
 import pytest
 
-from travel_video_agent.artifact_tracking import register_artifact
-from travel_video_agent.music.schemas import MusicAnalysis
-from travel_video_agent.soundtrack import generated
-from travel_video_agent.soundtrack.generated import (
+from video_edit_agent.artifact_tracking import register_artifact
+from video_edit_agent.music.schemas import MusicAnalysis
+from video_edit_agent.soundtrack import generated
+from video_edit_agent.soundtrack.generated import (
     GeneratedCandidateError,
     prepare_generated_soundtrack_candidates,
 )
-from travel_video_agent.soundtrack.generation import GeneratedSoundtrackArtifact
-from travel_video_agent.soundtrack.providers.stable_audio import StableAudioGenerationResult
-from travel_video_agent.soundtrack.review import (
+from video_edit_agent.soundtrack.generation import GeneratedSoundtrackArtifact
+from video_edit_agent.soundtrack.providers.stable_audio import StableAudioGenerationResult
+from video_edit_agent.soundtrack.review import (
     build_soundtrack_candidate_review,
     save_soundtrack_candidate_review,
 )
-from travel_video_agent.soundtrack.schemas import SoundtrackBrief
+from video_edit_agent.soundtrack.schemas import SoundtrackBrief
 
 
 def _write_brief(root):
@@ -160,7 +160,7 @@ def test_prepare_candidates_rejects_audio_checksum_mismatch(tmp_path, monkeypatc
 
 
 def test_prepare_candidates_combines_catalog_and_generated_tracks(tmp_path, monkeypatch):
-    from travel_video_agent.soundtrack.catalog import SoundtrackSearchResponse
+    from video_edit_agent.soundtrack.catalog import SoundtrackSearchResponse
 
     _write_brief(tmp_path)
     _write_generated_track(tmp_path)

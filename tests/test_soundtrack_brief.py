@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from travel_video_agent.editing.planning_schemas import VideoProjectPlan
-from travel_video_agent.soundtrack.brief import (
+from video_edit_agent.editing.planning_schemas import VideoProjectPlan
+from video_edit_agent.soundtrack.brief import (
     build_soundtrack_brief,
     create_soundtrack_brief,
 )

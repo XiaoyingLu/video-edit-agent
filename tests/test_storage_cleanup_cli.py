@@ -2,7 +2,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from travel_video_agent.cli import app
+from video_edit_agent.cli import app
 
 runner = CliRunner()
 

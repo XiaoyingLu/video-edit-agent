@@ -1,3 +1,6 @@
-"""Local-first AI travel video editing agent."""
+"""Backward-compatible import namespace for :mod:`video_edit_agent`."""
 
-__version__ = "0.1.0"
+import video_edit_agent as _canonical
+
+__path__ = _canonical.__path__
+__version__ = _canonical.__version__

@@ -2,26 +2,26 @@ import json
 
 import pytest
 
-from travel_video_agent.artifact_tracking import (
+from video_edit_agent.artifact_tracking import (
     StaleArtifactError,
     register_artifact,
     validate_artifact,
 )
-from travel_video_agent.editing import music_pacing, planning_generation, planning_pipeline
-from travel_video_agent.editing.intent_schemas import EditingPlan
-from travel_video_agent.editing.planning_generation import (
+from video_edit_agent.editing import music_pacing, planning_generation, planning_pipeline
+from video_edit_agent.editing.intent_schemas import EditingPlan
+from video_edit_agent.editing.planning_generation import (
     GeneratedVideoPlanContent,
     explicit_duration_seconds,
     infer_creative_priorities,
     normalize_storyboard_ids,
 )
-from travel_video_agent.editing.planning_schemas import (
+from video_edit_agent.editing.planning_schemas import (
     PlannedScene,
     StoryboardShot,
     StoryTreatment,
 )
-from travel_video_agent.music.schemas import MusicAnalysis, MusicSection
-from travel_video_agent.story_proposal import StoryAngle, StoryChapter, StoryProposal
+from video_edit_agent.music.schemas import MusicAnalysis, MusicSection
+from video_edit_agent.story_proposal import StoryAngle, StoryChapter, StoryProposal
 
 
 def _generated_content():

@@ -4,12 +4,12 @@ import types
 
 import pytest
 
-from travel_video_agent.understanding.provider import create_vision_analyzer
-from travel_video_agent.understanding.qwen3_vl_analyzer import (
+from video_edit_agent.understanding.provider import create_vision_analyzer
+from video_edit_agent.understanding.qwen3_vl_analyzer import (
     DEFAULT_QWEN3_VL_MODEL,
     Qwen3VLMLXAnalyzer,
 )
-from travel_video_agent.understanding.visual_analyzer import VisionModelError
+from video_edit_agent.understanding.visual_analyzer import VisionModelError
 
 
 def _observation() -> dict:

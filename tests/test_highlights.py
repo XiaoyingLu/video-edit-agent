@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from travel_video_agent.highlights.pipeline import _score, find_highlights_folder
-from travel_video_agent.highlights.schemas import HighlightSignals
+from video_edit_agent.highlights.pipeline import _score, find_highlights_folder
+from video_edit_agent.highlights.schemas import HighlightSignals
 
 
 def test_visual_score_is_explainable_and_keeps_low_motion_scenery() -> None:
@@ -15,7 +15,7 @@ def test_visual_score_is_explainable_and_keeps_low_motion_scenery() -> None:
 def test_highlight_pipeline_ranks_candidates_without_understanding(
     monkeypatch, tmp_path: Path
 ) -> None:
-    from travel_video_agent.highlights import pipeline
+    from video_edit_agent.highlights import pipeline
 
     video = tmp_path / "clip.mp4"
     video.touch()

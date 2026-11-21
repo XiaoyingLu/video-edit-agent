@@ -22,14 +22,14 @@ import time
 from pathlib import Path
 from typing import Any
 
-from travel_video_agent.understanding.schemas import FrameObservation, SceneDynamics
-from travel_video_agent.understanding.smolvlm2_analyzer import (
+from video_edit_agent.understanding.schemas import FrameObservation, SceneDynamics
+from video_edit_agent.understanding.smolvlm2_analyzer import (
     _FRAME_PROMPT,
     _TEMPORAL_PROMPT,
     SmolVLM2MLXAnalyzer,
     _json_object,
 )
-from travel_video_agent.understanding.visual_analyzer import _parse_observation
+from video_edit_agent.understanding.visual_analyzer import _parse_observation
 
 DEFAULT_SMOL_MODEL = "mlx-community/SmolVLM2-2.2B-Instruct-mlx"
 DEFAULT_QWEN_MODEL = "mlx-community/Qwen3-VL-4B-Instruct-4bit"

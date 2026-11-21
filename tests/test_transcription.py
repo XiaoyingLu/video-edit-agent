@@ -2,10 +2,10 @@ from pathlib import Path
 
 import pytest
 
-from travel_video_agent.models import MediaInfo, ProjectAnalysis
-from travel_video_agent.transcription.pipeline import transcribe_folder
-from travel_video_agent.transcription.schemas import TranscriptSegment
-from travel_video_agent.transcription.whisper_backend import FasterWhisperTranscriber
+from video_edit_agent.models import MediaInfo, ProjectAnalysis
+from video_edit_agent.transcription.pipeline import transcribe_folder
+from video_edit_agent.transcription.schemas import TranscriptSegment
+from video_edit_agent.transcription.whisper_backend import FasterWhisperTranscriber
 
 
 def test_transcript_segment_validates_timestamps() -> None:
@@ -15,7 +15,7 @@ def test_transcript_segment_validates_timestamps() -> None:
 
 
 def test_transcribe_folder_skips_video_without_audio(tmp_path: Path, monkeypatch) -> None:
-    from travel_video_agent.transcription import pipeline
+    from video_edit_agent.transcription import pipeline
 
     silent_video = tmp_path / "silent.mp4"
     silent_video.touch()
@@ -44,7 +44,7 @@ def test_transcribe_folder_skips_video_without_audio(tmp_path: Path, monkeypatch
 
 
 def test_transcribe_folder_builds_timestamped_transcript(tmp_path: Path, monkeypatch) -> None:
-    from travel_video_agent.transcription import pipeline
+    from video_edit_agent.transcription import pipeline
 
     video = tmp_path / "clip.mp4"
     video.touch()
@@ -105,7 +105,7 @@ def test_backend_reports_missing_optional_dependency(monkeypatch) -> None:
     import builtins
 
     monkeypatch.setattr(
-        "travel_video_agent.transcription.whisper_backend.ensure_memory_available",
+        "video_edit_agent.transcription.whisper_backend.ensure_memory_available",
         lambda required_gb, task: None,
     )
 
@@ -118,14 +118,14 @@ def test_backend_reports_missing_optional_dependency(monkeypatch) -> None:
 
     monkeypatch.setattr(builtins, "__import__", guarded_import)
 
-    from travel_video_agent.transcription.whisper_backend import TranscriptionError
+    from video_edit_agent.transcription.whisper_backend import TranscriptionError
 
     with pytest.raises(TranscriptionError, match="optional dependency"):
         FasterWhisperTranscriber()
 
 
 def test_detect_speech_pauses_reports_long_gaps_only() -> None:
-    from travel_video_agent.transcription.pipeline import detect_speech_pauses
+    from video_edit_agent.transcription.pipeline import detect_speech_pauses
 
     segments = [
         TranscriptSegment(start_seconds=2.0, end_seconds=3.0, text="First"),
@@ -144,7 +144,7 @@ def test_whisper_backend_close_releases_model_reference(monkeypatch) -> None:
     backend._model = object()
     collected = []
     monkeypatch.setattr(
-        "travel_video_agent.transcription.whisper_backend.gc.collect",
+        "video_edit_agent.transcription.whisper_backend.gc.collect",
         lambda: collected.append(True),
     )
 
@@ -155,14 +155,14 @@ def test_whisper_backend_close_releases_model_reference(monkeypatch) -> None:
 
 
 def test_whisper_memory_preflight_rejects_before_loading_backend(monkeypatch) -> None:
-    from travel_video_agent.resource_manager import ResourceError
-    from travel_video_agent.transcription.whisper_backend import TranscriptionError
+    from video_edit_agent.resource_manager import ResourceError
+    from video_edit_agent.transcription.whisper_backend import TranscriptionError
 
     def reject(required_gb, task):
         raise ResourceError("Not enough available memory")
 
     monkeypatch.setattr(
-        "travel_video_agent.transcription.whisper_backend.ensure_memory_available", reject
+        "video_edit_agent.transcription.whisper_backend.ensure_memory_available", reject
     )
     with pytest.raises(TranscriptionError, match="Not enough available memory"):
         FasterWhisperTranscriber(model="small")

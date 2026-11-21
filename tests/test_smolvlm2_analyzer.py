@@ -4,8 +4,8 @@ import types
 
 import pytest
 
-from travel_video_agent.understanding.smolvlm2_analyzer import SmolVLM2MLXAnalyzer
-from travel_video_agent.understanding.visual_analyzer import VisionModelError
+from video_edit_agent.understanding.smolvlm2_analyzer import SmolVLM2MLXAnalyzer
+from video_edit_agent.understanding.visual_analyzer import VisionModelError
 
 
 def _observation() -> dict:
@@ -132,7 +132,7 @@ def test_smolvlm2_mlx_reports_missing_optional_dependency(monkeypatch, tmp_path)
 
 
 def test_provider_factory_selects_mlx_without_loading_optional_runtime():
-    from travel_video_agent.understanding.provider import create_vision_analyzer
+    from video_edit_agent.understanding.provider import create_vision_analyzer
 
     analyzer = create_vision_analyzer("mlx", "test/model")
 

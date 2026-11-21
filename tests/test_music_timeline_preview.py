@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from travel_video_agent.music.timeline_preview import (
+from video_edit_agent.music.timeline_preview import (
     MusicTimelinePreview,
     MusicTimelinePreviewError,
     render_music_timeline_preview_html,
@@ -88,7 +88,7 @@ def test_html_handles_missing_tempo(tmp_path):
 def test_save_writes_relative_audio_path_and_refuses_overwrite(tmp_path, monkeypatch):
     report = _report(tmp_path)
     monkeypatch.setattr(
-        "travel_video_agent.music.timeline_preview.register_artifact",
+        "video_edit_agent.music.timeline_preview.register_artifact",
         lambda *_args, **_kwargs: None,
     )
 
