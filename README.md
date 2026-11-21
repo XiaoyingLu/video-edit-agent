@@ -29,7 +29,9 @@ Requirements: Python 3.11 or 3.12, FFmpeg/ffprobe, and Ollama (unless using an M
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev,transcription]"
-ollama pull qwen2.5vl:7b
+cp .env.example .env
+set -a && source .env && set +a
+ollama pull qwen2.5vl:3b
 ollama pull qwen2.5:1.5b
 video-agent --help
 video-agent analyze ./my-video
