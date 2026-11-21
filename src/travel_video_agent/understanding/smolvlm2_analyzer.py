@@ -81,13 +81,13 @@ def _json_object(text: str, *, label: str) -> dict[str, Any]:
 
 
 class SmolVLM2MLXAnalyzer:
-    provider_name = "SmolVLM2"
-
     """Run SmolVLM2 locally using MLX-VLM's native Apple Silicon backend.
 
     This adapter must run in a native macOS Python process; Docker Desktop's Linux
     containers cannot access Apple's Metal GPU.
     """
+
+    provider_name = "SmolVLM2"
 
     def __init__(
         self,
