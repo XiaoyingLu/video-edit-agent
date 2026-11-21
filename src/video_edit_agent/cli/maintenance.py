@@ -35,6 +35,7 @@ def validate_artifacts(
         "with the current CLI to enable dependency tracking.[/dim]"
     )
 
+
 @app.command()
 def clean(
     folder: Annotated[
@@ -99,6 +100,7 @@ def clean(
             "[yellow]JSON artifacts, manifests, rendered videos, model weights, "
             "and original source media were preserved.[/yellow]"
         )
+
 
 @app.command("report-revision-cycle")
 def report_revision_cycle(
