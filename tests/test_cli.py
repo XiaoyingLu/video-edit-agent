@@ -26,7 +26,8 @@ def test_analyze_command_writes_json(
         "total_duration_seconds": 0,
         "videos": [],
     }
-    monkeypatch.setattr(cli, "analyze_folder", lambda folder: ProjectAnalysis(**expected))
+    monkeypatch.setattr(
+        cli.understanding, "analyze_folder", lambda folder: ProjectAnalysis(**expected))
     output = (
         tmp_path / "custom" / "analysis.json"
         if output_option
@@ -50,7 +51,8 @@ def test_understand_command_writes_json(tmp_path: Path, monkeypatch) -> None:
         scenes=[],
         model="qwen2.5vl:7b",
     )
-    monkeypatch.setattr(cli, "understand_folder", lambda *args, **kwargs: expected)
+    monkeypatch.setattr(
+        cli.understanding, "understand_folder", lambda *args, **kwargs: expected)
     output = tmp_path / "custom" / "understanding.json"
     result = runner.invoke(app, ["understand", str(tmp_path), "--output", str(output)])
     assert result.exit_code == 0
@@ -68,7 +70,8 @@ def test_transcribe_command_writes_json(tmp_path: Path, monkeypatch) -> None:
         model="tiny",
         videos=[],
     )
-    monkeypatch.setattr(cli, "transcribe_folder", lambda *args, **kwargs: expected)
+    monkeypatch.setattr(
+        cli.understanding, "transcribe_folder", lambda *args, **kwargs: expected)
     output = tmp_path / "custom" / "transcription.json"
     result = runner.invoke(app, ["transcribe", str(tmp_path), "--model", "tiny", "-o", str(output)])
     assert result.exit_code == 0
@@ -87,7 +90,8 @@ def test_detect_silence_command_writes_json(tmp_path: Path, monkeypatch) -> None
         speech_padding_seconds=0.25,
         videos=[],
     )
-    monkeypatch.setattr(cli, "analyze_silence_folder", lambda *args, **kwargs: expected)
+    monkeypatch.setattr(
+        cli.understanding, "analyze_silence_folder", lambda *args, **kwargs: expected)
     output = tmp_path / "custom" / "silence.json"
     result = runner.invoke(
         app, ["detect-silence", str(tmp_path), "--noise-db", "-35", "-o", str(output)]
@@ -151,7 +155,8 @@ def test_propose_edits_command_writes_review_only_json(tmp_path: Path, monkeypat
         ],
     )
     monkeypatch = pytest.MonkeyPatch()
-    monkeypatch.setattr(cli, "build_edit_proposal", lambda folder: expected)
+    monkeypatch.setattr(
+        cli.understanding, "build_edit_proposal", lambda folder: expected)
     output = tmp_path / "custom" / "proposal.json"
     result = runner.invoke(app, ["propose-edits", str(tmp_path), "-o", str(output)])
     monkeypatch.undo()
@@ -167,7 +172,8 @@ def test_subtitles_command_writes_srt_path(tmp_path: Path, monkeypatch) -> None:
     from travel_video_agent import cli
 
     destination = tmp_path / "custom" / "captions.srt"
-    monkeypatch.setattr(cli, "generate_subtitles", lambda *args, **kwargs: (destination, 7))
+    monkeypatch.setattr(
+        cli.understanding, "generate_subtitles", lambda *args, **kwargs: (destination, 7))
     result = runner.invoke(app, ["subtitles", str(tmp_path), "--output", str(destination)])
 
     assert result.exit_code == 0, result.output
@@ -315,7 +321,8 @@ def test_render_command_reports_verified_output(tmp_path: Path, monkeypatch) -> 
         captured.update(kwargs)
         return expected
 
-    monkeypatch.setattr(cli, "render_project", fake_render)
+    monkeypatch.setattr(
+        cli.rendering, "render_project", fake_render)
     output = tmp_path / "custom.mp4"
     result = runner.invoke(
         app,
@@ -346,7 +353,8 @@ def test_render_command_dry_run_reports_preflight(tmp_path: Path, monkeypatch) -
         captured.update(kwargs)
         return None
 
-    monkeypatch.setattr(cli, "render_project", fake_render)
+    monkeypatch.setattr(
+        cli.rendering, "render_project", fake_render)
     result = runner.invoke(app, ["render", str(tmp_path), "--dry-run"])
 
     assert result.exit_code == 0, result.output
@@ -372,7 +380,8 @@ def test_plan_command_writes_validated_editing_plan(tmp_path: Path, monkeypatch)
         captured["model"] = model
         return expected
 
-    monkeypatch.setattr(cli, "parse_editing_intent", fake_parse)
+    monkeypatch.setattr(
+        cli.planning, "parse_editing_intent", fake_parse)
     output = tmp_path / "custom" / "editing-plan.json"
     result = runner.invoke(
         app,
@@ -423,7 +432,8 @@ def test_draft_edit_command_writes_selection_json(tmp_path: Path, monkeypatch) -
             )
         ],
     )
-    monkeypatch.setattr(cli, "build_draft_selection", lambda folder, plan_path=None: expected)
+    monkeypatch.setattr(
+        cli.planning, "build_draft_selection", lambda folder, plan_path=None: expected)
     output = tmp_path / "custom" / "draft-selection.json"
     result = runner.invoke(
         app,
@@ -500,7 +510,8 @@ def test_create_plan_command_writes_hierarchical_brief(tmp_path: Path, monkeypat
         assert music_analysis_path is None
         return expected, destination
 
-    monkeypatch.setattr(cli, "create_video_project_plan", fake_create)
+    monkeypatch.setattr(
+        cli.planning, "create_video_project_plan", fake_create)
     result = runner.invoke(
         app,
         [
@@ -654,7 +665,8 @@ def test_review_music_sync_command_accepts_and_persists_selected_boundary(
             ],
         )
 
-    monkeypatch.setattr(cli, "apply_music_sync_review", fake_review)
+    monkeypatch.setattr(
+        cli.music, "apply_music_sync_review", fake_review)
     result = runner.invoke(
         app, ["review-music-sync", str(tmp_path), "--accept", "shot-001->shot-002"]
     )
@@ -677,7 +689,8 @@ def test_review_music_sync_command_rejects_overlapping_accept_and_reject_ids(
         nonlocal called
         called = True
 
-    monkeypatch.setattr(cli, "apply_music_sync_review", fake_review)
+    monkeypatch.setattr(
+        cli.music, "apply_music_sync_review", fake_review)
     result = runner.invoke(
         app,
         [
@@ -718,7 +731,8 @@ def test_review_music_sync_command_interactively_prompts_for_each_pending_bounda
             ],
         )
 
-    monkeypatch.setattr(cli, "apply_music_sync_review", fake_review)
+    monkeypatch.setattr(
+        cli.music, "apply_music_sync_review", fake_review)
     result = runner.invoke(app, ["review-music-sync", str(tmp_path)], input="a\n")
 
     assert result.exit_code == 0, result.output
@@ -758,8 +772,7 @@ def test_suggest_soundtrack_command_writes_brief(tmp_path: Path, monkeypatch) ->
     )
     destination = tmp_path / ".video-agent" / "soundtrack-brief.json"
     monkeypatch.setattr(
-        cli,
-        "create_soundtrack_brief",
+        cli.music, "create_soundtrack_brief",
         lambda folder, *, plan_path=None, output_path=None: (expected, destination),
     )
 
@@ -788,7 +801,8 @@ def test_analyze_selected_soundtrack_command_invokes_provenance_workflow(tmp_pat
         captured.update(kwargs)
         return expected
 
-    monkeypatch.setattr(cli, "analyze_selected_soundtrack", fake_analyze)
+    monkeypatch.setattr(
+        cli.music, "analyze_selected_soundtrack", fake_analyze)
     result = runner.invoke(
         app,
         [
