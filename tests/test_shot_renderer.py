@@ -255,7 +255,7 @@ def test_render_draft_cli_invokes_approved_renderer(tmp_path, monkeypatch):
         audio_codec="aac",
     )
     monkeypatch.setattr(
-        "video_edit_agent.cli.render_approved_shot_timeline",
+        "video_edit_agent.cli.rendering.render_approved_shot_timeline",
         lambda *args, **kwargs: report,
     )
     result = runner.invoke(app, ["render-draft", str(tmp_path)])
@@ -279,7 +279,7 @@ def test_render_draft_cli_dry_run_reports_preflight_without_rendering(tmp_path, 
         calls.update(kwargs)
         return None
 
-    monkeypatch.setattr("video_edit_agent.cli.render_approved_shot_timeline", fake_render)
+    monkeypatch.setattr("video_edit_agent.cli.rendering.render_approved_shot_timeline", fake_render)
     result = runner.invoke(app, ["render-draft", str(tmp_path), "--dry-run"])
 
     assert result.exit_code == 0, result.output
