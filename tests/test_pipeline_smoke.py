@@ -88,7 +88,7 @@ def test_understand_create_plan_suggest_footage_smoke(tmp_path: Path, monkeypatc
                     title="By the Water",
                     purpose="Establish the landscape and the traveler.",
                     narrative_function="establishing",
-                    target_duration_seconds=10,
+                    target_duration_seconds=5,
                     shots=[
                         StoryboardShot(
                             shot_id="shot-01",
@@ -98,7 +98,7 @@ def test_understand_create_plan_suggest_footage_smoke(tmp_path: Path, monkeypatc
                             visual_description="A hiker walking beside a turquoise alpine lake.",
                             shot_scale="wide",
                             visual_role="establishing",
-                            target_duration_seconds=10,
+                            target_duration_seconds=5,
                         )
                     ],
                 ),
