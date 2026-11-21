@@ -3,8 +3,10 @@ from pathlib import Path
 
 import pytest
 
+from scripts import benchmark_scene_suite
 from scripts.benchmark_scene_suite import (
     inference_timing,
+    run_smol_suite,
     latency_summary,
     load_manifest,
     validate_frame_output,
@@ -99,3 +101,61 @@ def test_inference_timing_reports_measurable_phases():
         "generate_call_seconds": 12.3457,
         "output_characters": 12,
     }
+
+
+
+def test_smol_suite_runs_without_qwen_timing_metrics(monkeypatch, tmp_path: Path):
+    class FakeAnalyzer:
+        def __init__(self, model: str):
+            self.model = model
+
+        def _load(self):
+            return None
+
+        def analyze_frame(self, frame_path: Path):
+            return {
+                "description": "A performer juggles torches.",
+                "objects": ["performer", "torches"],
+                "activities": ["juggling"],
+                "confidence": 0.9,
+                "shot_scale": "wide",
+                "camera_angle": "eye_level",
+                "composition": "unknown",
+                "lighting": "daylight",
+                "mood": "energetic",
+                "visual_role": "action",
+                "setting": "waterfront",
+                "primary_subject": "performer",
+            }
+
+        def analyze_scene(self, frames):
+            return {
+                "temporal_summary": "A performer juggles for an audience.",
+                "action_progression": ["Juggles torches"],
+                "subject_motion": "stationary",
+                "camera_motion": "static",
+                "confidence": 0.9,
+            }
+
+        def unload_model(self):
+            return None
+
+    monkeypatch.setattr(
+        benchmark_scene_suite, "SmolVLM2MLXAnalyzer", FakeAnalyzer
+    )
+    monkeypatch.setattr(benchmark_scene_suite, "_mlx_memory", lambda: {})
+
+    frames = [
+        {"path": tmp_path / "one.jpg", "timestamp_seconds": 0.0},
+        {"path": tmp_path / "two.jpg", "timestamp_seconds": 1.0},
+    ]
+    result = run_smol_suite(
+        [{"scene_id": "one", "frames": frames, "review_notes": "",
+          "expected_events": []}],
+        "fake-model",
+    )
+
+    assert result["status"] == "completed"
+    assert result["frame_schema_valid_count"] == 2
+    assert result["temporal_schema_valid_count"] == 1
+    assert "inference_timing" not in result["scenes"][0]["frames"][0]
