@@ -157,5 +157,3 @@ def _track_artifact(
 @app.callback()
 def main() -> None:
     """Analyze and edit local personal video footage."""
-
-
