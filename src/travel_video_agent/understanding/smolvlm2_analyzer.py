@@ -140,8 +140,8 @@ class SmolVLM2MLXAnalyzer:
             )
         except Exception as exc:
             raise VisionModelError(
-                f"{self.provider_name} MLX inference failed. Confirm that the selected model supports "
-                f"the installed mlx-vlm version and image input: {exc}"
+                f"{self.provider_name} MLX inference failed. Confirm that the selected model "
+                f"supports the installed mlx-vlm version and image input: {exc}"
             ) from exc
         if isinstance(result, str):
             return result
@@ -171,8 +171,8 @@ class SmolVLM2MLXAnalyzer:
                 return _parse_observation(_normalize_frame_arrays(retry_content), frame_path)
             except VisionModelError as retry_error:
                 raise VisionModelError(
-                    f"{self.provider_name} returned invalid frame output after retry for {frame_path}. "
-                    f"First attempt: {first_error} Retry attempt: {retry_error}"
+                    f"{self.provider_name} returned invalid frame output after retry "
+                    f"for {frame_path}. First attempt: {first_error} Retry attempt: {retry_error}"
                 ) from retry_error
 
     def analyze_scene(self, frames: list[tuple[float, Path]]) -> dict[str, Any]:
