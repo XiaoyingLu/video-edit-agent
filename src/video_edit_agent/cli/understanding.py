@@ -64,6 +64,7 @@ def analyze(
     )
     console.print(f"Analysis saved to [green]{destination}[/green]")
 
+
 @app.command()
 def understand(
     folder: Annotated[
@@ -239,6 +240,7 @@ def understand(
         f"[green]{folder.resolve() / '.video-agent' / 'frames'}[/green]"
     )
 
+
 @app.command()
 def transcribe(
     folder: Annotated[
@@ -338,6 +340,7 @@ def transcribe(
         "preserve quiet scenic footage by default.[/yellow]"
     )
 
+
 @app.command("detect-silence")
 def detect_silence(
     folder: Annotated[
@@ -426,6 +429,7 @@ def detect_silence(
         "source media is never modified.[/yellow]"
     )
 
+
 @app.command("propose-edits")
 def propose_edits(
     folder: Annotated[
@@ -481,6 +485,7 @@ def propose_edits(
         "Every item is pending human approval; review visual context and audio "
         "before deciding.[/yellow]"
     )
+
 
 @app.command("review-edits")
 def review_edits(
@@ -565,6 +570,7 @@ def review_edits(
     )
     console.print("[yellow]No source media was modified or rendered.[/yellow]")
 
+
 @app.command("build-timeline")
 def build_timeline(
     folder: Annotated[
@@ -619,6 +625,7 @@ def build_timeline(
         "[yellow]This is a validated edit-decision artifact only. "
         "No FFmpeg commands were run and no video was rendered.[/yellow]"
     )
+
 
 @app.command("subtitles")
 def subtitles_command(
