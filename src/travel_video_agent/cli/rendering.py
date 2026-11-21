@@ -459,7 +459,6 @@ def critique_draft(
         bool,
         typer.Option(
             "--semantic",
-            is_flag=True,
             help="Use the local vision model to compare rendered shots with storyboard intent.",
         ),
     ] = False,
