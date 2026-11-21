@@ -6,9 +6,9 @@ import pytest
 from scripts import benchmark_scene_suite
 from scripts.benchmark_scene_suite import (
     inference_timing,
-    run_smol_suite,
     latency_summary,
     load_manifest,
+    run_smol_suite,
     validate_frame_output,
     validate_temporal_output,
 )
@@ -192,4 +192,6 @@ def test_smol_suite_runs_without_qwen_timing_metrics(monkeypatch, tmp_path: Path
     assert result["status"] == "completed"
     assert result["frame_schema_valid_count"] == 2
     assert result["temporal_schema_valid_count"] == 1
+    assert result["scenes"][0]["temporal"]["schema_validation"]["valid"] is True
+    assert result["scenes"][0]["temporal"]["normalization_applied"] == []
     assert "inference_timing" not in result["scenes"][0]["frames"][0]
