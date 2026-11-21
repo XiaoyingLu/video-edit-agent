@@ -47,6 +47,32 @@ def test_frame_sampler_rejects_invalid_scene(monkeypatch, tmp_path: Path) -> Non
     assert extract_representative_frames(tmp_path / "clip.mp4", 4.0, 4.0, tmp_path / "frames") == []
 
 
+def test_frame_sampler_uses_jpeg_compatible_pixel_format(monkeypatch, tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"source-video")
+    captured = {}
+
+    monkeypatch.setattr(
+        "travel_video_agent.understanding.frame_sampler.shutil.which", lambda _: "ffmpeg"
+    )
+
+    def fake_run(command, **kwargs):
+        captured["command"] = command
+        Path(command[-1]).write_bytes(b"jpeg-frame")
+
+    monkeypatch.setattr(
+        "travel_video_agent.understanding.frame_sampler.subprocess.run", fake_run
+    )
+
+    result = extract_representative_frames(video, 0.0, 10.0, tmp_path / "frames", samples_per_scene=1)
+
+    command = captured["command"]
+    assert command[command.index("-pix_fmt") + 1] == "yuvj420p"
+    assert command[command.index("-threads") + 1] == "1"
+    assert len(result) == 1
+    assert result[0][1].read_bytes() == b"jpeg-frame"
+
+
 def test_frame_sampler_reuses_existing_extracted_frames(monkeypatch, tmp_path: Path) -> None:
     frame_dir = tmp_path / "frames"
     frame_dir.mkdir()
