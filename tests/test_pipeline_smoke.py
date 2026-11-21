@@ -10,8 +10,8 @@ from travel_video_agent.editing.intent_schemas import EditingPlan
 from travel_video_agent.editing.planning_generation import GeneratedVideoPlanContent
 from travel_video_agent.editing.planning_schemas import (
     PlannedScene,
-    StoryTreatment,
     StoryboardShot,
+    StoryTreatment,
 )
 from travel_video_agent.understanding import pipeline as understanding_pipeline
 
