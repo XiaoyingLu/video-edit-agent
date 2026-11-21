@@ -177,7 +177,8 @@ def test_review_timeline_applies_browser_decisions_only_to_matching_timeline(tmp
         lambda *_: (timeline, source),
     )
     monkeypatch.setattr(
-        "video_edit_agent.cli.planning.save_draft_timeline", lambda result, path: saved.append(result)
+        "video_edit_agent.cli.planning.save_draft_timeline",
+        lambda result, path: saved.append(result),
     )
 
     result = CliRunner().invoke(
