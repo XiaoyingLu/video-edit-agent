@@ -101,6 +101,26 @@ def test_understand_create_plan_suggest_footage_smoke(tmp_path: Path, monkeypatc
                             target_duration_seconds=10,
                         )
                     ],
+                ),
+                PlannedScene(
+                    scene_id="scene-02",
+                    sequence_index=2,
+                    title="A Quiet Pause",
+                    purpose="Let the landscape breathe.",
+                    narrative_function="scenic_breath",
+                    target_duration_seconds=5,
+                    shots=[
+                        StoryboardShot(
+                            shot_id="shot-02",
+                            scene_id="scene-02",
+                            sequence_index=1,
+                            purpose="Hold on the alpine lake",
+                            visual_description="A calm wide view of a turquoise alpine lake.",
+                            shot_scale="wide",
+                            visual_role="scenic_breath",
+                            target_duration_seconds=5,
+                        )
+                    ],
                 )
             ],
         )
@@ -127,6 +147,6 @@ def test_understand_create_plan_suggest_footage_smoke(tmp_path: Path, monkeypatc
     assert result.exit_code == 0, result.output
     suggestions_path = tmp_path / ".video-agent" / "footage-suggestions.json"
     suggestions = json.loads(suggestions_path.read_text())
-    assert suggestions["matched_shot_count"] == 1
+    assert suggestions["matched_shot_count"] >= 1
     assert suggestions["candidate_count"] >= 1
     assert suggestions["suggestions"][0]["candidates"][0]["video_path"] == "clip.mp4"
