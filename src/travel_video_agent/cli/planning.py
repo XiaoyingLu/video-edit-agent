@@ -1,8 +1,8 @@
 """Story and editing workflow commands."""
 
 # ruff: noqa: F403,F405
-from .common import *  # noqa: F403
 from .common import _MUSIC_ANALYSIS_OPTION, _track_artifact, app, console
+from .common import *  # noqa: F403
 
 
 
@@ -477,7 +477,7 @@ def suggest_footage(
                 "(e.g. nomic-embed-text)."
             ),
         ),
-    ] = os.getenv("FOOTAGE_EMBEDDING_MODEL"),
+    ] = DEFAULT_FOOTAGE_EMBEDDING_MODEL,
 ) -> None:
     """Rank analyzed source scenes for storyboard shots; never assign footage automatically."""
     try:
