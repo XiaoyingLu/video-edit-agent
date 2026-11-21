@@ -1,7 +1,7 @@
 """Story and editing workflow commands."""
 
 # ruff: noqa: F403,F405
-from .common import _MUSIC_ANALYSIS_OPTION, _track_artifact, app, console
+from . import common
 from .common import *  # noqa: F403
 
 
@@ -49,7 +49,7 @@ def find_highlights(
     destination.write_text(
         json.dumps(report.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
     )
-    _track_artifact(
+    common._track_artifact(
         folder,
         destination,
         dependencies=(".video-agent/understanding.json",),
@@ -241,7 +241,7 @@ def plan_edit(
         json.dumps(editing_plan.model_dump(mode="json"), indent=2) + "\n",
         encoding="utf-8",
     )
-    _track_artifact(folder, destination, config={"prompt": prompt, "model": model})
+    common._track_artifact(folder, destination, config={"prompt": prompt, "model": model})
     console.print("[bold]Validated Natural-language Editing Plan[/bold]")
     console.print(f"Target duration: {editing_plan.target_duration_seconds:.1f}s")
     console.print(f"Style: {editing_plan.style} | Pacing: {editing_plan.pacing}")
@@ -498,7 +498,7 @@ def suggest_footage(
     destination.write_text(
         json.dumps(report.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
     )
-    _track_artifact(
+    common._track_artifact(
         folder,
         destination,
         dependencies=(report.source_plan, report.source_understanding),
@@ -771,7 +771,7 @@ def draft_edit(
         json.dumps(draft.model_dump(mode="json"), indent=2) + "\n",
         encoding="utf-8",
     )
-    _track_artifact(
+    common._track_artifact(
         folder,
         destination,
         dependencies=(
@@ -830,7 +830,7 @@ def optimize_timeline(
         Path | None,
         typer.Option("--plan", help="Editing plan JSON path."),
     ] = None,
-    music_analysis: Path | None = _MUSIC_ANALYSIS_OPTION,
+    music_analysis: Path | None = common._MUSIC_ANALYSIS_OPTION,
     output: Annotated[
         Path | None,
         typer.Option(
