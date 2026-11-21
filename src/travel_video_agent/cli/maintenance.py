@@ -5,6 +5,7 @@ from .common import *  # noqa: F403
 from .common import _MUSIC_ANALYSIS_OPTION, _track_artifact, app, console
 
 
+
 @app.command("validate-artifacts")
 def validate_artifacts(
     folder: Annotated[
@@ -35,6 +36,7 @@ def validate_artifacts(
         "[dim]Legacy artifacts without manifest entries are not checked; regenerate them "
         "with the current CLI to enable dependency tracking.[/dim]"
     )
+
 
 @app.command()
 def clean(
@@ -100,6 +102,7 @@ def clean(
             "[yellow]JSON artifacts, manifests, rendered videos, model weights, "
             "and original source media were preserved.[/yellow]"
         )
+
 
 @app.command("report-revision-cycle")
 def report_revision_cycle(
