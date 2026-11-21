@@ -1,6 +1,6 @@
-# AI Video Agent
+# Video Edit Agent — Feature Guide
 
-A local-first Python CLI for editing personal travel footage. Media stays on your machine, source files are never modified, and every edit will be represented by a reviewable plan before rendering.
+A local-first Python CLI for editing personal video footage. Media stays on your machine, source files are never modified, and every edit will be represented by a reviewable plan before rendering.
 
 ## MVP
 
