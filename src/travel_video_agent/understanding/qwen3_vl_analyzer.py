@@ -5,8 +5,8 @@ from typing import Any
 
 from .schemas import SceneDynamics
 from .smolvlm2_analyzer import (
-    SmolVLM2MLXAnalyzer,
     _TEMPORAL_PROMPT,
+    SmolVLM2MLXAnalyzer,
     _json_object,
     _string_array,
 )
@@ -15,11 +15,15 @@ from .visual_analyzer import VisionModelError
 DEFAULT_QWEN3_VL_MODEL = "mlx-community/Qwen3-VL-4B-Instruct-4bit"
 
 _SUBJECT_MOTION = {
-    "approaching", "receding", "crossing", "stationary", "interacting", "mixed", "unknown"
+    "approaching",
+    "receding",
+    "crossing",
+    "stationary",
+    "interacting",
+    "mixed",
+    "unknown",
 }
-_CAMERA_MOTION = {
-    "static", "pan", "tilt", "zoom", "tracking", "handheld", "mixed", "unknown"
-}
+_CAMERA_MOTION = {"static", "pan", "tilt", "zoom", "tracking", "handheld", "mixed", "unknown"}
 
 
 def _classify_motion(value: Any, *, field: str) -> str:
@@ -60,11 +64,7 @@ def _classify_motion(value: Any, *, field: str) -> str:
 def _normalize_motion(value: Any, *, field: str) -> str:
     """Normalize Qwen scalar/list motion descriptions to one schema enum."""
     values = value if isinstance(value, list) else [value]
-    classified = {
-        _classify_motion(item, field=field)
-        for item in values
-        if isinstance(item, str)
-    }
+    classified = {_classify_motion(item, field=field) for item in values if isinstance(item, str)}
     classified.discard("unknown")
     if not classified:
         return "unknown"
