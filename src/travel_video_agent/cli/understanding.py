@@ -15,7 +15,7 @@ def analyze(
             file_okay=False,
             dir_okay=True,
             readable=True,
-            help="Folder containing travel videos.",
+            help="Folder containing video files.",
         ),
     ],
     output: Annotated[
@@ -74,7 +74,7 @@ def understand(
             file_okay=False,
             dir_okay=True,
             readable=True,
-            help="Folder containing travel videos.",
+            help="Folder containing video files.",
         ),
     ],
     output: Annotated[
@@ -249,7 +249,7 @@ def transcribe(
             file_okay=False,
             dir_okay=True,
             readable=True,
-            help="Folder containing travel videos.",
+            help="Folder containing video files.",
         ),
     ],
     output: Annotated[
@@ -348,7 +348,7 @@ def detect_silence(
             file_okay=False,
             dir_okay=True,
             readable=True,
-            help="Folder containing travel videos.",
+            help="Folder containing video files.",
         ),
     ],
     output: Annotated[
@@ -436,7 +436,7 @@ def propose_edits(
             file_okay=False,
             dir_okay=True,
             readable=True,
-            help="Folder containing travel videos.",
+            help="Folder containing video files.",
         ),
     ],
     output: Annotated[
