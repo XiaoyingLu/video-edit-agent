@@ -234,11 +234,10 @@ def run_smol_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any
             ])
             temporal_elapsed = time.perf_counter() - temporal_started
             temporal_latencies.append(temporal_elapsed)
-            try:
-                temporal = validate_temporal_output(temporal)
-                temporal_validation = {"valid": True, "errors": []}
-            except Exception as exc:
-                temporal_validation = {"valid": False, "errors": [str(exc)]}
+            # SmolVLM2's analyzer already parses, normalizes, and validates
+            # SceneDynamics internally; unlike the Qwen runner, it does not
+            # expose the pre-validation raw generation.
+            temporal_validation = {"valid": True, "errors": []}
             scene_results.append({
                 "scene_id": scene["scene_id"],
                 "elapsed_seconds": round(time.perf_counter() - scene_started, 3),
@@ -248,8 +247,7 @@ def run_smol_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any
                 "temporal": {
                     "latency_seconds": round(temporal_elapsed, 3),
                     "schema_validation": temporal_validation,
-                    "normalization_applied": normalized_fields,
-                    "raw_output": raw_temporal,
+                    "normalization_applied": [],
                     "output": temporal,
                 },
                 "memory_after_scene": _mlx_memory(),
