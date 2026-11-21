@@ -4,7 +4,6 @@
 from .common import *  # noqa: F403
 
 
-
 @app.command()
 def render(
     folder: Annotated[
@@ -112,7 +111,6 @@ def render(
         console.print(f"Burned-in subtitles: [green]{subtitle_display_path}[/green]")
     console.print("[yellow]Original source videos were not modified.[/yellow]")
 
-
 @app.command("init-title-overlays")
 def init_title_overlays(
     folder: Annotated[
@@ -152,7 +150,6 @@ def init_title_overlays(
         raise typer.Exit(code=1) from exc
     console.print(f"Title overlay template created at [green]{destination}[/green]")
     console.print("Add overlay entries to the JSON, then review them with review-title-overlays.")
-
 
 @app.command("suggest-title-sequences")
 def suggest_title_sequences(
@@ -204,7 +201,6 @@ def suggest_title_sequences(
     console.print(table)
     console.print(f"Review suggestions in [green]{destination}[/green]")
     console.print("Nothing is approved automatically; use review-title-overlays before rendering.")
-
 
 @app.command("review-title-overlays")
 def review_titles(
@@ -259,7 +255,6 @@ def review_titles(
         )
     console.print(table)
     console.print(f"Title overlay review saved to [green]{destination}[/green]")
-
 
 @app.command("render-revision-preview")
 def render_revision_preview(
@@ -347,7 +342,6 @@ def render_revision_preview(
     console.print(f"Preview manifest: [green]{manifest}[/green]")
     console.print("[yellow]Original timeline and source media were not modified.[/yellow]")
 
-
 @app.command("render-draft")
 def render_draft(
     folder: Annotated[
@@ -432,7 +426,6 @@ def render_draft(
         f"{report.video_codec.upper()} video + {report.audio_codec.upper()} audio"
     )
     console.print("[yellow]Original source videos were not modified.[/yellow]")
-
 
 @app.command("critique-draft")
 def critique_draft(
@@ -565,7 +558,6 @@ def critique_draft(
         "No timeline, rendered video, or source media was modified.[/yellow]"
     )
 
-
 @app.command("suggest-revisions")
 def suggest_revisions(
     folder: Annotated[
@@ -649,7 +641,6 @@ def suggest_revisions(
         "timeline approvals, or rendered videos were changed. Review each recommendation "
         "and use the existing revision workflow for any explicit trim.[/yellow]"
     )
-
 
 @app.command("review-revision-suggestions")
 def review_revision_suggestions(
@@ -800,7 +791,6 @@ def review_revision_suggestions(
             "No source intervals were changed. Accepted footage-review suggestions remain "
             "follow-up tasks for the separate storyboard footage workflow."
         )
-
 
 @app.command("compare-drafts")
 def compare_drafts(
