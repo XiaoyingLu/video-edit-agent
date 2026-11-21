@@ -12,6 +12,7 @@ Requirements: Docker Compose and a project folder containing video files.
 cp .env.example .env
 docker compose up -d ollama
 docker compose exec ollama ollama pull qwen2.5vl:3b
+docker compose exec ollama ollama pull qwen2.5:1.5b
 docker compose run --rm video-agent analyze ./my-video
 docker compose run --rm video-agent understand ./my-video
 docker compose run --rm video-agent create-plan ./my-video --prompt "A concise, cinematic personal video"
@@ -28,6 +29,8 @@ Requirements: Python 3.11 or 3.12, FFmpeg/ffprobe, and Ollama (unless using an M
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev,transcription]"
+ollama pull qwen2.5vl:7b
+ollama pull qwen2.5:1.5b
 video-agent --help
 video-agent analyze ./my-video
 video-agent understand ./my-video
