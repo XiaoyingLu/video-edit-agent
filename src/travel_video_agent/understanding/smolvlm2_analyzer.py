@@ -140,7 +140,7 @@ class SmolVLM2MLXAnalyzer:
             )
         except Exception as exc:
             raise VisionModelError(
-                "{self.provider_name} MLX inference failed. Confirm that the selected model supports "
+                f"{self.provider_name} MLX inference failed. Confirm that the selected model supports "
                 f"the installed mlx-vlm version and image input: {exc}"
             ) from exc
         if isinstance(result, str):
@@ -205,7 +205,7 @@ class SmolVLM2MLXAnalyzer:
                 return SceneDynamics.model_validate(dynamics).model_dump()
             except Exception as retry_error:
                 raise VisionModelError(
-                    "{self.provider_name} returned invalid temporal output after retry. "
+                    f"{self.provider_name} returned invalid temporal output after retry. "
                     f"First attempt: {first_error} Retry attempt: {retry_error}"
                 ) from retry_error
 
