@@ -172,7 +172,9 @@ def test_review_timeline_applies_browser_decisions_only_to_matching_timeline(tmp
         encoding="utf-8",
     )
     saved = []
-    monkeypatch.setattr("video_edit_agent.cli.planning.load_draft_timeline", lambda *_: (timeline, source))
+    monkeypatch.setattr(
+        "video_edit_agent.cli.planning.load_draft_timeline", lambda *_: (timeline, source)
+    )
     monkeypatch.setattr(
         "video_edit_agent.cli.save_draft_timeline", lambda result, path: saved.append(result)
     )
@@ -207,7 +209,9 @@ def test_review_timeline_rejects_decisions_for_changed_timeline(tmp_path, monkey
         ),
         encoding="utf-8",
     )
-    monkeypatch.setattr("video_edit_agent.cli.planning.load_draft_timeline", lambda *_: (timeline, source))
+    monkeypatch.setattr(
+        "video_edit_agent.cli.planning.load_draft_timeline", lambda *_: (timeline, source)
+    )
 
     result = CliRunner().invoke(
         app,
