@@ -107,7 +107,7 @@ def test_understand_create_plan_suggest_footage_smoke(tmp_path: Path, monkeypatc
                     sequence_index=2,
                     title="A Quiet Pause",
                     purpose="Let the landscape breathe.",
-                    narrative_function="scenic_breath",
+                    narrative_function="breath",
                     target_duration_seconds=5,
                     shots=[
                         StoryboardShot(
