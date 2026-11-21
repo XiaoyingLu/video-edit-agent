@@ -89,6 +89,73 @@ def validate_frame_output(raw: str | dict[str, Any], frame: dict[str, Any]) -> d
     return FrameObservation.model_validate(normalized).model_dump()
 
 
+def normalize_temporal_payload(
+    raw: str | dict[str, Any],
+) -> tuple[dict[str, Any], list[str]]:
+    """Normalize common Qwen enum-shape drift without hiding the original output."""
+    payload = dict(_json_payload(raw))
+    changed_fields: list[str] = []
+    allowed = {
+        "subject_motion": {
+            "approaching", "receding", "crossing", "stationary",
+            "interacting", "mixed", "unknown",
+        },
+        "camera_motion": {
+            "static", "pan", "tilt", "zoom", "tracking",
+            "handheld", "mixed", "unknown",
+        },
+    }
+
+    def classify(value: Any, field: str) -> str:
+        if not isinstance(value, str):
+            return "unknown"
+        normalized = value.strip().lower().replace("-", "_").replace(" ", "_")
+        if normalized in allowed[field]:
+            return normalized
+        if field == "subject_motion":
+            if any(word in normalized for word in ("stationary", "standing_still", "not_moving")):
+                return "stationary"
+            if any(word in normalized for word in ("approach", "toward_camera", "coming_closer")):
+                return "approaching"
+            if any(word in normalized for word in ("reced", "moving_away", "away_from_camera")):
+                return "receding"
+            if any(word in normalized for word in ("cross", "running", "walking", "moving_across")):
+                return "crossing"
+            if any(word in normalized for word in ("interact", "acrobat", "juggling", "with_hoop")):
+                return "interacting"
+        else:
+            if "handheld" in normalized or "shaky" in normalized:
+                return "handheld"
+            if "track" in normalized or "follow" in normalized:
+                return "tracking"
+            if "pan" in normalized:
+                return "pan"
+            if "tilt" in normalized:
+                return "tilt"
+            if "zoom" in normalized:
+                return "zoom"
+            if "static" in normalized or "fixed" in normalized:
+                return "static"
+        return "unknown"
+
+    for field in allowed:
+        original = payload.get(field, "unknown")
+        if isinstance(original, list):
+            values = {classify(item, field) for item in original}
+            values.discard("unknown")
+            normalized_value = (
+                next(iter(values)) if len(values) == 1
+                else "mixed" if len(values) > 1
+                else "unknown"
+            )
+        else:
+            normalized_value = classify(original, field)
+        if normalized_value != original:
+            changed_fields.append(field)
+            payload[field] = normalized_value
+    return payload, changed_fields
+
+
 def validate_temporal_output(raw: str | dict[str, Any]) -> dict[str, Any]:
     return SceneDynamics.model_validate(_json_payload(raw)).model_dump()
 
@@ -181,6 +248,8 @@ def run_smol_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any
                 "temporal": {
                     "latency_seconds": round(temporal_elapsed, 3),
                     "schema_validation": temporal_validation,
+                    "normalization_applied": normalized_fields,
+                    "raw_output": raw_temporal,
                     "output": temporal,
                 },
                 "memory_after_scene": _mlx_memory(),
@@ -262,8 +331,9 @@ def run_qwen_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any
             )
             temporal_elapsed = time.perf_counter() - temporal_started
             temporal_latencies.append(temporal_elapsed)
+            normalized_temporal, normalized_fields = normalize_temporal_payload(raw_temporal)
             try:
-                temporal = validate_temporal_output(raw_temporal)
+                temporal = validate_temporal_output(normalized_temporal)
                 temporal_validation = {"valid": True, "errors": []}
             except Exception as exc:
                 temporal = {"raw": raw_temporal}
