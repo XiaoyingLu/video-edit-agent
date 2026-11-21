@@ -249,6 +249,7 @@ def run_qwen_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any
                     "frame": str(frame["path"]),
                     "timestamp_seconds": frame["timestamp_seconds"],
                     "latency_seconds": round(elapsed, 3),
+                    "inference_timing": inference_metrics,
                     "schema_validation": validation,
                     "observation": parsed,
                 })
