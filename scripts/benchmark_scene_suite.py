@@ -181,7 +181,6 @@ def run_smol_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any
                 "frames": frame_results,
                 "temporal": {
                     "latency_seconds": round(temporal_elapsed, 3),
-                    "inference_timing": temporal_inference_metrics,
                     "schema_validation": temporal_validation,
                     "output": temporal,
                 },
@@ -277,6 +276,7 @@ def run_qwen_suite(scenes: list[dict[str, Any]], model_id: str) -> dict[str, Any
                 "frames": frame_results,
                 "temporal": {
                     "latency_seconds": round(temporal_elapsed, 3),
+                    "inference_timing": temporal_inference_metrics,
                     "schema_validation": temporal_validation,
                     "output": temporal,
                 },
