@@ -1,6 +1,6 @@
 """Analysis and ingestion commands."""
 
-# ruff: noqa: F403,F405
+# ruff: noqa: F403,F405,I001
 from . import common
 from .common import *  # noqa: F403
 
