@@ -1,8 +1,8 @@
 """Maintenance and reporting commands."""
 
 # ruff: noqa: F403,F405
+from .common import app, console
 from .common import *  # noqa: F403
-from .common import _MUSIC_ANALYSIS_OPTION, _track_artifact, app, console
 
 
 
