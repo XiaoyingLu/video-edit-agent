@@ -908,8 +908,9 @@ It uses ordinal placeholder timestamps for the multi-image prompt because standa
 paths do not contain source-video timestamps. Use identical frame files and order for each
 candidate. The script records failed candidates without discarding successful runs.
 
-This is an isolated experiment: it does not add production providers, alter the default
-understanding model, change frame sampling, or modify temporal-analysis behavior.
+This benchmark harness remains isolated: it does not change provider defaults, frame sampling,
+or production temporal-analysis behavior. Qwen3-VL is also available as an opt-in production
+provider; see [Qwen3-VL setup and rollout notes](docs/qwen3-vl.md).
 
 
 ### Production Qwen3-VL provider (opt-in)
