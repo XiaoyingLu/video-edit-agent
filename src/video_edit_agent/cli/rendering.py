@@ -913,4 +913,3 @@ def compare_drafts(
         "not aesthetic scores; inspect and listen to both complete drafts before deciding. "
         "No source videos or timelines were modified.[/yellow]"
     )
-
