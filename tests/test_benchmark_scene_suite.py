@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from scripts.benchmark_scene_suite import (
+    inference_timing,
     latency_summary,
     load_manifest,
     validate_frame_output,
@@ -88,3 +89,13 @@ def test_temporal_schema_rejects_invalid_enum():
             "camera_motion": "static",
             "confidence": 0.8,
         })
+
+
+
+def test_inference_timing_reports_measurable_phases():
+    result = inference_timing(0.123456, 12.34567, '{"ok": true}')
+    assert result == {
+        "prompt_format_seconds": 0.1235,
+        "generate_call_seconds": 12.3457,
+        "output_characters": 12,
+    }
