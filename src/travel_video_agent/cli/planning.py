@@ -15,7 +15,7 @@ def find_highlights(
             file_okay=False,
             dir_okay=True,
             readable=True,
-            help="Folder containing travel videos.",
+            help="Folder containing video files.",
         ),
     ],
     output: Annotated[
@@ -88,7 +88,7 @@ def create_video(
             file_okay=False,
             dir_okay=True,
             readable=True,
-            help="Folder containing travel videos.",
+            help="Folder containing video files.",
         ),
     ],
     prompt: Annotated[str, typer.Option("--prompt", "-p", help="Describe the video you want.")],
@@ -204,7 +204,7 @@ def plan_edit(
             file_okay=False,
             dir_okay=True,
             readable=True,
-            help="Folder containing travel videos.",
+            help="Folder containing video files.",
         ),
     ],
     prompt: Annotated[
@@ -730,7 +730,7 @@ def draft_edit(
             file_okay=False,
             dir_okay=True,
             readable=True,
-            help="Folder containing analyzed travel videos.",
+            help="Folder containing analyzed video files.",
         ),
     ],
     plan: Annotated[
