@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from travel_video_agent.storage_cleanup import cleanup_generated_storage
+from video_edit_agent.storage_cleanup import cleanup_generated_storage
 
 
 def _write(path: Path, content: bytes = b"frame", *, age_days: float = 0) -> Path:

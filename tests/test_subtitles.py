@@ -2,19 +2,19 @@ from pathlib import Path
 
 import pytest
 
-from travel_video_agent.editing.schemas import (
+from video_edit_agent.editing.schemas import (
     ProjectTimeline,
     TimelineSegment,
     VideoTimeline,
 )
-from travel_video_agent.subtitles import (
+from video_edit_agent.subtitles import (
     SubtitleCue,
     SubtitleError,
     build_subtitle_cues,
     generate_subtitles,
     render_srt,
 )
-from travel_video_agent.transcription.schemas import (
+from video_edit_agent.transcription.schemas import (
     ProjectTranscription,
     TranscriptSegment,
     VideoTranscript,

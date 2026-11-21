@@ -3,16 +3,16 @@ from pathlib import Path
 
 import pytest
 
-from travel_video_agent.understanding.frame_sampler import extract_representative_frames
-from travel_video_agent.understanding.pipeline import understand_folder
-from travel_video_agent.understanding.scene_detection import detect_scenes
-from travel_video_agent.understanding.visual_analyzer import OllamaVisionAnalyzer
+from video_edit_agent.understanding.frame_sampler import extract_representative_frames
+from video_edit_agent.understanding.pipeline import understand_folder
+from video_edit_agent.understanding.scene_detection import detect_scenes
+from video_edit_agent.understanding.visual_analyzer import OllamaVisionAnalyzer
 
 
 @pytest.fixture(autouse=True)
 def disable_environment_dependent_memory_preflight(monkeypatch):
     monkeypatch.setattr(
-        "travel_video_agent.understanding.visual_analyzer.ensure_memory_available",
+        "video_edit_agent.understanding.visual_analyzer.ensure_memory_available",
         lambda required_gb, task: None,
     )
 
@@ -42,7 +42,7 @@ def test_scene_detection_falls_back_to_one_scene_when_detector_finds_none(
 
 def test_frame_sampler_rejects_invalid_scene(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(
-        "travel_video_agent.understanding.frame_sampler.shutil.which", lambda _: "ffmpeg"
+        "video_edit_agent.understanding.frame_sampler.shutil.which", lambda _: "ffmpeg"
     )
     assert extract_representative_frames(tmp_path / "clip.mp4", 4.0, 4.0, tmp_path / "frames") == []
 
@@ -53,14 +53,14 @@ def test_frame_sampler_uses_jpeg_compatible_pixel_format(monkeypatch, tmp_path: 
     captured = {}
 
     monkeypatch.setattr(
-        "travel_video_agent.understanding.frame_sampler.shutil.which", lambda _: "ffmpeg"
+        "video_edit_agent.understanding.frame_sampler.shutil.which", lambda _: "ffmpeg"
     )
 
     def fake_run(command, **kwargs):
         captured["command"] = command
         Path(command[-1]).write_bytes(b"jpeg-frame")
 
-    monkeypatch.setattr("travel_video_agent.understanding.frame_sampler.subprocess.run", fake_run)
+    monkeypatch.setattr("video_edit_agent.understanding.frame_sampler.subprocess.run", fake_run)
 
     result = extract_representative_frames(
         video, 0.0, 10.0, tmp_path / "frames", samples_per_scene=1
@@ -91,14 +91,14 @@ def test_frame_sampler_reuses_existing_extracted_frames(monkeypatch, tmp_path: P
         encoding="utf-8",
     )
     monkeypatch.setattr(
-        "travel_video_agent.understanding.frame_sampler.shutil.which", lambda _: "ffmpeg"
+        "video_edit_agent.understanding.frame_sampler.shutil.which", lambda _: "ffmpeg"
     )
 
     def unexpected_extract(*args, **kwargs):
         raise AssertionError("existing frame should not be extracted again")
 
     monkeypatch.setattr(
-        "travel_video_agent.understanding.frame_sampler.subprocess.run", unexpected_extract
+        "video_edit_agent.understanding.frame_sampler.subprocess.run", unexpected_extract
     )
     result = extract_representative_frames(video, 0.0, 10.0, frame_dir, samples_per_scene=1)
 
@@ -132,7 +132,7 @@ def test_ollama_analyzer_parses_structured_response(monkeypatch, tmp_path: Path)
             return json.dumps({"message": {"content": json.dumps(content)}}).encode()
 
     monkeypatch.setattr(
-        "travel_video_agent.understanding.visual_analyzer.urlopen",
+        "video_edit_agent.understanding.visual_analyzer.urlopen",
         lambda request, timeout: FakeResponse(),
     )
     result = OllamaVisionAnalyzer().analyze_frame(frame)
@@ -166,7 +166,7 @@ def test_ollama_analyzer_compares_rendered_frame_to_storyboard(monkeypatch, tmp_
         captured["payload"] = json.loads(request.data.decode("utf-8"))
         return FakeResponse()
 
-    monkeypatch.setattr("travel_video_agent.understanding.visual_analyzer.urlopen", fake_urlopen)
+    monkeypatch.setattr("video_edit_agent.understanding.visual_analyzer.urlopen", fake_urlopen)
     analyzer = OllamaVisionAnalyzer(model="qwen2.5vl:3b")
     result = analyzer.compare_frame_to_storyboard(
         frame,
@@ -194,7 +194,7 @@ def test_ollama_analyzer_compares_rendered_frame_to_storyboard(monkeypatch, tmp_
 
 
 def test_understanding_pipeline_builds_timestamped_scenes(monkeypatch, tmp_path: Path) -> None:
-    from travel_video_agent.understanding import pipeline
+    from video_edit_agent.understanding import pipeline
 
     video = tmp_path / "clip.mp4"
     video.touch()
@@ -262,7 +262,7 @@ def test_ollama_analyzer_requests_json_schema(monkeypatch, tmp_path: Path) -> No
         captured["payload"] = json.loads(request.data.decode("utf-8"))
         return FakeResponse()
 
-    monkeypatch.setattr("travel_video_agent.understanding.visual_analyzer.urlopen", fake_urlopen)
+    monkeypatch.setattr("video_edit_agent.understanding.visual_analyzer.urlopen", fake_urlopen)
     result = OllamaVisionAnalyzer(model="qwen2.5vl:3b").analyze_frame(frame)
 
     assert result["description"] == "A lake beneath mountains."
@@ -304,7 +304,7 @@ def test_ollama_analyzer_accepts_markdown_wrapped_json(monkeypatch, tmp_path: Pa
             return json.dumps({"message": {"content": content}}).encode()
 
     monkeypatch.setattr(
-        "travel_video_agent.understanding.visual_analyzer.urlopen",
+        "video_edit_agent.understanding.visual_analyzer.urlopen",
         lambda request, timeout: FakeResponse(),
     )
     result = OllamaVisionAnalyzer().analyze_frame(frame)
@@ -316,7 +316,7 @@ def test_ollama_analyzer_accepts_markdown_wrapped_json(monkeypatch, tmp_path: Pa
 def test_ollama_analyzer_reports_invalid_json_with_response_preview(
     monkeypatch, tmp_path: Path
 ) -> None:
-    from travel_video_agent.understanding.visual_analyzer import VisionModelError
+    from video_edit_agent.understanding.visual_analyzer import VisionModelError
 
     frame = tmp_path / "frame.jpg"
     frame.write_bytes(b"fake-image")
@@ -332,7 +332,7 @@ def test_ollama_analyzer_reports_invalid_json_with_response_preview(
             return json.dumps({"message": {"content": "not json"}}).encode()
 
     monkeypatch.setattr(
-        "travel_video_agent.understanding.visual_analyzer.urlopen",
+        "video_edit_agent.understanding.visual_analyzer.urlopen",
         lambda request, timeout: FakeResponse(),
     )
 
@@ -369,7 +369,7 @@ def test_ollama_analyzer_limits_structured_output_and_generation_tokens(
         captured["payload"] = json.loads(request.data.decode("utf-8"))
         return FakeResponse()
 
-    monkeypatch.setattr("travel_video_agent.understanding.visual_analyzer.urlopen", fake_urlopen)
+    monkeypatch.setattr("video_edit_agent.understanding.visual_analyzer.urlopen", fake_urlopen)
     OllamaVisionAnalyzer(model="qwen2.5vl:3b").analyze_frame(frame)
 
     schema = captured["payload"]["format"]
@@ -425,7 +425,7 @@ def test_ollama_analyzer_retries_truncated_json_with_shorter_output(
             )
         )
 
-    monkeypatch.setattr("travel_video_agent.understanding.visual_analyzer.urlopen", fake_urlopen)
+    monkeypatch.setattr("video_edit_agent.understanding.visual_analyzer.urlopen", fake_urlopen)
     result = OllamaVisionAnalyzer(model="qwen2.5vl:3b").analyze_frame(frame)
 
     assert result["description"] == "A person prepares coffee."
@@ -436,9 +436,7 @@ def test_ollama_analyzer_retries_truncated_json_with_shorter_output(
 
 
 def test_ollama_analyzer_rejects_too_many_objects(monkeypatch, tmp_path: Path) -> None:
-    import pytest
-
-    from travel_video_agent.understanding.visual_analyzer import VisionModelError
+    from video_edit_agent.understanding.visual_analyzer import VisionModelError
 
     frame = tmp_path / "frame.jpg"
     frame.write_bytes(b"fake-image")
@@ -462,7 +460,7 @@ def test_ollama_analyzer_rejects_too_many_objects(monkeypatch, tmp_path: Path) -
             return json.dumps({"message": {"content": content}}).encode()
 
     monkeypatch.setattr(
-        "travel_video_agent.understanding.visual_analyzer.urlopen",
+        "video_edit_agent.understanding.visual_analyzer.urlopen",
         lambda request, timeout: FakeResponse(),
     )
 
@@ -495,9 +493,9 @@ def test_ollama_analyzer_sends_keep_alive_and_can_unload(monkeypatch, tmp_path: 
         requests.append((request.full_url, json.loads(request.data.decode("utf-8"))))
         return FakeResponse()
 
-    monkeypatch.setattr("travel_video_agent.understanding.visual_analyzer.urlopen", fake_urlopen)
+    monkeypatch.setattr("video_edit_agent.understanding.visual_analyzer.urlopen", fake_urlopen)
     monkeypatch.setattr(
-        "travel_video_agent.understanding.visual_analyzer.ensure_memory_available",
+        "video_edit_agent.understanding.visual_analyzer.ensure_memory_available",
         lambda required_gb, task: None,
     )
     analyzer = OllamaVisionAnalyzer(model="qwen2.5vl:3b")
@@ -509,8 +507,8 @@ def test_ollama_analyzer_sends_keep_alive_and_can_unload(monkeypatch, tmp_path: 
 
 
 def test_vision_memory_preflight_stops_before_ollama_request(monkeypatch, tmp_path: Path) -> None:
-    from travel_video_agent.resource_manager import ResourceError
-    from travel_video_agent.understanding.visual_analyzer import VisionModelError
+    from video_edit_agent.resource_manager import ResourceError
+    from video_edit_agent.understanding.visual_analyzer import VisionModelError
 
     frame = tmp_path / "frame.jpg"
     frame.write_bytes(b"fake-image")
@@ -519,10 +517,10 @@ def test_vision_memory_preflight_stops_before_ollama_request(monkeypatch, tmp_pa
         raise ResourceError("Not enough available memory")
 
     monkeypatch.setattr(
-        "travel_video_agent.understanding.visual_analyzer.ensure_memory_available", reject
+        "video_edit_agent.understanding.visual_analyzer.ensure_memory_available", reject
     )
     monkeypatch.setattr(
-        "travel_video_agent.understanding.visual_analyzer.urlopen",
+        "video_edit_agent.understanding.visual_analyzer.urlopen",
         lambda *args, **kwargs: pytest.fail("Ollama must not be called after failed preflight"),
     )
     with pytest.raises(VisionModelError, match="Not enough available memory"):
@@ -552,7 +550,7 @@ def test_vision_analyzer_normalizes_missing_editorial_fields_to_unknown(
             return json.dumps({"message": {"content": json.dumps(content)}}).encode()
 
     monkeypatch.setattr(
-        "travel_video_agent.understanding.visual_analyzer.urlopen",
+        "video_edit_agent.understanding.visual_analyzer.urlopen",
         lambda request, timeout: FakeResponse(),
     )
     result = OllamaVisionAnalyzer().analyze_frame(frame)
@@ -591,7 +589,7 @@ def test_vision_analyzer_returns_cinematic_attributes(monkeypatch, tmp_path: Pat
             return json.dumps({"message": {"content": json.dumps(content)}}).encode()
 
     monkeypatch.setattr(
-        "travel_video_agent.understanding.visual_analyzer.urlopen",
+        "video_edit_agent.understanding.visual_analyzer.urlopen",
         lambda request, timeout: FakeResponse(),
     )
     result = OllamaVisionAnalyzer().analyze_frame(frame)
@@ -603,8 +601,8 @@ def test_vision_analyzer_returns_cinematic_attributes(monkeypatch, tmp_path: Pat
 
 
 def test_scene_editorial_labels_use_most_common_known_value() -> None:
-    from travel_video_agent.understanding.pipeline import _dominant_label
-    from travel_video_agent.understanding.schemas import FrameObservation
+    from video_edit_agent.understanding.pipeline import _dominant_label
+    from video_edit_agent.understanding.schemas import FrameObservation
 
     observations = [
         FrameObservation(
@@ -625,7 +623,7 @@ def test_scene_editorial_labels_use_most_common_known_value() -> None:
 
 
 def test_temporal_analyzer_uses_ordered_frames_and_validates_dynamics(monkeypatch, tmp_path):
-    from travel_video_agent.understanding.visual_analyzer import OllamaVisionAnalyzer
+    from video_edit_agent.understanding.visual_analyzer import OllamaVisionAnalyzer
 
     frames = []
     for index in range(3):
@@ -658,7 +656,7 @@ def test_temporal_analyzer_uses_ordered_frames_and_validates_dynamics(monkeypatc
         captured["payload"] = json.loads(request.data.decode("utf-8"))
         return FakeResponse()
 
-    monkeypatch.setattr("travel_video_agent.understanding.visual_analyzer.urlopen", fake_urlopen)
+    monkeypatch.setattr("video_edit_agent.understanding.visual_analyzer.urlopen", fake_urlopen)
     analyzer = OllamaVisionAnalyzer(model="qwen2.5vl:3b")
     result = analyzer.analyze_scene(frames)
 
@@ -681,7 +679,7 @@ def test_temporal_analyzer_returns_unknown_for_single_frame(tmp_path):
 
 
 def test_understanding_pipeline_attaches_temporal_scene_dynamics(monkeypatch, tmp_path):
-    from travel_video_agent.understanding import pipeline
+    from video_edit_agent.understanding import pipeline
 
     video = tmp_path / "clip.mp4"
     video.touch()
@@ -732,8 +730,8 @@ def test_understanding_pipeline_attaches_temporal_scene_dynamics(monkeypatch, tm
 def test_understanding_resumes_cached_frame_observations_after_interruption(
     monkeypatch, tmp_path: Path
 ) -> None:
-    from travel_video_agent.understanding import pipeline
-    from travel_video_agent.understanding.visual_analyzer import VisionModelError
+    from video_edit_agent.understanding import pipeline
+    from video_edit_agent.understanding.visual_analyzer import VisionModelError
 
     video = tmp_path / "clip.mp4"
     video.write_bytes(b"source-video")

@@ -4,12 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from travel_video_agent.editing.schemas import (
+from video_edit_agent.editing.schemas import (
     ProjectTimeline,
     TimelineSegment,
     VideoTimeline,
 )
-from travel_video_agent.rendering import RenderError, render_project
+from video_edit_agent.rendering import RenderError, render_project
 
 
 def _write_timeline(
@@ -44,7 +44,7 @@ def _write_timeline(
 
 
 def _fake_tools(monkeypatch, *, output_duration: float = 8, has_audio: bool = True):
-    from travel_video_agent.rendering import renderer
+    from video_edit_agent.rendering import renderer
 
     monkeypatch.setattr(
         renderer.shutil,

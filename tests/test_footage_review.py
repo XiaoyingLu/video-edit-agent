@@ -2,17 +2,17 @@
 
 import pytest
 
-from travel_video_agent.artifact_tracking import register_artifact
-from travel_video_agent.editing.footage_mapping import suggest_storyboard_footage
-from travel_video_agent.editing.footage_review import review_storyboard_footage
-from travel_video_agent.editing.planning_schemas import (
+from video_edit_agent.artifact_tracking import register_artifact
+from video_edit_agent.editing.footage_mapping import suggest_storyboard_footage
+from video_edit_agent.editing.footage_review import review_storyboard_footage
+from video_edit_agent.editing.planning_schemas import (
     CreativeBrief,
     PlannedScene,
     StoryboardShot,
     StoryTreatment,
     VideoProjectPlan,
 )
-from travel_video_agent.understanding.schemas import (
+from video_edit_agent.understanding.schemas import (
     FrameObservation,
     VideoScene,
     VideoUnderstanding,

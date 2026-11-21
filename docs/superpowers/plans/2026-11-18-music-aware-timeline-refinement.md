@@ -34,7 +34,7 @@
 ### Task 1: Model refinement decisions and revision reports
 
 **Files:**
-- Create: `src/travel_video_agent/music/refinement.py`
+- Create: `src/video_edit_agent/music/refinement.py`
 - Test: `tests/test_music_sync_refinement.py`
 
 **Interfaces:**
@@ -65,7 +65,7 @@
 ### Task 2: Apply accepted timing changes safely
 
 **Files:**
-- Modify: `src/travel_video_agent/music/refinement.py`
+- Modify: `src/video_edit_agent/music/refinement.py`
 - Test: `tests/test_music_sync_refinement.py`
 
 **Interfaces:**
@@ -105,7 +105,7 @@
 ### Task 3: Persist versioned revisions and review provenance
 
 **Files:**
-- Modify: `src/travel_video_agent/music/refinement.py`
+- Modify: `src/video_edit_agent/music/refinement.py`
 - Modify: `tests/test_music_sync_refinement.py`
 
 **Interfaces:**
@@ -141,7 +141,7 @@
 ### Task 4: Add the review-music-sync CLI workflow
 
 **Files:**
-- Modify: `src/travel_video_agent/cli.py`
+- Modify: `src/video_edit_agent/cli.py`
 - Modify: `tests/test_cli.py`
 - Modify: `tests/test_music_sync_refinement.py`
 

@@ -1,8 +1,8 @@
 import pytest
 
-from travel_video_agent.soundtrack.catalog import SoundtrackSearchRequest
-from travel_video_agent.soundtrack.providers.soundstripe import SoundstripeCatalogProvider
-from travel_video_agent.soundtrack.schemas import SoundtrackLicense
+from video_edit_agent.soundtrack.catalog import SoundtrackSearchRequest
+from video_edit_agent.soundtrack.providers.soundstripe import SoundstripeCatalogProvider
+from video_edit_agent.soundtrack.schemas import SoundtrackLicense
 
 
 def provider(profile=None):

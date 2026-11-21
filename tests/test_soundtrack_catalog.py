@@ -3,12 +3,12 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from travel_video_agent.soundtrack.catalog import (
+from video_edit_agent.soundtrack.catalog import (
     SoundtrackSearchRequest,
     SoundtrackSearchResponse,
 )
-from travel_video_agent.soundtrack.licensing import evaluate_soundtrack_rights
-from travel_video_agent.soundtrack.schemas import (
+from video_edit_agent.soundtrack.licensing import evaluate_soundtrack_rights
+from video_edit_agent.soundtrack.schemas import (
     SoundtrackCandidate,
     SoundtrackLicense,
     SoundtrackRightsPolicy,

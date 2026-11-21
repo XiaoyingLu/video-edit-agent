@@ -3,14 +3,14 @@ from types import SimpleNamespace
 
 from typer.testing import CliRunner
 
-from travel_video_agent.cli import app
-from travel_video_agent.editing.revision_visual_review import (
+from video_edit_agent.cli import app
+from video_edit_agent.editing.revision_visual_review import (
     build_timeline_revision_visual_review,
     render_timeline_revision_review_html,
     save_timeline_revision_visual_review,
 )
-from travel_video_agent.editing.revisions import TimelineIntervalEdit, create_timeline_revision
-from travel_video_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
+from video_edit_agent.editing.revisions import TimelineIntervalEdit, create_timeline_revision
+from video_edit_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
 
 
 def _approved_timeline(root: Path) -> Path:
@@ -60,17 +60,17 @@ def _approved_timeline(root: Path) -> Path:
 
 
 def _patch_tools(monkeypatch):
-    monkeypatch.setattr("travel_video_agent.editing.revisions.validate_artifact", lambda *_: True)
+    monkeypatch.setattr("video_edit_agent.editing.revisions.validate_artifact", lambda *_: True)
     monkeypatch.setattr(
-        "travel_video_agent.editing.revisions.register_artifact",
+        "video_edit_agent.editing.revisions.register_artifact",
         lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_visual_review.validate_artifact",
+        "video_edit_agent.editing.revision_visual_review.validate_artifact",
         lambda *_: True,
     )
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_visual_review.shutil.which",
+        "video_edit_agent.editing.revision_visual_review.shutil.which",
         lambda name: f"/usr/bin/{name}",
     )
 
@@ -78,7 +78,7 @@ def _patch_tools(monkeypatch):
         Path(command[-1]).write_bytes(b"fake jpeg")
         return SimpleNamespace(returncode=0, stderr="")
 
-    monkeypatch.setattr("travel_video_agent.editing.revision_visual_review._run", fake_run)
+    monkeypatch.setattr("video_edit_agent.editing.revision_visual_review._run", fake_run)
 
 
 def _revision(root, monkeypatch):
@@ -132,7 +132,7 @@ def test_visual_review_saves_self_contained_html_and_json(tmp_path, monkeypatch)
     )
     registered = []
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_visual_review.register_artifact",
+        "video_edit_agent.editing.revision_visual_review.register_artifact",
         lambda root, path, dependencies: registered.append((path, dependencies)),
     )
 
@@ -152,7 +152,7 @@ def test_visual_review_saves_self_contained_html_and_json(tmp_path, monkeypatch)
 def test_visual_review_cli_writes_report(tmp_path, monkeypatch):
     source, revision = _revision(tmp_path, monkeypatch)
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_visual_review.register_artifact",
+        "video_edit_agent.editing.revision_visual_review.register_artifact",
         lambda *_args, **_kwargs: None,
     )
     runner = CliRunner()

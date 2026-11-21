@@ -2,14 +2,14 @@ from pathlib import Path
 
 import pytest
 
-from travel_video_agent.artifact_tracking import register_artifact
-from travel_video_agent.editing.planning_schemas import VideoProjectPlan
-from travel_video_agent.editing.storyboard_production import (
+from video_edit_agent.artifact_tracking import register_artifact
+from video_edit_agent.editing.planning_schemas import VideoProjectPlan
+from video_edit_agent.editing.storyboard_production import (
     approve_storyboard,
     build_storyboard_timeline,
     save_storyboard_timeline,
 )
-from travel_video_agent.editing.timeline_schemas import ProjectDraftTimeline
+from video_edit_agent.editing.timeline_schemas import ProjectDraftTimeline
 
 
 def _write_plan(root: Path, *, mapped: bool = True) -> Path:

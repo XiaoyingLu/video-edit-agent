@@ -6,15 +6,15 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from travel_video_agent.artifact_tracking import register_artifact
-from travel_video_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
-from travel_video_agent.models import MediaInfo
-from travel_video_agent.music.refinement import (
+from video_edit_agent.artifact_tracking import register_artifact
+from video_edit_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
+from video_edit_agent.models import MediaInfo
+from video_edit_agent.music.refinement import (
     MusicSyncReviewDecision,
     MusicSyncReviewResult,
     apply_music_sync_review,
 )
-from travel_video_agent.music.sync import MusicSyncBoundary, MusicSyncSuggestions
+from video_edit_agent.music.sync import MusicSyncBoundary, MusicSyncSuggestions
 
 
 def test_review_decision_records_accepted_rejected_and_infeasible_states() -> None:
@@ -115,7 +115,7 @@ def _inputs(
 
 def _probe(monkeypatch: pytest.MonkeyPatch, duration: float = 12) -> None:
     monkeypatch.setattr(
-        "travel_video_agent.music.refinement.probe_video",
+        "video_edit_agent.music.refinement.probe_video",
         lambda path, root: MediaInfo(
             path=path.name, duration_seconds=duration, has_video=True, has_audio=True
         ),

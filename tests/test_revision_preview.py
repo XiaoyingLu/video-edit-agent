@@ -3,10 +3,10 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from travel_video_agent.cli import app
-from travel_video_agent.editing.revision_preview import render_timeline_revision_preview
-from travel_video_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
-from travel_video_agent.rendering.renderer import RenderReport
+from video_edit_agent.cli import app
+from video_edit_agent.editing.revision_preview import render_timeline_revision_preview
+from video_edit_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
+from video_edit_agent.rendering.renderer import RenderReport
 
 
 def _approved_revision(root: Path) -> Path:
@@ -43,7 +43,7 @@ def _approved_revision(root: Path) -> Path:
 def _mock_renderer(monkeypatch):
     calls = []
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_preview.validate_artifact",
+        "video_edit_agent.editing.revision_preview.validate_artifact",
         lambda *_: True,
     )
 
@@ -85,11 +85,11 @@ def _mock_renderer(monkeypatch):
         )
 
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_preview.render_approved_shot_timeline",
+        "video_edit_agent.editing.revision_preview.render_approved_shot_timeline",
         fake_render,
     )
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_preview.register_artifact",
+        "video_edit_agent.editing.revision_preview.register_artifact",
         lambda *_args, **_kwargs: None,
     )
     return calls

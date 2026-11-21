@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from travel_video_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
-from travel_video_agent.editing.timeline_visual_editor import (
+from video_edit_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
+from video_edit_agent.editing.timeline_visual_editor import (
     TimelineVisualEditClip,
     TimelineVisualEditError,
     TimelineVisualEditExport,
@@ -63,10 +63,10 @@ def _export(path: Path, clips: list[TimelineVisualEditClip]) -> TimelineVisualEd
 
 def _patch_tracking(monkeypatch):
     monkeypatch.setattr(
-        "travel_video_agent.editing.timeline_visual_editor.validate_artifact", lambda *_: True
+        "video_edit_agent.editing.timeline_visual_editor.validate_artifact", lambda *_: True
     )
     monkeypatch.setattr(
-        "travel_video_agent.editing.timeline_visual_editor.register_artifact",
+        "video_edit_agent.editing.timeline_visual_editor.register_artifact",
         lambda *_args, **_kwargs: None,
     )
 

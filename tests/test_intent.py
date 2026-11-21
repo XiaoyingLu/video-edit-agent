@@ -4,14 +4,14 @@ from urllib.request import Request
 import pytest
 from pydantic import ValidationError
 
-from travel_video_agent.editing.intent import IntentParsingError, OllamaIntentParser
-from travel_video_agent.editing.intent_schemas import EditingPlan
+from video_edit_agent.editing.intent import IntentParsingError, OllamaIntentParser
+from video_edit_agent.editing.intent_schemas import EditingPlan
 
 
 @pytest.fixture(autouse=True)
 def disable_environment_dependent_memory_preflight(monkeypatch):
     monkeypatch.setattr(
-        "travel_video_agent.editing.intent.ensure_memory_available",
+        "video_edit_agent.editing.intent.ensure_memory_available",
         lambda required_gb, task: None,
     )
 
@@ -73,7 +73,7 @@ def test_ollama_intent_parser_validates_structured_response(monkeypatch) -> None
         captured["timeout"] = timeout
         return FakeResponse({"message": {"content": json.dumps(content)}})
 
-    monkeypatch.setattr("travel_video_agent.editing.intent.urlopen", fake_urlopen)
+    monkeypatch.setattr("video_edit_agent.editing.intent.urlopen", fake_urlopen)
     plan = OllamaIntentParser(model="qwen2.5vl:3b").parse(
         "  Create a 60-second cinematic travel video  "
     )
@@ -91,7 +91,7 @@ def test_ollama_intent_parser_validates_structured_response(monkeypatch) -> None
 def test_ollama_intent_parser_rejects_invalid_model_output(monkeypatch) -> None:
     content = {"style": "make_shell_command", "target_duration_seconds": 60}
     monkeypatch.setattr(
-        "travel_video_agent.editing.intent.urlopen",
+        "video_edit_agent.editing.intent.urlopen",
         lambda request, timeout: FakeResponse({"message": {"content": json.dumps(content)}}),
     )
     with pytest.raises(IntentParsingError, match="did not satisfy"):
@@ -111,7 +111,7 @@ def test_intent_parser_unloads_model(monkeypatch) -> None:
         captured["payload"] = json.loads(request.data.decode("utf-8"))
         return FakeResponse({"response": ""})
 
-    monkeypatch.setattr("travel_video_agent.editing.intent.urlopen", fake_urlopen)
+    monkeypatch.setattr("video_edit_agent.editing.intent.urlopen", fake_urlopen)
     parser = OllamaIntentParser(model="qwen2.5vl:3b")
     parser._model_used = True
     assert parser.unload_model() is True
@@ -120,11 +120,11 @@ def test_intent_parser_unloads_model(monkeypatch) -> None:
 
 
 def test_intent_memory_preflight_rejects_before_parser_can_run(monkeypatch) -> None:
-    from travel_video_agent.resource_manager import ResourceError
+    from video_edit_agent.resource_manager import ResourceError
 
     def reject(required_gb, task):
         raise ResourceError("Not enough available memory")
 
-    monkeypatch.setattr("travel_video_agent.editing.intent.ensure_memory_available", reject)
+    monkeypatch.setattr("video_edit_agent.editing.intent.ensure_memory_available", reject)
     with pytest.raises(IntentParsingError, match="Not enough available memory"):
         OllamaIntentParser(model="qwen2.5vl:7b")

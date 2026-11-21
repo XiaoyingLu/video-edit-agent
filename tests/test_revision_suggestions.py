@@ -4,17 +4,17 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from travel_video_agent.cli import app
-from travel_video_agent.editing.revision_review import (
+from video_edit_agent.cli import app
+from video_edit_agent.editing.revision_review import (
     RevisionSuggestionReviewError,
     review_draft_revision_suggestions,
 )
-from travel_video_agent.editing.revision_suggestions import (
+from video_edit_agent.editing.revision_suggestions import (
     build_draft_revision_suggestions,
     save_draft_revision_suggestions,
 )
-from travel_video_agent.editing.revisions import TimelineIntervalEdit
-from travel_video_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
+from video_edit_agent.editing.revisions import TimelineIntervalEdit
+from video_edit_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
 
 
 def _inputs(root: Path) -> tuple[Path, Path]:
@@ -98,7 +98,7 @@ def _inputs(root: Path) -> tuple[Path, Path]:
 def test_builds_confident_story_and_pacing_suggestions(tmp_path, monkeypatch):
     critique_path, timeline_path = _inputs(tmp_path)
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_suggestions.validate_artifact",
+        "video_edit_agent.editing.revision_suggestions.validate_artifact",
         lambda *_: True,
     )
 
@@ -142,7 +142,7 @@ def test_ignores_uncertain_semantic_reviews_and_unmapped_shots(tmp_path, monkeyp
     )
     critique_path.write_text(json.dumps(payload), encoding="utf-8")
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_suggestions.validate_artifact",
+        "video_edit_agent.editing.revision_suggestions.validate_artifact",
         lambda *_: True,
     )
 
@@ -157,12 +157,12 @@ def test_ignores_uncertain_semantic_reviews_and_unmapped_shots(tmp_path, monkeyp
 def test_saves_suggestions_with_artifact_dependencies(tmp_path, monkeypatch):
     _inputs(tmp_path)
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_suggestions.validate_artifact",
+        "video_edit_agent.editing.revision_suggestions.validate_artifact",
         lambda *_: True,
     )
     registered = {}
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_suggestions.register_artifact",
+        "video_edit_agent.editing.revision_suggestions.register_artifact",
         lambda root, path, dependencies: registered.update(
             root=root, path=path, dependencies=dependencies
         ),
@@ -180,28 +180,28 @@ def test_saves_suggestions_with_artifact_dependencies(tmp_path, monkeypatch):
 def test_review_records_decisions_and_creates_separate_timeline_revision(tmp_path, monkeypatch):
     _inputs(tmp_path)
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_suggestions.validate_artifact",
+        "video_edit_agent.editing.revision_suggestions.validate_artifact",
         lambda *_: True,
     )
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_review.validate_artifact",
+        "video_edit_agent.editing.revision_review.validate_artifact",
         lambda *_: True,
     )
     monkeypatch.setattr(
-        "travel_video_agent.editing.revisions.validate_artifact",
+        "video_edit_agent.editing.revisions.validate_artifact",
         lambda *_: True,
     )
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_suggestions.register_artifact",
+        "video_edit_agent.editing.revision_suggestions.register_artifact",
         lambda *_args, **_kwargs: None,
     )
     registered = []
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_review.register_artifact",
+        "video_edit_agent.editing.revision_review.register_artifact",
         lambda root, path, dependencies: registered.append((path, dependencies)),
     )
     monkeypatch.setattr(
-        "travel_video_agent.editing.revisions.register_artifact",
+        "video_edit_agent.editing.revisions.register_artifact",
         lambda *_args, **_kwargs: None,
     )
     suggestions = build_draft_revision_suggestions(tmp_path)
@@ -239,15 +239,15 @@ def test_review_records_decisions_and_creates_separate_timeline_revision(tmp_pat
 def test_review_rejects_interval_for_unaccepted_suggestion(tmp_path, monkeypatch):
     _inputs(tmp_path)
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_suggestions.validate_artifact",
+        "video_edit_agent.editing.revision_suggestions.validate_artifact",
         lambda *_: True,
     )
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_suggestions.register_artifact",
+        "video_edit_agent.editing.revision_suggestions.register_artifact",
         lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_review.validate_artifact",
+        "video_edit_agent.editing.revision_review.validate_artifact",
         lambda *_: True,
     )
     suggestions = build_draft_revision_suggestions(tmp_path)
@@ -272,27 +272,27 @@ def test_review_rejects_interval_for_unaccepted_suggestion(tmp_path, monkeypatch
 def test_review_revision_suggestions_cli_accepts_explicit_interval(tmp_path, monkeypatch):
     _inputs(tmp_path)
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_suggestions.validate_artifact",
+        "video_edit_agent.editing.revision_suggestions.validate_artifact",
         lambda *_: True,
     )
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_suggestions.register_artifact",
+        "video_edit_agent.editing.revision_suggestions.register_artifact",
         lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_review.validate_artifact",
+        "video_edit_agent.editing.revision_review.validate_artifact",
         lambda *_: True,
     )
     monkeypatch.setattr(
-        "travel_video_agent.editing.revisions.validate_artifact",
+        "video_edit_agent.editing.revisions.validate_artifact",
         lambda *_: True,
     )
     monkeypatch.setattr(
-        "travel_video_agent.editing.revision_review.register_artifact",
+        "video_edit_agent.editing.revision_review.register_artifact",
         lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
-        "travel_video_agent.editing.revisions.register_artifact",
+        "video_edit_agent.editing.revisions.register_artifact",
         lambda *_args, **_kwargs: None,
     )
     report = build_draft_revision_suggestions(tmp_path)

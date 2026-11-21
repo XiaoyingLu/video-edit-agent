@@ -5,14 +5,14 @@ from datetime import UTC, datetime
 
 import pytest
 
-from travel_video_agent.soundtrack import generation
-from travel_video_agent.soundtrack.generation import (
+from video_edit_agent.soundtrack import generation
+from video_edit_agent.soundtrack.generation import (
     SoundtrackGenerationError,
     generate_soundtrack_from_brief,
     stable_audio_license,
 )
-from travel_video_agent.soundtrack.providers.stable_audio import StableAudioGenerationResult
-from travel_video_agent.soundtrack.schemas import SoundtrackBrief
+from video_edit_agent.soundtrack.providers.stable_audio import StableAudioGenerationResult
+from video_edit_agent.soundtrack.schemas import SoundtrackBrief
 
 
 def write_brief(root, *, duration=60):
