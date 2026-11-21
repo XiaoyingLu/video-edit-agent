@@ -78,6 +78,7 @@ def find_highlights(
         "No edits were applied and source media was not modified.[/yellow]"
     )
 
+
 @app.command("create-video")
 def create_video(
     folder: Annotated[
@@ -194,6 +195,7 @@ def create_video(
     )
     console.print("[yellow]Original source videos were not modified.[/yellow]")
 
+
 @app.command("plan")
 def plan_edit(
     folder: Annotated[
@@ -248,6 +250,7 @@ def plan_edit(
         "[yellow]This is an intent artifact only. No clips were selected, "
         "no timeline was changed, and no video was rendered.[/yellow]"
     )
+
 
 @app.command("create-plan")
 def create_plan(
@@ -329,6 +332,7 @@ def create_plan(
         "no source footage was assigned, and no video was rendered.[/yellow]"
     )
 
+
 @app.command("propose-story")
 def propose_story_command(
     folder: Annotated[
@@ -407,6 +411,7 @@ def propose_story_command(
         "and no video was rendered.[/yellow]"
     )
 
+
 @app.command("select-story")
 def select_story_command(
     folder: Annotated[
@@ -426,6 +431,7 @@ def select_story_command(
     chosen = next(angle for angle in proposal.angles if angle.angle_id == angle_id)
     console.print(f"Selected [bold]{chosen.angle_id}[/bold]: {chosen.title}")
     console.print(f"Saved to [green]{destination}[/green]")
+
 
 @app.command("suggest-footage")
 def suggest_footage(
@@ -539,6 +545,7 @@ def suggest_footage(
         "approved, trimmed, or rendered.[/yellow]"
     )
 
+
 @app.command("approve-storyboard")
 def approve_storyboard_command(
     folder: Annotated[
@@ -560,6 +567,7 @@ def approve_storyboard_command(
     )
     console.print(f"Updated plan: [green]{destination}[/green]")
     console.print("[yellow]No timeline was built and no video was rendered.[/yellow]")
+
 
 @app.command("build-storyboard-timeline")
 def build_storyboard_timeline_command(
@@ -621,6 +629,7 @@ def build_storyboard_timeline_command(
         "no source media was modified and no video was rendered.[/yellow]"
     )
 
+
 @app.command("review-storyboard")
 def review_storyboard(
     folder: Annotated[
@@ -653,6 +662,7 @@ def review_storyboard(
         "[yellow]Open the HTML file locally to inspect the sequence. "
         "This is read-only review; no approval or rendering was performed.[/yellow]"
     )
+
 
 @app.command("review-footage")
 def review_footage(
@@ -719,6 +729,7 @@ def review_footage(
     console.print(
         "[yellow]This does not approve the overall creative plan or render video.[/yellow]"
     )
+
 
 @app.command("draft-edit")
 def draft_edit(
@@ -795,6 +806,7 @@ def draft_edit(
         "[yellow]All selections require human review. No existing timeline was changed "
         "and no video was rendered.[/yellow]"
     )
+
 
 @app.command("optimize-timeline")
 def optimize_timeline(
@@ -890,6 +902,7 @@ def optimize_timeline(
         "[yellow]Review every clip with review-timeline. This is not the renderer's "
         "timeline.json; no source media was changed and no video was rendered.[/yellow]"
     )
+
 
 @app.command("review-timeline")
 def review_timeline(
@@ -1030,6 +1043,7 @@ def review_timeline(
         console.print("[yellow]Sequence is not approved yet; resolve all pending clips.[/yellow]")
     console.print("[yellow]No renderer timeline was created and no video was rendered.[/yellow]")
 
+
 @app.command("review-timeline-visual")
 def review_timeline_visual(
     folder: Annotated[
@@ -1073,6 +1087,7 @@ def review_timeline_visual(
         "review-timeline --decisions-file. No decisions are applied by this command.[/yellow]"
     )
 
+
 @app.command("apply-timeline-visual-edits")
 def apply_timeline_visual_edits_command(
     folder: Annotated[
@@ -1103,6 +1118,7 @@ def apply_timeline_visual_edits_command(
         "[yellow]Review the new revision with review-timeline before rendering. "
         "The original timeline and source media are unchanged.[/yellow]"
     )
+
 
 @app.command("revise-timeline")
 def revise_timeline(
@@ -1171,6 +1187,7 @@ def revise_timeline(
         "are unchanged.[/yellow]"
     )
 
+
 @app.command("review-timeline-revision")
 def review_timeline_revision(
     folder: Annotated[
@@ -1232,6 +1249,7 @@ def review_timeline_revision(
         "Review full shot context and transitions before approving the revised timeline. "
         "Neither timeline nor source media was modified.[/yellow]"
     )
+
 
 @app.command("compare-timelines")
 def compare_timelines(
