@@ -1,7 +1,7 @@
 """Analysis and ingestion commands."""
 
 # ruff: noqa: F403,F405
-from .common import _track_artifact, app, console
+from . import common
 from .common import *  # noqa: F403
 
 
@@ -41,7 +41,7 @@ def analyze(
     destination.write_text(
         json.dumps(analysis.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
     )
-    _track_artifact(folder, destination)
+    common._track_artifact(folder, destination)
 
     table = Table(title="Travel Video Analysis")
     table.add_column("Video", style="cyan")
@@ -198,7 +198,7 @@ def understand(
     destination.write_text(
         json.dumps(understanding.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
     )
-    _track_artifact(
+    common._track_artifact(
         folder,
         destination,
         config={
@@ -309,7 +309,7 @@ def transcribe(
     destination.write_text(
         json.dumps(transcription.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
     )
-    _track_artifact(
+    common._track_artifact(
         folder,
         destination,
         config={"model": model, "device": device, "compute_type": compute_type},
@@ -400,7 +400,7 @@ def detect_silence(
     destination.write_text(
         json.dumps(report.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
     )
-    _track_artifact(
+    common._track_artifact(
         folder,
         destination,
         dependencies=(".video-agent/transcription.json",),
@@ -466,7 +466,7 @@ def propose_edits(
     destination.write_text(
         json.dumps(proposal.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
     )
-    _track_artifact(
+    common._track_artifact(
         folder,
         destination,
         dependencies=(".video-agent/silence-analysis.json", ".video-agent/understanding.json"),
@@ -549,7 +549,7 @@ def review_edits(
                         console.print("[yellow]Enter a, r, or s.[/yellow]")
         apply_review_decisions(proposal, approve_ids, reject_ids)
         save_edit_proposal(proposal, destination)
-        _track_artifact(
+        common._track_artifact(
             folder,
             destination,
             dependencies=(".video-agent/silence-analysis.json", ".video-agent/understanding.json"),
@@ -612,7 +612,7 @@ def build_timeline(
     destination.write_text(
         json.dumps(timeline.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
     )
-    _track_artifact(folder, destination, dependencies=(".video-agent/edit-proposal.json",))
+    common._track_artifact(folder, destination, dependencies=(".video-agent/edit-proposal.json",))
     table = Table(title="Validated Edit Timeline — No Rendering")
     table.add_column("Video", style="cyan")
     table.add_column("Approved cuts", justify="right")
@@ -670,7 +670,7 @@ def subtitles_command(
         console.print(f"[red]Subtitle generation failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
-    _track_artifact(
+    common._track_artifact(
         folder,
         destination,
         dependencies=(".video-agent/timeline.json", ".video-agent/transcription.json"),
