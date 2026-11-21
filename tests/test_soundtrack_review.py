@@ -3,14 +3,14 @@ from datetime import UTC, datetime
 
 import pytest
 
-from travel_video_agent.soundtrack.catalog import SoundtrackSearchResponse
-from travel_video_agent.soundtrack.review import (
+from video_edit_agent.soundtrack.catalog import SoundtrackSearchResponse
+from video_edit_agent.soundtrack.review import (
     SoundtrackReviewError,
     build_soundtrack_candidate_review,
     save_soundtrack_candidate_review,
     select_soundtrack_candidate,
 )
-from travel_video_agent.soundtrack.schemas import (
+from video_edit_agent.soundtrack.schemas import (
     SoundtrackBrief,
     SoundtrackCandidate,
     SoundtrackLicense,
@@ -146,8 +146,8 @@ def test_review_does_not_overwrite_existing_output(tmp_path):
 def test_soundstripe_search_uses_brief_and_tracks_license_profile(tmp_path, monkeypatch):
     import asyncio
 
-    from travel_video_agent.soundtrack import review
-    from travel_video_agent.soundtrack.schemas import SoundtrackLicense
+    from video_edit_agent.soundtrack import review
+    from video_edit_agent.soundtrack.schemas import SoundtrackLicense
 
     _write_inputs(tmp_path, _candidate())
     profile_path = tmp_path / ".video-agent" / "soundstripe-license.json"

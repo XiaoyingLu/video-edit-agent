@@ -1,8 +1,8 @@
 import pytest
 from pydantic import ValidationError
 
-from travel_video_agent.editing.intent_schemas import EditingPlan
-from travel_video_agent.editing.planning_schemas import (
+from video_edit_agent.editing.intent_schemas import EditingPlan
+from video_edit_agent.editing.planning_schemas import (
     CreativeBrief,
     StoryboardShot,
     VideoProjectPlan,

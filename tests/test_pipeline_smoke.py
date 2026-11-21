@@ -4,16 +4,16 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from travel_video_agent.cli import app
-from travel_video_agent.editing import planning_pipeline
-from travel_video_agent.editing.intent_schemas import EditingPlan
-from travel_video_agent.editing.planning_generation import GeneratedVideoPlanContent
-from travel_video_agent.editing.planning_schemas import (
+from video_edit_agent.cli import app
+from video_edit_agent.editing import planning_pipeline
+from video_edit_agent.editing.intent_schemas import EditingPlan
+from video_edit_agent.editing.planning_generation import GeneratedVideoPlanContent
+from video_edit_agent.editing.planning_schemas import (
     PlannedScene,
     StoryboardShot,
     StoryTreatment,
 )
-from travel_video_agent.understanding import pipeline as understanding_pipeline
+from video_edit_agent.understanding import pipeline as understanding_pipeline
 
 runner = CliRunner()
 

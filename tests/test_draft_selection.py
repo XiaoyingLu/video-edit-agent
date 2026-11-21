@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from travel_video_agent.editing.draft_pipeline import build_draft_selection
-from travel_video_agent.editing.intent_schemas import EditingPlan
+from video_edit_agent.editing.draft_pipeline import build_draft_selection
+from video_edit_agent.editing.intent_schemas import EditingPlan
 
 
 def _write_artifacts(root, candidates, scenes=None, transcript=None):

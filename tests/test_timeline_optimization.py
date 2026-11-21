@@ -2,14 +2,14 @@ import pytest
 from rich.text import Text
 from typer.testing import CliRunner
 
-from travel_video_agent.cli import app
-from travel_video_agent.editing.draft_schemas import DraftClip, ProjectDraftSelection
-from travel_video_agent.editing.intent_schemas import EditingPlan
-from travel_video_agent.editing.timeline_pipeline import (
+from video_edit_agent.cli import app
+from video_edit_agent.editing.draft_schemas import DraftClip, ProjectDraftSelection
+from video_edit_agent.editing.intent_schemas import EditingPlan
+from video_edit_agent.editing.timeline_pipeline import (
     apply_timeline_review,
     build_draft_timeline,
 )
-from travel_video_agent.editing.timeline_schemas import (
+from video_edit_agent.editing.timeline_schemas import (
     DraftTimelineClip,
     ProjectDraftTimeline,
 )
@@ -197,7 +197,7 @@ def test_cli_help_includes_timeline_commands():
 
 
 def test_cinematic_timeline_builds_establishing_action_detail_and_scenic_arc(tmp_path):
-    from travel_video_agent.editing.draft_schemas import DraftClip
+    from video_edit_agent.editing.draft_schemas import DraftClip
 
     _write_inputs(tmp_path, style="highlight_reel", transition="cut")
     artifact = tmp_path / ".video-agent"
@@ -293,7 +293,7 @@ def test_cinematic_timeline_builds_establishing_action_detail_and_scenic_arc(tmp
 
 
 def test_chronological_story_keeps_source_order_despite_scene_roles(tmp_path):
-    from travel_video_agent.editing.draft_schemas import DraftClip
+    from video_edit_agent.editing.draft_schemas import DraftClip
 
     _write_inputs(tmp_path, style="vlog", transition="cut")
     artifact = tmp_path / ".video-agent"
@@ -340,7 +340,7 @@ def test_chronological_story_keeps_source_order_despite_scene_roles(tmp_path):
 
 
 def test_role_aware_pacing_uses_different_targets_for_action_and_scenic_shots():
-    from travel_video_agent.editing.timeline_pipeline import _pacing_guidance
+    from video_edit_agent.editing.timeline_pipeline import _pacing_guidance
 
     action = _pacing_guidance(3.0, "moderate", "action")
     scenic = _pacing_guidance(4.5, "moderate", "scenic_breath")
@@ -372,7 +372,7 @@ def test_cinematic_timeline_preserves_ranked_order_without_scene_metadata(tmp_pa
 
 
 def test_music_analysis_guides_pacing_without_changing_source_intervals(tmp_path):
-    from travel_video_agent.music.schemas import MusicAnalysis, MusicSection
+    from video_edit_agent.music.schemas import MusicAnalysis, MusicSection
 
     _write_inputs(tmp_path, style="vlog", transition="cut")
     artifact = tmp_path / ".video-agent"
@@ -406,7 +406,7 @@ def test_music_analysis_guides_pacing_without_changing_source_intervals(tmp_path
 
 
 def test_music_analysis_rejects_foreign_project(tmp_path):
-    from travel_video_agent.music.schemas import MusicAnalysis
+    from video_edit_agent.music.schemas import MusicAnalysis
 
     _write_inputs(tmp_path)
     analysis_path = tmp_path / "music-analysis.json"
@@ -425,7 +425,7 @@ def test_music_analysis_rejects_foreign_project(tmp_path):
 
 
 def test_optimize_timeline_cannot_overwrite_music_analysis(tmp_path):
-    from travel_video_agent.music.schemas import MusicAnalysis
+    from video_edit_agent.music.schemas import MusicAnalysis
 
     _write_inputs(tmp_path)
     soundtrack = tmp_path / "score.mp3"
@@ -460,7 +460,7 @@ def test_optimize_timeline_cannot_overwrite_music_analysis(tmp_path):
 
 
 def test_motion_aware_pacing_and_continuity_guidance():
-    from travel_video_agent.editing.timeline_pipeline import (
+    from video_edit_agent.editing.timeline_pipeline import (
         _continuity_guidance,
         _pacing_guidance,
     )
@@ -557,7 +557,7 @@ def test_draft_timeline_carries_motion_metadata_and_continuity_notes(tmp_path):
 
 
 def test_narrative_transition_prefers_distinct_action_beats_for_same_subject():
-    from travel_video_agent.editing.timeline_pipeline import (
+    from video_edit_agent.editing.timeline_pipeline import (
         _narrative_transition_score,
         _sequence_reason,
     )
@@ -591,7 +591,7 @@ def test_narrative_transition_prefers_distinct_action_beats_for_same_subject():
 
 
 def test_narrative_transition_does_not_invent_links_without_subject_evidence():
-    from travel_video_agent.editing.timeline_pipeline import _narrative_transition_score
+    from video_edit_agent.editing.timeline_pipeline import _narrative_transition_score
 
     previous = DraftClip(
         clip_id="one",

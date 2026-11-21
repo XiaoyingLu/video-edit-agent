@@ -5,19 +5,19 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-from travel_video_agent.highlights.schemas import (
+from video_edit_agent.highlights.schemas import (
     HighlightCandidate,
     HighlightSignals,
     ProjectHighlights,
 )
-from travel_video_agent.models import MediaInfo, ProjectAnalysis
-from travel_video_agent.story_ledger import build_story_ledger
-from travel_video_agent.transcription.schemas import (
+from video_edit_agent.models import MediaInfo, ProjectAnalysis
+from video_edit_agent.story_ledger import build_story_ledger
+from video_edit_agent.transcription.schemas import (
     ProjectTranscription,
     TranscriptSegment,
     VideoTranscript,
 )
-from travel_video_agent.understanding.schemas import (
+from video_edit_agent.understanding.schemas import (
     FrameObservation,
     SceneDynamics,
     VideoScene,

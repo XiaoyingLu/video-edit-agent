@@ -5,8 +5,8 @@ from urllib.error import HTTPError
 
 import pytest
 
-from travel_video_agent.soundtrack.providers import stable_audio
-from travel_video_agent.soundtrack.providers.stable_audio import (
+from video_edit_agent.soundtrack.providers import stable_audio
+from video_edit_agent.soundtrack.providers.stable_audio import (
     StableAudioAPIError,
     StableAudioGenerationProvider,
     StableAudioGenerationRequest,

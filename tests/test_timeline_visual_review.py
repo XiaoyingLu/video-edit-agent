@@ -6,9 +6,9 @@ from types import SimpleNamespace
 import pytest
 from typer.testing import CliRunner
 
-from travel_video_agent.cli import app
-from travel_video_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
-from travel_video_agent.editing.timeline_visual_review import (
+from video_edit_agent.cli import app
+from video_edit_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
+from video_edit_agent.editing.timeline_visual_review import (
     TimelineVisualReviewError,
     build_timeline_visual_review,
     load_timeline_visual_review_decisions,
@@ -54,14 +54,14 @@ def _timeline(root: Path) -> Path:
 
 def _patch(monkeypatch):
     monkeypatch.setattr(
-        "travel_video_agent.editing.timeline_visual_review.validate_artifact", lambda *_: True
+        "video_edit_agent.editing.timeline_visual_review.validate_artifact", lambda *_: True
     )
     monkeypatch.setattr(
-        "travel_video_agent.editing.timeline_visual_review.register_artifact",
+        "video_edit_agent.editing.timeline_visual_review.register_artifact",
         lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
-        "travel_video_agent.editing.timeline_visual_review.shutil.which",
+        "video_edit_agent.editing.timeline_visual_review.shutil.which",
         lambda _name: "/usr/bin/ffmpeg",
     )
 
@@ -69,7 +69,7 @@ def _patch(monkeypatch):
         Path(command[-1]).write_bytes(b"jpeg")
         return SimpleNamespace(returncode=0, stderr="")
 
-    monkeypatch.setattr("travel_video_agent.editing.timeline_visual_review._run", fake_run)
+    monkeypatch.setattr("video_edit_agent.editing.timeline_visual_review._run", fake_run)
 
 
 def test_build_visual_review_extracts_midpoint_frame_without_mutating_timeline(
@@ -92,7 +92,7 @@ def test_build_visual_review_extracts_midpoint_frame_without_mutating_timeline(
 def test_visual_review_rejects_stale_or_external_timeline(tmp_path, monkeypatch):
     _timeline(tmp_path)
     monkeypatch.setattr(
-        "travel_video_agent.editing.timeline_visual_review.validate_artifact", lambda *_: False
+        "video_edit_agent.editing.timeline_visual_review.validate_artifact", lambda *_: False
     )
     with pytest.raises(TimelineVisualReviewError, match="stale or untracked"):
         build_timeline_visual_review(tmp_path)
@@ -158,7 +158,7 @@ def test_decision_export_rejects_unsupported_values(tmp_path):
 
 
 def test_review_timeline_applies_browser_decisions_only_to_matching_timeline(tmp_path, monkeypatch):
-    from travel_video_agent.editing.timeline_visual_review import TimelineVisualReviewDecisions
+    from video_edit_agent.editing.timeline_visual_review import TimelineVisualReviewDecisions
 
     source = _timeline(tmp_path)
     timeline = ProjectDraftTimeline.model_validate_json(source.read_text())
@@ -172,9 +172,9 @@ def test_review_timeline_applies_browser_decisions_only_to_matching_timeline(tmp
         encoding="utf-8",
     )
     saved = []
-    monkeypatch.setattr("travel_video_agent.cli.load_draft_timeline", lambda *_: (timeline, source))
+    monkeypatch.setattr("video_edit_agent.cli.load_draft_timeline", lambda *_: (timeline, source))
     monkeypatch.setattr(
-        "travel_video_agent.cli.save_draft_timeline", lambda result, path: saved.append(result)
+        "video_edit_agent.cli.save_draft_timeline", lambda result, path: saved.append(result)
     )
 
     result = CliRunner().invoke(
@@ -207,7 +207,7 @@ def test_review_timeline_rejects_decisions_for_changed_timeline(tmp_path, monkey
         ),
         encoding="utf-8",
     )
-    monkeypatch.setattr("travel_video_agent.cli.load_draft_timeline", lambda *_: (timeline, source))
+    monkeypatch.setattr("video_edit_agent.cli.load_draft_timeline", lambda *_: (timeline, source))
 
     result = CliRunner().invoke(
         app,

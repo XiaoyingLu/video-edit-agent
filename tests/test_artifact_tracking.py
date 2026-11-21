@@ -3,7 +3,7 @@ import os
 
 import pytest
 
-from travel_video_agent.artifact_tracking import (
+from video_edit_agent.artifact_tracking import (
     StaleArtifactError,
     register_artifact,
     validate_all_artifacts,
@@ -87,8 +87,8 @@ def test_sampled_hash_detects_content_change_with_preserved_stat(tmp_path):
 
 
 def test_downstream_selection_rejects_stale_source_artifacts(tmp_path):
-    from travel_video_agent.editing.draft_pipeline import build_draft_selection
-    from travel_video_agent.editing.intent_schemas import EditingPlan
+    from video_edit_agent.editing.draft_pipeline import build_draft_selection
+    from video_edit_agent.editing.intent_schemas import EditingPlan
 
     source = _write(tmp_path / "trip.mp4", "original")
     artifact_dir = tmp_path / ".video-agent"

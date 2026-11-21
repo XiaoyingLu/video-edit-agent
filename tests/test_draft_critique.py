@@ -7,17 +7,17 @@ from pydantic import ValidationError
 from rich.text import Text
 from typer.testing import CliRunner
 
-from travel_video_agent.cli import app
-from travel_video_agent.editing.intent_schemas import EditingPlan
-from travel_video_agent.editing.planning_schemas import (
+from video_edit_agent.cli import app
+from video_edit_agent.editing.intent_schemas import EditingPlan
+from video_edit_agent.editing.planning_schemas import (
     CreativeBrief,
     PlannedScene,
     StoryboardShot,
     StoryTreatment,
     VideoProjectPlan,
 )
-from travel_video_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
-from travel_video_agent.rendering.critique import (
+from video_edit_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
+from video_edit_agent.rendering.critique import (
     AudioQualitySummary,
     CritiqueFinding,
     DraftCritiqueError,
@@ -125,8 +125,8 @@ def _frame(timestamp: float = 5) -> FrameQualitySample:
 
 def test_critique_compares_render_to_brief_and_approved_timeline(tmp_path, monkeypatch):
     video, timeline, plan = _write_inputs(tmp_path)
-    monkeypatch.setattr("travel_video_agent.rendering.critique.validate_artifact", lambda *_: False)
-    monkeypatch.setattr("travel_video_agent.rendering.critique.shutil.which", lambda name: name)
+    monkeypatch.setattr("video_edit_agent.rendering.critique.validate_artifact", lambda *_: False)
+    monkeypatch.setattr("video_edit_agent.rendering.critique.shutil.which", lambda name: name)
 
     probe = {
         "format": {"duration": "15"},
@@ -152,9 +152,9 @@ def test_critique_compares_render_to_brief_and_approved_timeline(tmp_path, monke
             "mean_volume: -18.0 dB\nmax_volume: -2.0 dB\nsilence_start: 4.0\nsilence_end: 8.0",
         )
 
-    monkeypatch.setattr("travel_video_agent.rendering.critique._run", fake_run)
+    monkeypatch.setattr("video_edit_agent.rendering.critique._run", fake_run)
     monkeypatch.setattr(
-        "travel_video_agent.rendering.critique._sample_frames",
+        "video_edit_agent.rendering.critique._sample_frames",
         lambda *_: [_frame(5), _frame(10)],
     )
 
@@ -178,8 +178,8 @@ def test_critique_compares_render_to_brief_and_approved_timeline(tmp_path, monke
 
 def test_semantic_critique_compares_rendered_frames_to_storyboard(tmp_path, monkeypatch):
     _write_inputs(tmp_path)
-    monkeypatch.setattr("travel_video_agent.rendering.critique.validate_artifact", lambda *_: False)
-    monkeypatch.setattr("travel_video_agent.rendering.critique.shutil.which", lambda name: name)
+    monkeypatch.setattr("video_edit_agent.rendering.critique.validate_artifact", lambda *_: False)
+    monkeypatch.setattr("video_edit_agent.rendering.critique.shutil.which", lambda name: name)
     probe = {
         "format": {"duration": "10"},
         "streams": [
@@ -199,9 +199,9 @@ def test_semantic_critique_compares_rendered_frames_to_storyboard(tmp_path, monk
         Path(command[-1]).write_bytes(b"frame")
         return subprocess.CompletedProcess(command, 0, "", "")
 
-    monkeypatch.setattr("travel_video_agent.rendering.critique._run", fake_run)
+    monkeypatch.setattr("video_edit_agent.rendering.critique._run", fake_run)
     monkeypatch.setattr(
-        "travel_video_agent.rendering.critique._sample_frames",
+        "video_edit_agent.rendering.critique._sample_frames",
         lambda *_: [_frame(5)],
     )
 
@@ -234,7 +234,7 @@ def test_semantic_critique_compares_rendered_frames_to_storyboard(tmp_path, monk
         return analyzer
 
     monkeypatch.setattr(
-        "travel_video_agent.understanding.visual_analyzer.OllamaVisionAnalyzer",
+        "video_edit_agent.understanding.visual_analyzer.OllamaVisionAnalyzer",
         analyzer_factory,
     )
 
@@ -260,7 +260,7 @@ def test_semantic_sample_limit_supports_single_frame(tmp_path):
     timeline = ProjectDraftTimeline.model_validate_json(timeline_path.read_text())
     plan = VideoProjectPlan.model_validate_json(plan_path.read_text())
 
-    from travel_video_agent.rendering.critique import _semantic_targets
+    from video_edit_agent.rendering.critique import _semantic_targets
 
     targets = _semantic_targets(
         timeline.clips * 3,
@@ -274,8 +274,8 @@ def test_semantic_sample_limit_supports_single_frame(tmp_path):
 
 def test_critique_reports_missing_audio_and_dark_frames(tmp_path, monkeypatch):
     _write_inputs(tmp_path)
-    monkeypatch.setattr("travel_video_agent.rendering.critique.validate_artifact", lambda *_: False)
-    monkeypatch.setattr("travel_video_agent.rendering.critique.shutil.which", lambda name: name)
+    monkeypatch.setattr("video_edit_agent.rendering.critique.validate_artifact", lambda *_: False)
+    monkeypatch.setattr("video_edit_agent.rendering.critique.shutil.which", lambda name: name)
     probe = {
         "format": {"duration": "10"},
         "streams": [
@@ -289,7 +289,7 @@ def test_critique_reports_missing_audio_and_dark_frames(tmp_path, monkeypatch):
         ],
     }
     monkeypatch.setattr(
-        "travel_video_agent.rendering.critique._run",
+        "video_edit_agent.rendering.critique._run",
         lambda command, **kwargs: subprocess.CompletedProcess(command, 0, json.dumps(probe), ""),
     )
     dark = FrameQualitySample(
@@ -299,7 +299,7 @@ def test_critique_reports_missing_audio_and_dark_frames(tmp_path, monkeypatch):
         bright_pixel_ratio=0,
         sharpness_variance=2,
     )
-    monkeypatch.setattr("travel_video_agent.rendering.critique._sample_frames", lambda *_: [dark])
+    monkeypatch.setattr("video_edit_agent.rendering.critique._sample_frames", lambda *_: [dark])
 
     report = critique_rendered_draft(tmp_path, sample_count=1)
 
@@ -313,7 +313,7 @@ def test_critique_rejects_unapproved_timeline(tmp_path, monkeypatch):
     timeline = ProjectDraftTimeline.model_validate_json(timeline_path.read_text())
     timeline.timeline_approved = False
     timeline_path.write_text(timeline.model_dump_json(), encoding="utf-8")
-    monkeypatch.setattr("travel_video_agent.rendering.critique.validate_artifact", lambda *_: False)
+    monkeypatch.setattr("video_edit_agent.rendering.critique.validate_artifact", lambda *_: False)
 
     with pytest.raises(DraftCritiqueError, match="fully reviewed and approved"):
         critique_rendered_draft(tmp_path)
@@ -373,8 +373,8 @@ def test_critique_cli_writes_review_only_report(tmp_path, monkeypatch):
             )
         ],
     )
-    monkeypatch.setattr("travel_video_agent.cli.critique_rendered_draft", lambda *a, **k: report)
-    monkeypatch.setattr("travel_video_agent.cli.register_artifact", lambda *a, **k: None)
+    monkeypatch.setattr("video_edit_agent.cli.critique_rendered_draft", lambda *a, **k: report)
+    monkeypatch.setattr("video_edit_agent.cli.register_artifact", lambda *a, **k: None)
     result = runner.invoke(app, ["critique-draft", str(tmp_path), "--samples", "1"])
 
     assert result.exit_code == 0, result.output

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from travel_video_agent.editing.pipeline import build_edit_proposal
+from video_edit_agent.editing.pipeline import build_edit_proposal
 
 
 def test_builds_review_only_items_from_silence_candidates(tmp_path: Path) -> None:
@@ -91,7 +91,7 @@ def test_scene_context_is_optional_and_never_auto_approves(tmp_path: Path) -> No
 def test_scene_context_is_joined_by_source_video_hash(tmp_path: Path) -> None:
     import hashlib
 
-    from travel_video_agent.understanding.schemas import VideoScene, VideoUnderstanding
+    from video_edit_agent.understanding.schemas import VideoScene, VideoUnderstanding
 
     artifact_dir = tmp_path / ".video-agent"
     artifact_dir.mkdir()
@@ -149,7 +149,7 @@ def test_scene_context_is_joined_by_source_video_hash(tmp_path: Path) -> None:
 def test_review_item_rejects_invalid_interval() -> None:
     from pydantic import ValidationError
 
-    from travel_video_agent.editing.schemas import EditReviewItem
+    from video_edit_agent.editing.schemas import EditReviewItem
 
     with pytest.raises(ValidationError):
         EditReviewItem(
@@ -164,7 +164,7 @@ def test_review_item_rejects_invalid_interval() -> None:
 def test_review_item_rejects_duration_mismatch() -> None:
     from pydantic import ValidationError
 
-    from travel_video_agent.editing.schemas import EditReviewItem
+    from video_edit_agent.editing.schemas import EditReviewItem
 
     with pytest.raises(ValidationError):
         EditReviewItem(
@@ -177,7 +177,7 @@ def test_review_item_rejects_duration_mismatch() -> None:
 
 
 def _review_proposal(tmp_path: Path):
-    from travel_video_agent.editing.schemas import (
+    from video_edit_agent.editing.schemas import (
         EditReviewItem,
         ProjectEditProposal,
         VideoEditProposal,
@@ -214,7 +214,7 @@ def _review_proposal(tmp_path: Path):
 
 
 def test_review_decisions_generate_retained_timeline(tmp_path: Path) -> None:
-    from travel_video_agent.editing.pipeline import (
+    from video_edit_agent.editing.pipeline import (
         apply_review_decisions,
         build_project_timeline,
     )
@@ -239,7 +239,7 @@ def test_review_decisions_generate_retained_timeline(tmp_path: Path) -> None:
 
 
 def test_review_decisions_reject_unknown_and_conflicting_ids(tmp_path: Path) -> None:
-    from travel_video_agent.editing.pipeline import apply_review_decisions
+    from video_edit_agent.editing.pipeline import apply_review_decisions
 
     proposal = _review_proposal(tmp_path)
     with pytest.raises(ValueError, match="unknown review item"):
@@ -249,7 +249,7 @@ def test_review_decisions_reject_unknown_and_conflicting_ids(tmp_path: Path) -> 
 
 
 def test_timeline_rejects_overlapping_approved_cuts(tmp_path: Path) -> None:
-    from travel_video_agent.editing.pipeline import apply_review_decisions, build_project_timeline
+    from video_edit_agent.editing.pipeline import apply_review_decisions, build_project_timeline
 
     proposal = _review_proposal(tmp_path)
     proposal.videos[0].review_items[1].start_seconds = 3
@@ -265,7 +265,7 @@ def test_timeline_rejects_overlapping_approved_cuts(tmp_path: Path) -> None:
 
 
 def test_review_proposal_must_match_project_folder(tmp_path: Path) -> None:
-    from travel_video_agent.editing.pipeline import load_edit_proposal, save_edit_proposal
+    from video_edit_agent.editing.pipeline import load_edit_proposal, save_edit_proposal
 
     artifact_dir = tmp_path / ".video-agent"
     artifact_dir.mkdir()

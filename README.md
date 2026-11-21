@@ -65,8 +65,9 @@ flowchart LR
 
 ## Project layout
 
-- `src/travel_video_agent/` — Python import namespace (retained for compatibility).
+- `src/video_edit_agent/` — canonical Python package.
+- `src/travel_video_agent/` — compatibility shim for older imports.
 - `docs/` — architecture, model setup, feature guides, maintainer notes, and release instructions.
 - `.video-agent/` — project-local analysis, plans, review decisions, and generated outputs.
 
-The distribution and CLI are named `video-edit-agent` / `video-agent`; the Python import namespace remains `travel_video_agent` to avoid breaking existing integrations.
+The distribution and CLI are named `video-edit-agent` / `video-agent`; the canonical Python import is `video_edit_agent`. The legacy `travel_video_agent` namespace remains available as a compatibility shim.

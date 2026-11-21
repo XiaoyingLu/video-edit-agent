@@ -5,11 +5,11 @@ import click
 import pytest
 from typer.testing import CliRunner
 
-from travel_video_agent.cli import app
-from travel_video_agent.models import ProjectAnalysis
-from travel_video_agent.silence.schemas import ProjectSilenceAnalysis
-from travel_video_agent.transcription.schemas import ProjectTranscription
-from travel_video_agent.understanding.schemas import VideoUnderstanding
+from video_edit_agent.cli import app
+from video_edit_agent.models import ProjectAnalysis
+from video_edit_agent.silence.schemas import ProjectSilenceAnalysis
+from video_edit_agent.transcription.schemas import ProjectTranscription
+from video_edit_agent.understanding.schemas import VideoUnderstanding
 
 runner = CliRunner()
 
@@ -18,7 +18,7 @@ runner = CliRunner()
 def test_analyze_command_writes_json(
     tmp_path: Path, monkeypatch, output_option: str | None
 ) -> None:
-    from travel_video_agent import cli
+    from video_edit_agent import cli
 
     expected = {
         "project_path": str(tmp_path.resolve()),
@@ -45,7 +45,7 @@ def test_analyze_command_writes_json(
 
 
 def test_understand_command_writes_json(tmp_path: Path, monkeypatch) -> None:
-    from travel_video_agent import cli
+    from video_edit_agent import cli
 
     expected = VideoUnderstanding(
         project_path=str(tmp_path.resolve()),
@@ -66,7 +66,7 @@ def test_understand_command_writes_json(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_transcribe_command_writes_json(tmp_path: Path, monkeypatch) -> None:
-    from travel_video_agent import cli
+    from video_edit_agent import cli
 
     expected = ProjectTranscription(
         project_path=str(tmp_path.resolve()),
@@ -88,7 +88,7 @@ def test_transcribe_command_writes_json(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_detect_silence_command_writes_json(tmp_path: Path, monkeypatch) -> None:
-    from travel_video_agent import cli
+    from video_edit_agent import cli
 
     expected = ProjectSilenceAnalysis(
         project_path=str(tmp_path.resolve()),
@@ -138,8 +138,8 @@ def test_cli_help_is_available() -> None:
 
 
 def test_propose_edits_command_writes_review_only_json(tmp_path: Path, monkeypatch) -> None:
-    from travel_video_agent import cli
-    from travel_video_agent.editing.schemas import (
+    from video_edit_agent import cli
+    from video_edit_agent.editing.schemas import (
         EditReviewItem,
         ProjectEditProposal,
         VideoEditProposal,
@@ -184,7 +184,7 @@ def test_propose_edits_command_writes_review_only_json(tmp_path: Path, monkeypat
 
 
 def test_subtitles_command_writes_srt_path(tmp_path: Path, monkeypatch) -> None:
-    from travel_video_agent import cli
+    from video_edit_agent import cli
 
     destination = tmp_path / "custom" / "captions.srt"
     monkeypatch.setattr(
@@ -216,7 +216,7 @@ def test_render_help_includes_subtitle_style() -> None:
 
 
 def test_review_and_build_timeline_commands(tmp_path: Path) -> None:
-    from travel_video_agent.editing.schemas import (
+    from video_edit_agent.editing.schemas import (
         EditReviewItem,
         ProjectEditProposal,
         VideoEditProposal,
@@ -281,7 +281,7 @@ def test_review_and_build_timeline_commands(tmp_path: Path) -> None:
 
 
 def test_build_timeline_requires_all_review_items_decided(tmp_path: Path) -> None:
-    from travel_video_agent.editing.schemas import (
+    from video_edit_agent.editing.schemas import (
         EditReviewItem,
         ProjectEditProposal,
         VideoEditProposal,
@@ -317,8 +317,8 @@ def test_build_timeline_requires_all_review_items_decided(tmp_path: Path) -> Non
 
 
 def test_render_command_reports_verified_output(tmp_path: Path, monkeypatch) -> None:
-    from travel_video_agent import cli
-    from travel_video_agent.rendering import RenderReport
+    from video_edit_agent import cli
+    from video_edit_agent.rendering import RenderReport
 
     expected = RenderReport(
         output_path=str(tmp_path / "rendered.mp4"),
@@ -366,7 +366,7 @@ def test_render_command_reports_verified_output(tmp_path: Path, monkeypatch) -> 
 
 
 def test_render_command_dry_run_reports_preflight(tmp_path: Path, monkeypatch) -> None:
-    from travel_video_agent import cli
+    from video_edit_agent import cli
 
     captured = {}
 
@@ -388,8 +388,8 @@ def test_render_command_dry_run_reports_preflight(tmp_path: Path, monkeypatch) -
 
 
 def test_plan_command_writes_validated_editing_plan(tmp_path: Path, monkeypatch) -> None:
-    from travel_video_agent import cli
-    from travel_video_agent.editing.intent_schemas import EditingPlan
+    from video_edit_agent import cli
+    from video_edit_agent.editing.intent_schemas import EditingPlan
 
     expected = EditingPlan(
         source_prompt="Create a 60-second cinematic travel video",
@@ -435,8 +435,8 @@ def test_plan_command_writes_validated_editing_plan(tmp_path: Path, monkeypatch)
 
 
 def test_draft_edit_command_writes_selection_json(tmp_path: Path, monkeypatch) -> None:
-    from travel_video_agent import cli
-    from travel_video_agent.editing.draft_schemas import DraftClip, ProjectDraftSelection
+    from video_edit_agent import cli
+    from video_edit_agent.editing.draft_schemas import DraftClip, ProjectDraftSelection
 
     expected = ProjectDraftSelection(
         project_path=str(tmp_path.resolve()),
@@ -475,8 +475,8 @@ def test_draft_edit_command_writes_selection_json(tmp_path: Path, monkeypatch) -
 
 
 def test_create_plan_command_writes_hierarchical_brief(tmp_path: Path, monkeypatch) -> None:
-    from travel_video_agent import cli
-    from travel_video_agent.editing.planning_schemas import VideoProjectPlan
+    from video_edit_agent import cli
+    from video_edit_agent.editing.planning_schemas import VideoProjectPlan
 
     expected = VideoProjectPlan(
         project_path=str(tmp_path.resolve()),
@@ -594,8 +594,8 @@ def test_create_plan_command_exposes_story_option():
 
 
 def _music_sync_cli_inputs(tmp_path: Path) -> tuple[Path, Path]:
-    from travel_video_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
-    from travel_video_agent.music.sync import MusicSyncBoundary, MusicSyncSuggestions
+    from video_edit_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
+    from video_edit_agent.music.sync import MusicSyncBoundary, MusicSyncSuggestions
 
     artifacts = tmp_path / ".video-agent"
     artifacts.mkdir(exist_ok=True)
@@ -678,8 +678,8 @@ def test_review_music_sync_command_help() -> None:
 def test_review_music_sync_command_accepts_and_persists_selected_boundary(
     tmp_path: Path, monkeypatch
 ) -> None:
-    from travel_video_agent import cli
-    from travel_video_agent.music.refinement import (
+    from video_edit_agent import cli
+    from video_edit_agent.music.refinement import (
         MusicSyncReviewDecision,
         MusicSyncReviewResult,
     )
@@ -717,7 +717,7 @@ def test_review_music_sync_command_accepts_and_persists_selected_boundary(
 def test_review_music_sync_command_rejects_overlapping_accept_and_reject_ids(
     tmp_path: Path, monkeypatch
 ) -> None:
-    from travel_video_agent import cli
+    from video_edit_agent import cli
 
     called = False
 
@@ -750,8 +750,8 @@ def test_review_music_sync_command_rejects_overlapping_accept_and_reject_ids(
 def test_review_music_sync_command_interactively_prompts_for_each_pending_boundary(
     tmp_path: Path, monkeypatch
 ) -> None:
-    from travel_video_agent import cli
-    from travel_video_agent.music.refinement import (
+    from video_edit_agent import cli
+    from video_edit_agent.music.refinement import (
         MusicSyncReviewDecision,
         MusicSyncReviewResult,
     )
@@ -785,8 +785,8 @@ def test_review_music_sync_command_interactively_prompts_for_each_pending_bounda
 
 
 def test_suggest_soundtrack_command_writes_brief(tmp_path: Path, monkeypatch) -> None:
-    from travel_video_agent import cli
-    from travel_video_agent.soundtrack.schemas import SoundtrackBrief, SoundtrackEnergySegment
+    from video_edit_agent import cli
+    from video_edit_agent.soundtrack.schemas import SoundtrackBrief, SoundtrackEnergySegment
 
     expected = SoundtrackBrief(
         project_path=str(tmp_path.resolve()),
@@ -828,7 +828,7 @@ def test_suggest_soundtrack_command_writes_brief(tmp_path: Path, monkeypatch) ->
 def test_analyze_selected_soundtrack_command_invokes_provenance_workflow(tmp_path, monkeypatch):
     from types import SimpleNamespace
 
-    from travel_video_agent import cli
+    from video_edit_agent import cli
 
     expected = (
         SimpleNamespace(bpm=92.0, duration_seconds=60.0, beat_confidence=0.8),

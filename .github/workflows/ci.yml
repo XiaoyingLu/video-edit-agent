@@ -30,7 +30,7 @@ jobs:
       - name: Test with coverage
         run: >-
           pytest
-          --cov=travel_video_agent
+          --cov=video_edit_agent
           --cov-report=term-missing
           --cov-report=xml:coverage-${{ matrix.python-version }}.xml
       - name: Upload coverage report

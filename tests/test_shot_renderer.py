@@ -7,14 +7,14 @@ import click
 import pytest
 from typer.testing import CliRunner
 
-from travel_video_agent.artifact_tracking import register_artifact
-from travel_video_agent.cli import app
-from travel_video_agent.editing.timeline_schemas import (
+from video_edit_agent.artifact_tracking import register_artifact
+from video_edit_agent.cli import app
+from video_edit_agent.editing.timeline_schemas import (
     DraftTimelineClip,
     ProjectDraftTimeline,
 )
-from travel_video_agent.rendering import RenderError, RenderReport, render_approved_shot_timeline
-from travel_video_agent.rendering.shot_renderer import (
+from video_edit_agent.rendering import RenderError, RenderReport, render_approved_shot_timeline
+from video_edit_agent.rendering.shot_renderer import (
     _build_shot_render_command,
     _resolve_output_dimensions,
 )
@@ -222,7 +222,7 @@ def test_render_rejects_path_traversal_before_invoking_ffmpeg(tmp_path, monkeypa
     )
     (artifact / "optimized-timeline.json").write_text(timeline.model_dump_json(), encoding="utf-8")
     monkeypatch.setattr(
-        "travel_video_agent.rendering.shot_renderer.shutil.which",
+        "video_edit_agent.rendering.shot_renderer.shutil.which",
         lambda _: "ffmpeg",
     )
 
@@ -255,7 +255,7 @@ def test_render_draft_cli_invokes_approved_renderer(tmp_path, monkeypatch):
         audio_codec="aac",
     )
     monkeypatch.setattr(
-        "travel_video_agent.cli.render_approved_shot_timeline",
+        "video_edit_agent.cli.render_approved_shot_timeline",
         lambda *args, **kwargs: report,
     )
     result = runner.invoke(app, ["render-draft", str(tmp_path)])
@@ -279,7 +279,7 @@ def test_render_draft_cli_dry_run_reports_preflight_without_rendering(tmp_path, 
         calls.update(kwargs)
         return None
 
-    monkeypatch.setattr("travel_video_agent.cli.render_approved_shot_timeline", fake_render)
+    monkeypatch.setattr("video_edit_agent.cli.render_approved_shot_timeline", fake_render)
     result = runner.invoke(app, ["render-draft", str(tmp_path), "--dry-run"])
 
     assert result.exit_code == 0, result.output

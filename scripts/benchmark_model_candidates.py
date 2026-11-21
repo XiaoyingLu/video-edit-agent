@@ -19,7 +19,7 @@ import traceback
 from pathlib import Path
 from typing import Any
 
-from travel_video_agent.understanding.smolvlm2_analyzer import (
+from video_edit_agent.understanding.smolvlm2_analyzer import (
     _FRAME_PROMPT,
     _TEMPORAL_PROMPT,
     SmolVLM2MLXAnalyzer,

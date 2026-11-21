@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from travel_video_agent.editing import workflow
+from video_edit_agent.editing import workflow
 
 
 def test_create_video_draft_parses_prompt_before_running_expensive_stages(

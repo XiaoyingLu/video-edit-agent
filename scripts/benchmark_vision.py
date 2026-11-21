@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from travel_video_agent.understanding.provider import create_vision_analyzer
+from video_edit_agent.understanding.provider import create_vision_analyzer
 
 
 def run_provider(provider: str, model: str | None, frames: list[Path]) -> dict[str, Any]:

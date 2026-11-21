@@ -3,14 +3,14 @@ import json
 import pytest
 from typer.testing import CliRunner
 
-from travel_video_agent.cli import app
-from travel_video_agent.editing.revisions import (
+from video_edit_agent.cli import app
+from video_edit_agent.editing.revisions import (
     TimelineIntervalEdit,
     TimelineRevisionError,
     compare_timeline_files,
     create_timeline_revision,
 )
-from travel_video_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
+from video_edit_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
 
 runner = CliRunner()
 
@@ -61,9 +61,9 @@ def _approved_timeline(root):
 
 
 def _patch_artifact_tracking(monkeypatch):
-    monkeypatch.setattr("travel_video_agent.editing.revisions.validate_artifact", lambda *_: True)
+    monkeypatch.setattr("video_edit_agent.editing.revisions.validate_artifact", lambda *_: True)
     monkeypatch.setattr(
-        "travel_video_agent.editing.revisions.register_artifact",
+        "video_edit_agent.editing.revisions.register_artifact",
         lambda *_args, **_kwargs: None,
     )
 

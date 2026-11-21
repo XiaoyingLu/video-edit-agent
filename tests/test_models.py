@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from travel_video_agent.models import MediaInfo, ProjectAnalysis
+from video_edit_agent.models import MediaInfo, ProjectAnalysis
 
 
 def test_media_info_accepts_valid_metadata() -> None:
