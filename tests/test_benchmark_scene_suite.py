@@ -94,6 +94,40 @@ def test_temporal_schema_rejects_invalid_enum():
 
 
 
+def test_normalize_temporal_payload_collapses_qwen_enum_arrays():
+    raw = {
+        "temporal_summary": "A fire performer is followed by a hoop performer.",
+        "action_progression": ["Runs", "Performs acrobatics with hoop", "Stops"],
+        "subject_motion": ["Running", "Acrobatic movement with hoop", "Stationary"],
+        "camera_motion": ["Handheld", "Handheld"],
+        "confidence": 0.95,
+    }
+    normalized, changed = benchmark_scene_suite.normalize_temporal_payload(raw)
+
+    assert normalized["subject_motion"] == "mixed"
+    assert normalized["camera_motion"] == "handheld"
+    assert set(changed) == {"subject_motion", "camera_motion"}
+    assert raw["subject_motion"] == [
+        "Running", "Acrobatic movement with hoop", "Stationary"
+    ]
+    assert validate_temporal_output(normalized)["camera_motion"] == "handheld"
+
+
+def test_normalize_temporal_payload_preserves_known_scalar_enums():
+    raw = {
+        "temporal_summary": "A performer remains in place.",
+        "action_progression": [],
+        "subject_motion": "stationary",
+        "camera_motion": "static",
+        "confidence": 0.8,
+    }
+    normalized, changed = benchmark_scene_suite.normalize_temporal_payload(raw)
+
+    assert normalized == raw
+    assert changed == []
+
+
+
 def test_inference_timing_reports_measurable_phases():
     result = inference_timing(0.123456, 12.34567, '{"ok": true}')
     assert result == {
