@@ -117,10 +117,7 @@ def test_comparison_pairs_samples_by_normalized_position_and_reports_deltas(tmp_
 
 def test_comparison_rejects_same_video_and_paths_outside_project(tmp_path, monkeypatch):
     before, _ = _media(tmp_path)
-    monkeypatch.setattr(
-        "video_edit_agent.rendering.comparison.validate_artifact",
-        lambda *_: False
-    )
+    monkeypatch.setattr("video_edit_agent.rendering.comparison.validate_artifact", lambda *_: False)
     with pytest.raises(DraftComparisonError, match="different files"):
         compare_rendered_drafts(tmp_path, before_video=before, after_video=before)
     with pytest.raises(DraftComparisonError, match="inside the project"):
