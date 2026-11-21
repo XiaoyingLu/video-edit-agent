@@ -3,9 +3,9 @@ requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ai-video-agent"
+name = "video-edit-agent"
 version = "0.1.0"
-description = "A local-first AI-assisted travel video editing CLI."
+description = "A local-first AI-assisted personal video editing CLI."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
