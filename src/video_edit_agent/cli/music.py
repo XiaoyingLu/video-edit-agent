@@ -4,7 +4,6 @@
 from .common import *  # noqa: F403
 
 
-
 @app.command("suggest-soundtrack")
 def suggest_soundtrack_command(
     folder: Annotated[
@@ -49,7 +48,6 @@ def suggest_soundtrack_command(
         "and no timeline or video was changed.[/yellow]"
     )
 
-
 @app.command("search-soundtrack")
 def search_soundtrack_command(
     folder: Annotated[
@@ -92,7 +90,6 @@ def search_soundtrack_command(
             "permissions are explicitly documented.[/yellow]"
         )
     console.print("[dim]No audio was downloaded and no timeline or video was changed.[/dim]")
-
 
 @app.command("generate-soundtrack")
 def generate_soundtrack_command(
@@ -144,7 +141,6 @@ def generate_soundtrack_command(
         "no timeline was changed and no video was rendered.[/yellow]"
     )
 
-
 @app.command("prepare-soundtrack-candidates")
 def prepare_soundtrack_candidates_command(
     folder: Annotated[
@@ -187,7 +183,6 @@ def prepare_soundtrack_candidates_command(
         "[yellow]Generated tracks were analyzed for duration and estimated tempo. "
         "No candidate was selected, no timeline was changed, and no video was rendered.[/yellow]"
     )
-
 
 @app.command("review-soundtrack")
 def review_soundtrack_command(
@@ -246,7 +241,6 @@ def review_soundtrack_command(
         "source video was changed. Only rights-eligible candidates can be selected.[/yellow]"
     )
 
-
 @app.command("select-soundtrack")
 def select_soundtrack_command(
     folder: Annotated[
@@ -282,7 +276,6 @@ def select_soundtrack_command(
         "[yellow]The selected track has not been downloaded or added to a timeline. "
         "No source media was changed and no video was rendered.[/yellow]"
     )
-
 
 @app.command("analyze-selected-soundtrack")
 def analyze_selected_soundtrack_command(
@@ -344,7 +337,6 @@ def analyze_selected_soundtrack_command(
         "[yellow]Analysis only. The selected track was not added to the timeline; "
         "no timeline approval or rendering occurred.[/yellow]"
     )
-
 
 @app.command("analyze-music")
 def analyze_music_command(
@@ -411,7 +403,6 @@ def analyze_music_command(
     console.print(f"Music analysis saved to [green]{destination}[/green]")
     for note in report.notes:
         console.print(f"[dim]• {note}[/dim]")
-
 
 @app.command("suggest-music-sync")
 def suggest_music_sync_command(
@@ -511,7 +502,6 @@ def suggest_music_sync_command(
         "were not changed.[/yellow]"
     )
 
-
 @app.command("review-music-timeline")
 def review_music_timeline(
     folder: Annotated[
@@ -550,7 +540,6 @@ def review_music_timeline(
         "[yellow]This is a read-only synchronization view. Beat estimates are approximate; "
         "no timeline timing, approval, or source media was changed.[/yellow]"
     )
-
 
 @app.command("review-music-sync")
 def review_music_sync(
