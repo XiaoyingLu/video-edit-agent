@@ -129,7 +129,7 @@ from ..understanding.visual_analyzer import VisionModelError
 
 app = typer.Typer(
     name="video-agent",
-    help="Analyze and edit local travel footage with an AI-assisted workflow.",
+    help="Analyze and edit local personal video footage with an AI-assisted workflow.",
     no_args_is_help=True,
 )
 console = Console()
@@ -154,6 +154,6 @@ def _track_artifact(
 
 @app.callback()
 def main() -> None:
-    """Analyze and edit local travel footage."""
+    """Analyze and edit local personal video footage."""
 
 
