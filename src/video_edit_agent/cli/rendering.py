@@ -442,7 +442,11 @@ def render_draft(
         float, typer.Option("--music-fade-out", min=0, help="Music fade-out seconds.")
     ] = 1.5,
     music_ducking: Annotated[
-        bool, typer.Option("--music-ducking/--no-music-ducking", help="Lower music when source audio is active.")
+        bool,
+        typer.Option(
+            "--music-ducking/--no-music-ducking",
+            help="Lower music when source audio is active.",
+        ),
     ] = False,
 ) -> None:
     """Render the approved timeline using the creative plan output profile."""
