@@ -92,7 +92,11 @@ def append_music_mix(
         raise AudioMixError("music volume must be greater than 0 and at most 2")
     if fade_in_seconds < 0 or fade_out_seconds < 0:
         raise AudioMixError("music fade durations must be non-negative")
-    if music_input_index is None or mode == "original":
+    if mode == "original":
+        return base_label
+    if music_input_index is None:
+        if mode == "music_only":
+            raise AudioMixError("music_only mode requires a selected soundtrack; use --music.")
         return base_label
     if duration_seconds <= 0:
         raise AudioMixError("render duration must be positive")
