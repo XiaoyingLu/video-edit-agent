@@ -580,7 +580,10 @@ def render_social_exports(
     ] = "1080p",
     fit_mode: Annotated[
         str | None,
-        typer.Option("--fit-mode", help="Framing: center crop to fill or pad to preserve the full frame."),
+        typer.Option(
+            "--fit-mode",
+            help="Framing: center crop to fill or pad to preserve the full frame.",
+        ),
     ] = None,
     style_preset: Annotated[
         str | None,
@@ -592,7 +595,9 @@ def render_social_exports(
     ] = False,
     dry_run: Annotated[
         bool,
-        typer.Option("--dry-run", help="Validate all three output formats without writing MP4 files."),
+        typer.Option(
+            "--dry-run", help="Validate all three output formats without writing MP4 files."
+        ),
     ] = False,
 ) -> None:
     """Render approved footage in landscape, vertical, and square social formats."""
@@ -646,11 +651,13 @@ def render_social_exports(
     table.add_column("Resolution")
     table.add_column("Output")
     for label, aspect_ratio, report in outputs:
-        table.add_row(label, aspect_ratio, f"{report.width}x{report.height}", str(report.output_path))
+        table.add_row(
+            label, aspect_ratio, f"{report.width}x{report.height}", str(report.output_path)
+        )
     console.print(table)
     console.print(
-        "[yellow]Framing uses a centered crop or letterbox; review each export for subject placement. "
-        "No subject-aware tracking is applied.[/yellow]"
+        "[yellow]Framing uses a centered crop or letterbox; review each export for subject "
+        "placement. No subject-aware tracking is applied.[/yellow]"
     )
 
 
