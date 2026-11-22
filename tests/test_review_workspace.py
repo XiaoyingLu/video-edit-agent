@@ -21,7 +21,7 @@ def test_workspace_links_existing_review_pages_and_lists_artifacts(tmp_path: Pat
     assert 'href="timeline-visual-review/review.html"' in content
     assert "Rendered-draft critique" in content
     assert "Available" in content
-    assert "does not approve clips" not in content
+    assert "does not approve clips" in content
 
 
 def test_workspace_supports_nested_output_path(tmp_path: Path):
