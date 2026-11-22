@@ -104,8 +104,11 @@ def create_video(
     overwrite: Annotated[
         bool, typer.Option("--overwrite", help="Replace existing output.")
     ] = False,
+    review: Annotated[
+        bool, typer.Option("--review", help="Ask once before rendering the automatically assembled draft.")
+    ] = False,
 ) -> None:
-    """Create a video from natural language with mandatory shot-by-shot approval."""
+    """Create and render a first draft automatically; use advanced commands for shot-by-shot review."""
     try:
         plan, highlights, selection, timeline, timeline_path = create_video_draft(
             folder,
@@ -114,7 +117,7 @@ def create_video(
             whisper_model=whisper_model,
             samples_per_scene=samples_per_scene,
         )
-        console.print("[bold green]Analysis and draft planning complete.[/bold green]")
+        console.print("[bold green]Analysis and automatic draft planning complete.[/bold green]")
         console.print(
             f"Intent: {plan.style}, {plan.target_duration_seconds:.0f}s, "
             f"{plan.aspect_ratio}, {plan.resolution}"
@@ -123,52 +126,28 @@ def create_video(
             f"Found {highlights.candidate_count} highlights; selected "
             f"{selection.selected_clip_count} shots ({selection.selected_duration_seconds:.1f}s)."
         )
-        console.print(f"Review artifact: [green]{timeline_path}[/green]")
+        console.print(f"Draft timeline: [green]{timeline_path}[/green]")
         console.print(
-            "[yellow]Output resolution/aspect ratio and subtitle/audio preferences are "
-            "recorded in the plan; this renderer currently preserves the first source shot "
-            "dimensions.[/yellow]"
+            "[yellow]Quick mode uses deterministic footage ranking and approves the proposed "
+            "sequence for this first draft. Inspect the rendered video before sharing; use "
+            "the advanced review commands to curate individual shots.[/yellow]"
         )
-        console.print("[bold]Human review required — no video has been rendered.[/bold]")
-        approve_ids: set[str] = set()
-        reject_ids: set[str] = set()
-        for clip in timeline.clips:
-            console.print(
-                f"\n[bold cyan]{clip.sequence_index}. {clip.video_path}[/bold cyan] "
-                f"— {clip.clip_id} ({clip.source_start_seconds:.2f}–"
-                f"{clip.source_end_seconds:.2f}s)"
-            )
-            if clip.scene_summary:
-                console.print(f"Scene: {clip.scene_summary}")
-            console.print(clip.pacing_note)
-            if clip.transition_in != "cut":
-                console.print(
-                    f"Incoming transition: {clip.transition_in} "
-                    f"({clip.transition_duration_seconds:.2f}s)"
-                )
-            while True:
-                choice = console.input("Decision [a]pprove / [r]eject: ").strip().lower()
-                if choice in {"a", "approve"}:
-                    approve_ids.add(clip.clip_id)
-                    break
-                if choice in {"r", "reject"}:
-                    reject_ids.add(clip.clip_id)
-                    break
-                console.print(
-                    "[yellow]Enter a or r. Every shot needs an explicit decision.[/yellow]"
-                )
+        if review:
+            decision = console.input("Render this automatically assembled first draft? [y/N]: ")
+            if decision.strip().lower() not in {"y", "yes"}:
+                console.print("[yellow]Rendering cancelled. The draft timeline was preserved.[/yellow]")
+                raise typer.Exit(code=2)
 
-        timeline = apply_timeline_review(timeline, approve_ids, reject_ids)
+        approve_ids = {clip.clip_id for clip in timeline.clips}
+        timeline = apply_timeline_review(timeline, approve_ids, set())
         save_draft_timeline(timeline, timeline_path)
-        if not timeline.timeline_approved:
-            console.print("[yellow]No shots were approved. Rendering was skipped.[/yellow]")
-            raise typer.Exit(code=2)
-
         report = render_approved_shot_timeline(
             folder,
             timeline_path=timeline_path,
             output_path=output,
             overwrite=overwrite,
+            output_aspect_ratio=plan.aspect_ratio,
+            output_resolution=plan.resolution,
         )
     except typer.Exit:
         raise
@@ -184,17 +163,19 @@ def create_video(
         console.print(f"[red]Video creation failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
-    console.print("[bold green]Approved video rendered and verified.[/bold green]")
+    console.print("[bold green]First draft rendered and verified.[/bold green]")
     console.print(f"Output: [green]{report.output_path}[/green]")
     console.print(
-        f"Duration: {report.actual_duration_seconds:.2f}s — {report.segment_count} approved shots."
+        f"Duration: {report.actual_duration_seconds:.2f}s — {report.segment_count} shots."
     )
     console.print(
         f"Format: {report.width}x{report.height}, "
         f"{report.video_codec.upper()} video + {report.audio_codec.upper()} audio"
     )
-    console.print("[yellow]Original source videos were not modified.[/yellow]")
-
+    console.print(
+        "[yellow]The selected project soundtrack is mixed automatically when a local "
+        "eligible asset is available. Original source videos were not modified.[/yellow]"
+    )
 
 @app.command("plan")
 def plan_edit(
