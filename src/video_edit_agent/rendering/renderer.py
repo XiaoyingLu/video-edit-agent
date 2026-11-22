@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
 from ..editing.schemas import ProjectTimeline, VideoTimeline
+from .audio_mix import append_music_input, append_music_mix, resolve_selected_music
 
 
 class RenderError(RuntimeError):
@@ -210,10 +211,17 @@ def _build_ffmpeg_command(
     subtitle_font_size: int = 28,
     subtitle_position: str = "bottom",
     subtitle_style: str = "classic",
+    music_path: Path | None = None,
+    music_mode: str = "blend",
+    music_volume: float = 0.22,
+    music_fade_in: float = 1.0,
+    music_fade_out: float = 1.5,
+    music_ducking: bool = False,
 ) -> list[str]:
     command = [ffmpeg, "-hide_banner", "-nostdin", "-y"]
     for source_index, _, _ in sources:
         command.extend(["-i", str(source_index)])
+    music_input_index = append_music_input(command, music_path)
 
     filters: list[str] = []
     concat_inputs: list[str] = []
@@ -243,6 +251,17 @@ def _build_ffmpeg_command(
         concat_inputs.extend([f"[{video_label}]", f"[{audio_label}]"])
 
     filters.append(f"{''.join(concat_inputs)}concat=n={len(segments)}:v=1:a=1[outv][outa]")
+    audio_output = append_music_mix(
+        filters,
+        base_label="outa",
+        music_input_index=music_input_index,
+        duration_seconds=sum(end - start for _, start, end, _ in segments),
+        mode=music_mode,
+        volume=music_volume,
+        fade_in_seconds=music_fade_in,
+        fade_out_seconds=music_fade_out,
+        ducking=music_ducking,
+    )
     video_output = "[outv]"
     if subtitle_path is not None:
         escaped_path = (
@@ -265,7 +284,7 @@ def _build_ffmpeg_command(
             "-map",
             video_output,
             "-map",
-            "[outa]",
+            f"[{audio_output}]",
             "-c:v",
             "libx264",
             "-preset",
@@ -297,6 +316,12 @@ def render_project(
     subtitle_font_size: int = 28,
     subtitle_position: str = "bottom",
     subtitle_style: str = "classic",
+    music_path: Path | None = None,
+    music_mode: str = "blend",
+    music_volume: float = 0.22,
+    music_fade_in: float = 1.0,
+    music_fade_out: float = 1.5,
+    music_ducking: bool = False,
     dry_run: bool = False,
 ) -> RenderReport | None:
     """Render the approved retained intervals into one MP4 and verify the result.
@@ -315,6 +340,7 @@ def render_project(
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise FileNotFoundError(f"Project folder does not exist: {root}")
+    selected_music = resolve_selected_music(root, music_path=music_path)
 
     timeline_file = (
         (timeline_path or root / ".video-agent" / "timeline.json").expanduser().resolve()
@@ -410,6 +436,12 @@ def render_project(
             subtitle_font_size=subtitle_font_size,
             subtitle_position=subtitle_position,
             subtitle_style=subtitle_style,
+            music_path=selected_music,
+            music_mode=music_mode,
+            music_volume=music_volume,
+            music_fade_in=music_fade_in,
+            music_fade_out=music_fade_out,
+            music_ducking=music_ducking,
         )
         if dry_run:
             _validate_filter_graph(command, timeout=min(timeout_seconds, 120))
