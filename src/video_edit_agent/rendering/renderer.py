@@ -384,6 +384,8 @@ def render_project(
     source_paths = {entry[0] for entry in source_entries}
     if destination in source_paths:
         raise RenderError("render output cannot overwrite a source video")
+    if selected_music is not None and destination == selected_music:
+        raise RenderError("render output cannot overwrite the selected soundtrack")
     if destination.exists() and not overwrite and not dry_run:
         raise FileExistsError(
             f"Render output already exists: {destination}; pass --overwrite to replace it."
@@ -493,6 +495,8 @@ def render_project(
     dependencies = [timeline_file]
     if subtitle_file is not None:
         dependencies.append(subtitle_file)
+    if selected_music is not None:
+        dependencies.append(selected_music)
     register_artifact(root, destination, dependencies=dependencies, verify_content=False)
 
     return RenderReport(
