@@ -105,7 +105,11 @@ def create_video(
         bool, typer.Option("--overwrite", help="Replace existing output.")
     ] = False,
     review: Annotated[
-        bool, typer.Option("--review", help="Ask once before rendering the automatically assembled draft.")
+        bool,
+        typer.Option(
+            "--review",
+            help="Ask once before rendering the automatically assembled draft.",
+        ),
     ] = False,
 ) -> None:
     """Create and render a first draft automatically; use advanced commands for shot-by-shot review."""
@@ -135,7 +139,9 @@ def create_video(
         if review:
             decision = console.input("Render this automatically assembled first draft? [y/N]: ")
             if decision.strip().lower() not in {"y", "yes"}:
-                console.print("[yellow]Rendering cancelled. The draft timeline was preserved.[/yellow]")
+                console.print(
+                "[yellow]Rendering cancelled. The draft timeline was preserved.[/yellow]"
+            )
                 raise typer.Exit(code=2)
 
         approve_ids = {clip.clip_id for clip in timeline.clips}
@@ -176,6 +182,7 @@ def create_video(
         "[yellow]The selected project soundtrack is mixed automatically when a local "
         "eligible asset is available. Original source videos were not modified.[/yellow]"
     )
+
 
 @app.command("plan")
 def plan_edit(
