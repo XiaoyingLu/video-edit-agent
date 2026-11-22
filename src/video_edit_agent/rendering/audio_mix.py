@@ -48,7 +48,9 @@ def resolve_selected_music(
             )
     else:
         if not validate_artifact(root, selection_file):
-            raise AudioMixError("Soundtrack selection is untracked; regenerate it before rendering.")
+            raise AudioMixError(
+                "Soundtrack selection is untracked; regenerate it before rendering."
+            )
         try:
             selection = json.loads(selection_file.read_text(encoding="utf-8"))
             if Path(selection["project_path"]).resolve() != root:
