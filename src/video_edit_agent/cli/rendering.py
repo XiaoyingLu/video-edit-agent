@@ -578,6 +578,10 @@ def render_social_exports(
         str,
         typer.Option("--resolution", help="Output resolution: 720p, 1080p, or 4k."),
     ] = "1080p",
+    title_overlays: Annotated[
+        Path | None,
+        typer.Option("--title-overlays", help="Optional reviewed title overlay JSON artifact."),
+    ] = None,
     fit_mode: Annotated[
         str | None,
         typer.Option(
@@ -629,6 +633,7 @@ def render_social_exports(
                 fit_mode=resolved_fit_mode,
                 output_aspect_ratio=aspect_ratio,
                 output_resolution=resolution,
+                title_overlay_path=title_overlays,
                 music_mode=preset.music_mode if preset else "blend",
                 music_volume=preset.music_volume if preset else 0.22,
                 music_fade_in=preset.music_fade_in if preset else 1.0,
