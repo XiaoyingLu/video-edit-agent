@@ -269,8 +269,10 @@ def test_cli_help_includes_render_draft():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "render-draft" in result.output
+    assert "style-presets" in result.output
     result = runner.invoke(app, ["render-draft", "--help"])
     assert result.exit_code == 0
+    assert "--style-preset" in click.unstyle(result.output)
     assert "--fit-mode" in click.unstyle(result.output)
     assert "--music-mode" in click.unstyle(result.output)
     assert "--music-ducking" in click.unstyle(result.output)
@@ -293,6 +295,45 @@ def test_render_draft_cli_dry_run_reports_preflight_without_rendering(tmp_path, 
     assert calls["dry_run"] is True
     assert "preflight passed" in result.output
     assert "no MP4 was written" in result.output
+
+
+def test_render_draft_cli_applies_preset_and_explicit_overrides(tmp_path, monkeypatch):
+    calls = {}
+
+    def fake_render(*args, **kwargs):
+        calls.update(kwargs)
+        return None
+
+    monkeypatch.setattr("video_edit_agent.cli.rendering.render_approved_shot_timeline", fake_render)
+    result = runner.invoke(
+        app,
+        [
+            "render-draft",
+            str(tmp_path),
+            "--dry-run",
+            "--style-preset",
+            "cinematic",
+            "--music-volume",
+            "0.3",
+            "--no-music-ducking",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert calls["fit_mode"] == "crop"
+    assert calls["music_volume"] == 0.3
+    assert calls["music_fade_in"] == 1.8
+    assert calls["music_fade_out"] == 2.5
+    assert calls["music_ducking"] is False
+
+
+def test_style_presets_cli_lists_available_profiles():
+    result = runner.invoke(app, ["style-presets"])
+    assert result.exit_code == 0, result.output
+    assert "cinematic" in result.output
+    assert "vlog" in result.output
+    assert "travel-montage" in result.output
+    assert "social" in result.output
 
 
 def test_approved_duration_does_not_apply_transition_across_rejected_shot(tmp_path):
