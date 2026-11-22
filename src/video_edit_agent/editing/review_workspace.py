@@ -1,4 +1,4 @@
-"""Generate a local landing page for the project's existing review artifacts."""
+"""Generate a unified local review workspace for a project's existing review artifacts."""
 
 import html
 import os
@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 def generate_review_workspace(folder: Path, *, output_path: Path | None = None) -> Path:
-    """Create a project-local index of available visual reviews and next actions."""
+    """Create one tabbed review surface around the project's existing local review pages."""
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise NotADirectoryError(f"Project folder does not exist: {root}")
@@ -22,63 +22,72 @@ def generate_review_workspace(folder: Path, *, output_path: Path | None = None) 
 
     entries = [
         (
+            "storyboard",
             "Storyboard",
             artifact_dir / "storyboard.html",
-            "Inspect the narrative sequence and planned shots.",
+            "Review the narrative sequence and planned shots.",
         ),
         (
+            "timeline",
             "Timeline editor",
             _latest(artifact_dir / "timeline-visual-review", "*.html"),
-            "Preview the sequence, reorder shots, adjust trims, and export decisions.",
+            "Preview the sequence, reorder shots, adjust trims, and export a revision.",
         ),
         (
-            "Music sync preview",
+            "music",
+            "Music sync",
             _latest(artifact_dir / "music-timeline-preview", "*.html"),
-            "Inspect proposed cut points against the soundtrack beat and energy map.",
+            "Listen to the soundtrack while inspecting beats, energy, and cut alignment.",
         ),
         (
-            "Soundtrack audition",
-            _latest(artifact_dir, "soundtrack-review.html"),
-            "Audition soundtrack candidates and review rights information.",
+            "soundtrack",
+            "Soundtrack",
+            artifact_dir / "soundtrack-review.html",
+            "Audition soundtrack candidates and review their usage information.",
         ),
     ]
-    cards = []
-    for title, path, description in entries:
+
+    tabs = []
+    panels = []
+    for index, (key, title, path, description) in enumerate(entries):
         available = path is not None and path.is_file()
-        href = (
-            html.escape(
-                Path(os.path.relpath(path, destination.parent)).as_posix(),
-                quote=True,
+        relative = (
+            Path(os.path.relpath(path, destination.parent)).as_posix() if available else None
+        )
+        escaped_title = html.escape(title)
+        if available:
+            href = html.escape(relative or "", quote=True)
+            tabs.append(
+                f'<button class="tab" type="button" role="tab" id="tab-{key}" '
+                f'aria-controls="panel-{key}" aria-selected="{"true" if index == 0 else "false"}" '
+                f'tabindex="{"0" if index == 0 else "-1"}" data-panel="{key}">{escaped_title}</button>'
             )
-            if available
-            else ""
-        )
-        action = (
-            f'<a href="{href}">Open review</a>'
-            if available
-            else '<span class="missing">Not generated yet</span>'
-        )
-        cards.append(
-            f'<article class="card"><h2>{html.escape(title)}</h2>'
-            f"<p>{html.escape(description)}</p>{action}</article>"
-        )
+            panels.append(
+                f'<section class="panel" role="tabpanel" id="panel-{key}" '
+                f'aria-labelledby="tab-{key}" {" " if index == 0 else "hidden"}>'
+                f'<div class="panel-heading"><div><h2>{escaped_title}</h2>'
+                f'<p>{html.escape(description)}</p></div>'
+                f'<a href="{href}" target="_blank" rel="noopener">Open separately</a></div>'
+                f'<iframe title="{escaped_title}" src="{href}" loading="{"eager" if index == 0 else "lazy"}" '
+                f'sandbox="allow-scripts allow-same-origin allow-downloads"></iframe></section>'
+            )
+        else:
+            tabs.append(
+                f'<button class="tab" type="button" role="tab" id="tab-{key}" '
+                f'aria-controls="panel-{key}" aria-selected="false" tabindex="-1" '
+                f'data-panel="{key}" disabled>{escaped_title} · unavailable</button>'
+            )
+            panels.append(
+                f'<section class="panel" role="tabpanel" id="panel-{key}" '
+                f'aria-labelledby="tab-{key}" hidden><div class="empty">'
+                f'<h2>{escaped_title}</h2><p>Not generated yet.</p>'
+                f'<p>{html.escape(description)}</p></div></section>'
+            )
 
     data_files = [
-        (
-            "Rendered-draft critique",
-            artifact_dir / "draft-critique.json",
-            "critique-draft",
-        ),
-        (
-            "Footage suggestions",
-            artifact_dir / "footage-suggestions.json",
-            "review-footage",
-        ),
-        (
-            "Soundtrack selection",
-            artifact_dir / "soundtrack-selection.json",
-            "select-soundtrack",
-        ),
+        ("Rendered-draft critique", artifact_dir / "draft-critique.json", "critique-draft"),
+        ("Footage suggestions", artifact_dir / "footage-suggestions.json", "review-footage"),
+        ("Soundtrack selection", artifact_dir / "soundtrack-selection.json", "select-soundtrack"),
     ]
     rows = []
     for label, path, command in data_files:
@@ -96,30 +105,70 @@ def generate_review_workspace(folder: Path, *, output_path: Path | None = None) 
 <title>Video project review</title>
 <style>
 :root{color-scheme:light dark;font-family:system-ui,sans-serif}
-body{max-width:1100px;margin:3rem auto;padding:0 1.25rem;line-height:1.5}
-header{border-bottom:1px solid #8886;padding-bottom:1.2rem;margin-bottom:1.5rem}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem}
-.card{border:1px solid #8886;border-radius:12px;padding:1.1rem}
-.card h2{margin-top:0}.card p{min-height:3rem;color:GrayText}
-a{font-weight:600}.missing{color:GrayText}
+body{margin:0;line-height:1.5}
+header,.artifacts{max-width:1400px;margin:0 auto;padding:1.2rem 1.5rem}
+header{border-bottom:1px solid #8886}
+h1{margin:.2rem 0}.muted,.panel-heading p{color:GrayText}
+.tabs{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:1rem}
+.tab{padding:.65rem .9rem;border:1px solid #8888;border-radius:8px;background:transparent;
+     color:inherit;cursor:pointer;font:inherit}
+.tab[aria-selected=true]{background:Highlight;color:HighlightText;border-color:Highlight}
+.tab:disabled{opacity:.45;cursor:not-allowed}
+.panel{max-width:1500px;margin:0 auto;padding:1rem 1.5rem}
+.panel[hidden]{display:none}
+.panel-heading{display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.panel-heading h2{margin:.2rem 0}.panel-heading p{margin:.2rem 0 1rem}
+.panel-heading a{white-space:nowrap}
+iframe{display:block;width:100%;height:min(78vh,1050px);min-height:620px;
+       border:1px solid #8886;border-radius:10px;background:Canvas}
+.empty{padding:3rem;border:1px dashed #8888;border-radius:12px}
+.artifacts{border-top:1px solid #8886;margin-top:1rem}
 table{width:100%;border-collapse:collapse;margin-top:1rem}
 th,td{text-align:left;padding:.7rem;border-bottom:1px solid #8886}
 code{overflow-wrap:anywhere}
-@media(max-width:650px){body{margin:1.5rem auto}table{font-size:.9rem}}
+@media(max-width:700px){header,.artifacts{padding:1rem}
+.panel{padding:.75rem}iframe{min-height:520px;height:75vh}
+.panel-heading{align-items:flex-start;flex-direction:column}}
 </style></head><body>
 <header><h1>Project review</h1>
-<p>A local index of this project's review tools and generated artifacts.</p>
+<p class="muted">Review your storyboard, timeline, and soundtrack in one local workspace.</p>
 <p><strong>Project:</strong> """
         + html.escape(root.name)
-        + """</p></header>
-<main><section><h2>Visual reviews</h2><div class="grid">"""
-        + "".join(cards)
-        + """</div></section><section><h2>Project artifacts</h2>
-<p>Generate missing artifacts with the CLI commands below. Decisions and edits remain explicit;
-this page does not approve clips or start a render.</p><table><thead><tr><th>Artifact</th>
-<th>Status</th><th>Next action</th></tr></thead><tbody>"""
+        + """</p><nav class="tabs" role="tablist" aria-label="Review sections">"""
+        + "".join(tabs)
+        + """</nav></header><main>"""
+        + "".join(panels)
+        + """</main><section class="artifacts"><h2>Project artifacts</h2>
+<p class="muted">Some analysis and critique actions still use the CLI. Browser edits remain exports
+until you explicitly apply and approve a revision; this workspace never starts a render.</p>
+<table><thead><tr><th>Artifact</th><th>Status</th><th>Next action</th></tr></thead>
+<tbody>"""
         + "".join(rows)
-        + """</tbody></table></section></main></body></html>
+        + """</tbody></table></section>
+<script>
+const tabs = Array.from(document.querySelectorAll('[role="tab"]:not(:disabled)'));
+function activateTab(selected, moveFocus) {
+  for (const tab of tabs) {
+    const active = tab === selected;
+    tab.setAttribute("aria-selected", String(active));
+    tab.tabIndex = active ? 0 : -1;
+    document.getElementById(tab.getAttribute("aria-controls")).hidden = !active;
+  }
+  if (moveFocus) selected.focus();
+}
+for (const tab of tabs) {
+  tab.addEventListener("click", () => activateTab(tab, false));
+  tab.addEventListener("keydown", event => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const index = tabs.indexOf(tab);
+    const next = event.key === "Home" ? 0 :
+      event.key === "End" ? tabs.length - 1 :
+      (index + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+    activateTab(tabs[next], true);
+  });
+}
+</script></body></html>
 """,
         encoding="utf-8",
     )
