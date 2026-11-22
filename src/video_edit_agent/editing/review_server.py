@@ -27,7 +27,7 @@ _SAVE_CONTROLS = """
 (() => {
   const button = document.getElementById("save-draft-revision");
   const status = document.getElementById("live-save-status");
-  if (!button || typeof report === "undefined") return;
+  if (!button) return;
   button.addEventListener("click", async () => {
     const token = new URL(window.parent.location.href).searchParams.get("token");
     if (!token) {
