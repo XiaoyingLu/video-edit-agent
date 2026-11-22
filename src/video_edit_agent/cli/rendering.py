@@ -345,12 +345,6 @@ def render_revision_preview(
             dry_run=dry_run,
             fit_mode=fit_mode,
             title_overlay_path=title_overlays,
-            music_path=music,
-            music_mode=music_mode,
-            music_volume=music_volume,
-            music_fade_in=music_fade_in,
-            music_fade_out=music_fade_out,
-            music_ducking=music_ducking,
         )
     except (
         FileNotFoundError,
@@ -458,6 +452,12 @@ def render_draft(
             dry_run=dry_run,
             fit_mode=fit_mode,
             title_overlay_path=title_overlays,
+            music_path=music,
+            music_mode=music_mode,
+            music_volume=music_volume,
+            music_fade_in=music_fade_in,
+            music_fade_out=music_fade_out,
+            music_ducking=music_ducking,
         )
     except (FileNotFoundError, FileExistsError, ValueError, RenderError) as exc:
         console.print(f"[red]Draft render failed:[/red] {exc}")
