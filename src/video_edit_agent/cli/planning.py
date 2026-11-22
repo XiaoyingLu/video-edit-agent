@@ -175,7 +175,7 @@ def create_video(
             ]
             if missing:
                 raise ValueError(
-                    "Semantic footage matching found no candidates for "
+                    "Footage matching found no candidates for "
                     f"{len(missing)} storyboard shot(s): {', '.join(missing[:8])}. "
                     "No footage was assigned; inspect footage-suggestions.json."
                 )
@@ -188,7 +188,7 @@ def create_video(
                 f"{len(project_plan.scenes)} scene(s), {len(shots)} shot(s)."
             )
             console.print(
-                f"Semantic matching produced a top-ranked candidate for every shot "
+                f"{suggestions.matching_method.title()} matching produced a top-ranked candidate for every shot "
                 f"(score range {min(scores):.1f}–{max(scores):.1f})."
             )
             console.print(
