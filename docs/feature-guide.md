@@ -151,8 +151,9 @@ docker compose run --rm video-agent render-draft ./travel-test \
   --music-mode blend --music-volume 0.18 --music-ducking
 
 # Use music only, or preserve the original audio unchanged
-docker compose run --rm video-agent render-draft ./travel-test \\\n  --music-mode music_only --music ./travel-test/music/licensed-track.mp3
+docker compose run --rm video-agent render-draft ./travel-test --music-mode music_only --music ./travel-test/music/licensed-track.mp3
 docker compose run --rm video-agent render-draft ./travel-test --music-mode original
+
 ```
 
 Music is looped or trimmed to the rendered duration and receives a 1-second fade-in and 1.5-second fade-out by default. Adjust these with `--music-fade-in` and `--music-fade-out`. Ducking uses the source audio mix as its sidechain, so it responds to dialogue and other prominent source sounds; it is not speech recognition and may also respond to loud ambient audio. The selected music file is tracked as a render dependency, and the render never modifies it or the source videos. If no soundtrack has been selected, the default blend mode preserves the existing source audio.
