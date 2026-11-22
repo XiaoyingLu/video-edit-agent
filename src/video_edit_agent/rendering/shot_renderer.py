@@ -315,7 +315,9 @@ def render_approved_shot_timeline(
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise FileNotFoundError(f"Project folder does not exist: {root}")
-    selected_music = resolve_selected_music(root, music_path=music_path)
+    selected_music = (
+        None if music_mode == "original" else resolve_selected_music(root, music_path=music_path)
+    )
 
     timeline_file = (
         (timeline_path or root / ".video-agent" / "optimized-timeline.json").expanduser().resolve()
