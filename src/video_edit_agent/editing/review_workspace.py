@@ -1,6 +1,7 @@
 """Generate a local landing page for the project's existing review artifacts."""
 
 import html
+import os
 from pathlib import Path
 
 
@@ -25,7 +26,7 @@ def generate_review_workspace(folder: Path, *, output_path: Path | None = None) 
     cards = []
     for title, path, description in entries:
         available = path is not None and path.is_file()
-        href = html.escape(Path(path).relative_to(destination.parent).as_posix(), quote=True) if available else ""
+        href = html.escape(Path(os.path.relpath(path, destination.parent)).as_posix(), quote=True) if available else ""
         action = f'<a href="{href}">Open review</a>' if available else '<span class="missing">Not generated yet</span>'
         cards.append(
             f'<article class="card"><h2>{html.escape(title)}</h2>'
