@@ -16,8 +16,8 @@ from video_edit_agent.editing.timeline_schemas import (
 from video_edit_agent.rendering import RenderError, RenderReport, render_approved_shot_timeline
 from video_edit_agent.rendering.shot_renderer import (
     _build_shot_render_command,
-    _resolve_output_dimensions,
     _requested_output_dimensions,
+    _resolve_output_dimensions,
 )
 
 runner = CliRunner()
@@ -471,4 +471,4 @@ def test_create_video_help_exposes_single_final_review_option(tmp_path):
     result = runner.invoke(app, ["create-video", str(tmp_path), "--help"])
     assert result.exit_code == 0
     assert "--review" in result.output
-    assert "automatically assembled" in result.output
+    assert "automatically assembled" in " ".join(result.output.replace("│", " ").split())

@@ -112,7 +112,7 @@ def create_video(
         ),
     ] = False,
 ) -> None:
-    """Create and render a first draft automatically; use advanced commands for shot-by-shot review."""
+    """Create and render a first draft; use advanced commands for shot-by-shot review."""
     try:
         plan, highlights, selection, timeline, timeline_path = create_video_draft(
             folder,
@@ -140,8 +140,8 @@ def create_video(
             decision = console.input("Render this automatically assembled first draft? [y/N]: ")
             if decision.strip().lower() not in {"y", "yes"}:
                 console.print(
-                "[yellow]Rendering cancelled. The draft timeline was preserved.[/yellow]"
-            )
+                    "[yellow]Rendering cancelled. The draft timeline was preserved.[/yellow]"
+                )
                 raise typer.Exit(code=2)
 
         approve_ids = {clip.clip_id for clip in timeline.clips}
