@@ -34,6 +34,11 @@ def generate_review_workspace(folder: Path, *, output_path: Path | None = None) 
             "Preview the sequence, reorder shots, adjust trims, and export decisions.",
         ),
         (
+            "Music sync preview",
+            _latest(artifact_dir / "music-timeline-preview", "*.html"),
+            "Inspect proposed cut points against the soundtrack beat and energy map.",
+        ),
+        (
             "Soundtrack audition",
             _latest(artifact_dir, "soundtrack-review.html"),
             "Audition soundtrack candidates and review rights information.",
