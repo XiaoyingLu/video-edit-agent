@@ -2,6 +2,7 @@
 
 # ruff: noqa: F403,F405,I001
 from .common import *  # noqa: F403
+from ..rendering.style_presets import STYLE_PRESETS, resolve_style_preset
 
 
 @app.command()
@@ -375,6 +376,27 @@ def render_revision_preview(
     console.print("[yellow]Original timeline and source media were not modified.[/yellow]")
 
 
+@app.command("style-presets")
+def list_style_presets() -> None:
+    """List available render style presets."""
+    table = Table(title="Render Style Presets")
+    table.add_column("Preset", style="cyan")
+    table.add_column("Description")
+    table.add_column("Framing")
+    table.add_column("Music", justify="right")
+    table.add_column("Ducking")
+    for preset in STYLE_PRESETS.values():
+        table.add_row(
+            preset.name,
+            preset.description,
+            preset.fit_mode,
+            f"{preset.music_volume:.2f}",
+            "on" if preset.music_ducking else "off",
+        )
+    console.print(table)
+    console.print("Pass --style-preset to render-draft; explicit render options override preset values.")
+
+
 @app.command("render-draft")
 def render_draft(
     folder: Annotated[
@@ -419,38 +441,46 @@ def render_draft(
         Path | None,
         typer.Option("--title-overlays", help="Optional reviewed title overlay JSON artifact."),
     ] = None,
+    style_preset: Annotated[
+        str | None,
+        typer.Option(
+            "--style-preset",
+            help="Optional render profile: cinematic, vlog, travel-montage, or social.",
+        ),
+    ] = None,
     fit_mode: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--fit-mode",
-            help="Source framing: crop to fill or pad to preserve the full frame.",
+            help="Source framing override: crop to fill or pad to preserve the full frame.",
         ),
-    ] = "crop",
+    ] = None,
     music: Annotated[
         Path | None, typer.Option("--music", help="Project-local selected soundtrack file.")
     ] = None,
     music_mode: Annotated[
-        str, typer.Option("--music-mode", help="Audio mode: original, music_only, or blend.")
-    ] = "blend",
+        str | None, typer.Option("--music-mode", help="Audio mode override: original, music_only, or blend.")
+    ] = None,
     music_volume: Annotated[
-        float, typer.Option("--music-volume", min=0.01, max=2.0, help="Music gain (default 0.22).")
-    ] = 0.22,
+        float | None, typer.Option("--music-volume", min=0.01, max=2.0, help="Music gain override.")
+    ] = None,
     music_fade_in: Annotated[
-        float, typer.Option("--music-fade-in", min=0, help="Music fade-in seconds.")
-    ] = 1.0,
+        float | None, typer.Option("--music-fade-in", min=0, help="Music fade-in override in seconds.")
+    ] = None,
     music_fade_out: Annotated[
-        float, typer.Option("--music-fade-out", min=0, help="Music fade-out seconds.")
-    ] = 1.5,
+        float | None, typer.Option("--music-fade-out", min=0, help="Music fade-out override in seconds.")
+    ] = None,
     music_ducking: Annotated[
-        bool,
+        bool | None,
         typer.Option(
             "--music-ducking/--no-music-ducking",
-            help="Lower music when source audio is active.",
+            help="Override whether music is lowered when source audio is active.",
         ),
-    ] = False,
+    ] = None,
 ) -> None:
-    """Render the approved timeline using the creative plan output profile."""
+    """Render the approved shot timeline using an optional named style preset."""
     try:
+        preset = resolve_style_preset(style_preset)
         report = render_approved_shot_timeline(
             folder,
             timeline_path=timeline,
@@ -458,14 +488,14 @@ def render_draft(
             overwrite=overwrite,
             timeout_seconds=timeout_seconds,
             dry_run=dry_run,
-            fit_mode=fit_mode,
+            fit_mode=fit_mode or (preset.fit_mode if preset else "crop"),
             title_overlay_path=title_overlays,
             music_path=music,
-            music_mode=music_mode,
-            music_volume=music_volume,
-            music_fade_in=music_fade_in,
-            music_fade_out=music_fade_out,
-            music_ducking=music_ducking,
+            music_mode=music_mode or (preset.music_mode if preset else "blend"),
+            music_volume=music_volume if music_volume is not None else (preset.music_volume if preset else 0.22),
+            music_fade_in=music_fade_in if music_fade_in is not None else (preset.music_fade_in if preset else 1.0),
+            music_fade_out=music_fade_out if music_fade_out is not None else (preset.music_fade_out if preset else 1.5),
+            music_ducking=music_ducking if music_ducking is not None else (preset.music_ducking if preset else False),
         )
     except (FileNotFoundError, FileExistsError, ValueError, RenderError) as exc:
         console.print(f"[red]Draft render failed:[/red] {exc}")
@@ -477,6 +507,8 @@ def render_draft(
         return
 
     console.print("[bold green]Approved shot timeline rendered and verified.[/bold green]")
+    if style_preset:
+        console.print(f"Style preset: [cyan]{style_preset}[/cyan]")
     console.print(f"Output: [green]{report.output_path}[/green]")
     console.print(
         f"Duration: {report.actual_duration_seconds:.2f}s "
