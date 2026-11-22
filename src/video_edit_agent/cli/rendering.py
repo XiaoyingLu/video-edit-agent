@@ -60,6 +60,28 @@ def render(
             help="Subtitle appearance: classic, cinematic, boxed, or minimal.",
         ),
     ] = "classic",
+    music: Annotated[
+        Path | None, typer.Option("--music", help="Project-local selected soundtrack file.")
+    ] = None,
+    music_mode: Annotated[
+        str, typer.Option("--music-mode", help="Audio mode: original, music_only, or blend.")
+    ] = "blend",
+    music_volume: Annotated[
+        float, typer.Option("--music-volume", min=0.01, max=2.0, help="Music gain (default 0.22).")
+    ] = 0.22,
+    music_fade_in: Annotated[
+        float, typer.Option("--music-fade-in", min=0, help="Music fade-in seconds.")
+    ] = 1.0,
+    music_fade_out: Annotated[
+        float, typer.Option("--music-fade-out", min=0, help="Music fade-out seconds.")
+    ] = 1.5,
+    music_ducking: Annotated[
+        bool,
+        typer.Option(
+            "--music-ducking/--no-music-ducking",
+            help="Lower music when source audio is active.",
+        ),
+    ] = False,
     dry_run: Annotated[
         bool,
         typer.Option(
@@ -84,6 +106,12 @@ def render(
             subtitle_font_size=subtitle_font_size,
             subtitle_position=subtitle_position,
             subtitle_style=subtitle_style,
+            music_path=music,
+            music_mode=music_mode,
+            music_volume=music_volume,
+            music_fade_in=music_fade_in,
+            music_fade_out=music_fade_out,
+            music_ducking=music_ducking,
             dry_run=dry_run,
         )
     except (FileNotFoundError, FileExistsError, ValueError, RenderError) as exc:
@@ -398,6 +426,24 @@ def render_draft(
             help="Source framing: crop to fill or pad to preserve the full frame.",
         ),
     ] = "crop",
+    music: Annotated[
+        Path | None, typer.Option("--music", help="Project-local selected soundtrack file.")
+    ] = None,
+    music_mode: Annotated[
+        str, typer.Option("--music-mode", help="Audio mode: original, music_only, or blend.")
+    ] = "blend",
+    music_volume: Annotated[
+        float, typer.Option("--music-volume", min=0.01, max=2.0, help="Music gain (default 0.22).")
+    ] = 0.22,
+    music_fade_in: Annotated[
+        float, typer.Option("--music-fade-in", min=0, help="Music fade-in seconds.")
+    ] = 1.0,
+    music_fade_out: Annotated[
+        float, typer.Option("--music-fade-out", min=0, help="Music fade-out seconds.")
+    ] = 1.5,
+    music_ducking: Annotated[
+        bool, typer.Option("--music-ducking/--no-music-ducking", help="Lower music when source audio is active.")
+    ] = False,
 ) -> None:
     """Render the approved timeline using the creative plan output profile."""
     try:
@@ -410,6 +456,12 @@ def render_draft(
             dry_run=dry_run,
             fit_mode=fit_mode,
             title_overlay_path=title_overlays,
+            music_path=music,
+            music_mode=music_mode,
+            music_volume=music_volume,
+            music_fade_in=music_fade_in,
+            music_fade_out=music_fade_out,
+            music_ducking=music_ducking,
         )
     except (FileNotFoundError, FileExistsError, ValueError, RenderError) as exc:
         console.print(f"[red]Draft render failed:[/red] {exc}")
