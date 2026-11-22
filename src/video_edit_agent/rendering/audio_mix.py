@@ -145,6 +145,6 @@ def append_music_mix(
         music_label = "musicbed"
     filters.append(
         f"[{base_label}][{music_label}]amix=inputs=2:duration=first:"
-        "dropout_transition=2:normalize=0[audiomix]"
+        "dropout_transition=2:normalize=0,alimiter=limit=0.95[audiomix]"
     )
     return "audiomix"
