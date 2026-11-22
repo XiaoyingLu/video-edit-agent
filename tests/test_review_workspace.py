@@ -24,10 +24,16 @@ def test_workspace_links_existing_review_pages_and_lists_artifacts(tmp_path: Pat
     assert 'href="storyboard.html"' in content
     assert 'href="timeline-visual-review/review.html"' in content
     assert 'href="soundtrack-review.html"' in content
-    assert "Music sync preview" in content
+    assert "Music sync" in content
+    assert 'data-panel="music"' in content
     assert "Rendered-draft critique" in content
     assert "Available" in content
-    assert "does not approve clips" in content
+    assert "does not start a render" in content
+    assert 'role="tablist"' in content
+    assert 'id="panel-timeline"' in content
+    assert 'src="timeline-visual-review/review.html"' in content
+    assert 'src="music-timeline-preview/preview.html"' in content
+    assert 'sandbox="allow-scripts allow-same-origin allow-downloads"' in content
 
 
 def test_workspace_supports_nested_output_path(tmp_path: Path):
