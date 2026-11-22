@@ -8,6 +8,7 @@ from pathlib import Path
 from ..artifact_tracking import register_artifact, validate_artifact
 from ..editing.planning_schemas import VideoProjectPlan
 from ..editing.timeline_schemas import ProjectDraftTimeline
+from .audio_mix import append_music_input, append_music_mix, resolve_selected_music
 from .renderer import (
     RenderError,
     RenderReport,
@@ -17,7 +18,6 @@ from .renderer import (
     _validate_source_stream_metadata,
 )
 from .title_overlays import TitleOverlay
-from .audio_mix import append_music_input, append_music_mix, resolve_selected_music
 
 
 def _safe_source(root: Path, relative_path: str) -> Path:
