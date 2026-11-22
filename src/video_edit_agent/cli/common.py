@@ -31,8 +31,8 @@ from ..editing import (
 )
 from ..editing.embeddings import EmbeddingModelError
 from ..editing.footage_mapping import suggest_storyboard_footage
-from ..editing.footage_schemas import ProjectFootageSuggestions
 from ..editing.footage_review import review_storyboard_footage
+from ..editing.footage_schemas import ProjectFootageSuggestions
 from ..editing.planning_generation import VideoPlanningError
 from ..editing.revision_cycle import (
     RevisionCycleError,

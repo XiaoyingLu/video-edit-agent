@@ -115,7 +115,10 @@ def create_video(
         bool,
         typer.Option(
             "--storyboard",
-            help="Use AI storyboard planning and semantic footage matching instead of highlight ranking.",
+            help=(
+                "Use AI storyboard planning and semantic footage matching instead of "
+                "highlight ranking."
+            ),
         ),
     ] = False,
 ) -> None:
@@ -161,11 +164,7 @@ def create_video(
                 ),
                 config={"matching_method": suggestions.matching_method},
             )
-            shots = [
-                shot
-                for scene in project_plan.scenes
-                for shot in scene.shots
-            ]
+            shots = [shot for scene in project_plan.scenes for shot in scene.shots]
             suggestions_by_id = {item.shot_id: item for item in suggestions.suggestions}
             missing = [
                 shot.shot_id
@@ -180,15 +179,14 @@ def create_video(
                     "No footage was assigned; inspect footage-suggestions.json."
                 )
             selections = {shot.shot_id: 1 for shot in shots}
-            scores = [
-                suggestions_by_id[shot.shot_id].candidates[0].score for shot in shots
-            ]
+            scores = [suggestions_by_id[shot.shot_id].candidates[0].score for shot in shots]
             console.print(
                 f"Storyboard: {project_plan.story_treatment.working_title} — "
                 f"{len(project_plan.scenes)} scene(s), {len(shots)} shot(s)."
             )
             console.print(
-                f"{suggestions.matching_method.title()} matching produced a top-ranked candidate for every shot "
+                f"{suggestions.matching_method.title()} matching produced a top-ranked candidate "
+                "for every shot "
                 f"(score range {min(scores):.1f}–{max(scores):.1f})."
             )
             console.print(
@@ -201,7 +199,8 @@ def create_video(
             )
             if decision.strip().lower() not in {"y", "yes"}:
                 console.print(
-                    "[yellow]Rendering cancelled. Storyboard and footage suggestions were preserved.[/yellow]"
+                    "[yellow]Rendering cancelled. Storyboard and footage suggestions "
+                    "were preserved.[/yellow]"
                 )
                 raise typer.Exit(code=2)
             project_plan, plan_path = review_storyboard_footage(
@@ -245,9 +244,7 @@ def create_video(
             )
             console.print(f"Draft timeline: [green]{timeline_path}[/green]")
             if review:
-                decision = console.input(
-                    "Render this automatically assembled first draft? [y/N]: "
-                )
+                decision = console.input("Render this automatically assembled first draft? [y/N]: ")
                 if decision.strip().lower() not in {"y", "yes"}:
                     console.print(
                         "[yellow]Rendering cancelled. The draft timeline was preserved.[/yellow]"
