@@ -54,6 +54,21 @@ def _resolve_output_dimensions(
     return short_side, short_side
 
 
+def _requested_output_dimensions(aspect_ratio: str, resolution: str) -> tuple[int, int]:
+    """Resolve a validated aspect-ratio and resolution pair to even output dimensions."""
+    if aspect_ratio not in {"16:9", "9:16", "1:1"}:
+        raise ValueError("output_aspect_ratio must be 16:9, 9:16, or 1:1")
+    if resolution not in {"720p", "1080p", "4k"}:
+        raise ValueError("output_resolution must be 720p, 1080p, or 4k")
+    long_side = {"720p": 1280, "1080p": 1920, "4k": 3840}[resolution]
+    short_side = {"720p": 720, "1080p": 1080, "4k": 2160}[resolution]
+    if aspect_ratio == "16:9":
+        return long_side, short_side
+    if aspect_ratio == "9:16":
+        return short_side, long_side
+    return short_side, short_side
+
+
 def _escape_drawtext(value: str) -> str:
     """Escape user text for a quoted FFmpeg filter value with expansion disabled."""
     escaped = value.replace("\\", "\\\\")
@@ -444,18 +459,7 @@ def render_approved_shot_timeline(
     if output_aspect_ratio is None and output_resolution is None:
         width, height = _resolve_output_dimensions(root, width, height)
     else:
-        if output_aspect_ratio not in {"16:9", "9:16", "1:1"}:
-            raise ValueError("output_aspect_ratio must be 16:9, 9:16, or 1:1")
-        if output_resolution not in {"720p", "1080p", "4k"}:
-            raise ValueError("output_resolution must be 720p, 1080p, or 4k")
-        long_side = {"720p": 1280, "1080p": 1920, "4k": 3840}[output_resolution]
-        short_side = {"720p": 720, "1080p": 1080, "4k": 2160}[output_resolution]
-        if output_aspect_ratio == "16:9":
-            width, height = long_side, short_side
-        elif output_aspect_ratio == "9:16":
-            width, height = short_side, long_side
-        else:
-            width, height = short_side, short_side
+        width, height = _requested_output_dimensions(output_aspect_ratio, output_resolution)
 
     expected_duration = sum(end - start for _, start, end, *_ in clip_inputs) - sum(
         transition_duration
