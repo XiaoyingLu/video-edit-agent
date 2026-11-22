@@ -443,6 +443,14 @@ def render_draft(
         Path | None,
         typer.Option("--title-overlays", help="Optional reviewed title overlay JSON artifact."),
     ] = None,
+    output_aspect_ratio: Annotated[
+        str | None,
+        typer.Option("--aspect-ratio", help="Output aspect ratio: 16:9, 9:16, or 1:1."),
+    ] = None,
+    output_resolution: Annotated[
+        str | None,
+        typer.Option("--resolution", help="Output resolution: 720p, 1080p, or 4k."),
+    ] = None,
     style_preset: Annotated[
         str | None,
         typer.Option(
@@ -487,6 +495,8 @@ def render_draft(
     """Render the approved shot timeline using an optional named style preset."""
     try:
         preset = resolve_style_preset(style_preset)
+        if (output_aspect_ratio is None) != (output_resolution is None):
+            raise ValueError("--aspect-ratio and --resolution must be supplied together")
         report = render_approved_shot_timeline(
             folder,
             timeline_path=timeline,
@@ -495,6 +505,8 @@ def render_draft(
             timeout_seconds=timeout_seconds,
             dry_run=dry_run,
             fit_mode=fit_mode or (preset.fit_mode if preset else "crop"),
+            output_aspect_ratio=output_aspect_ratio,
+            output_resolution=output_resolution,
             title_overlay_path=title_overlays,
             music_path=music,
             music_mode=music_mode or (preset.music_mode if preset else "blend"),
@@ -531,6 +543,8 @@ def render_draft(
     console.print("[bold green]Approved shot timeline rendered and verified.[/bold green]")
     if style_preset:
         console.print(f"Style preset: [cyan]{style_preset}[/cyan]")
+    if output_aspect_ratio:
+        console.print(f"Aspect ratio: {output_aspect_ratio} ({output_resolution})")
     console.print(f"Output: [green]{report.output_path}[/green]")
     console.print(
         f"Duration: {report.actual_duration_seconds:.2f}s "
@@ -541,6 +555,103 @@ def render_draft(
         f"{report.video_codec.upper()} video + {report.audio_codec.upper()} audio"
     )
     console.print("[yellow]Original source videos were not modified.[/yellow]")
+
+
+@app.command("render-social-exports")
+def render_social_exports(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder containing the approved optimized timeline and source videos.",
+        ),
+    ],
+    timeline: Annotated[
+        Path | None,
+        typer.Option("--timeline", help="Path to the reviewed optimized timeline JSON."),
+    ] = None,
+    resolution: Annotated[
+        str,
+        typer.Option("--resolution", help="Output resolution: 720p, 1080p, or 4k."),
+    ] = "1080p",
+    fit_mode: Annotated[
+        str | None,
+        typer.Option("--fit-mode", help="Framing: center crop to fill or pad to preserve the full frame."),
+    ] = None,
+    style_preset: Annotated[
+        str | None,
+        typer.Option("--style-preset", help="Optional audio/framing profile."),
+    ] = "social",
+    overwrite: Annotated[
+        bool,
+        typer.Option("--overwrite", help="Replace existing social export files."),
+    ] = False,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Validate all three output formats without writing MP4 files."),
+    ] = False,
+) -> None:
+    """Render approved footage in landscape, vertical, and square social formats."""
+    root = folder.expanduser().resolve()
+    export_dir = root / ".video-agent" / "social-exports"
+    profiles = (
+        ("landscape", "16:9"),
+        ("vertical", "9:16"),
+        ("square", "1:1"),
+    )
+    try:
+        preset = resolve_style_preset(style_preset)
+        # Validate the resolution and framing once before starting a multi-output render.
+        from ..rendering.shot_renderer import _requested_output_dimensions
+
+        _requested_output_dimensions("16:9", resolution)
+        resolved_fit_mode = fit_mode or (preset.fit_mode if preset else "crop")
+        if resolved_fit_mode not in {"crop", "pad"}:
+            raise ValueError("fit_mode must be crop or pad")
+        outputs = []
+        for label, aspect_ratio in profiles:
+            destination = export_dir / f"{label}-{resolution}.mp4"
+            report = render_approved_shot_timeline(
+                root,
+                timeline_path=timeline,
+                output_path=destination,
+                overwrite=overwrite,
+                dry_run=dry_run,
+                fit_mode=resolved_fit_mode,
+                output_aspect_ratio=aspect_ratio,
+                output_resolution=resolution,
+                music_mode=preset.music_mode if preset else "blend",
+                music_volume=preset.music_volume if preset else 0.22,
+                music_fade_in=preset.music_fade_in if preset else 1.0,
+                music_fade_out=preset.music_fade_out if preset else 1.5,
+                music_ducking=preset.music_ducking if preset else False,
+            )
+            outputs.append((label, aspect_ratio, report))
+    except (FileNotFoundError, FileExistsError, ValueError, RenderError) as exc:
+        console.print(f"[red]Social export failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    if dry_run:
+        console.print("[bold green]All three social export preflights passed.[/bold green]")
+        console.print("No MP4 files were written.")
+        return
+
+    table = Table(title="Social Exports")
+    table.add_column("Format", style="cyan")
+    table.add_column("Aspect ratio")
+    table.add_column("Resolution")
+    table.add_column("Output")
+    for label, aspect_ratio, report in outputs:
+        table.add_row(label, aspect_ratio, f"{report.width}x{report.height}", str(report.output_path))
+    console.print(table)
+    console.print(
+        "[yellow]Framing uses a centered crop or letterbox; review each export for subject placement. "
+        "No subject-aware tracking is applied.[/yellow]"
+    )
 
 
 @app.command("critique-draft")
