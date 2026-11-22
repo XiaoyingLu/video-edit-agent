@@ -66,6 +66,7 @@ _SAVE_CONTROLS = """
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Review save failed");
+    if (result.timeline_sha256) report.timeline_sha256 = result.timeline_sha256;
     return result;
   }
   decisionsButton.addEventListener("click", async () => {
@@ -280,6 +281,9 @@ def create_review_server(
                 rejected = sum(c.decision == "rejected" for c in updated.clips)
                 if approve and (pending or not approved):
                     raise ValueError("Resolve every clip and approve at least one before approving the timeline")
+                for clip in updated.clips:
+                    if decisions[clip.clip_id] == "pending":
+                        clip.decision = "pending"
                 updated.timeline_approved = approve
                 updated = ProjectDraftTimeline.model_validate(updated.model_dump())
                 save_draft_timeline(updated, timeline_file)
@@ -287,7 +291,7 @@ def create_review_server(
                 self._send_json(400, {"error": str(exc)})
                 return
             self._send_json(200, {"timeline_path":relative.as_posix(),"timeline_approved":approve,
-                "approved_count":approved,"rejected_count":rejected,"pending_count":pending})
+                "approved_count":approved,"rejected_count":rejected,"pending_count":pending,"timeline_sha256":hashlib.sha256(timeline_file.read_bytes()).hexdigest()})
 
         def _send_json(self, status: int, payload: dict):
             body = json.dumps(payload).encode("utf-8")
