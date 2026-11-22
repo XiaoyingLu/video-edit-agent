@@ -45,7 +45,7 @@ For Apple Silicon MLX vision, install `.[mlx,dev]` in a native macOS environment
 - **Ingest & understand:** `analyze`, `understand`, `transcribe`, `detect-silence`, `propose-edits`, `review-edits`, `build-timeline`, `subtitles`
 - **Story & planning:** `find-highlights`, `create-video`, `plan`, `create-plan`, `propose-story`, `select-story`, `suggest-footage`, `approve-storyboard`, `build-storyboard-timeline`, `review-storyboard`, `review-footage`
 - **Editing & revisions:** `draft-edit`, `optimize-timeline`, `review-timeline`, `review-timeline-visual`, `apply-timeline-visual-edits`, `revise-timeline`, `review-timeline-revision`, `compare-timelines`
-- **Rendering & visual review:** `render`, `init-title-overlays`, `suggest-title-sequences`, `review-title-overlays`, `render-revision-preview`, `render-draft`, `critique-draft`, `suggest-revisions`, `review-revision-suggestions`, `compare-drafts`
+- **Rendering & visual review:** `render`, `style-presets`, `init-title-overlays`, `suggest-title-sequences`, `review-title-overlays`, `render-revision-preview`, `render-draft`, `critique-draft`, `suggest-revisions`, `review-revision-suggestions`, `compare-drafts`
 - **Soundtrack & music:** `suggest-soundtrack`, `search-soundtrack`, `generate-soundtrack`, `prepare-soundtrack-candidates`, `review-soundtrack`, `select-soundtrack`, `analyze-selected-soundtrack`, `analyze-music`, `suggest-music-sync`, `review-music-timeline`, `review-music-sync`
 - **Project maintenance:** `validate-artifacts`, `clean`, `report-revision-cycle`
 
