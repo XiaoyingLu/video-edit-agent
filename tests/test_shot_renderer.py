@@ -5,6 +5,7 @@ from pathlib import Path
 
 import click
 import pytest
+import typer.rich_utils
 from typer.testing import CliRunner
 
 from video_edit_agent.artifact_tracking import register_artifact
@@ -467,8 +468,17 @@ def test_requested_output_dimensions_reject_unsupported_profiles(aspect_ratio, r
         _requested_output_dimensions(aspect_ratio, resolution)
 
 
-def test_create_video_help_exposes_single_final_review_option(tmp_path):
-    result = runner.invoke(app, ["create-video", str(tmp_path), "--help"])
+@pytest.mark.parametrize("color", [False, True])
+def test_create_video_help_exposes_single_final_review_option(tmp_path, monkeypatch, color):
+    monkeypatch.setattr(typer.rich_utils, "FORCE_TERMINAL", color)
+    result = runner.invoke(
+        app,
+        ["create-video", str(tmp_path), "--help"],
+        color=True,
+        env={"TERM": "xterm", "NO_COLOR": None},
+    )
     assert result.exit_code == 0
-    assert "--review" in result.output
-    assert "automatically assembled" in " ".join(result.output.replace("│", " ").split())
+    assert ("\x1b[" in result.output) is color
+    help_text = click.unstyle(result.output)
+    assert "--review" in help_text
+    assert "automatically assembled" in " ".join(help_text.replace("│", " ").split())
