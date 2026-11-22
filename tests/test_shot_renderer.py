@@ -276,6 +276,8 @@ def test_cli_help_includes_render_draft():
     assert "--fit-mode" in click.unstyle(result.output)
     assert "--music-mode" in click.unstyle(result.output)
     assert "--music-ducking" in click.unstyle(result.output)
+    assert "--aspect-ratio" in click.unstyle(result.output)
+    assert "--resolution" in click.unstyle(result.output)
     result = runner.invoke(app, ["render", "--help"])
     assert result.exit_code == 0
     assert "--music-mode" in click.unstyle(result.output)
@@ -325,6 +327,63 @@ def test_render_draft_cli_applies_preset_and_explicit_overrides(tmp_path, monkey
     assert calls["music_fade_in"] == 1.8
     assert calls["music_fade_out"] == 2.5
     assert calls["music_ducking"] is False
+
+
+def test_render_draft_cli_passes_social_output_profile(tmp_path, monkeypatch):
+    calls = {}
+
+    def fake_render(*args, **kwargs):
+        calls.update(kwargs)
+        return None
+
+    monkeypatch.setattr("video_edit_agent.cli.rendering.render_approved_shot_timeline", fake_render)
+    result = runner.invoke(
+        app,
+        [
+            "render-draft",
+            str(tmp_path),
+            "--dry-run",
+            "--aspect-ratio",
+            "9:16",
+            "--resolution",
+            "1080p",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert calls["output_aspect_ratio"] == "9:16"
+    assert calls["output_resolution"] == "1080p"
+
+
+def test_render_draft_requires_aspect_ratio_and_resolution_together(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "video_edit_agent.cli.rendering.render_approved_shot_timeline",
+        lambda *args, **kwargs: None,
+    )
+    result = runner.invoke(
+        app,
+        ["render-draft", str(tmp_path), "--aspect-ratio", "9:16", "--dry-run"],
+    )
+    assert result.exit_code == 1
+    assert "--aspect-ratio and --resolution must be supplied together" in result.output
+
+
+def test_render_social_exports_generates_three_preflights(tmp_path, monkeypatch):
+    calls = []
+
+    def fake_render(*args, **kwargs):
+        calls.append(kwargs)
+        return None
+
+    monkeypatch.setattr("video_edit_agent.cli.rendering.render_approved_shot_timeline", fake_render)
+    result = runner.invoke(app, ["render-social-exports", str(tmp_path), "--dry-run"])
+
+    assert result.exit_code == 0, result.output
+    assert len(calls) == 3
+    assert [call["output_aspect_ratio"] for call in calls] == ["16:9", "9:16", "1:1"]
+    assert {call["output_resolution"] for call in calls} == {"1080p"}
+    assert all(call["dry_run"] for call in calls)
+    assert "No MP4 files were written" in result.output
 
 
 def test_style_presets_cli_lists_available_profiles():
