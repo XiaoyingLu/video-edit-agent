@@ -55,24 +55,25 @@ def generate_review_workspace(folder: Path, *, output_path: Path | None = None) 
     panels = []
     for key, title, path, description in entries:
         available = path is not None and path.is_file()
-        relative = (
-            Path(os.path.relpath(path, destination.parent)).as_posix() if available else None
-        )
+        relative = Path(os.path.relpath(path, destination.parent)).as_posix() if available else None
         escaped_title = html.escape(title)
         if available:
             href = html.escape(relative or "", quote=True)
             tabs.append(
                 f'<button class="tab" type="button" role="tab" id="tab-{key}" '
-                f'aria-controls="panel-{key}" aria-selected="{"true" if key == active_key else "false"}" '
-                f'tabindex="{"0" if key == active_key else "-1"}" data-panel="{key}">{escaped_title}</button>'
+                f'aria-controls="panel-{key}" '
+                f'aria-selected="{"true" if key == active_key else "false"}" '
+                f'tabindex="{"0" if key == active_key else "-1"}" '
+                f'data-panel="{key}">{escaped_title}</button>'
             )
             panels.append(
                 f'<section class="panel" role="tabpanel" id="panel-{key}" '
                 f'aria-labelledby="tab-{key}" {" " if key == active_key else "hidden"}>'
                 f'<div class="panel-heading"><div><h2>{escaped_title}</h2>'
-                f'<p>{html.escape(description)}</p></div>'
+                f"<p>{html.escape(description)}</p></div>"
                 f'<a href="{href}" target="_blank" rel="noopener">Open separately</a></div>'
-                f'<iframe title="{escaped_title}" src="{href}" loading="{"eager" if key == active_key else "lazy"}" '
+                f'<iframe title="{escaped_title}" src="{href}" '
+                f'loading="{"eager" if key == active_key else "lazy"}" '
                 f'sandbox="allow-scripts allow-same-origin allow-downloads"></iframe></section>'
             )
         else:
@@ -84,8 +85,8 @@ def generate_review_workspace(folder: Path, *, output_path: Path | None = None) 
             panels.append(
                 f'<section class="panel" role="tabpanel" id="panel-{key}" '
                 f'aria-labelledby="tab-{key}" hidden><div class="empty">'
-                f'<h2>{escaped_title}</h2><p>Not generated yet.</p>'
-                f'<p>{html.escape(description)}</p></div></section>'
+                f"<h2>{escaped_title}</h2><p>Not generated yet.</p>"
+                f"<p>{html.escape(description)}</p></div></section>"
             )
 
     data_files = [
