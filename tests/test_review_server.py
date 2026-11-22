@@ -185,3 +185,22 @@ def test_review_server_does_not_serve_environment_files(tmp_path: Path):
         assert error.value.code == 404
     finally:
         _stop_server(server, thread)
+
+
+def test_review_server_can_bind_all_container_interfaces(tmp_path: Path):
+    server = create_review_server(tmp_path, host="0.0.0.0")
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        assert server.server_address[0] == "0.0.0.0"
+        _, port = server.server_address
+        with pytest.raises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=3)
+        assert error.value.code == 404
+    finally:
+        _stop_server(server, thread)
+
+
+def test_review_server_rejects_unsafe_bind_addresses(tmp_path: Path):
+    with pytest.raises(ValueError, match="Unsupported bind host"):
+        create_review_server(tmp_path, host="192.168.1.10")
