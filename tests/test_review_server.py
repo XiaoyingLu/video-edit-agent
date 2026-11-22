@@ -208,48 +208,112 @@ def test_review_server_rejects_unsafe_bind_addresses(tmp_path: Path):
 
 def test_live_review_saves_clip_decisions_without_approving_timeline(tmp_path, monkeypatch):
     from video_edit_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
-    artifact_dir=tmp_path/".video-agent"; artifact_dir.mkdir()
-    timeline=ProjectDraftTimeline(project_path=str(tmp_path.resolve()),style="cinematic",pacing="moderate",
-      target_duration_seconds=10,proposed_duration_seconds=4,proposed_clip_count=1,
-      clips=[DraftTimelineClip(clip_id="coast",sequence_index=1,video_path="coast.mp4",
-        source_start_seconds=0,source_end_seconds=4,duration_seconds=4,combined_score=90,pacing_note="Opening")])
-    path=artifact_dir/"optimized-timeline.json"; path.write_text(timeline.model_dump_json(),encoding="utf-8")
-    monkeypatch.setattr("video_edit_agent.editing.review_server.validate_artifact",lambda *_:True)
-    payload={"schema_version":"1.0","timeline_path":".video-agent/optimized-timeline.json",
-      "timeline_sha256":hashlib.sha256(path.read_bytes()).hexdigest(),"decisions":{"coast":"approved"},
-      "approve_timeline":False}
-    server,thread=_start_server(tmp_path)
+
+    artifact_dir = tmp_path / ".video-agent"
+    artifact_dir.mkdir()
+    timeline = ProjectDraftTimeline(
+        project_path=str(tmp_path.resolve()),
+        style="cinematic",
+        pacing="moderate",
+        target_duration_seconds=10,
+        proposed_duration_seconds=4,
+        proposed_clip_count=1,
+        clips=[
+            DraftTimelineClip(
+                clip_id="coast",
+                sequence_index=1,
+                video_path="coast.mp4",
+                source_start_seconds=0,
+                source_end_seconds=4,
+                duration_seconds=4,
+                combined_score=90,
+                pacing_note="Opening",
+            )
+        ],
+    )
+    path = artifact_dir / "optimized-timeline.json"
+    path.write_text(timeline.model_dump_json(), encoding="utf-8")
+    monkeypatch.setattr("video_edit_agent.editing.review_server.validate_artifact", lambda *_: True)
+    payload = {
+        "schema_version": "1.0",
+        "timeline_path": ".video-agent/optimized-timeline.json",
+        "timeline_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "decisions": {"coast": "approved"},
+        "approve_timeline": False,
+    }
+    server, thread = _start_server(tmp_path)
     try:
-      host,port=server.server_address
-      request=urllib.request.Request(f"http://{host}:{port}/__video_agent__/timeline-review",
-        data=json.dumps(payload).encode(),headers={"Content-Type":"application/json","Origin":f"http://{host}:{port}",
-        "X-Video-Agent-Token":server.session_token},method="POST")
-      with urllib.request.urlopen(request,timeout=3) as response: result=json.loads(response.read())
-      saved=ProjectDraftTimeline.model_validate_json(path.read_text())
-      assert result["approved_count"]==1 and saved.clips[0].decision=="approved"
-      assert saved.timeline_approved is False
-    finally: _stop_server(server,thread)
+        host, port = server.server_address
+        request = urllib.request.Request(
+            f"http://{host}:{port}/__video_agent__/timeline-review",
+            data=json.dumps(payload).encode(),
+            headers={
+                "Content-Type": "application/json",
+                "Origin": f"http://{host}:{port}",
+                "X-Video-Agent-Token": server.session_token,
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=3) as response:
+            result = json.loads(response.read())
+        saved = ProjectDraftTimeline.model_validate_json(path.read_text())
+        assert result["approved_count"] == 1 and saved.clips[0].decision == "approved"
+        assert saved.timeline_approved is False
+    finally:
+        _stop_server(server, thread)
 
 
 def test_live_review_rejects_timeline_approval_with_pending_clips(tmp_path, monkeypatch):
     from video_edit_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
-    artifact_dir=tmp_path/".video-agent"; artifact_dir.mkdir()
-    timeline=ProjectDraftTimeline(project_path=str(tmp_path.resolve()),style="cinematic",pacing="moderate",
-      target_duration_seconds=10,proposed_duration_seconds=4,proposed_clip_count=1,
-      clips=[DraftTimelineClip(clip_id="coast",sequence_index=1,video_path="coast.mp4",
-        source_start_seconds=0,source_end_seconds=4,duration_seconds=4,combined_score=90,pacing_note="Opening")])
-    path=artifact_dir/"optimized-timeline.json"; path.write_text(timeline.model_dump_json(),encoding="utf-8")
-    monkeypatch.setattr("video_edit_agent.editing.review_server.validate_artifact",lambda *_:True)
-    payload={"schema_version":"1.0","timeline_path":".video-agent/optimized-timeline.json",
-      "timeline_sha256":hashlib.sha256(path.read_bytes()).hexdigest(),"decisions":{"coast":"pending"},
-      "approve_timeline":True}
-    server,thread=_start_server(tmp_path)
+
+    artifact_dir = tmp_path / ".video-agent"
+    artifact_dir.mkdir()
+    timeline = ProjectDraftTimeline(
+        project_path=str(tmp_path.resolve()),
+        style="cinematic",
+        pacing="moderate",
+        target_duration_seconds=10,
+        proposed_duration_seconds=4,
+        proposed_clip_count=1,
+        clips=[
+            DraftTimelineClip(
+                clip_id="coast",
+                sequence_index=1,
+                video_path="coast.mp4",
+                source_start_seconds=0,
+                source_end_seconds=4,
+                duration_seconds=4,
+                combined_score=90,
+                pacing_note="Opening",
+            )
+        ],
+    )
+    path = artifact_dir / "optimized-timeline.json"
+    path.write_text(timeline.model_dump_json(), encoding="utf-8")
+    monkeypatch.setattr("video_edit_agent.editing.review_server.validate_artifact", lambda *_: True)
+    payload = {
+        "schema_version": "1.0",
+        "timeline_path": ".video-agent/optimized-timeline.json",
+        "timeline_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "decisions": {"coast": "pending"},
+        "approve_timeline": True,
+    }
+    server, thread = _start_server(tmp_path)
     try:
-      host,port=server.server_address
-      request=urllib.request.Request(f"http://{host}:{port}/__video_agent__/timeline-review",
-        data=json.dumps(payload).encode(),headers={"Content-Type":"application/json","Origin":f"http://{host}:{port}",
-        "X-Video-Agent-Token":server.session_token},method="POST")
-      with pytest.raises(urllib.error.HTTPError) as error: urllib.request.urlopen(request,timeout=3)
-      assert error.value.code==400
-      assert ProjectDraftTimeline.model_validate_json(path.read_text()).timeline_approved is False
-    finally: _stop_server(server,thread)
+        host, port = server.server_address
+        request = urllib.request.Request(
+            f"http://{host}:{port}/__video_agent__/timeline-review",
+            data=json.dumps(payload).encode(),
+            headers={
+                "Content-Type": "application/json",
+                "Origin": f"http://{host}:{port}",
+                "X-Video-Agent-Token": server.session_token,
+            },
+            method="POST",
+        )
+        with pytest.raises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(request, timeout=3)
+        assert error.value.code == 400
+        assert ProjectDraftTimeline.model_validate_json(path.read_text()).timeline_approved is False
+    finally:
+        _stop_server(server, thread)

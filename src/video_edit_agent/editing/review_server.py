@@ -56,7 +56,9 @@ _SAVE_CONTROLS = """
     if (!token) throw new Error("Open this page from the running review workspace.");
     const decisions = {};
     for (const clip of report.clips) {
-      const selected = document.querySelector('input[name="decision-' + clip.sequence_index + '"]:checked');
+      const selected = document.querySelector(
+        'input[name="decision-' + clip.sequence_index + '"]:checked'
+      );
       decisions[clip.clip_id] = selected ? selected.value : "pending";
     }
     const response = await fetch("/__video_agent__/timeline-review", {
@@ -79,7 +81,9 @@ _SAVE_CONTROLS = """
     finally { decisionsButton.disabled=false; }
   });
   approveButton.addEventListener("click", async () => {
-    if (!window.confirm("Approve this complete timeline? This enables the existing render workflow.")) return;
+    if (!window.confirm(
+      "Approve this complete timeline? This enables the existing render workflow."
+    )) return;
     approveButton.disabled=true; status.textContent=" Approving complete timeline…";
     try {
       const result=await postReview(true);
@@ -172,7 +176,10 @@ def create_review_server(
 
         def do_GET(self):
             parsed = urlsplit(self.path)
-            if parsed.path in {"/__video_agent__/timeline-edits", "/__video_agent__/timeline-review"}:
+            if parsed.path in {
+                "/__video_agent__/timeline-edits",
+                "/__video_agent__/timeline-review",
+            }:
                 self.send_error(405, "Method not allowed")
                 return
             target = Path(self.translate_path(parsed.path))
@@ -200,7 +207,10 @@ def create_review_server(
 
         def do_POST(self):
             parsed = urlsplit(self.path)
-            if parsed.path not in {"/__video_agent__/timeline-edits", "/__video_agent__/timeline-review"}:
+            if parsed.path not in {
+                "/__video_agent__/timeline-edits",
+                "/__video_agent__/timeline-review",
+            }:
                 self.send_error(404, "Not found")
                 return
             expected_host = f"127.0.0.1:{self.server.server_port}"
@@ -258,20 +268,28 @@ def create_review_server(
                 timeline_file.relative_to(root)
                 if not timeline_file.is_file() or not validate_artifact(root, timeline_file):
                     raise ValueError("Timeline is missing, stale, or untracked")
-                if hashlib.sha256(timeline_file.read_bytes()).hexdigest() != payload.get("timeline_sha256"):
+                if hashlib.sha256(timeline_file.read_bytes()).hexdigest() != payload.get(
+                    "timeline_sha256"
+                ):
                     raise ValueError("Timeline changed after review; reload the review page")
-                timeline = ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
+                timeline = ProjectDraftTimeline.model_validate_json(
+                    timeline_file.read_text(encoding="utf-8")
+                )
                 if Path(timeline.project_path).resolve() != root:
                     raise ValueError("Timeline belongs to a different project folder")
                 decisions = payload.get("decisions")
-                if not isinstance(decisions, dict) or set(decisions) != {c.clip_id for c in timeline.clips}:
+                if not isinstance(decisions, dict) or set(decisions) != {
+                    c.clip_id for c in timeline.clips
+                }:
                     raise ValueError("Decisions must include every timeline clip exactly once")
-                if any(value not in {"approved", "rejected", "pending"} for value in decisions.values()):
+                if any(
+                    value not in {"approved", "rejected", "pending"} for value in decisions.values()
+                ):
                     raise ValueError("Decisions must be approved, rejected, or pending")
                 updated = apply_timeline_review(
                     timeline,
-                    {key for key,value in decisions.items() if value == "approved"},
-                    {key for key,value in decisions.items() if value == "rejected"},
+                    {key for key, value in decisions.items() if value == "approved"},
+                    {key for key, value in decisions.items() if value == "rejected"},
                 )
                 approve = payload.get("approve_timeline") is True
                 for clip in updated.clips:
@@ -281,15 +299,26 @@ def create_review_server(
                 approved = sum(c.decision == "approved" for c in updated.clips)
                 rejected = sum(c.decision == "rejected" for c in updated.clips)
                 if approve and (pending or not approved):
-                    raise ValueError("Resolve every clip and approve at least one before approving the timeline")
+                    raise ValueError(
+                        "Resolve every clip and approve at least one before approving the timeline"
+                    )
                 updated.timeline_approved = approve
                 updated = ProjectDraftTimeline.model_validate(updated.model_dump())
                 save_draft_timeline(updated, timeline_file)
             except (ValueError, OSError, TypeError) as exc:
                 self._send_json(400, {"error": str(exc)})
                 return
-            self._send_json(200, {"timeline_path":relative.as_posix(),"timeline_approved":approve,
-                "approved_count":approved,"rejected_count":rejected,"pending_count":pending,"timeline_sha256":hashlib.sha256(timeline_file.read_bytes()).hexdigest()})
+            self._send_json(
+                200,
+                {
+                    "timeline_path": relative.as_posix(),
+                    "timeline_approved": approve,
+                    "approved_count": approved,
+                    "rejected_count": rejected,
+                    "pending_count": pending,
+                    "timeline_sha256": hashlib.sha256(timeline_file.read_bytes()).hexdigest(),
+                },
+            )
 
         def _send_json(self, status: int, payload: dict):
             body = json.dumps(payload).encode("utf-8")
