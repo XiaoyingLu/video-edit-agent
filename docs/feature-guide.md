@@ -978,3 +978,26 @@ It uses `mlx-community/Qwen3-VL-4B-Instruct-4bit` by default and supports `--mod
 all selected representative frames are passed to Qwen3-VL in chronological order. The provider
 is opt-in and does not change the default Ollama provider or the existing SmolVLM2 `mlx` option.
 See [Qwen3-VL setup and rollout notes](qwen3-vl.md) before running a full project.
+
+## Render style presets
+
+Choose a named starting point for the approved shot-timeline renderer:
+
+```bash
+docker compose run --rm video-agent style-presets
+docker compose run --rm video-agent render-draft ./travel-test --style-preset cinematic
+docker compose run --rm video-agent render-draft ./travel-test --style-preset travel-montage
+docker compose run --rm video-agent render-draft ./travel-test --style-preset social
+```
+
+Available presets are `cinematic`, `vlog`, `travel-montage`, and `social`. They set conservative render defaults for source framing and soundtrack mix/fades. They do not reorder clips, change approved source intervals, alter timeline transition decisions, generate titles, or approve anything. The existing timeline and explicit approval gates remain authoritative.
+
+Any individual render option overrides the selected preset. For example:
+
+```bash
+docker compose run --rm video-agent render-draft ./travel-test \\
+  --style-preset cinematic --music-volume 0.12 --no-music-ducking
+```
+
+Without `--style-preset`, the renderer retains its previous defaults, so existing commands behave the same.
+
