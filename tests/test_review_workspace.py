@@ -12,9 +12,7 @@ def test_workspace_links_existing_review_pages_and_lists_artifacts(tmp_path: Pat
     timeline_dir.mkdir(parents=True)
     music_dir.mkdir(parents=True)
     (artifact_dir / "storyboard.html").write_text("<html></html>", encoding="utf-8")
-    (artifact_dir / "soundtrack-review.html").write_text(
-        "<html></html>", encoding="utf-8"
-    )
+    (artifact_dir / "soundtrack-review.html").write_text("<html></html>", encoding="utf-8")
     (timeline_dir / "review.html").write_text("<html></html>", encoding="utf-8")
     (music_dir / "preview.html").write_text("<html></html>", encoding="utf-8")
     (artifact_dir / "draft-critique.json").write_text("{}", encoding="utf-8")

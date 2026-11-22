@@ -13,16 +13,12 @@ def generate_review_workspace(folder: Path, *, output_path: Path | None = None) 
     artifact_dir = root / ".video-agent"
     destination = (output_path or artifact_dir / "review-workspace.html").expanduser()
     destination = (
-        (root / destination).resolve()
-        if not destination.is_absolute()
-        else destination.resolve()
+        (root / destination).resolve() if not destination.is_absolute() else destination.resolve()
     )
     try:
         destination.relative_to(root)
     except ValueError as exc:
-        raise ValueError(
-            "Workspace output must stay inside the project folder"
-        ) from exc
+        raise ValueError("Workspace output must stay inside the project folder") from exc
 
     entries = [
         (
@@ -64,7 +60,7 @@ def generate_review_workspace(folder: Path, *, output_path: Path | None = None) 
         )
         cards.append(
             f'<article class="card"><h2>{html.escape(title)}</h2>'
-            f'<p>{html.escape(description)}</p>{action}</article>'
+            f"<p>{html.escape(description)}</p>{action}</article>"
         )
 
     data_files = [
