@@ -34,6 +34,7 @@ from ..editing.footage_mapping import suggest_storyboard_footage
 from ..editing.footage_review import review_storyboard_footage
 from ..editing.footage_schemas import ProjectFootageSuggestions
 from ..editing.planning_generation import VideoPlanningError
+from ..editing.review_workspace import generate_review_workspace
 from ..editing.revision_cycle import (
     RevisionCycleError,
     build_revision_cycle_report,

@@ -969,3 +969,35 @@ def compare_drafts(
         "not aesthetic scores; inspect and listen to both complete drafts before deciding. "
         "No source videos or timelines were modified.[/yellow]"
     )
+
+
+@app.command("review-workspace")
+def review_workspace(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder containing generated review artifacts.",
+        ),
+    ],
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Workspace HTML output path."),
+    ] = None,
+) -> None:
+    """Create a local landing page for the project's available review tools."""
+    try:
+        destination = generate_review_workspace(folder, output_path=output)
+    except (FileNotFoundError, NotADirectoryError, OSError, ValueError) as exc:
+        console.print(f"[red]Review workspace failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    console.print(f"Project review workspace: [green]{destination}[/green]")
+    console.print(
+        "[yellow]Open this HTML file in a browser. It links to existing review pages and "
+        "shows which project artifacts are available. Decisions and rendering still require "
+        "their explicit CLI workflows.[/yellow]"
+    )
