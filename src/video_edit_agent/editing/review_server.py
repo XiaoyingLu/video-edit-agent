@@ -276,14 +276,14 @@ def create_review_server(
                     {key for key,value in decisions.items() if value == "rejected"},
                 )
                 approve = payload.get("approve_timeline") is True
+                for clip in updated.clips:
+                    if decisions[clip.clip_id] == "pending":
+                        clip.decision = "pending"
                 pending = sum(c.decision == "pending" for c in updated.clips)
                 approved = sum(c.decision == "approved" for c in updated.clips)
                 rejected = sum(c.decision == "rejected" for c in updated.clips)
                 if approve and (pending or not approved):
                     raise ValueError("Resolve every clip and approve at least one before approving the timeline")
-                for clip in updated.clips:
-                    if decisions[clip.clip_id] == "pending":
-                        clip.decision = "pending"
                 updated.timeline_approved = approve
                 updated = ProjectDraftTimeline.model_validate(updated.model_dump())
                 save_draft_timeline(updated, timeline_file)
