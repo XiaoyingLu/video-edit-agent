@@ -501,15 +501,25 @@ def render_draft(
             music_path=music,
             music_mode=music_mode or (preset.music_mode if preset else "blend"),
             music_volume=(
-                music_volume if music_volume is not None else (preset.music_volume if preset else 0.22)
+                music_volume
+                if music_volume is not None
+                else (preset.music_volume if preset else 0.22)
             ),
             music_fade_in=(
-                music_fade_in if music_fade_in is not None else (preset.music_fade_in if preset else 1.0)
+                music_fade_in
+                if music_fade_in is not None
+                else (preset.music_fade_in if preset else 1.0)
             ),
             music_fade_out=(
-                music_fade_out if music_fade_out is not None else (preset.music_fade_out if preset else 1.5)
+                music_fade_out
+                if music_fade_out is not None
+                else (preset.music_fade_out if preset else 1.5)
             ),
-            music_ducking=music_ducking if music_ducking is not None else (preset.music_ducking if preset else False),
+            music_ducking=(
+                music_ducking
+                if music_ducking is not None
+                else (preset.music_ducking if preset else False)
+            ),
         )
     except (FileNotFoundError, FileExistsError, ValueError, RenderError) as exc:
         console.print(f"[red]Draft render failed:[/red] {exc}")
