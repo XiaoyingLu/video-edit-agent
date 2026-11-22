@@ -23,9 +23,7 @@ def resolve_selected_music(
 ) -> Path | None:
     """Resolve an explicitly selected, project-local soundtrack; never guess catalog assets."""
     root = folder.expanduser().resolve()
-    selection_file = (
-        selection_path or root / ".video-agent" / "soundtrack-selection.json"
-    )
+    selection_file = selection_path or root / ".video-agent" / "soundtrack-selection.json"
     selection_file = selection_file.expanduser()
     if not selection_file.is_absolute():
         selection_file = (root / selection_file).resolve()
@@ -72,9 +70,7 @@ def resolve_selected_music(
     if not selected.is_file():
         raise FileNotFoundError(f"Selected soundtrack audio does not exist: {selected}")
     if selected.suffix.lower() not in {".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg"}:
-        raise AudioMixError(
-            f"Unsupported soundtrack format: {selected.suffix}"
-        )
+        raise AudioMixError(f"Unsupported soundtrack format: {selected.suffix}")
     return selected
 
 
@@ -126,10 +122,7 @@ def append_music_mix(
     if fade_in > 0:
         chain += f",afade=t=in:st=0:d={fade_in:.6f}"
     if fade_out > 0:
-        chain += (
-            f",afade=t=out:st={max(0.0, duration_seconds - fade_out):.6f}:"
-            f"d={fade_out:.6f}"
-        )
+        chain += f",afade=t=out:st={max(0.0, duration_seconds - fade_out):.6f}:d={fade_out:.6f}"
     filters.append(chain + "[musicbed]")
 
     if mode == "music_only":
