@@ -137,6 +137,26 @@ Selection writes `.video-agent/soundtrack-selection.json`. Candidates requiring 
 
 See [the soundtrack assistant architecture](soundtrack-assistant.md) for provider boundaries, license/provenance requirements, and the incremental implementation plan.
 
+### Add the selected soundtrack to a render
+
+Rendering automatically uses a selected generated track when its local asset is recorded in `.video-agent/soundtrack-selection.json`. A selected catalog track still needs a licensed local audio file; pass it explicitly with `--music`. Both `render` and `render-draft` support the same mixing options:
+
+```bash
+# Blend music under the original clip audio (default: 22% music gain)
+docker compose run --rm video-agent render-draft ./travel-test
+
+# Use a local catalog download and lower music while source audio is active
+docker compose run --rm video-agent render-draft ./travel-test \
+  --music ./travel-test/music/licensed-track.mp3 \
+  --music-mode blend --music-volume 0.18 --music-ducking
+
+# Use music only, or preserve the original audio unchanged
+docker compose run --rm video-agent render-draft ./travel-test --music-mode music_only
+docker compose run --rm video-agent render-draft ./travel-test --music-mode original
+```
+
+Music is looped or trimmed to the rendered duration and receives a 1-second fade-in and 1.5-second fade-out by default. Adjust these with `--music-fade-in` and `--music-fade-out`. Ducking uses the source audio mix as its sidechain, so it responds to dialogue and other prominent source sounds; it is not speech recognition and may also respond to loud ambient audio. The selected music file is tracked as a render dependency, and the render never modifies it or the source videos. If no soundtrack has been selected, the default blend mode preserves the existing source audio.
+
 ## Music-aware editing
 
 Analyze an explicit soundtrack independently of the video clips:
