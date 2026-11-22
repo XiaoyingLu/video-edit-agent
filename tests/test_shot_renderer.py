@@ -376,13 +376,24 @@ def test_render_social_exports_generates_three_preflights(tmp_path, monkeypatch)
         return None
 
     monkeypatch.setattr("video_edit_agent.cli.rendering.render_approved_shot_timeline", fake_render)
-    result = runner.invoke(app, ["render-social-exports", str(tmp_path), "--dry-run"])
+    overlay_file = tmp_path / ".video-agent" / "title-overlays.json"
+    result = runner.invoke(
+        app,
+        [
+            "render-social-exports",
+            str(tmp_path),
+            "--dry-run",
+            "--title-overlays",
+            str(overlay_file),
+        ],
+    )
 
     assert result.exit_code == 0, result.output
     assert len(calls) == 3
     assert [call["output_aspect_ratio"] for call in calls] == ["16:9", "9:16", "1:1"]
     assert {call["output_resolution"] for call in calls} == {"1080p"}
     assert all(call["dry_run"] for call in calls)
+    assert all(call["title_overlay_path"] == overlay_file for call in calls)
     assert "No MP4 files were written" in result.output
 
 
