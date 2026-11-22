@@ -122,8 +122,31 @@ def create_video(
     """Create and render a first draft; use advanced commands for shot-by-shot review."""
     try:
         if storyboard:
+            understanding = understand_folder(
+                folder,
+                model=model or os.getenv("OLLAMA_MODEL", "qwen2.5vl:3b"),
+                samples_per_scene=samples_per_scene,
+            )
+            understanding_path = folder.resolve() / ".video-agent" / "understanding.json"
+            understanding_path.parent.mkdir(parents=True, exist_ok=True)
+            understanding_path.write_text(
+                json.dumps(understanding.model_dump(mode="json"), indent=2) + "\n",
+                encoding="utf-8",
+            )
+            common._track_artifact(
+                folder,
+                understanding_path,
+                config={
+                    "model": getattr(understanding, "model", model),
+                    "samples_per_scene": samples_per_scene,
+                },
+            )
             project_plan, plan_path = create_video_project_plan(folder, prompt)
-            suggestions = suggest_storyboard_footage(folder, plan_path=plan_path)
+            suggestions = suggest_storyboard_footage(
+                folder,
+                plan_path=plan_path,
+                embedding_model=DEFAULT_FOOTAGE_EMBEDDING_MODEL,
+            )
             suggestions_path = folder.resolve() / ".video-agent" / "footage-suggestions.json"
             suggestions_path.write_text(
                 json.dumps(suggestions.model_dump(mode="json"), indent=2) + "\n",
