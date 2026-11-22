@@ -58,9 +58,21 @@ def generate_review_workspace(folder: Path, *, output_path: Path | None = None) 
         )
 
     data_files = [
-        ("Rendered-draft critique", artifact_dir / "draft-critique.json", "critique-draft"),
-        ("Footage suggestions", artifact_dir / "footage-suggestions.json", "review-footage"),
-        ("Soundtrack selection", artifact_dir / "soundtrack-selection.json", "select-soundtrack"),
+        (
+            "Rendered-draft critique",
+            artifact_dir / "draft-critique.json",
+            "critique-draft",
+        ),
+        (
+            "Footage suggestions",
+            artifact_dir / "footage-suggestions.json",
+            "review-footage",
+        ),
+        (
+            "Soundtrack selection",
+            artifact_dir / "soundtrack-selection.json",
+            "select-soundtrack",
+        ),
     ]
     rows = []
     for label, path, command in data_files:
