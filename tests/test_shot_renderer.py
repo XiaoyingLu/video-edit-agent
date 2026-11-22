@@ -442,7 +442,6 @@ def test_render_approved_shot_timeline_with_real_ffmpeg(tmp_path):
     assert report.actual_duration_seconds == pytest.approx(3.6, abs=0.2)
 
 
-
 @pytest.mark.parametrize(
     ("aspect_ratio", "resolution", "expected"),
     [
