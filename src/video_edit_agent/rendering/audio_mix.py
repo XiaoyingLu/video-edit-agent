@@ -35,7 +35,15 @@ def resolve_selected_music(
 
     if music_path is not None:
         selected = music_path.expanduser()
-        selected = (root / selected).resolve() if not selected.is_absolute() else selected.resolve()
+        if selected.is_absolute():
+            selected = selected.resolve()
+        else:
+            working_directory_path = selected.resolve()
+            selected = (
+                working_directory_path
+                if working_directory_path.is_relative_to(root)
+                else (root / selected).resolve()
+            )
     else:
         if not validate_artifact(root, selection_file):
             raise AudioMixError("Soundtrack selection is untracked; regenerate it before rendering.")
