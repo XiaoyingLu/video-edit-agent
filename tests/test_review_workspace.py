@@ -28,7 +28,7 @@ def test_workspace_links_existing_review_pages_and_lists_artifacts(tmp_path: Pat
     assert 'data-panel="music"' in content
     assert "Rendered-draft critique" in content
     assert "Available" in content
-    assert "does not start a render" in content
+    assert "never starts a render" in content
     assert 'role="tablist"' in content
     assert 'id="panel-timeline"' in content
     assert 'src="timeline-visual-review/review.html"' in content
