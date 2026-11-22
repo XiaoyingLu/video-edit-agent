@@ -481,4 +481,5 @@ def test_create_video_help_exposes_single_final_review_option(tmp_path, monkeypa
     assert ("\x1b[" in result.output) is color
     help_text = click.unstyle(result.output)
     assert "--review" in help_text
+    assert "--storyboard" in help_text
     assert "automatically assembled" in " ".join(help_text.replace("│", " ").split())
