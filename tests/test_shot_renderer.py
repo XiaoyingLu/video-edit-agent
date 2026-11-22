@@ -17,6 +17,7 @@ from video_edit_agent.rendering import RenderError, RenderReport, render_approve
 from video_edit_agent.rendering.shot_renderer import (
     _build_shot_render_command,
     _resolve_output_dimensions,
+    _requested_output_dimensions,
 )
 
 runner = CliRunner()
@@ -439,3 +440,36 @@ def test_render_approved_shot_timeline_with_real_ffmpeg(tmp_path):
     assert report.segment_count == 2
     assert report.source_video_count == 2
     assert report.actual_duration_seconds == pytest.approx(3.6, abs=0.2)
+
+
+
+@pytest.mark.parametrize(
+    ("aspect_ratio", "resolution", "expected"),
+    [
+        ("16:9", "720p", (1280, 720)),
+        ("16:9", "1080p", (1920, 1080)),
+        ("9:16", "1080p", (1080, 1920)),
+        ("1:1", "4k", (2160, 2160)),
+    ],
+)
+def test_requested_output_dimensions(aspect_ratio, resolution, expected):
+    assert _requested_output_dimensions(aspect_ratio, resolution) == expected
+
+
+@pytest.mark.parametrize(
+    ("aspect_ratio", "resolution"),
+    [
+        ("4:3", "1080p"),
+        ("16:9", "480p"),
+    ],
+)
+def test_requested_output_dimensions_reject_unsupported_profiles(aspect_ratio, resolution):
+    with pytest.raises(ValueError):
+        _requested_output_dimensions(aspect_ratio, resolution)
+
+
+def test_create_video_help_exposes_single_final_review_option(tmp_path):
+    result = runner.invoke(app, ["create-video", str(tmp_path), "--help"])
+    assert result.exit_code == 0
+    assert "--review" in result.output
+    assert "automatically assembled" in result.output
