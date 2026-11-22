@@ -270,6 +270,11 @@ def test_cli_help_includes_render_draft():
     result = runner.invoke(app, ["render-draft", "--help"])
     assert result.exit_code == 0
     assert "--fit-mode" in click.unstyle(result.output)
+    assert "--music-mode" in click.unstyle(result.output)
+    assert "--music-ducking" in click.unstyle(result.output)
+    result = runner.invoke(app, ["render", "--help"])
+    assert result.exit_code == 0
+    assert "--music-mode" in click.unstyle(result.output)
 
 
 def test_render_draft_cli_dry_run_reports_preflight_without_rendering(tmp_path, monkeypatch):

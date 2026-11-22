@@ -8,6 +8,7 @@ from pathlib import Path
 from ..artifact_tracking import register_artifact, validate_artifact
 from ..editing.planning_schemas import VideoProjectPlan
 from ..editing.timeline_schemas import ProjectDraftTimeline
+from .audio_mix import append_music_input, append_music_mix, resolve_selected_music
 from .renderer import (
     RenderError,
     RenderReport,
@@ -70,6 +71,12 @@ def _build_shot_render_command(
     frame_rate: float = 30.0,
     fit_mode: str = "crop",
     title_overlays: list[TitleOverlay] | None = None,
+    music_path: Path | None = None,
+    music_mode: str = "blend",
+    music_volume: float = 0.22,
+    music_fade_in: float = 1.0,
+    music_fade_out: float = 1.5,
+    music_ducking: bool = False,
 ) -> list[str]:
     """Build a filter graph that preserves shot order and applies approved transitions."""
     if fit_mode not in {"crop", "pad"}:
@@ -77,6 +84,7 @@ def _build_shot_render_command(
     command = [ffmpeg, "-hide_banner", "-nostdin", "-y"]
     for source, *_ in clips:
         command.extend(["-i", str(source)])
+    music_input_index = append_music_input(command, music_path)
 
     filters: list[str] = []
     for index, (_, start, end, has_audio, _, _) in enumerate(clips):
@@ -241,7 +249,19 @@ def _build_shot_render_command(
         )
         video_label = next_label
     filters.append(f"[{video_label}]format=yuv420p[vfinal]")
-    filters.append(f"[{current_audio}]aresample=48000[audiofinal]")
+    filters.append(f"[{current_audio}]aresample=48000[baseaudio]")
+    audio_output = append_music_mix(
+        filters,
+        base_label="baseaudio",
+        music_input_index=music_input_index,
+        duration_seconds=sum(end - start for _, start, end, *_ in clips)
+        - sum(duration for *_, transition, duration in clips[1:] if transition != "cut"),
+        mode=music_mode,
+        volume=music_volume,
+        fade_in_seconds=music_fade_in,
+        fade_out_seconds=music_fade_out,
+        ducking=music_ducking,
+    )
     command.extend(
         [
             "-filter_complex",
@@ -249,7 +269,7 @@ def _build_shot_render_command(
             "-map",
             "[vfinal]",
             "-map",
-            "[audiofinal]",
+            f"[{audio_output}]",
             "-c:v",
             "libx264",
             "-preset",
@@ -280,6 +300,12 @@ def render_approved_shot_timeline(
     dry_run: bool = False,
     fit_mode: str = "crop",
     title_overlay_path: Path | None = None,
+    music_path: Path | None = None,
+    music_mode: str = "blend",
+    music_volume: float = 0.22,
+    music_fade_in: float = 1.0,
+    music_fade_out: float = 1.5,
+    music_ducking: bool = False,
 ) -> RenderReport | None:
     """Render only approved shots after every proposed shot has a decision."""
     if timeout_seconds <= 0:
@@ -289,6 +315,9 @@ def render_approved_shot_timeline(
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise FileNotFoundError(f"Project folder does not exist: {root}")
+    selected_music = (
+        None if music_mode == "original" else resolve_selected_music(root, music_path=music_path)
+    )
 
     timeline_file = (
         (timeline_path or root / ".video-agent" / "optimized-timeline.json").expanduser().resolve()
@@ -398,6 +427,8 @@ def render_approved_shot_timeline(
 
     if destination in source_paths:
         raise RenderError("render output cannot overwrite a source video")
+    if selected_music is not None and destination == selected_music:
+        raise RenderError("render output cannot overwrite the selected soundtrack")
     first_payload = source_cache[clip_inputs[0][0]][0]
     first_video = next(
         item for item in first_payload["streams"] if item.get("codec_type") == "video"
@@ -443,6 +474,12 @@ def render_approved_shot_timeline(
             height,
             fit_mode=fit_mode,
             title_overlays=approved_titles,
+            music_path=selected_music,
+            music_mode=music_mode,
+            music_volume=music_volume,
+            music_fade_in=music_fade_in,
+            music_fade_out=music_fade_out,
+            music_ducking=music_ducking,
         )
         if dry_run:
             _validate_filter_graph(command, timeout=min(timeout_seconds, 120))
@@ -498,6 +535,8 @@ def render_approved_shot_timeline(
     dependencies = [timeline_file]
     if title_file is not None:
         dependencies.append(title_file)
+    if selected_music is not None:
+        dependencies.append(selected_music)
     plan_file = root / ".video-agent" / "video-project-plan.json"
     if plan_file.is_file():
         dependencies.append(plan_file)

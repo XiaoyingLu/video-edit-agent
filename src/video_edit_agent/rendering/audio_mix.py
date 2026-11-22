@@ -23,7 +23,7 @@ def resolve_selected_music(
 ) -> Path | None:
     """Resolve an explicitly selected, project-local soundtrack; never guess catalog assets."""
     root = folder.expanduser().resolve()
-    selection_file = (selection_path or root / ".video-agent" / "soundtrack-selection.json")
+    selection_file = selection_path or root / ".video-agent" / "soundtrack-selection.json"
     selection_file = selection_file.expanduser()
     if not selection_file.is_absolute():
         selection_file = (root / selection_file).resolve()
@@ -35,10 +35,20 @@ def resolve_selected_music(
 
     if music_path is not None:
         selected = music_path.expanduser()
-        selected = (root / selected).resolve() if not selected.is_absolute() else selected.resolve()
+        if selected.is_absolute():
+            selected = selected.resolve()
+        else:
+            working_directory_path = selected.resolve()
+            selected = (
+                working_directory_path
+                if working_directory_path.is_relative_to(root)
+                else (root / selected).resolve()
+            )
     else:
         if not validate_artifact(root, selection_file):
-            raise AudioMixError("Soundtrack selection is untracked; regenerate it before rendering.")
+            raise AudioMixError(
+                "Soundtrack selection is untracked; regenerate it before rendering."
+            )
         try:
             selection = json.loads(selection_file.read_text(encoding="utf-8"))
             if Path(selection["project_path"]).resolve() != root:
@@ -128,6 +138,6 @@ def append_music_mix(
         music_label = "musicbed"
     filters.append(
         f"[{base_label}][{music_label}]amix=inputs=2:duration=first:"
-        "dropout_transition=2:normalize=0[audiomix]"
+        "dropout_transition=2:normalize=0,alimiter=limit=0.95[audiomix]"
     )
     return "audiomix"
