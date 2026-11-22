@@ -54,6 +54,21 @@ def _resolve_output_dimensions(
     return short_side, short_side
 
 
+def _requested_output_dimensions(aspect_ratio: str, resolution: str) -> tuple[int, int]:
+    """Resolve a validated aspect-ratio and resolution pair to even output dimensions."""
+    if aspect_ratio not in {"16:9", "9:16", "1:1"}:
+        raise ValueError("output_aspect_ratio must be 16:9, 9:16, or 1:1")
+    if resolution not in {"720p", "1080p", "4k"}:
+        raise ValueError("output_resolution must be 720p, 1080p, or 4k")
+    long_side = {"720p": 1280, "1080p": 1920, "4k": 3840}[resolution]
+    short_side = {"720p": 720, "1080p": 1080, "4k": 2160}[resolution]
+    if aspect_ratio == "16:9":
+        return long_side, short_side
+    if aspect_ratio == "9:16":
+        return short_side, long_side
+    return short_side, short_side
+
+
 def _escape_drawtext(value: str) -> str:
     """Escape user text for a quoted FFmpeg filter value with expansion disabled."""
     escaped = value.replace("\\", "\\\\")
@@ -306,6 +321,8 @@ def render_approved_shot_timeline(
     music_fade_in: float = 1.0,
     music_fade_out: float = 1.5,
     music_ducking: bool = False,
+    output_aspect_ratio: str | None = None,
+    output_resolution: str | None = None,
 ) -> RenderReport | None:
     """Render only approved shots after every proposed shot has a decision."""
     if timeout_seconds <= 0:
@@ -439,7 +456,10 @@ def render_approved_shot_timeline(
     height -= height % 2
     if width < 2 or height < 2:
         raise RenderError("could not determine a valid output resolution from the first source")
-    width, height = _resolve_output_dimensions(root, width, height)
+    if output_aspect_ratio is None and output_resolution is None:
+        width, height = _resolve_output_dimensions(root, width, height)
+    else:
+        width, height = _requested_output_dimensions(output_aspect_ratio, output_resolution)
 
     expected_duration = sum(end - start for _, start, end, *_ in clip_inputs) - sum(
         transition_duration
