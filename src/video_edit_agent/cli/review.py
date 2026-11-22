@@ -19,6 +19,10 @@ def review_serve(
         Path,
         typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True),
     ],
+    host: Annotated[
+        str,
+        typer.Option("--host", help="Bind address: 127.0.0.1 (local) or 0.0.0.0 (container)."),
+    ] = "127.0.0.1",
     port: Annotated[
         int,
         typer.Option("--port", min=0, max=65535, help="Local port (0 chooses an available port)."),
@@ -27,12 +31,13 @@ def review_serve(
     """Serve the project review workspace with direct saving of timeline draft edits."""
     try:
         workspace = generate_review_workspace(folder)
-        server = create_review_server(folder, port=port)
+        server = create_review_server(folder, host=host, port=port)
     except (OSError, ValueError) as exc:
         console.print(f"[red]Review server failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
-    address, selected_port = server.server_address
+    bind_address, selected_port = server.server_address
+    address = "127.0.0.1" if bind_address == "0.0.0.0" else bind_address
     url = (
         f"http://{address}:{selected_port}/"
         f"{workspace.relative_to(folder.resolve()).as_posix()}"
