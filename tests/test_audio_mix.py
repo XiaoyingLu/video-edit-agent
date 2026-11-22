@@ -50,6 +50,7 @@ def test_blend_graph_includes_fades_and_sidechain_ducking() -> None:
     assert "afade=t=out:st=10.800000:d=1.200000" in graph
     assert "sidechaincompress=threshold=0.025:ratio=8" in graph
     assert "[baseaudio][duckedmusic]amix=inputs=2" in graph
+    assert "alimiter=limit=0.95[audiomix]" in graph
 
 
 def test_music_only_graph_does_not_mix_original_audio() -> None:
