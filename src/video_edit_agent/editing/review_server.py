@@ -2,18 +2,19 @@
 
 from __future__ import annotations
 
-import html
 import json
-import mimetypes
 import secrets
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from .timeline_visual_editor import (
-    TimelineVisualEditExport,
-    apply_timeline_visual_edits,
-)
+from .timeline_visual_editor import TimelineVisualEditExport, apply_timeline_visual_edits
+
+_MEDIA_SUFFIXES = {
+    ".aac", ".avi", ".flac", ".jpeg", ".jpg", ".m4a", ".m4v", ".mkv",
+    ".mov", ".mp3", ".mp4", ".ogg", ".png", ".wav", ".webm", ".webp",
+}
+_BLOCKED_PARTS = {".git", ".venv", "venv", "__pycache__", "node_modules"}
 
 _SAVE_CONTROLS = """
 <section id="live-save" style="margin:.75rem 0;padding:.75rem;border:1px solid #8888;border-radius:8px">
@@ -95,8 +96,16 @@ def create_review_server(folder: Path, *, port: int = 0) -> ThreadingHTTPServer:
         def translate_path(self, path):
             translated = Path(super().translate_path(path)).resolve()
             try:
-                translated.relative_to(root)
+                relative = translated.relative_to(root)
             except ValueError:
+                return str(root / "__video_agent_not_found__")
+            parts = relative.parts
+            if any(
+                part in _BLOCKED_PARTS or part.startswith(".env")
+                for part in parts
+            ):
+                return str(root / "__video_agent_not_found__")
+            if ".video-agent" not in parts and translated.suffix.lower() not in _MEDIA_SUFFIXES:
                 return str(root / "__video_agent_not_found__")
             return str(translated)
 
@@ -106,6 +115,9 @@ def create_review_server(folder: Path, *, port: int = 0) -> ThreadingHTTPServer:
                 self.send_error(405, "Method not allowed")
                 return
             target = Path(self.translate_path(parsed.path))
+            if target.is_dir():
+                self.send_error(404, "Not found")
+                return
             if target.is_file() and target.suffix.lower() in {".html", ".htm"}:
                 try:
                     content = target.read_text(encoding="utf-8")
@@ -115,9 +127,8 @@ def create_review_server(folder: Path, *, port: int = 0) -> ThreadingHTTPServer:
                 if "<title>Visual Timeline Review</title>" in content:
                     content = content.replace("</header>", _SAVE_CONTROLS + "</header>", 1)
                 body = content.encode("utf-8")
-                content_type = "text/html; charset=utf-8"
                 self.send_response(200)
-                self.send_header("Content-Type", content_type)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.send_header("Content-Length", str(len(body)))
                 self.send_header("Cache-Control", "no-store")
                 self.send_header("X-Content-Type-Options", "nosniff")
