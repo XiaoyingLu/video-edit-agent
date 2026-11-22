@@ -76,7 +76,11 @@ def render(
         float, typer.Option("--music-fade-out", min=0, help="Music fade-out seconds.")
     ] = 1.5,
     music_ducking: Annotated[
-        bool, typer.Option("--music-ducking/--no-music-ducking", help="Lower music when source audio is active.")
+        bool,
+        typer.Option(
+            "--music-ducking/--no-music-ducking",
+            help="Lower music when source audio is active.",
+        ),
     ] = False,
     dry_run: Annotated[
         bool,
