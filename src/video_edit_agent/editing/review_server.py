@@ -90,8 +90,12 @@ class _ReviewWorkspaceServer(ThreadingHTTPServer):
     allow_reuse_address = True
 
 
-def create_review_server(folder: Path, *, port: int = 0) -> ThreadingHTTPServer:
-    """Create a loopback-only server for one project review workspace."""
+def create_review_server(
+    folder: Path, *, host: str = "127.0.0.1", port: int = 0
+) -> ThreadingHTTPServer:
+    """Create a review server; 0.0.0.0 supports explicitly port-published containers."""
+    if host not in {"127.0.0.1", "0.0.0.0"}:
+        raise ValueError(f"Unsupported bind host: {host}")
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise NotADirectoryError(f"Project folder does not exist: {root}")
@@ -205,7 +209,7 @@ def create_review_server(folder: Path, *, port: int = 0) -> ThreadingHTTPServer:
             self.end_headers()
             self.wfile.write(body)
 
-    server = _ReviewWorkspaceServer(("127.0.0.1", port), Handler)
+    server = _ReviewWorkspaceServer((host, port), Handler)
     server.session_token = token
     server.project_root = root
     return server
