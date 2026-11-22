@@ -1001,3 +1001,44 @@ docker compose run --rm video-agent render-draft ./travel-test \\
 
 Without `--style-preset`, the renderer retains its previous defaults, so existing commands behave the same.
 
+## Social-format exports
+
+Render the same fully approved shot timeline as landscape, vertical, and square MP4s:
+
+```bash
+docker compose run --rm video-agent render-social-exports ./travel-test
+```
+
+By default this creates three 1080p files under
+`.video-agent/social-exports/`:
+
+- `landscape-1080p.mp4` — 16:9 (1920×1080)
+- `vertical-1080p.mp4` — 9:16 (1080×1920)
+- `square-1080p.mp4` — 1:1 (1080×1080)
+
+Choose another output size or preserve the complete source frame with padding:
+
+```bash
+docker compose run --rm video-agent render-social-exports ./travel-test \\
+  --resolution 720p --fit-mode pad
+```
+
+The command uses the existing `social` style preset for soundtrack defaults. Use
+`--style-preset cinematic` or another named preset to change those defaults. Use
+`--dry-run` to validate all three output profiles without writing files, and
+`--overwrite` to replace existing exports.
+
+A single format can also be rendered with `render-draft`:
+
+```bash
+docker compose run --rm video-agent render-draft ./travel-test \\
+  --aspect-ratio 9:16 --resolution 1080p --style-preset social
+```
+
+These first-version exports use a centered crop (or letterboxing with `--fit-mode pad`);
+they do not track faces or subjects and do not change shot timing, order, transitions,
+or approval decisions. Inspect vertical and square results before publishing, especially
+when the important subject is near a frame edge. Subject-aware reframing is a separate
+future improvement. Every format is rendered from the same approved timeline; source
+videos and the timeline are not modified.
+
