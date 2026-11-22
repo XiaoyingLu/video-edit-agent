@@ -43,8 +43,8 @@ def test_review_server_injects_save_control_into_timeline_page(tmp_path: Path):
     page = tmp_path / ".video-agent" / "timeline-visual-review" / "review.html"
     page.parent.mkdir(parents=True)
     page.write_text(
-        '<html><head><title>Visual Timeline Review</title></head>'
-        '<body><header>Review</header></body></html>',
+        "<html><head><title>Visual Timeline Review</title></head>"
+        "<body><header>Review</header></body></html>",
         encoding="utf-8",
     )
     server, thread = _start_server(tmp_path)
@@ -166,9 +166,10 @@ def test_review_server_saves_a_separate_unapproved_timeline_revision(tmp_path, m
         assert [clip.clip_id for clip in revision.clips] == ["mountain", "coast"]
         assert revision.timeline_approved is False
         assert revision.approved_duration_seconds == 0
-        assert [clip.clip_id for clip in ProjectDraftTimeline.model_validate_json(
-            timeline.read_text()
-        ).clips] == ["coast", "mountain"]
+        assert [
+            clip.clip_id
+            for clip in ProjectDraftTimeline.model_validate_json(timeline.read_text()).clips
+        ] == ["coast", "mountain"]
     finally:
         _stop_server(server, thread)
 

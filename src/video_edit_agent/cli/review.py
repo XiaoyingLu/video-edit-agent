@@ -6,9 +6,9 @@ from typing import Annotated
 import typer
 from rich.console import Console
 
-from .common import app
 from ..editing.review_server import create_review_server
 from ..editing.review_workspace import generate_review_workspace
+from .common import app
 
 console = Console()
 

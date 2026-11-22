@@ -11,13 +11,28 @@ from urllib.parse import urlsplit
 from .timeline_visual_editor import TimelineVisualEditExport, apply_timeline_visual_edits
 
 _MEDIA_SUFFIXES = {
-    ".aac", ".avi", ".flac", ".jpeg", ".jpg", ".m4a", ".m4v", ".mkv",
-    ".mov", ".mp3", ".mp4", ".ogg", ".png", ".wav", ".webm", ".webp",
+    ".aac",
+    ".avi",
+    ".flac",
+    ".jpeg",
+    ".jpg",
+    ".m4a",
+    ".m4v",
+    ".mkv",
+    ".mov",
+    ".mp3",
+    ".mp4",
+    ".ogg",
+    ".png",
+    ".wav",
+    ".webm",
+    ".webp",
 }
 _BLOCKED_PARTS = {".git", ".venv", "venv", "__pycache__", "node_modules"}
 
 _SAVE_CONTROLS = """
-<section id="live-save" style="margin:.75rem 0;padding:.75rem;border:1px solid #8888;border-radius:8px">
+<section id="live-save"
+  style="margin:.75rem 0;padding:.75rem;border:1px solid #8888;border-radius:8px">
   <button id="save-draft-revision" type="button">Save as draft revision</button>
   <span id="live-save-status" role="status" aria-live="polite">
     Saves a separate, unapproved timeline revision in this project.
@@ -100,10 +115,7 @@ def create_review_server(folder: Path, *, port: int = 0) -> ThreadingHTTPServer:
             except ValueError:
                 return str(root / "__video_agent_not_found__")
             parts = relative.parts
-            if any(
-                part in _BLOCKED_PARTS or part.startswith(".env")
-                for part in parts
-            ):
+            if any(part in _BLOCKED_PARTS or part.startswith(".env") for part in parts):
                 return str(root / "__video_agent_not_found__")
             if ".video-agent" not in parts and translated.suffix.lower() not in _MEDIA_SUFFIXES:
                 return str(root / "__video_agent_not_found__")
