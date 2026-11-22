@@ -232,18 +232,16 @@ def create_review_server(
                 return
             try:
                 payload = json.loads(self.rfile.read(length))
+                if parsed.path == "/__video_agent__/timeline-review":
+                    self._save_timeline_review(payload)
+                    return
                 edits = TimelineVisualEditExport.model_validate(payload)
                 if not edits.clips:
                     raise ValueError("At least one clip is required")
                 ids = [clip.clip_id for clip in edits.clips]
                 if len(ids) != len(set(ids)):
                     raise ValueError("Duplicate clip IDs are not allowed")
-                if parsed.path == "/__video_agent__/timeline-edits":
-                    revision = apply_timeline_visual_edits(root, edits)
-                    self._send_json(200, {"revision_path": revision.relative_to(root).as_posix()})
-                    return
-                self._save_timeline_review(payload)
-                return
+                revision = apply_timeline_visual_edits(root, edits)
             except (ValueError, OSError, TypeError) as exc:
                 self._send_json(400, {"error": str(exc)})
                 return
