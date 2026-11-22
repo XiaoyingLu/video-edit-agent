@@ -21,7 +21,7 @@ def generate_review_workspace(folder: Path, *, output_path: Path | None = None) 
     entries = [
         ("Storyboard", artifact_dir / "storyboard.html", "Inspect the narrative sequence and planned shots."),
         ("Timeline editor", _latest(artifact_dir / "timeline-visual-review", "*.html"), "Preview the sequence, reorder shots, adjust trims, and export decisions."),
-        ("Soundtrack audition", _latest(artifact_dir, "soundtrack-candidates*.html"), "Audition available soundtrack candidates and review rights information."),
+        ("Soundtrack audition", _latest(artifact_dir, "soundtrack-review.html"), "Audition available soundtrack candidates and review rights information."),
     ]
     cards = []
     for title, path, description in entries:
