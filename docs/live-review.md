@@ -21,4 +21,4 @@ docker compose run --rm -p 127.0.0.1:8765:8765 video-agent \
 
 Open the URL printed by the command (it will use `http://127.0.0.1:8765`). Keep the terminal running while reviewing. The port is published only on the host's loopback interface; do not change the host-side `127.0.0.1` binding unless you intend to expose the review server to your network.
 
-Saving creates a separate, unapproved revision. The source timeline and source media remain unchanged. Clip approve/reject decisions, final timeline approval, and rendering remain explicit steps in the existing workflow. The existing static `review-workspace` command remains available.
+Saving timeline edits creates a separate, unapproved revision; the source timeline and media remain unchanged. In the live timeline page, **Save clip decisions** persists per-shot approve/reject/pending choices without approving the timeline. **Approve complete timeline** is a separate confirmed action and is rejected unless every clip has an explicit decision and at least one clip is approved. Rendering remains a separate CLI action. The static `review-workspace` command remains available.

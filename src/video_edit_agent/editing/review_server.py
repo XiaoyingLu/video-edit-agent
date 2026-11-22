@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import secrets
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from ..artifact_tracking import validate_artifact
+from .timeline_pipeline import apply_timeline_review, save_draft_timeline
+from .timeline_schemas import ProjectDraftTimeline
 from .timeline_visual_editor import TimelineVisualEditExport, apply_timeline_visual_edits
 
 _MEDIA_SUFFIXES = {
@@ -34,15 +38,60 @@ _SAVE_CONTROLS = """
 <section id="live-save"
   style="margin:.75rem 0;padding:.75rem;border:1px solid #8888;border-radius:8px">
   <button id="save-draft-revision" type="button">Save as draft revision</button>
+  <button id="save-clip-decisions" type="button">Save clip decisions</button>
+  <button id="approve-complete-timeline" type="button">Approve complete timeline</button>
   <span id="live-save-status" role="status" aria-live="polite">
-    Saves a separate, unapproved timeline revision in this project.
+    Save clip decisions first; final timeline approval is a separate action.
   </span>
 </section>
 <script>
 (() => {
   const button = document.getElementById("save-draft-revision");
   const status = document.getElementById("live-save-status");
+  const decisionsButton = document.getElementById("save-clip-decisions");
+  const approveButton = document.getElementById("approve-complete-timeline");
   if (!button) return;
+  async function postReview(approveTimeline) {
+    const token = new URL(window.parent.location.href).searchParams.get("token");
+    if (!token) throw new Error("Open this page from the running review workspace.");
+    const decisions = {};
+    for (const clip of report.clips) {
+      const selected = document.querySelector(
+        'input[name="decision-' + clip.sequence_index + '"]:checked'
+      );
+      decisions[clip.clip_id] = selected ? selected.value : "pending";
+    }
+    const response = await fetch("/__video_agent__/timeline-review", {
+      method:"POST", headers:{"Content-Type":"application/json","X-Video-Agent-Token":token},
+      body:JSON.stringify({schema_version:"1.0",timeline_path:report.timeline_path,
+        timeline_sha256:report.timeline_sha256,decisions,approve_timeline:approveTimeline})
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Review save failed");
+    if (result.timeline_sha256) report.timeline_sha256 = result.timeline_sha256;
+    return result;
+  }
+  decisionsButton.addEventListener("click", async () => {
+    decisionsButton.disabled=true; status.textContent=" Saving clip decisions…";
+    try {
+      const result=await postReview(false);
+      status.textContent=" Saved: "+result.approved_count+" approved, "+
+        result.rejected_count+" rejected, "+result.pending_count+" pending. Timeline not approved.";
+    } catch(error) { status.textContent=" Could not save: "+error.message; }
+    finally { decisionsButton.disabled=false; }
+  });
+  approveButton.addEventListener("click", async () => {
+    if (!window.confirm(
+      "Approve this complete timeline? This enables the existing render workflow."
+    )) return;
+    approveButton.disabled=true; status.textContent=" Approving complete timeline…";
+    try {
+      const result=await postReview(true);
+      status.textContent=" Timeline approved: "+result.approved_count+
+        " approved, "+result.rejected_count+" rejected.";
+    } catch(error) { status.textContent=" Could not approve: "+error.message; }
+    finally { approveButton.disabled=false; }
+  });
   button.addEventListener("click", async () => {
     const token = new URL(window.parent.location.href).searchParams.get("token");
     if (!token) {
@@ -127,7 +176,10 @@ def create_review_server(
 
         def do_GET(self):
             parsed = urlsplit(self.path)
-            if parsed.path == "/__video_agent__/timeline-edits":
+            if parsed.path in {
+                "/__video_agent__/timeline-edits",
+                "/__video_agent__/timeline-review",
+            }:
                 self.send_error(405, "Method not allowed")
                 return
             target = Path(self.translate_path(parsed.path))
@@ -155,7 +207,10 @@ def create_review_server(
 
         def do_POST(self):
             parsed = urlsplit(self.path)
-            if parsed.path != "/__video_agent__/timeline-edits":
+            if parsed.path not in {
+                "/__video_agent__/timeline-edits",
+                "/__video_agent__/timeline-review",
+            }:
                 self.send_error(404, "Not found")
                 return
             expected_host = f"127.0.0.1:{self.server.server_port}"
@@ -187,6 +242,9 @@ def create_review_server(
                 return
             try:
                 payload = json.loads(self.rfile.read(length))
+                if parsed.path == "/__video_agent__/timeline-review":
+                    self._save_timeline_review(payload)
+                    return
                 edits = TimelineVisualEditExport.model_validate(payload)
                 if not edits.clips:
                     raise ValueError("At least one clip is required")
@@ -198,6 +256,69 @@ def create_review_server(
                 self._send_json(400, {"error": str(exc)})
                 return
             self._send_json(200, {"revision_path": revision.relative_to(root).as_posix()})
+
+        def _save_timeline_review(self, payload):
+            try:
+                if payload.get("schema_version") != "1.0":
+                    raise ValueError("Unsupported timeline review schema version")
+                relative = Path(payload.get("timeline_path", ""))
+                if relative.is_absolute() or ".." in relative.parts:
+                    raise ValueError("Timeline path must be project-relative")
+                timeline_file = (root / relative).resolve()
+                timeline_file.relative_to(root)
+                if not timeline_file.is_file() or not validate_artifact(root, timeline_file):
+                    raise ValueError("Timeline is missing, stale, or untracked")
+                if hashlib.sha256(timeline_file.read_bytes()).hexdigest() != payload.get(
+                    "timeline_sha256"
+                ):
+                    raise ValueError("Timeline changed after review; reload the review page")
+                timeline = ProjectDraftTimeline.model_validate_json(
+                    timeline_file.read_text(encoding="utf-8")
+                )
+                if Path(timeline.project_path).resolve() != root:
+                    raise ValueError("Timeline belongs to a different project folder")
+                decisions = payload.get("decisions")
+                if not isinstance(decisions, dict) or set(decisions) != {
+                    c.clip_id for c in timeline.clips
+                }:
+                    raise ValueError("Decisions must include every timeline clip exactly once")
+                if any(
+                    value not in {"approved", "rejected", "pending"} for value in decisions.values()
+                ):
+                    raise ValueError("Decisions must be approved, rejected, or pending")
+                updated = apply_timeline_review(
+                    timeline,
+                    {key for key, value in decisions.items() if value == "approved"},
+                    {key for key, value in decisions.items() if value == "rejected"},
+                )
+                approve = payload.get("approve_timeline") is True
+                for clip in updated.clips:
+                    if decisions[clip.clip_id] == "pending":
+                        clip.decision = "pending"
+                pending = sum(c.decision == "pending" for c in updated.clips)
+                approved = sum(c.decision == "approved" for c in updated.clips)
+                rejected = sum(c.decision == "rejected" for c in updated.clips)
+                if approve and (pending or not approved):
+                    raise ValueError(
+                        "Resolve every clip and approve at least one before approving the timeline"
+                    )
+                updated.timeline_approved = approve
+                updated = ProjectDraftTimeline.model_validate(updated.model_dump())
+                save_draft_timeline(updated, timeline_file)
+            except (ValueError, OSError, TypeError) as exc:
+                self._send_json(400, {"error": str(exc)})
+                return
+            self._send_json(
+                200,
+                {
+                    "timeline_path": relative.as_posix(),
+                    "timeline_approved": approve,
+                    "approved_count": approved,
+                    "rejected_count": rejected,
+                    "pending_count": pending,
+                    "timeline_sha256": hashlib.sha256(timeline_file.read_bytes()).hexdigest(),
+                },
+            )
 
         def _send_json(self, status: int, payload: dict):
             body = json.dumps(payload).encode("utf-8")
