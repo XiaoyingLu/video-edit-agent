@@ -151,7 +151,7 @@ docker compose run --rm video-agent render-draft ./travel-test \
   --music-mode blend --music-volume 0.18 --music-ducking
 
 # Use music only, or preserve the original audio unchanged
-docker compose run --rm video-agent render-draft ./travel-test --music-mode music_only
+docker compose run --rm video-agent render-draft ./travel-test \\\n  --music-mode music_only --music ./travel-test/music/licensed-track.mp3
 docker compose run --rm video-agent render-draft ./travel-test --music-mode original
 ```
 
