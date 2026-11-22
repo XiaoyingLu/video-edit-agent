@@ -47,9 +47,13 @@ def generate_review_workspace(folder: Path, *, output_path: Path | None = None) 
         ),
     ]
 
+    active_key = next(
+        (key for key, _title, path, _description in entries if path is not None and path.is_file()),
+        None,
+    )
     tabs = []
     panels = []
-    for index, (key, title, path, description) in enumerate(entries):
+    for key, title, path, description in entries:
         available = path is not None and path.is_file()
         relative = (
             Path(os.path.relpath(path, destination.parent)).as_posix() if available else None
@@ -59,16 +63,16 @@ def generate_review_workspace(folder: Path, *, output_path: Path | None = None) 
             href = html.escape(relative or "", quote=True)
             tabs.append(
                 f'<button class="tab" type="button" role="tab" id="tab-{key}" '
-                f'aria-controls="panel-{key}" aria-selected="{"true" if index == 0 else "false"}" '
-                f'tabindex="{"0" if index == 0 else "-1"}" data-panel="{key}">{escaped_title}</button>'
+                f'aria-controls="panel-{key}" aria-selected="{"true" if key == active_key else "false"}" '
+                f'tabindex="{"0" if key == active_key else "-1"}" data-panel="{key}">{escaped_title}</button>'
             )
             panels.append(
                 f'<section class="panel" role="tabpanel" id="panel-{key}" '
-                f'aria-labelledby="tab-{key}" {" " if index == 0 else "hidden"}>'
+                f'aria-labelledby="tab-{key}" {" " if key == active_key else "hidden"}>'
                 f'<div class="panel-heading"><div><h2>{escaped_title}</h2>'
                 f'<p>{html.escape(description)}</p></div>'
                 f'<a href="{href}" target="_blank" rel="noopener">Open separately</a></div>'
-                f'<iframe title="{escaped_title}" src="{href}" loading="{"eager" if index == 0 else "lazy"}" '
+                f'<iframe title="{escaped_title}" src="{href}" loading="{"eager" if key == active_key else "lazy"}" '
                 f'sandbox="allow-scripts allow-same-origin allow-downloads"></iframe></section>'
             )
         else:
