@@ -425,6 +425,8 @@ def render_approved_shot_timeline(
 
     if destination in source_paths:
         raise RenderError("render output cannot overwrite a source video")
+    if selected_music is not None and destination == selected_music:
+        raise RenderError("render output cannot overwrite the selected soundtrack")
     first_payload = source_cache[clip_inputs[0][0]][0]
     first_video = next(
         item for item in first_payload["streams"] if item.get("codec_type") == "video"
@@ -531,6 +533,8 @@ def render_approved_shot_timeline(
     dependencies = [timeline_file]
     if title_file is not None:
         dependencies.append(title_file)
+    if selected_music is not None:
+        dependencies.append(selected_music)
     plan_file = root / ".video-agent" / "video-project-plan.json"
     if plan_file.is_file():
         dependencies.append(plan_file)
