@@ -20,7 +20,9 @@ def generate_review_workspace(folder: Path, *, output_path: Path | None = None) 
     try:
         destination.relative_to(root)
     except ValueError as exc:
-        raise ValueError(\n            "Workspace output must stay inside the project folder"\n        ) from exc
+        raise ValueError(
+            "Workspace output must stay inside the project folder"
+        ) from exc
 
     entries = [
         (
@@ -48,7 +50,10 @@ def generate_review_workspace(folder: Path, *, output_path: Path | None = None) 
     for title, path, description in entries:
         available = path is not None and path.is_file()
         href = (
-            html.escape(\n                Path(os.path.relpath(path, destination.parent)).as_posix(), quote=True\n            )
+            html.escape(
+                Path(os.path.relpath(path, destination.parent)).as_posix(),
+                quote=True,
+            )
             if available
             else ""
         )
