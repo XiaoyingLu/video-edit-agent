@@ -12,22 +12,46 @@ def generate_review_workspace(folder: Path, *, output_path: Path | None = None) 
         raise NotADirectoryError(f"Project folder does not exist: {root}")
     artifact_dir = root / ".video-agent"
     destination = (output_path or artifact_dir / "review-workspace.html").expanduser()
-    destination = (root / destination).resolve() if not destination.is_absolute() else destination.resolve()
+    destination = (
+        (root / destination).resolve()
+        if not destination.is_absolute()
+        else destination.resolve()
+    )
     try:
         destination.relative_to(root)
     except ValueError as exc:
         raise ValueError("Workspace output must stay inside the project folder") from exc
 
     entries = [
-        ("Storyboard", artifact_dir / "storyboard.html", "Inspect the narrative sequence and planned shots."),
-        ("Timeline editor", _latest(artifact_dir / "timeline-visual-review", "*.html"), "Preview the sequence, reorder shots, adjust trims, and export decisions."),
-        ("Soundtrack audition", _latest(artifact_dir, "soundtrack-review.html"), "Audition available soundtrack candidates and review rights information."),
+        (
+            "Storyboard",
+            artifact_dir / "storyboard.html",
+            "Inspect the narrative sequence and planned shots.",
+        ),
+        (
+            "Timeline editor",
+            _latest(artifact_dir / "timeline-visual-review", "*.html"),
+            "Preview the sequence, reorder shots, adjust trims, and export decisions.",
+        ),
+        (
+            "Soundtrack audition",
+            _latest(artifact_dir, "soundtrack-review.html"),
+            "Audition soundtrack candidates and review rights information.",
+        ),
     ]
     cards = []
     for title, path, description in entries:
         available = path is not None and path.is_file()
-        href = html.escape(Path(os.path.relpath(path, destination.parent)).as_posix(), quote=True) if available else ""
-        action = f'<a href="{href}">Open review</a>' if available else '<span class="missing">Not generated yet</span>'
+        href = (
+            html.escape(Path(os.path.relpath(path, destination.parent)).as_posix(), quote=True)
+            if available
+            else ""
+        )
+        action = (
+            f'<a href="{href}">Open review</a>'
+            if available
+            else '<span class="missing">Not generated yet</span>'
+        )
         cards.append(
             f'<article class="card"><h2>{html.escape(title)}</h2>'
             f'<p>{html.escape(description)}</p>{action}</article>'
