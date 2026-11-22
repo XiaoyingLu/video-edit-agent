@@ -394,7 +394,9 @@ def list_style_presets() -> None:
             "on" if preset.music_ducking else "off",
         )
     console.print(table)
-    console.print("Pass --style-preset to render-draft; explicit render options override preset values.")
+    console.print(
+        "Pass --style-preset to render-draft; explicit render options override preset values."
+    )
 
 
 @app.command("render-draft")
@@ -459,16 +461,22 @@ def render_draft(
         Path | None, typer.Option("--music", help="Project-local selected soundtrack file.")
     ] = None,
     music_mode: Annotated[
-        str | None, typer.Option("--music-mode", help="Audio mode override: original, music_only, or blend.")
+        str | None,
+        typer.Option(
+            "--music-mode", help="Audio mode override: original, music_only, or blend."
+        ),
     ] = None,
     music_volume: Annotated[
-        float | None, typer.Option("--music-volume", min=0.01, max=2.0, help="Music gain override.")
+        float | None,
+        typer.Option("--music-volume", min=0.01, max=2.0, help="Music gain override."),
     ] = None,
     music_fade_in: Annotated[
-        float | None, typer.Option("--music-fade-in", min=0, help="Music fade-in override in seconds.")
+        float | None,
+        typer.Option("--music-fade-in", min=0, help="Music fade-in override in seconds."),
     ] = None,
     music_fade_out: Annotated[
-        float | None, typer.Option("--music-fade-out", min=0, help="Music fade-out override in seconds.")
+        float | None,
+        typer.Option("--music-fade-out", min=0, help="Music fade-out override in seconds."),
     ] = None,
     music_ducking: Annotated[
         bool | None,
@@ -492,9 +500,15 @@ def render_draft(
             title_overlay_path=title_overlays,
             music_path=music,
             music_mode=music_mode or (preset.music_mode if preset else "blend"),
-            music_volume=music_volume if music_volume is not None else (preset.music_volume if preset else 0.22),
-            music_fade_in=music_fade_in if music_fade_in is not None else (preset.music_fade_in if preset else 1.0),
-            music_fade_out=music_fade_out if music_fade_out is not None else (preset.music_fade_out if preset else 1.5),
+            music_volume=(
+                music_volume if music_volume is not None else (preset.music_volume if preset else 0.22)
+            ),
+            music_fade_in=(
+                music_fade_in if music_fade_in is not None else (preset.music_fade_in if preset else 1.0)
+            ),
+            music_fade_out=(
+                music_fade_out if music_fade_out is not None else (preset.music_fade_out if preset else 1.5)
+            ),
             music_ducking=music_ducking if music_ducking is not None else (preset.music_ducking if preset else False),
         )
     except (FileNotFoundError, FileExistsError, ValueError, RenderError) as exc:
