@@ -299,13 +299,20 @@ For the first Codespaces test, use `qwen2.5vl:3b` for vision and `qwen2.5:1.5b` 
 
 ### Run the CLI
 
-For the end-to-end workflow, use one natural-language command. It analyzes the footage, transcribes speech, ranks highlights, parses your request into a validated plan, selects shots, and builds a proposed timeline. It then asks you to explicitly approve or reject every shot before rendering; if no shot is approved, rendering is skipped. The command never auto-approves clips. It requires an interactive terminal (`-it`) because approval is a deliberate human decision.
+For a quick first draft, use one natural-language command. It analyzes the footage, transcribes speech, ranks highlights, parses your request, selects and orders shots, applies the requested aspect ratio/resolution, mixes an explicitly selected local soundtrack when available, and renders an MP4. It uses deterministic footage ranking to approve the proposed sequence automatically; inspect the output before sharing. No interactive terminal is required by default.
 
 ```bash
-docker compose run --rm -it video-agent create-video ./travel-test --prompt "Create a 60-second cinematic travel video"
+docker compose run --rm video-agent create-video ./travel-test --prompt "Create a 60-second cinematic travel video"
 ```
 
-Tune local resource usage with `--model qwen2.5vl:3b`, `--whisper-model tiny`, or `--samples-per-scene 1`. The workflow writes inspectable artifacts under `.video-agent/`; the individual commands remain available for finer control. Current renderer limitation: it preserves the dimensions of the first approved source shot. Requested aspect ratio/resolution and subtitle/audio preferences are retained in the editing plan but are not yet all applied by this end-to-end command.
+Add `--review` if you want one confirmation before rendering:
+
+```bash
+docker compose run --rm -it video-agent create-video ./travel-test \
+  --prompt "Create a 60-second cinematic travel video" --review
+```
+
+Tune local resource usage with `--model qwen2.5vl:3b`, `--whisper-model tiny`, or `--samples-per-scene 1`. The workflow writes inspectable artifacts under `.video-agent/`. Quick mode is intended to produce a first draft, not a final editorial decision: use the advanced `draft-edit`, `review-timeline`, and `render-draft` commands when you want to curate or reject individual shots before rendering. Source videos remain unchanged.
 
 
 Put a short travel clip in a folder in the repository, for example `travel-test/`, then run:
