@@ -462,9 +462,7 @@ def render_draft(
     ] = None,
     music_mode: Annotated[
         str | None,
-        typer.Option(
-            "--music-mode", help="Audio mode override: original, music_only, or blend."
-        ),
+        typer.Option("--music-mode", help="Audio mode override: original, music_only, or blend."),
     ] = None,
     music_volume: Annotated[
         float | None,
