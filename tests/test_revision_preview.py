@@ -158,16 +158,26 @@ def test_revision_preview_renders_separate_video_and_manifest(tmp_path, monkeypa
     assert calls[0]["output_resolution"] is None
 
 
-def test_revision_preview_uses_720p_and_preserves_project_aspect_ratio(tmp_path, monkeypatch):
+@pytest.mark.parametrize(
+    ("aspect_ratio", "expected_dimensions"),
+    [
+        ("16:9", (1280, 720)),
+        ("9:16", (720, 1280)),
+        ("1:1", (720, 720)),
+    ],
+)
+def test_revision_preview_uses_720p_and_preserves_project_aspect_ratio(
+    tmp_path, monkeypatch, aspect_ratio, expected_dimensions
+):
     revision = _approved_revision(tmp_path)
-    _write_project_plan(tmp_path, aspect_ratio="9:16")
+    _write_project_plan(tmp_path, aspect_ratio=aspect_ratio)
     calls = _mock_renderer(monkeypatch)
 
     report, manifest = render_timeline_revision_preview(tmp_path, timeline_path=revision)
 
     assert report is not None
-    assert (report.width, report.height) == (720, 1280)
-    assert calls[0]["output_aspect_ratio"] == "9:16"
+    assert (report.width, report.height) == expected_dimensions
+    assert calls[0]["output_aspect_ratio"] == aspect_ratio
     assert calls[0]["output_resolution"] == "720p"
     saved = json.loads(manifest.read_text(encoding="utf-8"))
     assert saved["preview_resolution"] == "720p"
