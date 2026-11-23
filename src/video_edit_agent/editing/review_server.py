@@ -272,11 +272,6 @@ def create_review_server(
                     "timeline_sha256"
                 ):
                     raise ValueError("Timeline changed after review; reload the review page")
-                timeline = ProjectDraftTimeline.model_validate_json(
-                    timeline_file.read_text(encoding="utf-8")
-                )
-                if Path(timeline.project_path).resolve() != root:
-                    raise ValueError("Timeline belongs to a different project folder")
                 decisions = payload.get("decisions")
                 if not isinstance(decisions, dict) or set(decisions) != {
                     c.clip_id for c in timeline.clips
