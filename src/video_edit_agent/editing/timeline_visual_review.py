@@ -222,7 +222,7 @@ def render_timeline_visual_review_html(
     payload_json = json.dumps(payload, ensure_ascii=True).replace("<", "\\u003c")
     crop_warning_html = (
         f'<p role="status">Existing crop anchors were not loaded: '
-        f'{html.escape(report.crop_anchor_warning)}</p>'
+        f"{html.escape(report.crop_anchor_warning)}</p>"
         if report.crop_anchor_warning
         else ""
     )

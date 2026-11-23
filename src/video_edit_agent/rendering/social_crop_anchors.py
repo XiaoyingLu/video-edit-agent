@@ -85,9 +85,7 @@ def save_crop_anchors(
     )
     if not timeline_file.is_file():
         raise FileNotFoundError(f"Missing optimized timeline: {timeline_file}")
-    timeline = ProjectDraftTimeline.model_validate_json(
-        timeline_file.read_text(encoding="utf-8")
-    )
+    timeline = ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root:
         raise ValueError("optimized timeline belongs to a different project folder")
     if not timeline.timeline_approved:

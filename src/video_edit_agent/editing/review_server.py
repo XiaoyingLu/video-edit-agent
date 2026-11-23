@@ -306,9 +306,8 @@ def create_review_server(
                 timeline_file.relative_to(root)
                 if not timeline_file.is_file() or not validate_artifact(root, timeline_file):
                     raise ValueError("Timeline is missing, stale, or untracked")
-                if (
-                    hashlib.sha256(timeline_file.read_bytes()).hexdigest()
-                    != payload.get("timeline_sha256")
+                if hashlib.sha256(timeline_file.read_bytes()).hexdigest() != payload.get(
+                    "timeline_sha256"
                 ):
                     raise ValueError("Timeline changed after review; reload the review page")
                 destination = save_crop_anchors(

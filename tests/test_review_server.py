@@ -349,9 +349,7 @@ def test_review_server_saves_browser_crop_anchors_for_approved_timeline(tmp_path
     )
     timeline_path = artifact_dir / "optimized-timeline.json"
     timeline_path.write_text(timeline.model_dump_json(), encoding="utf-8")
-    monkeypatch.setattr(
-        "video_edit_agent.editing.review_server.validate_artifact", lambda *_: True
-    )
+    monkeypatch.setattr("video_edit_agent.editing.review_server.validate_artifact", lambda *_: True)
     payload = {
         "schema_version": "1.0",
         "timeline_path": ".video-agent/optimized-timeline.json",
@@ -362,9 +360,7 @@ def test_review_server_saves_browser_crop_anchors_for_approved_timeline(tmp_path
     try:
         with _post(server, payload, endpoint="/__video_agent__/crop-anchors") as response:
             result = json.loads(response.read())
-        saved = json.loads(
-            (artifact_dir / "social-crop-anchors.json").read_text(encoding="utf-8")
-        )
+        saved = json.loads((artifact_dir / "social-crop-anchors.json").read_text(encoding="utf-8"))
         assert result["anchor_count"] == 1
         assert result["path"] == ".video-agent/social-crop-anchors.json"
         assert saved["schema_version"] == "1.0"
@@ -401,9 +397,7 @@ def test_review_server_rejects_stale_crop_anchor_save(tmp_path, monkeypatch):
     )
     timeline_path = artifact_dir / "optimized-timeline.json"
     timeline_path.write_text(timeline.model_dump_json(), encoding="utf-8")
-    monkeypatch.setattr(
-        "video_edit_agent.editing.review_server.validate_artifact", lambda *_: True
-    )
+    monkeypatch.setattr("video_edit_agent.editing.review_server.validate_artifact", lambda *_: True)
     payload = {
         "schema_version": "1.0",
         "timeline_path": ".video-agent/optimized-timeline.json",

@@ -52,9 +52,9 @@ def test_save_crop_anchors_writes_loadable_timeline_bound_template(tmp_path):
     assert document["schema_version"] == "1.0"
     assert document["source_timeline"] == ".video-agent/optimized-timeline.json"
     assert document["anchors"] == [{"clip_id": "coast-shot", "x": 0.72, "y": 0.38}]
-    assert load_crop_anchors(
-        tmp_path, timeline_path, timeline, destination
-    ) == {"coast-shot": (0.72, 0.38)}
+    assert load_crop_anchors(tmp_path, timeline_path, timeline, destination) == {
+        "coast-shot": (0.72, 0.38)
+    }
 
 
 def test_save_crop_anchors_rejects_invalid_coordinates_and_clip_ids(tmp_path):
