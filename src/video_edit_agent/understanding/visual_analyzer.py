@@ -3,12 +3,12 @@
 import base64
 import json
 import math
-import os
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from ..config import get_setting
 from ..resource_manager import ResourceError, ensure_memory_available, required_vision_memory_gb
 
 
@@ -295,11 +295,9 @@ class OllamaVisionAnalyzer:
         timeout_seconds: int = 600,
     ) -> None:
         self.model = model
-        self.base_url = (base_url or os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")).rstrip(
-            "/"
-        )
+        self.base_url = (base_url or get_setting("OLLAMA_BASE_URL")).rstrip("/")
         self.timeout_seconds = timeout_seconds
-        self.keep_alive = os.getenv("OLLAMA_KEEP_ALIVE", "5m")
+        self.keep_alive = get_setting("OLLAMA_KEEP_ALIVE")
         self._memory_checked = False
         self._model_used = False
 

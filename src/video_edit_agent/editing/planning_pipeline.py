@@ -1,10 +1,10 @@
 """Creation and persistence of hierarchical video project plans."""
 
 import json
-import os
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..config import get_setting
 from ..music.schemas import MusicAnalysis, MusicSection
 from ..story_proposal import StoryProposal
 from .intent import parse_editing_intent
@@ -97,7 +97,7 @@ def create_video_project_plan(
                 "use the story's target duration"
             )
 
-    planner_model = model or os.getenv("VIDEO_PLANNER_MODEL", "qwen2.5:1.5b")
+    planner_model = model or get_setting("VIDEO_PLANNER_MODEL")
     editing_plan = parse_editing_intent(
         prompt,
         model=planner_model,

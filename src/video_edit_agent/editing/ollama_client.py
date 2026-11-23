@@ -6,18 +6,17 @@ A hosted provider can implement ModelClient without changing editing workflows.
 from __future__ import annotations
 
 import json
-import os
 import time
 from typing import Protocol
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from ..config import get_setting
+
 CHAT_TIMEOUT_SECONDS = 300
 LONG_CONTEXT_CHAT_TIMEOUT_SECONDS = 600
 EMBED_TIMEOUT_SECONDS = 180
 CONTROL_TIMEOUT_SECONDS = 30
-DEFAULT_KEEP_ALIVE = "5m"
-DEFAULT_BASE_URL = "http://127.0.0.1:11434"
 MAX_RETRIES = 1
 RETRY_DELAY_SECONDS = 0.5
 _RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
@@ -87,12 +86,8 @@ class OllamaClient:
     ) -> None:
         if max_retries < 0:
             raise ValueError("max_retries must not be negative")
-        self.base_url = (base_url or os.getenv("OLLAMA_BASE_URL", DEFAULT_BASE_URL)).rstrip("/")
-        self.keep_alive = (
-            keep_alive
-            if keep_alive is not None
-            else os.getenv("OLLAMA_KEEP_ALIVE", DEFAULT_KEEP_ALIVE)
-        )
+        self.base_url = (base_url or get_setting("OLLAMA_BASE_URL")).rstrip("/")
+        self.keep_alive = keep_alive if keep_alive is not None else get_setting("OLLAMA_KEEP_ALIVE")
         self.max_retries = max_retries
 
     def _request(self, endpoint: str, payload: dict, timeout_seconds: int) -> dict:

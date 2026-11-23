@@ -1,11 +1,11 @@
 """LLM-backed narrative and storyboard generation for creative video plans."""
 
 import json
-import os
 import re
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from ..config import get_setting
 from ..resource_manager import ResourceError, ensure_memory_available, required_ollama_memory_gb
 from .ollama_client import (
     CHAT_TIMEOUT_SECONDS,
@@ -92,7 +92,7 @@ class OllamaVideoPlanner:
         base_url: str | None = None,
         client: ModelClient | None = None,
     ) -> None:
-        self.model = model or os.getenv("VIDEO_PLANNER_MODEL", "qwen2.5:1.5b")
+        self.model = model or get_setting("VIDEO_PLANNER_MODEL")
         self.client = client if client is not None else OllamaClient(base_url=base_url)
         if isinstance(self.client, OllamaClient):
             try:

@@ -1,12 +1,13 @@
 """Memory preflight and local model lifecycle helpers."""
 
 import math
-import os
 import re
 import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+
+from .config import get_setting
 
 
 class ResourceError(RuntimeError):
@@ -90,7 +91,7 @@ def memory_snapshot() -> MemorySnapshot:
 
 def required_vision_memory_gb(model: str) -> float:
     """Estimate a conservative RAM budget from a model tag."""
-    override = os.getenv("OLLAMA_MIN_MEMORY_GB")
+    override = get_setting("OLLAMA_MIN_MEMORY_GB")
     if override:
         try:
             value = float(override)
@@ -105,7 +106,7 @@ def required_vision_memory_gb(model: str) -> float:
 
 def required_ollama_memory_gb(model: str, override_env: str = "OLLAMA_MIN_MEMORY_GB") -> float:
     """Estimate RAM for text or vision Ollama models with a caller-specific override."""
-    override = os.getenv(override_env)
+    override = get_setting(override_env)
     if override:
         try:
             value = float(override)
@@ -133,7 +134,7 @@ def required_ollama_memory_gb(model: str, override_env: str = "OLLAMA_MIN_MEMORY
 
 def required_whisper_memory_gb(model: str) -> float:
     """Estimate CPU RAM required for a faster-whisper model."""
-    override = os.getenv("WHISPER_MIN_MEMORY_GB")
+    override = get_setting("WHISPER_MIN_MEMORY_GB")
     if override:
         try:
             value = float(override)
@@ -147,7 +148,7 @@ def required_whisper_memory_gb(model: str) -> float:
 
 def required_whisper_vram_gb(model: str) -> float:
     """Estimate NVIDIA VRAM required for faster-whisper CUDA inference."""
-    override = os.getenv("WHISPER_MIN_VRAM_GB")
+    override = get_setting("WHISPER_MIN_VRAM_GB")
     if override:
         try:
             value = float(override)

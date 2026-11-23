@@ -1,10 +1,10 @@
 """Natural-language editing intent parsing through a local Ollama model."""
 
-import os
 import warnings
 
 from pydantic import ValidationError
 
+from ..config import get_setting
 from ..resource_manager import (
     ResourceError,
     ensure_memory_available,
@@ -35,7 +35,7 @@ class OllamaIntentParser:
         memory_override_env: str = "OLLAMA_MIN_MEMORY_GB",
         client: ModelClient | None = None,
     ) -> None:
-        self.model = model or os.getenv("OLLAMA_MODEL", "qwen2.5vl:3b")
+        self.model = model or get_setting("OLLAMA_MODEL")
         self.client = client if client is not None else OllamaClient(base_url=base_url)
         self.timeout_seconds = timeout_seconds
         self._model_used = False

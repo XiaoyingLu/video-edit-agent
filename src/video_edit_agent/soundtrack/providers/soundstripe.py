@@ -2,13 +2,13 @@
 
 import asyncio
 import json
-import os
 from datetime import UTC, datetime
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import Request, urlopen
 
+from ...config import get_setting
 from ..catalog import SoundtrackSearchRequest, SoundtrackSearchResponse
 from ..schemas import SoundtrackCandidate, SoundtrackLicense
 
@@ -30,7 +30,7 @@ class SoundstripeCatalogProvider:
         license_profile: SoundtrackLicense | None = None,
         timeout_seconds: float = 20.0,
     ) -> None:
-        self._api_key = api_key or os.getenv("SOUNDSTRIPE_API_KEY")
+        self._api_key = api_key or get_setting("SOUNDSTRIPE_API_KEY")
         if not self._api_key:
             raise ValueError("Set SOUNDSTRIPE_API_KEY or pass api_key explicitly")
         if timeout_seconds <= 0:
