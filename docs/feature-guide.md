@@ -1035,10 +1035,21 @@ docker compose run --rm video-agent render-draft ./travel-test \\
   --aspect-ratio 9:16 --resolution 1080p --style-preset social
 ```
 
-These first-version exports use a centered crop (or letterboxing with `--fit-mode pad`);
-they do not track faces or subjects and do not change shot timing, order, transitions,
-or approval decisions. Inspect vertical and square results before publishing, especially
-when the important subject is near a frame edge. Subject-aware reframing is a separate
-future improvement. Every format is rendered from the same approved timeline; source
-videos and the timeline are not modified.
+By default, exports use a centered crop (or letterboxing with `--fit-mode pad`). For
+an optional face-centered crop anchor per shot, use:
+
+```bash
+docker compose run --rm video-agent render-social-exports ./travel-test --reframe face
+```
+
+Face-aware framing samples three frames from each approved shot with OpenCV's local
+frontal-face detector and uses the median detected face center to position that shot's
+crop. If no face is detected, the shot falls back to a centered crop. This is a stable
+per-shot anchor, not continuous face tracking; profile faces, occlusion, fast movement,
+and multiple people can reduce detection quality. It requires crop framing (not
+`--fit-mode pad`). Review vertical and square exports before publishing.
+
+Reframing does not change shot timing, order, transitions, source intervals, or approval
+decisions. Every format is rendered from the same approved timeline; source videos and
+the timeline are not modified.
 

@@ -597,6 +597,13 @@ def render_social_exports(
         bool,
         typer.Option("--overwrite", help="Replace existing social export files."),
     ] = False,
+    reframe: Annotated[
+        str,
+        typer.Option(
+            "--reframe",
+            help="Crop positioning: center (default) or face (local face detection per shot).",
+        ),
+    ] = "center",
     dry_run: Annotated[
         bool,
         typer.Option(
@@ -621,6 +628,10 @@ def render_social_exports(
         resolved_fit_mode = fit_mode or (preset.fit_mode if preset else "crop")
         if resolved_fit_mode not in {"crop", "pad"}:
             raise ValueError("fit_mode must be crop or pad")
+        if reframe not in {"center", "face"}:
+            raise ValueError("--reframe must be center or face")
+        if reframe == "face" and resolved_fit_mode != "crop":
+            raise ValueError("--reframe face requires --fit-mode crop")
         outputs = []
         for label, aspect_ratio in profiles:
             destination = export_dir / f"{label}-{resolution}.mp4"
@@ -631,6 +642,7 @@ def render_social_exports(
                 overwrite=overwrite,
                 dry_run=dry_run,
                 fit_mode=resolved_fit_mode,
+                reframe_mode=reframe,
                 output_aspect_ratio=aspect_ratio,
                 output_resolution=resolution,
                 title_overlay_path=title_overlays,
@@ -660,10 +672,17 @@ def render_social_exports(
             label, aspect_ratio, f"{report.width}x{report.height}", str(report.output_path)
         )
     console.print(table)
-    console.print(
-        "[yellow]Framing uses a centered crop or letterbox; review each export for subject "
-        "placement. No subject-aware tracking is applied.[/yellow]"
-    )
+    if reframe == "face":
+        console.print(
+            "[yellow]Face-aware framing uses one stable face-centered crop anchor per shot. "
+            "Shots without a detected face fall back to center crop; this is not continuous "
+            "face tracking.[/yellow]"
+        )
+    else:
+        console.print(
+            "[yellow]Framing uses a centered crop or letterbox; review each export for subject "
+            "placement.[/yellow]"
+        )
 
 
 @app.command("critique-draft")
