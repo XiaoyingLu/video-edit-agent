@@ -212,10 +212,7 @@ def test_renderer_keeps_legacy_linear_fade_and_slide_filter_strings(tmp_path: Pa
         title_overlays=[_overlay(animation="fade")],
     )
     fade_graph = fade_command[fade_command.index("-filter_complex") + 1]
-    assert (
-        "alpha='if(lt(t,0.450000),(t-0.000000)/0.450000,"
-        "if(gt(t,2.550000),(3.000000-t)/0.450000,1))'"
-    ) in fade_graph
+    assert "alpha='if(lt(t,0.450000),(t-0.000000)/0.450000,if(gt(t,2.550000),(3.000000-t)/0.450000,1))'" in fade_graph
 
     slide_command = _build_shot_render_command(
         "ffmpeg",
