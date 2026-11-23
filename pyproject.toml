@@ -16,7 +16,7 @@ dependencies = [
   "rich>=13.7,<16",
   "scenedetect[opencv]>=0.6.4,<0.8",
   # OpenCV 5 moved CascadeClassifier out of the main wheel; face reframing uses Haar cascades.
-  "opencv-python>=4.8,<5",
+  "opencv-python>=4.8,<6",
   "numpy>=1.24,<3",
 ]
 
