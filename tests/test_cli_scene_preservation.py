@@ -47,9 +47,7 @@ def test_review_edits_displays_scene_preservation_hint(tmp_path: Path) -> None:
             )
         ],
     )
-    (artifact_dir / "edit-proposal.json").write_text(
-        proposal.model_dump_json(), encoding="utf-8"
-    )
+    (artifact_dir / "edit-proposal.json").write_text(proposal.model_dump_json(), encoding="utf-8")
 
     result = CliRunner().invoke(app, ["review-edits", str(tmp_path)], input="s\n")
 
