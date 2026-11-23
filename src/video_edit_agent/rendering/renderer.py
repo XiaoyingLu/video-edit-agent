@@ -2,7 +2,6 @@
 
 import json
 import shutil
-import subprocess
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -11,10 +10,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
 from ..editing.schemas import ProjectTimeline, VideoTimeline
+from ..media_runner import MediaError, run_ffmpeg
 from .audio_mix import append_music_input, append_music_mix, resolve_selected_music
 
 
-class RenderError(RuntimeError):
+class RenderError(MediaError):
     """Raised when a reviewed timeline cannot safely be rendered or verified."""
 
 
@@ -47,14 +47,12 @@ def _run_probe(executable: str, path: Path, timeout: float = 60) -> dict[str, An
         "json",
         str(path),
     ]
-    try:
-        result = subprocess.run(
-            command, capture_output=True, text=True, timeout=timeout, check=False
-        )
-    except subprocess.TimeoutExpired as exc:
-        raise RenderError(f"ffprobe timed out while inspecting {path}") from exc
-    if result.returncode != 0:
-        raise RenderError(f"ffprobe could not inspect {path}: {result.stderr.strip()}")
+    result = run_ffmpeg(
+        command,
+        timeout=timeout,
+        label=f"ffprobe while inspecting {path}",
+        error_type=RenderError,
+    )
     try:
         return json.loads(result.stdout)
     except json.JSONDecodeError as exc:
@@ -80,19 +78,12 @@ def _validate_filter_graph(command: list[str], timeout: float = 120) -> None:
         "null",
         "-",
     ]
-    try:
-        result = subprocess.run(
-            validation_command,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            check=False,
-        )
-    except subprocess.TimeoutExpired as exc:
-        raise RenderError("FFmpeg filter-graph preflight exceeded its timeout") from exc
-    if result.returncode != 0:
-        detail = result.stderr.strip()[-4000:] or "unknown FFmpeg filter-graph error"
-        raise RenderError(f"FFmpeg filter-graph preflight failed: {detail}")
+    run_ffmpeg(
+        validation_command,
+        timeout=timeout,
+        label="FFmpeg filter-graph preflight",
+        error_type=RenderError,
+    )
 
 
 def _validate_source_stream_metadata(payload: dict[str, Any], path: Path) -> None:
@@ -450,19 +441,12 @@ def render_project(
         if dry_run:
             _validate_filter_graph(command, timeout=min(timeout_seconds, 120))
             return None
-        try:
-            result = subprocess.run(
-                command,
-                capture_output=True,
-                text=True,
-                timeout=timeout_seconds,
-                check=False,
-            )
-        except subprocess.TimeoutExpired as exc:
-            raise RenderError(f"FFmpeg render exceeded the {timeout_seconds:.0f}s timeout") from exc
-        if result.returncode != 0:
-            detail = result.stderr.strip()[-4000:] or "unknown FFmpeg error"
-            raise RenderError(f"FFmpeg render failed: {detail}")
+        run_ffmpeg(
+            command,
+            timeout=timeout_seconds,
+            label="FFmpeg render",
+            error_type=RenderError,
+        )
         if not temporary_path.is_file() or temporary_path.stat().st_size == 0:
             raise RenderError("FFmpeg completed without producing a non-empty MP4")
 

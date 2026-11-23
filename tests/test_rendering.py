@@ -87,7 +87,7 @@ def _fake_tools(monkeypatch, *, output_duration: float = 8, has_audio: bool = Tr
             }
         return subprocess.CompletedProcess(command, 0, json.dumps(payload), "")
 
-    monkeypatch.setattr(renderer.subprocess, "run", fake_run)
+    monkeypatch.setattr("video_edit_agent.media_runner.subprocess.run", fake_run)
     return commands
 
 

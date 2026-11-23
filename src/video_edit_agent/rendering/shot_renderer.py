@@ -1,13 +1,13 @@
 """Render an explicitly approved shot timeline with real FFmpeg transitions."""
 
 import shutil
-import subprocess
 import tempfile
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
 from ..editing.planning_schemas import VideoProjectPlan
 from ..editing.timeline_schemas import ProjectDraftTimeline
+from ..media_runner import run_ffmpeg
 from .audio_mix import append_music_input, append_music_mix, resolve_selected_music
 from .face_reframing import detect_face_crop_paths
 from .renderer import (
@@ -575,19 +575,12 @@ def render_approved_shot_timeline(
         if dry_run:
             _validate_filter_graph(command, timeout=min(timeout_seconds, 120))
             return None
-        try:
-            result = subprocess.run(
-                command,
-                capture_output=True,
-                text=True,
-                timeout=timeout_seconds,
-                check=False,
-            )
-        except subprocess.TimeoutExpired as exc:
-            raise RenderError(f"FFmpeg render exceeded the {timeout_seconds:.0f}s timeout") from exc
-        if result.returncode != 0:
-            detail = result.stderr.strip()[-4000:] or "unknown FFmpeg error"
-            raise RenderError(f"FFmpeg shot render failed: {detail}")
+        run_ffmpeg(
+            command,
+            timeout=timeout_seconds,
+            label="FFmpeg shot render",
+            error_type=RenderError,
+        )
         if not temporary_path.is_file() or temporary_path.stat().st_size == 0:
             raise RenderError("FFmpeg completed without producing a non-empty MP4")
 

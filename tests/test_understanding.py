@@ -1,4 +1,5 @@
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -59,8 +60,9 @@ def test_frame_sampler_uses_jpeg_compatible_pixel_format(monkeypatch, tmp_path: 
     def fake_run(command, **kwargs):
         captured["command"] = command
         Path(command[-1]).write_bytes(b"jpeg-frame")
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
 
-    monkeypatch.setattr("video_edit_agent.understanding.frame_sampler.subprocess.run", fake_run)
+    monkeypatch.setattr("video_edit_agent.media_runner.subprocess.run", fake_run)
 
     result = extract_representative_frames(
         video, 0.0, 10.0, tmp_path / "frames", samples_per_scene=1
@@ -97,9 +99,7 @@ def test_frame_sampler_reuses_existing_extracted_frames(monkeypatch, tmp_path: P
     def unexpected_extract(*args, **kwargs):
         raise AssertionError("existing frame should not be extracted again")
 
-    monkeypatch.setattr(
-        "video_edit_agent.understanding.frame_sampler.subprocess.run", unexpected_extract
-    )
+    monkeypatch.setattr("video_edit_agent.media_runner.subprocess.run", unexpected_extract)
     result = extract_representative_frames(video, 0.0, 10.0, frame_dir, samples_per_scene=1)
 
     assert result == [(5.0, existing)]
