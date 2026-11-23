@@ -12,12 +12,17 @@ import json
 import os
 from pathlib import Path
 from typing import Literal, Protocol
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from .artifact_tracking import register_artifact, validate_artifact
+from .editing.ollama_client import (
+    CONTROL_TIMEOUT_SECONDS,
+    LONG_CONTEXT_CHAT_TIMEOUT_SECONDS,
+    ModelClient,
+    ModelClientError,
+    OllamaClient,
+)
 from .editing.planning_generation import explicit_duration_seconds
 from .highlights.schemas import ProjectHighlights
 from .models import ProjectAnalysis
@@ -119,33 +124,32 @@ class StoryModel(Protocol):
 class OllamaStoryModel:
     """Structured-output story generation through a local Ollama text model."""
 
-    def __init__(self, model: str | None = None, base_url: str | None = None) -> None:
+    def __init__(
+        self,
+        model: str | None = None,
+        base_url: str | None = None,
+        client: ModelClient | None = None,
+    ) -> None:
         self.model = model or os.getenv("VIDEO_PLANNER_MODEL", "qwen2.5:1.5b")
-        self.base_url = (base_url or os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")).rstrip(
-            "/"
-        )
-        self.keep_alive = os.getenv("OLLAMA_KEEP_ALIVE", "5m")
+        self.client = client if client is not None else OllamaClient(base_url=base_url)
         self.num_ctx = int(os.getenv("VIDEO_STORY_NUM_CTX", str(DEFAULT_NUM_CTX)))
-        try:
-            ensure_memory_available(
-                required_ollama_memory_gb(self.model, "VIDEO_PLANNER_MIN_MEMORY_GB"),
-                f"Ollama story model '{self.model}'",
-            )
-        except ResourceError as exc:
-            raise StoryProposalError(str(exc)) from exc
+        if isinstance(self.client, OllamaClient):
+            try:
+                ensure_memory_available(
+                    required_ollama_memory_gb(self.model, "VIDEO_PLANNER_MIN_MEMORY_GB"),
+                    f"Ollama story model '{self.model}'",
+                )
+            except ResourceError as exc:
+                raise StoryProposalError(str(exc)) from exc
 
     def unload_model(self) -> None:
-        payload = json.dumps({"model": self.model, "keep_alive": 0}).encode("utf-8")
-        request = Request(
-            f"{self.base_url}/api/generate",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
         try:
-            with urlopen(request, timeout=30):
-                return
-        except (HTTPError, URLError, TimeoutError, OSError):
+            self.client.generate(
+                self.model,
+                timeout_seconds=CONTROL_TIMEOUT_SECONDS,
+                keep_alive=0,
+            )
+        except ModelClientError:
             return
 
     def generate_json(self, system_prompt: str, user_content: str, schema: dict) -> dict:
@@ -158,36 +162,19 @@ class OllamaStoryModel:
                 f"{self.num_ctx}. Raise VIDEO_STORY_NUM_CTX (and use a model that supports it) "
                 "or analyze fewer/shorter videos."
             )
-        payload = json.dumps(
-            {
-                "model": self.model,
-                "keep_alive": self.keep_alive,
-                "stream": False,
-                "format": schema,
-                "messages": [
+        try:
+            return self.client.chat_json(
+                self.model,
+                [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content},
                 ],
-                "options": {"temperature": 0.3, "num_ctx": self.num_ctx},
-            }
-        ).encode("utf-8")
-        request = Request(
-            f"{self.base_url}/api/chat",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        try:
-            with urlopen(request, timeout=600) as response:
-                result = json.loads(response.read().decode("utf-8"))
-            return json.loads(result["message"]["content"])
-        except HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")
-            raise StoryProposalError(f"Ollama returned HTTP {exc.code}: {detail}") from exc
-        except (URLError, TimeoutError) as exc:
-            raise StoryProposalError(f"Could not reach Ollama at {self.base_url}: {exc}") from exc
-        except (json.JSONDecodeError, UnicodeDecodeError, KeyError, TypeError) as exc:
-            raise StoryProposalError(f"Ollama returned unreadable story JSON: {exc}") from exc
+                schema,
+                options={"temperature": 0.3, "num_ctx": self.num_ctx},
+                timeout_seconds=LONG_CONTEXT_CHAT_TIMEOUT_SECONDS,
+            )
+        except ModelClientError as exc:
+            raise StoryProposalError(str(exc)) from exc
 
 
 SYSTEM_PROMPT = (

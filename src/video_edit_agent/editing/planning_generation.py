@@ -3,12 +3,17 @@
 import json
 import os
 import re
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from ..resource_manager import ResourceError, ensure_memory_available, required_ollama_memory_gb
+from .ollama_client import (
+    CHAT_TIMEOUT_SECONDS,
+    CONTROL_TIMEOUT_SECONDS,
+    ModelClient,
+    ModelClientError,
+    OllamaClient,
+)
 from .planning_schemas import PlannedScene, StoryTreatment
 
 
@@ -81,33 +86,32 @@ def explicit_duration_seconds(prompt: str) -> float | None:
 class OllamaVideoPlanner:
     """Generate a narrative treatment and storyboard using Ollama structured output."""
 
-    def __init__(self, model: str | None = None, base_url: str | None = None) -> None:
+    def __init__(
+        self,
+        model: str | None = None,
+        base_url: str | None = None,
+        client: ModelClient | None = None,
+    ) -> None:
         self.model = model or os.getenv("VIDEO_PLANNER_MODEL", "qwen2.5:1.5b")
-        self.base_url = (base_url or os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")).rstrip(
-            "/"
-        )
-        self.keep_alive = os.getenv("OLLAMA_KEEP_ALIVE", "5m")
-        try:
-            ensure_memory_available(
-                required_ollama_memory_gb(self.model, "VIDEO_PLANNER_MIN_MEMORY_GB"),
-                f"Ollama planning model '{self.model}'",
-            )
-        except ResourceError as exc:
-            raise VideoPlanningError(str(exc)) from exc
+        self.client = client if client is not None else OllamaClient(base_url=base_url)
+        if isinstance(self.client, OllamaClient):
+            try:
+                ensure_memory_available(
+                    required_ollama_memory_gb(self.model, "VIDEO_PLANNER_MIN_MEMORY_GB"),
+                    f"Ollama planning model '{self.model}'",
+                )
+            except ResourceError as exc:
+                raise VideoPlanningError(str(exc)) from exc
 
     def unload_model(self) -> None:
         """Best-effort model eviction after planning."""
-        payload = json.dumps({"model": self.model, "keep_alive": 0}).encode("utf-8")
-        request = Request(
-            f"{self.base_url}/api/generate",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
         try:
-            with urlopen(request, timeout=30):
-                return
-        except (HTTPError, URLError, TimeoutError, OSError):
+            self.client.generate(
+                self.model,
+                timeout_seconds=CONTROL_TIMEOUT_SECONDS,
+                keep_alive=0,
+            )
+        except ModelClientError:
             return
 
     def generate(
@@ -144,13 +148,10 @@ class OllamaVideoPlanner:
             "music energy; distribute concrete shots within that chapter and make each scene "
             "duration match its chapter target."
         )
-        payload = json.dumps(
-            {
-                "model": self.model,
-                "keep_alive": self.keep_alive,
-                "stream": False,
-                "format": schema,
-                "messages": [
+        try:
+            parsed = self.client.chat_json(
+                self.model,
+                [
                     {"role": "system", "content": system_prompt},
                     {
                         "role": "user",
@@ -164,19 +165,10 @@ class OllamaVideoPlanner:
                         ),
                     },
                 ],
-                "options": {"temperature": 0.2},
-            }
-        ).encode("utf-8")
-        request = Request(
-            f"{self.base_url}/api/chat",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        try:
-            with urlopen(request, timeout=300) as response:
-                result = json.loads(response.read().decode("utf-8"))
-            parsed = json.loads(result["message"]["content"])
+                schema,
+                options={"temperature": 0.2},
+                timeout_seconds=CHAT_TIMEOUT_SECONDS,
+            )
             # Creative storyboards must never carry partial or speculative footage mappings.
             # Strip assignment fields before validation; footage mapping is a later stage.
             for scene in parsed.get("scenes", []):
@@ -201,18 +193,9 @@ class OllamaVideoPlanner:
                     shot.pop("footage_end_seconds", None)
                     shot.pop("assignment_status", None)
             return GeneratedVideoPlanContent.model_validate(parsed)
-        except HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")
-            raise VideoPlanningError(f"Ollama returned HTTP {exc.code}: {detail}") from exc
-        except (URLError, TimeoutError) as exc:
-            raise VideoPlanningError(f"Could not reach Ollama at {self.base_url}: {exc}") from exc
-        except (
-            json.JSONDecodeError,
-            UnicodeDecodeError,
-            KeyError,
-            TypeError,
-            ValidationError,
-        ) as exc:
+        except ModelClientError as exc:
+            raise VideoPlanningError(str(exc)) from exc
+        except (TypeError, ValidationError) as exc:
             raise VideoPlanningError(
                 f"Ollama returned an invalid story or storyboard: {exc}"
             ) from exc
@@ -254,9 +237,10 @@ def generate_video_plan_content(
     model: str | None = None,
     music_sections: list[dict] | None = None,
     story_chapters: list[dict] | None = None,
+    client: ModelClient | None = None,
 ) -> GeneratedVideoPlanContent:
     """Generate structured story content and fit shot durations to the validated brief."""
-    planner = OllamaVideoPlanner(model=model)
+    planner = OllamaVideoPlanner(model=model, client=client)
     try:
         content = planner.generate(
             prompt, brief, music_sections=music_sections, story_chapters=story_chapters

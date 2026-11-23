@@ -73,7 +73,7 @@ def test_ollama_intent_parser_validates_structured_response(monkeypatch) -> None
         captured["timeout"] = timeout
         return FakeResponse({"message": {"content": json.dumps(content)}})
 
-    monkeypatch.setattr("video_edit_agent.editing.intent.urlopen", fake_urlopen)
+    monkeypatch.setattr("video_edit_agent.editing.ollama_client.urlopen", fake_urlopen)
     plan = OllamaIntentParser(model="qwen2.5vl:3b").parse(
         "  Create a 60-second cinematic travel video  "
     )
@@ -91,7 +91,7 @@ def test_ollama_intent_parser_validates_structured_response(monkeypatch) -> None
 def test_ollama_intent_parser_rejects_invalid_model_output(monkeypatch) -> None:
     content = {"style": "make_shell_command", "target_duration_seconds": 60}
     monkeypatch.setattr(
-        "video_edit_agent.editing.intent.urlopen",
+        "video_edit_agent.editing.ollama_client.urlopen",
         lambda request, timeout: FakeResponse({"message": {"content": json.dumps(content)}}),
     )
     with pytest.raises(IntentParsingError, match="did not satisfy"):
@@ -111,12 +111,13 @@ def test_intent_parser_unloads_model(monkeypatch) -> None:
         captured["payload"] = json.loads(request.data.decode("utf-8"))
         return FakeResponse({"response": ""})
 
-    monkeypatch.setattr("video_edit_agent.editing.intent.urlopen", fake_urlopen)
+    monkeypatch.setattr("video_edit_agent.editing.ollama_client.urlopen", fake_urlopen)
     parser = OllamaIntentParser(model="qwen2.5vl:3b")
     parser._model_used = True
     assert parser.unload_model() is True
     assert captured["url"].endswith("/api/generate")
-    assert captured["payload"] == {"model": "qwen2.5vl:3b", "keep_alive": 0}
+    assert captured["payload"]["model"] == "qwen2.5vl:3b"
+    assert captured["payload"]["keep_alive"] == 0
 
 
 def test_intent_memory_preflight_rejects_before_parser_can_run(monkeypatch) -> None:
