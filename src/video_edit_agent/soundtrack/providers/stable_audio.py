@@ -15,6 +15,8 @@ from urllib.request import Request, urlopen
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from ...config import get_setting
+
 
 class StableAudioAPIError(RuntimeError):
     """Raised when Stability AI rejects a request or returns an invalid response."""
@@ -70,7 +72,7 @@ class StableAudioGenerationProvider:
         *,
         request_timeout_seconds: float = 60,
     ) -> None:
-        self._api_key = api_key or os.getenv("STABILITY_API_KEY")
+        self._api_key = api_key or get_setting("STABILITY_API_KEY")
         if not self._api_key:
             raise ValueError("Set STABILITY_API_KEY or pass api_key explicitly")
         if request_timeout_seconds <= 0:

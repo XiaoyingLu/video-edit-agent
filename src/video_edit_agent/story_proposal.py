@@ -9,13 +9,13 @@ nothing here assigns footage, approves a plan, edits media, or renders video.
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from .artifact_tracking import register_artifact, validate_artifact
+from .config import get_setting
 from .editing.ollama_client import (
     CONTROL_TIMEOUT_SECONDS,
     LONG_CONTEXT_CHAT_TIMEOUT_SECONDS,
@@ -130,9 +130,9 @@ class OllamaStoryModel:
         base_url: str | None = None,
         client: ModelClient | None = None,
     ) -> None:
-        self.model = model or os.getenv("VIDEO_PLANNER_MODEL", "qwen2.5:1.5b")
+        self.model = model or get_setting("VIDEO_PLANNER_MODEL")
         self.client = client if client is not None else OllamaClient(base_url=base_url)
-        self.num_ctx = int(os.getenv("VIDEO_STORY_NUM_CTX", str(DEFAULT_NUM_CTX)))
+        self.num_ctx = int(get_setting("VIDEO_STORY_NUM_CTX", str(DEFAULT_NUM_CTX)))
         if isinstance(self.client, OllamaClient):
             try:
                 ensure_memory_available(

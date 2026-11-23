@@ -5,7 +5,6 @@
 import asyncio
 import hashlib
 import json
-import os
 from pathlib import Path
 from typing import Annotated
 
@@ -14,6 +13,7 @@ from rich.console import Console
 from rich.table import Table
 
 from ..artifact_tracking import register_artifact, validate_all_artifacts
+from ..config import get_setting
 from ..editing import (
     IntentParsingError,
     apply_review_decisions,
@@ -135,8 +135,8 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
-DEFAULT_VISION_PROVIDER = os.getenv("VISION_PROVIDER", "ollama")
-DEFAULT_FOOTAGE_EMBEDDING_MODEL = os.getenv("FOOTAGE_EMBEDDING_MODEL")
+DEFAULT_VISION_PROVIDER = get_setting("VISION_PROVIDER")
+DEFAULT_FOOTAGE_EMBEDDING_MODEL = get_setting("FOOTAGE_EMBEDDING_MODEL")
 _MUSIC_ANALYSIS_OPTION = typer.Option(
     None, "--music-analysis", help="Optional soundtrack energy analysis JSON path."
 )

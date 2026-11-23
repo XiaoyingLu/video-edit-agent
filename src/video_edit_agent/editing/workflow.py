@@ -1,10 +1,10 @@
 """End-to-end natural-language video creation workflow."""
 
 import json
-import os
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact
+from ..config import get_setting
 from ..highlights import find_highlights_folder
 from ..highlights.schemas import ProjectHighlights
 from ..transcription import transcribe_folder
@@ -51,7 +51,7 @@ def create_video_draft(
     artifact_dir = root / ".video-agent"
     artifact_dir.mkdir(parents=True, exist_ok=True)
 
-    resolved_vision_model = vision_model or os.getenv("OLLAMA_MODEL", "qwen2.5vl:3b")
+    resolved_vision_model = vision_model or get_setting("OLLAMA_MODEL")
     plan = parse_editing_intent(prompt, model=resolved_vision_model)
     _save_artifact(
         root,

@@ -111,11 +111,11 @@ def understand(
     project_root = folder.expanduser().resolve()
     selected_provider = provider.strip().lower()
     if selected_provider == "mlx":
-        default_model = os.getenv("MLX_VISION_MODEL", "mlx-community/SmolVLM2-2.2B-Instruct-mlx")
+        default_model = get_setting("MLX_VISION_MODEL")
     elif selected_provider == "qwen3-vl":
-        default_model = os.getenv("QWEN3_VL_MODEL", "mlx-community/Qwen3-VL-4B-Instruct-4bit")
+        default_model = get_setting("QWEN3_VL_MODEL")
     else:
-        default_model = os.getenv("OLLAMA_MODEL", "qwen2.5vl:7b")
+        default_model = get_setting("OLLAMA_MODEL")
     selected_model = model or default_model
     checkpoint = project_root / ".video-agent" / "understanding-checkpoint.json"
     if checkpoint.is_file() and not no_resume:

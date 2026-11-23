@@ -127,7 +127,7 @@ def create_video(
         if storyboard:
             understanding = understand_folder(
                 folder,
-                model=model or os.getenv("OLLAMA_MODEL", "qwen2.5vl:3b"),
+                model=model or get_setting("OLLAMA_MODEL"),
                 samples_per_scene=samples_per_scene,
             )
             understanding_path = folder.resolve() / ".video-agent" / "understanding.json"

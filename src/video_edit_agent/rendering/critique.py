@@ -1,7 +1,6 @@
 """Evidence-based technical and structural critique of rendered video drafts."""
 
 import json
-import os
 import re
 import shutil
 import subprocess
@@ -12,6 +11,7 @@ from typing import Literal
 import cv2
 from pydantic import BaseModel, ConfigDict, Field
 
+from ..config import get_setting
 from ..artifact_tracking import validate_artifact
 from ..editing.planning_schemas import VideoProjectPlan
 from ..editing.timeline_schemas import ProjectDraftTimeline
@@ -256,7 +256,7 @@ def _review_semantic_frames(
     """Compare representative rendered frames with storyboard intent using local Ollama."""
     from ..understanding.visual_analyzer import OllamaVisionAnalyzer, VisionModelError
 
-    selected_model = model or os.getenv("OLLAMA_MODEL", "qwen2.5vl:7b")
+    selected_model = model or get_setting("OLLAMA_MODEL")
     analyzer = OllamaVisionAnalyzer(model=selected_model)
     reviews: list[SemanticFrameReview] = []
     targets = _semantic_targets(

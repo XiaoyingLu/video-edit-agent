@@ -12,6 +12,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from ..config import get_setting
 from ..media import analyze_folder, discover_videos
 from .frame_sampler import extract_representative_frames
 from .provider import create_vision_analyzer
@@ -131,7 +132,7 @@ def understand_folder(
         else root / ".video-agent" / _CHECKPOINT_NAME
     )
     analyzer = (
-        OllamaVisionAnalyzer(model=model or os.getenv("OLLAMA_MODEL", "qwen2.5vl:7b"))
+        OllamaVisionAnalyzer(model=model or get_setting("OLLAMA_MODEL"))
         if provider.strip().lower() == "ollama"
         else create_vision_analyzer(provider, model)
     )
