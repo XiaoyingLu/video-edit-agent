@@ -70,10 +70,7 @@ def _ease_progress(start: float, duration: float, easing: str, *, reverse: bool 
     if easing == "ease_out":
         return f"(1-pow(1-({progress}),2))"
     if easing == "ease_in_out":
-        return (
-            f"if(lt({progress},0.5),2*pow({progress},2),"
-            f"1-pow(-2*({progress})+2,2)/2)"
-        )
+        return f"if(lt({progress},0.5),2*pow({progress},2),1-pow(-2*({progress})+2,2)/2)"
     return progress
 
 
@@ -94,14 +91,9 @@ def _animation_expressions(
     legacy_fade_exit = overlay.animation == "fade" and overlay.exit_animation == "auto"
     if overlay.animation == "fade":
         fade_in = _ease_progress(overlay.start_seconds, fade_seconds, overlay.easing)
-        alpha = (
-            f"if(lt(t,{_seconds(fade_in_end)}),{fade_in},"
-            "1)"
-        )
+        alpha = f"if(lt(t,{_seconds(fade_in_end)}),{fade_in},1)"
         if legacy_fade_exit:
-            fade_out = _ease_progress(
-                fade_out_start, fade_seconds, overlay.easing, reverse=True
-            )
+            fade_out = _ease_progress(fade_out_start, fade_seconds, overlay.easing, reverse=True)
             alpha = (
                 f"if(lt(t,{_seconds(fade_in_end)}),{fade_in},"
                 f"if(gt(t,{_seconds(fade_out_start)}),{fade_out},1))"
@@ -118,18 +110,13 @@ def _animation_expressions(
                 f"({base_y}))"
             )
         else:
-            y_position = (
-                f"if(lt(t,{_seconds(slide_end)}),"
-                f"({base_y})+80*(1-({progress})),({base_y}))"
-            )
+            y_position = f"if(lt(t,{_seconds(slide_end)}),({base_y})+80*(1-({progress})),({base_y}))"
 
     exit_animation = overlay.exit_animation
     if exit_animation == "auto":
         exit_animation = "fade" if overlay.animation == "fade" else "none"
     if exit_animation == "fade" and not legacy_fade_exit:
-        fade_out = _ease_progress(
-            fade_out_start, fade_seconds, overlay.easing, reverse=True
-        )
+        fade_out = _ease_progress(fade_out_start, fade_seconds, overlay.easing, reverse=True)
         alpha = f"if(gt(t,{_seconds(fade_out_start)}),{fade_out},{alpha})"
     elif exit_animation in {"slide_down", "slide_up"}:
         slide_start = overlay.end_seconds - 0.45
@@ -139,10 +126,7 @@ def _animation_expressions(
             movement = f"{direction}*(t-{_seconds(slide_start)})/0.45"
         else:
             movement = f"{direction}*({progress})"
-        y_position = (
-            f"if(gt(t,{_seconds(slide_start)}),({base_y})+{movement},"
-            f"({y_position}))"
-        )
+        y_position = f"if(gt(t,{_seconds(slide_start)}),({base_y})+{movement},({y_position}))"
     return alpha, y_position
 
 
@@ -174,9 +158,7 @@ def _append_title_overlay_filters(
             )
             primary_size = max(26, min(64, int(width * 0.034)))
             secondary_size = max(20, min(42, int(width * 0.022)))
-            alpha, primary_y = _animation_expressions(
-                overlay, "h*0.785", lower_third=True
-            )
+            alpha, primary_y = _animation_expressions(overlay, "h*0.785", lower_third=True)
             primary_label = f"vtitle{index}primary"
             filters.append(
                 f"[{next_label}bg]drawtext=text='{escaped_text}':expansion=none:"

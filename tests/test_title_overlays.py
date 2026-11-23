@@ -146,22 +146,16 @@ def test_renderer_builds_safe_lower_third_for_all_aspect_ratios(
     assert "vtitle0secondary" in graph
 
 
-
 def test_legacy_linear_fade_and_slide_up_filter_expressions_are_unchanged():
     fade = _overlay(start_seconds=0, end_seconds=3, animation="fade")
     alpha, y_position = _animation_expressions(fade, "h*0.12")
-    assert alpha == (
-        "if(lt(t,0.450000),(t-0.000000)/0.450000,"
-        "if(gt(t,2.550000),(3.000000-t)/0.450000,1))"
-    )
+    assert alpha == "if(lt(t,0.450000),(t-0.000000)/0.450000,if(gt(t,2.550000),(3.000000-t)/0.450000,1))"
     assert y_position == "h*0.12"
 
     slide = _overlay(start_seconds=0, end_seconds=3, animation="slide_up")
     alpha, y_position = _animation_expressions(slide, "h*0.12")
     assert alpha == "1"
-    assert y_position == (
-        "if(lt(t,0.450000),(h*0.12)+80*(0.450000-t)/0.45,(h*0.12))"
-    )
+    assert y_position == "if(lt(t,0.450000),(h*0.12)+80*(0.450000-t)/0.45,(h*0.12))"
 
 
 def test_lower_third_slide_up_moves_card_and_both_text_lines(tmp_path: Path):
@@ -208,7 +202,6 @@ def test_title_font_uses_configured_family_and_dejavu_for_non_ascii(monkeypatch)
     assert _font_option("Été à Québec") == "font='DejaVu Sans'"
 
 
-
 def test_renderer_keeps_legacy_linear_fade_and_slide_filter_strings(tmp_path: Path):
     fade_command = _build_shot_render_command(
         "ffmpeg",
@@ -233,10 +226,7 @@ def test_renderer_keeps_legacy_linear_fade_and_slide_filter_strings(tmp_path: Pa
         title_overlays=[_overlay(animation="slide_up")],
     )
     slide_graph = slide_command[slide_command.index("-filter_complex") + 1]
-    assert (
-        "y='if(lt(t,0.450000),(h-text_h-h*0.12)+80*(0.450000-t)/0.45,"
-        "(h-text_h-h*0.12))'"
-    ) in slide_graph
+    assert "y='if(lt(t,0.450000),(h-text_h-h*0.12)+80*(0.450000-t)/0.45,(h-text_h-h*0.12))'" in slide_graph
 
 
 def test_explicit_exit_animation_replaces_legacy_fade_out():
