@@ -135,6 +135,30 @@ def test_shot_renderer_builds_crossfade_and_audio_crossfade_graph(tmp_path):
     assert "[v0][a0][v1][a1]concat" not in graph
 
 
+@pytest.mark.parametrize(
+    ("transition", "xfade_name"),
+    [
+        ("fadeblack", "fadeblack"),
+        ("wipeleft", "wipeleft"),
+        ("slideleft", "slideleft"),
+        ("circleopen", "circleopen"),
+    ],
+)
+def test_shot_renderer_builds_additional_xfade_transitions(tmp_path, transition, xfade_name):
+    command = _build_shot_render_command(
+        "ffmpeg",
+        [
+            (tmp_path / "one.mp4", 0, 3, True, "cut", 0),
+            (tmp_path / "two.mp4", 5, 8, True, transition, 0.5),
+        ],
+        tmp_path / "out.mp4",
+        1920,
+        1080,
+    )
+    graph = command[command.index("-filter_complex") + 1]
+    assert f"xfade=transition={xfade_name}:duration=0.500000" in graph
+
+
 def test_face_reframing_uses_detected_face_position(tmp_path, monkeypatch):
     import numpy as np
 

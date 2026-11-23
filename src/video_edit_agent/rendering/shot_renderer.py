@@ -1,5 +1,6 @@
 """Render an explicitly approved shot timeline with real FFmpeg transitions."""
 
+import re
 import shutil
 import tempfile
 from pathlib import Path
@@ -92,6 +93,49 @@ def _crop_path_expression(path: list[tuple[float, float, float]], axis: int) -> 
     if first_time > 0:
         expression = f"if(lt(t,{first_time:.6f}),{first_value:.6f},{expression})"
     return expression
+
+
+_XFADE_TRANSITIONS = {
+    "crossfade": "fade",
+    "dissolve": "dissolve",
+    "fadeblack": "fadeblack",
+    "wipeleft": "wipeleft",
+    "slideleft": "slideleft",
+    "circleopen": "circleopen",
+}
+
+
+def _validate_xfade_transitions(
+    ffmpeg: str,
+    clip_inputs: list[tuple[Path, float, float, bool, str, float]],
+) -> None:
+    """Check the installed FFmpeg xfade enum before building a requested transition."""
+    requested = {transition for *_, transition, _ in clip_inputs if transition != "cut"}
+    if not requested:
+        return
+
+    result = run_ffmpeg(
+        [ffmpeg, "-hide_banner", "-h", "filter=xfade"],
+        timeout=30,
+        label="FFmpeg xfade capability preflight",
+        error_type=RenderError,
+    )
+    help_text = f"{result.stdout or ''}
+{result.stderr or ''}"
+    supported = set(
+        re.findall(r"^s+([a-z][a-z0-9_]*)s+-?d+s*$", help_text, re.MULTILINE)
+    )
+    unsupported = sorted(
+        transition
+        for transition in requested
+        if _XFADE_TRANSITIONS.get(transition, transition) not in supported
+    )
+    if unsupported:
+        names = ", ".join(unsupported)
+        raise RenderError(
+            f"Installed FFmpeg does not support xfade transition(s): {names}. "
+            "Upgrade FFmpeg to a build with these xfade transitions."
+        )
 
 
 def _build_shot_render_command(
@@ -191,7 +235,7 @@ def _build_shot_render_command(
                 raise RenderError(
                     f"Transition before clip {index + 1} is too long for adjacent shots"
                 )
-            transition_name = "fade" if transition == "crossfade" else "dissolve"
+            transition_name = _XFADE_TRANSITIONS[transition]
             offset = current_duration - transition_duration
             filters.append(
                 f"[{current_video}][{next_video}]xfade=transition={transition_name}:"
@@ -548,6 +592,7 @@ def render_approved_shot_timeline(
         raise RenderError("ffmpeg and ffprobe must be installed and available on PATH")
 
     source_cache, clip_inputs, source_paths = _probe_approved_clip_inputs(root, approved, ffprobe)
+    _validate_xfade_transitions(ffmpeg, clip_inputs)
     if destination in source_paths:
         raise RenderError("render output cannot overwrite a source video")
     if selected_music is not None and destination == selected_music:
