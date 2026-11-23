@@ -562,6 +562,7 @@ def test_style_presets_cli_lists_available_profiles():
     assert "vlog" in result.output
     assert "travel-montage" in result.output
     assert "social" in result.output
+    assert "Beat zoom" in result.output
 
 
 def test_approved_duration_does_not_apply_transition_across_rejected_shot(tmp_path):

@@ -392,6 +392,7 @@ def list_style_presets() -> None:
     table.add_column("Framing")
     table.add_column("Music", justify="right")
     table.add_column("Ducking")
+    table.add_column("Beat zoom")
     for preset in STYLE_PRESETS.values():
         table.add_row(
             preset.name,
@@ -399,6 +400,7 @@ def list_style_presets() -> None:
             preset.fit_mode,
             f"{preset.music_volume:.2f}",
             "on" if preset.music_ducking else "off",
+            "on" if preset.beat_punch_in else "off",
         )
     console.print(table)
     console.print(

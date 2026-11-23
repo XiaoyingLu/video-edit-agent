@@ -118,7 +118,8 @@ def _build_beat_zoom_paths(
     try:
         validate_artifact(root, analysis_file)
         analysis = MusicAnalysis.model_validate_json(analysis_file.read_text(encoding="utf-8"))
-        analyzed_music = Path(analysis.music_path).expanduser().resolve()
+        music_reference = Path(analysis.music_path).expanduser()
+        analyzed_music = (music_reference if music_reference.is_absolute() else root / music_reference).resolve()
     except (OSError, ValueError) as exc:
         raise RenderError(f"could not load beat analysis for punch-in: {exc}") from exc
     if analyzed_music != selected_music.resolve() or analysis.beat_confidence < 0.1:
