@@ -1,6 +1,5 @@
 """Vision analyzer provider selection."""
 
-
 from ..config import get_setting
 from .qwen3_vl_analyzer import Qwen3VLMLXAnalyzer
 from .smolvlm2_analyzer import SmolVLM2MLXAnalyzer

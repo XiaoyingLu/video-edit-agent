@@ -11,8 +11,8 @@ from typing import Literal
 import cv2
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..config import get_setting
 from ..artifact_tracking import validate_artifact
+from ..config import get_setting
 from ..editing.planning_schemas import VideoProjectPlan
 from ..editing.timeline_schemas import ProjectDraftTimeline
 
