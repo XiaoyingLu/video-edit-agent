@@ -502,9 +502,7 @@ def render_approved_shot_timeline(
         temporary_file.close()
     try:
         try:
-            crop_anchors = (
-                detect_face_crop_anchors(clip_inputs) if reframe_mode == "face" else None
-            )
+            crop_anchors = detect_face_crop_anchors(clip_inputs) if reframe_mode == "face" else None
         except RuntimeError as exc:
             raise RenderError(str(exc)) from exc
         command = _build_shot_render_command(
