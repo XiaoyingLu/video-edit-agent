@@ -18,7 +18,6 @@ from .renderer import (
     _validate_filter_graph,
     _validate_source_stream_metadata,
 )
-from .face_reframing import detect_face_crop_anchors
 from .title_overlays import TitleOverlay
 
 
