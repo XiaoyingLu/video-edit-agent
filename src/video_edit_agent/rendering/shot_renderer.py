@@ -18,6 +18,7 @@ from .renderer import (
     _validate_filter_graph,
     _validate_source_stream_metadata,
 )
+from .social_crop_anchors import load_crop_anchors
 from .title_overlays import TitleOverlay
 
 
@@ -334,6 +335,7 @@ def render_approved_shot_timeline(
     output_aspect_ratio: str | None = None,
     output_resolution: str | None = None,
     reframe_mode: str = "center",
+    crop_anchors_path: Path | None = None,
 ) -> RenderReport | None:
     """Render only approved shots after every proposed shot has a decision."""
     if timeout_seconds <= 0:
@@ -342,8 +344,8 @@ def render_approved_shot_timeline(
         raise ValueError("fit_mode must be crop or pad")
     if reframe_mode not in {"center", "face"}:
         raise ValueError("reframe_mode must be center or face")
-    if reframe_mode == "face" and fit_mode != "crop":
-        raise ValueError("face-aware reframing requires fit_mode='crop'")
+    if (reframe_mode == "face" or crop_anchors_path is not None) and fit_mode != "crop":
+        raise ValueError("face reframing and manual crop anchors require fit_mode='crop'")
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise FileNotFoundError(f"Project folder does not exist: {root}")
@@ -503,7 +505,14 @@ def render_approved_shot_timeline(
     try:
         try:
             crop_anchors = detect_face_crop_anchors(clip_inputs) if reframe_mode == "face" else None
-        except RuntimeError as exc:
+            if crop_anchors_path is not None:
+                manual_anchors = load_crop_anchors(root, timeline_file, timeline, crop_anchors_path)
+                if crop_anchors is None:
+                    crop_anchors = [(0.5, 0.5) for _ in approved]
+                for index, clip in enumerate(approved):
+                    if clip.clip_id in manual_anchors:
+                        crop_anchors[index] = manual_anchors[clip.clip_id]
+        except (RuntimeError, ValueError, OSError) as exc:
             raise RenderError(str(exc)) from exc
         command = _build_shot_render_command(
             ffmpeg,

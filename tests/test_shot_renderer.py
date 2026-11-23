@@ -500,6 +500,24 @@ def test_social_exports_cli_rejects_face_reframing_with_pad(tmp_path):
     assert "--reframe face requires --fit-mode crop" in result.output
 
 
+def test_social_exports_cli_rejects_crop_anchors_with_pad(tmp_path):
+    result = runner.invoke(
+        app,
+        [
+            "render-social-exports",
+            str(tmp_path),
+            "--dry-run",
+            "--fit-mode",
+            "pad",
+            "--crop-anchors",
+            str(tmp_path / "anchors.json"),
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "--crop-anchors requires --fit-mode crop" in result.output
+
+
 def test_style_presets_cli_lists_available_profiles():
     result = runner.invoke(app, ["style-presets"])
     assert result.exit_code == 0, result.output
@@ -697,3 +715,109 @@ def test_create_video_help_exposes_single_final_review_option(tmp_path, monkeypa
     assert "--review" in help_text
     assert "--storyboard" in help_text
     assert "automatically assembled" in " ".join(help_text.replace("│", " ").split())
+
+
+def test_manual_crop_anchor_template_is_timeline_bound_and_overrides_face(tmp_path):
+    from video_edit_agent.rendering.social_crop_anchors import (
+        create_crop_anchor_template,
+        load_crop_anchors,
+    )
+
+    artifact = tmp_path / ".video-agent"
+    artifact.mkdir()
+    timeline_file = artifact / "optimized-timeline.json"
+    timeline = _timeline(tmp_path)
+    timeline_file.write_text(timeline.model_dump_json(), encoding="utf-8")
+    template, clip_ids = create_crop_anchor_template(tmp_path)
+    document = json.loads(template.read_text(encoding="utf-8"))
+    assert clip_ids == ["one", "two"]
+    document["anchors"] = [{"clip_id": "two", "x": 0.72, "y": 0.38}]
+    template.write_text(json.dumps(document), encoding="utf-8")
+
+    # Relative paths are interpreted from the project root, not the process cwd.
+    anchors = load_crop_anchors(
+        tmp_path,
+        timeline_file,
+        timeline,
+        Path(".video-agent/social-crop-anchors.json"),
+    )
+    assert anchors == {"two": (0.72, 0.38)}
+
+
+def test_manual_crop_anchor_rejects_stale_timeline(tmp_path):
+    from video_edit_agent.rendering.social_crop_anchors import (
+        create_crop_anchor_template,
+        load_crop_anchors,
+    )
+
+    artifact = tmp_path / ".video-agent"
+    artifact.mkdir()
+    timeline_file = artifact / "optimized-timeline.json"
+    timeline = _timeline(tmp_path)
+    timeline_file.write_text(timeline.model_dump_json(), encoding="utf-8")
+    template, _ = create_crop_anchor_template(tmp_path)
+    timeline_file.write_text(timeline.model_dump_json() + "\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="stale"):
+        load_crop_anchors(tmp_path, timeline_file, timeline, template)
+
+
+def test_manual_crop_anchor_rejects_unknown_duplicate_and_invalid_values(tmp_path):
+    from video_edit_agent.rendering.social_crop_anchors import (
+        create_crop_anchor_template,
+        load_crop_anchors,
+    )
+
+    artifact = tmp_path / ".video-agent"
+    artifact.mkdir()
+    timeline_file = artifact / "optimized-timeline.json"
+    timeline = _timeline(tmp_path)
+    timeline_file.write_text(timeline.model_dump_json(), encoding="utf-8")
+    template, _ = create_crop_anchor_template(tmp_path)
+    base = json.loads(template.read_text(encoding="utf-8"))
+    cases = [
+        ([{"clip_id": "missing", "x": 0.5, "y": 0.5}], "unknown"),
+        ([{"clip_id": "one", "x": 0.5, "y": 0.5}] * 2, "duplicate"),
+        ([{"clip_id": "one", "x": 1.2, "y": 0.5}], "between 0 and 1"),
+    ]
+    for entries, message in cases:
+        document = {**base, "anchors": entries}
+        template.write_text(json.dumps(document), encoding="utf-8")
+        with pytest.raises(ValueError, match=message):
+            load_crop_anchors(tmp_path, timeline_file, timeline, template)
+
+
+def test_init_social_crop_anchors_cli_creates_template(tmp_path):
+    artifact = tmp_path / ".video-agent"
+    artifact.mkdir()
+    (artifact / "optimized-timeline.json").write_text(
+        _timeline(tmp_path).model_dump_json(), encoding="utf-8"
+    )
+    result = runner.invoke(app, ["init-social-crop-anchors", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    template = json.loads((artifact / "social-crop-anchors.json").read_text(encoding="utf-8"))
+    assert template["available_clip_ids"] == ["one", "two"]
+    assert template["anchors"] == []
+
+
+def test_social_exports_cli_passes_manual_crop_anchors(tmp_path, monkeypatch):
+    calls = []
+
+    def fake_render(*args, **kwargs):
+        calls.append(kwargs)
+        return None
+
+    monkeypatch.setattr("video_edit_agent.cli.rendering.render_approved_shot_timeline", fake_render)
+    anchor_file = tmp_path / "anchors.json"
+    result = runner.invoke(
+        app,
+        [
+            "render-social-exports",
+            str(tmp_path),
+            "--dry-run",
+            "--crop-anchors",
+            str(anchor_file),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert len(calls) == 3
+    assert all(call["crop_anchors_path"] == anchor_file for call in calls)
