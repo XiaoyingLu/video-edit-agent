@@ -5,6 +5,7 @@ import pytest
 from video_edit_agent.artifact_tracking import register_artifact
 from video_edit_agent.editing.footage_mapping import suggest_storyboard_footage
 from video_edit_agent.editing.footage_review import review_storyboard_footage
+from video_edit_agent.editing.footage_schemas import ProjectFootageSuggestions
 from video_edit_agent.editing.planning_schemas import (
     CreativeBrief,
     PlannedScene,
@@ -180,3 +181,50 @@ def test_review_footage_warns_but_allows_duplicate_source_interval(tmp_path):
         "approved",
         "approved",
     ]
+
+
+def test_review_footage_records_selected_candidate(tmp_path):
+    import json
+
+    plan_path, suggestions_path = _artifacts(tmp_path)
+    suggestions = ProjectFootageSuggestions.model_validate_json(
+        suggestions_path.read_text(encoding="utf-8")
+    )
+    chosen = suggestions.suggestions[0].candidates[0]
+    review_storyboard_footage(
+        tmp_path,
+        selections={"shot-001": 1},
+        plan_path=plan_path,
+        suggestions_path=suggestions_path,
+    )
+
+    feedback = json.loads(
+        (tmp_path / ".video-agent" / "footage-feedback.json").read_text(encoding="utf-8")
+    )
+    entry = feedback["entries"][0]
+    assert entry["selected_scene_id"] == chosen.source_scene_id
+    assert entry["shot_tokens"]
+    assert feedback["schema_version"] == "1.0"
+
+
+def test_review_footage_records_rejected_candidates(tmp_path):
+    import json
+
+    plan_path, suggestions_path = _artifacts(tmp_path)
+    suggestions = ProjectFootageSuggestions.model_validate_json(
+        suggestions_path.read_text(encoding="utf-8")
+    )
+    candidate_id = suggestions.suggestions[0].candidates[0].source_scene_id
+    review_storyboard_footage(
+        tmp_path,
+        rejected_shot_ids={"shot-001"},
+        plan_path=plan_path,
+        suggestions_path=suggestions_path,
+    )
+
+    feedback = json.loads(
+        (tmp_path / ".video-agent" / "footage-feedback.json").read_text(encoding="utf-8")
+    )
+    entry = feedback["entries"][0]
+    assert entry["selected_scene_id"] is None
+    assert entry["rejected_scene_ids"] == [candidate_id]

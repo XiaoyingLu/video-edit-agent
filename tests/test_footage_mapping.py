@@ -382,3 +382,54 @@ def test_suggest_storyboard_footage_fails_if_must_include_scene_is_unavailable(t
 
     with pytest.raises(ValueError, match="must-include scenes are missing"):
         suggest_storyboard_footage(tmp_path)
+
+
+def test_footage_feedback_adjusts_similar_shot_candidate_scores(tmp_path):
+    from video_edit_agent.artifact_tracking import register_artifact
+    from video_edit_agent.editing.footage_feedback import (
+        FootageFeedbackEntry,
+        ProjectFootageFeedback,
+        shot_feedback_tokens,
+    )
+
+    (tmp_path / "clip.mp4").write_bytes(b"test video placeholder")
+    artifact_dir = tmp_path / ".video-agent"
+    artifact_dir.mkdir()
+    plan_path = artifact_dir / "video-project-plan.json"
+    understanding_path = artifact_dir / "understanding.json"
+    plan_path.write_text(
+        json.dumps(_project_plan(tmp_path).model_dump(mode="json")), encoding="utf-8"
+    )
+    understanding_path.write_text(
+        json.dumps(_understanding(tmp_path).model_dump(mode="json")), encoding="utf-8"
+    )
+    register_artifact(tmp_path, plan_path)
+    register_artifact(tmp_path, understanding_path)
+    baseline = suggest_storyboard_footage(tmp_path)
+    preferred = baseline.suggestions[0].candidates[0]
+    shot = _project_plan(tmp_path).scenes[0].shots[0]
+    feedback_path = artifact_dir / "footage-feedback.json"
+    feedback_path.write_text(
+        ProjectFootageFeedback(
+            project_path=str(tmp_path.resolve()),
+            entries=[
+                FootageFeedbackEntry(
+                    shot_tokens=shot_feedback_tokens(shot),
+                    shot_scale=shot.shot_scale,
+                    visual_role=shot.visual_role,
+                    rejected_scene_ids=[preferred.source_scene_id],
+                )
+            ],
+        ).model_dump_json(indent=2),
+        encoding="utf-8",
+    )
+    register_artifact(tmp_path, feedback_path)
+
+    learned = suggest_storyboard_footage(tmp_path)
+    candidates = {item.source_scene_id: item for item in learned.suggestions[0].candidates}
+
+    assert candidates[preferred.source_scene_id].score == pytest.approx(preferred.score - 35)
+    assert any(
+        "previously rejected" in reason for reason in candidates[preferred.source_scene_id].reasons
+    )
+    assert learned.source_feedback == ".video-agent/footage-feedback.json"

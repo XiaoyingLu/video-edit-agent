@@ -10,6 +10,7 @@ from ..artifact_tracking import validate_artifact
 from ..media import discover_videos
 from ..understanding.schemas import VideoUnderstanding
 from .embeddings import ollama_embed_texts
+from .footage_feedback import load_footage_feedback, shot_feedback_tokens
 from .footage_schemas import (
     FootageMatchCandidate,
     ProjectFootageSuggestions,
@@ -143,6 +144,7 @@ def suggest_storyboard_footage(
     max_candidates_per_shot: int = 3,
     embedding_model: str | None = None,
     embedder: Callable[[list[str], str], list[list[float]]] | None = None,
+    feedback_path: Path | None = None,
 ) -> ProjectFootageSuggestions:
     """Rank analyzed source scenes for each storyboard shot without assigning footage."""
     if not 1 <= max_candidates_per_shot <= 10:
@@ -167,6 +169,16 @@ def suggest_storyboard_footage(
         validate_artifact(root, path)
 
     plan = VideoProjectPlan.model_validate_json(plan_file.read_text(encoding="utf-8"))
+    feedback = load_footage_feedback(root, feedback_path=feedback_path)
+    feedback_file = (feedback_path or artifact_dir / "footage-feedback.json").expanduser()
+    feedback_file = (
+        (root / feedback_file).resolve()
+        if not feedback_file.is_absolute()
+        else feedback_file.resolve()
+    )
+    source_feedback = (
+        feedback_file.relative_to(root).as_posix() if feedback_file.is_file() else None
+    )
     if Path(plan.project_path).resolve() != root:
         raise ValueError("video project plan belongs to a different project folder")
     if plan.planning_stage != "storyboard_ready":
@@ -256,6 +268,31 @@ def suggest_storyboard_footage(
                     reasons.append(
                         "Reuse discouraged: this source scene was top-ranked for an earlier shot."
                     )
+                shot_tokens = set(shot_feedback_tokens(shot))
+                for entry in feedback.entries:
+                    entry_tokens = set(entry.shot_tokens)
+                    union = shot_tokens | entry_tokens
+                    similarity = len(shot_tokens & entry_tokens) / len(union) if union else 0.0
+                    if shot.shot_scale == entry.shot_scale and shot.shot_scale != "unknown":
+                        similarity = min(1.0, similarity + 0.15)
+                    if shot.visual_role == entry.visual_role and shot.visual_role != "unknown":
+                        similarity = min(1.0, similarity + 0.15)
+                    if similarity < 0.25:
+                        continue
+                    if source_scene.scene_id == entry.selected_scene_id:
+                        adjustment = 20.0 * similarity
+                        score += adjustment
+                        reasons.append(
+                            "Your previous review preferred this scene for a similar shot "
+                            f"(+{adjustment:.1f})."
+                        )
+                    if source_scene.scene_id in entry.rejected_scene_ids:
+                        adjustment = 35.0 * similarity
+                        score -= adjustment
+                        reasons.append(
+                            "You previously rejected this scene for a similar shot "
+                            f"(-{adjustment:.1f})."
+                        )
                 score = round(max(0.0, min(100.0, score)), 1)
                 ranked.append(
                     FootageMatchCandidate(
@@ -336,6 +373,7 @@ def suggest_storyboard_footage(
         project_path=str(root),
         source_plan=plan_file.relative_to(root).as_posix(),
         source_understanding=understanding_file.relative_to(root).as_posix(),
+        source_feedback=source_feedback,
         suggestions=suggestions,
         candidate_count=candidate_count,
         matched_shot_count=matched_shot_count,
