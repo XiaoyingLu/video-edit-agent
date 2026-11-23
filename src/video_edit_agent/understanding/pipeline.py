@@ -172,9 +172,7 @@ def understand_folder(
                 elapsed_seconds=time.perf_counter() - detection_started,
             )
 
-        total_frames = sum(
-            len(intervals) * samples_per_scene for intervals in detected.values()
-        )
+        total_frames = sum(len(intervals) * samples_per_scene for intervals in detected.values())
         completed_frames = 0
         frame_durations: list[float] = []
         report(
