@@ -237,3 +237,15 @@ def test_renderer_keeps_legacy_linear_fade_and_slide_filter_strings(tmp_path: Pa
         "y='if(lt(t,0.450000),(h-text_h-h*0.12)+80*(0.450000-t)/0.45,"
         "(h-text_h-h*0.12))'"
     ) in slide_graph
+
+
+def test_explicit_exit_animation_replaces_legacy_fade_out():
+    overlay = _overlay(
+        animation="fade",
+        exit_animation="slide_down",
+        easing="ease_out",
+    )
+    alpha, y_position = _animation_expressions(overlay, "h*0.12")
+    assert alpha.startswith("if(lt(t,0.450000),")
+    assert "gt(t,2.550000)" not in alpha
+    assert "gt(t,2.550000)" in y_position
