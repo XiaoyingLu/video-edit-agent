@@ -92,8 +92,7 @@ def _crop_path_expression(path: list[tuple[float, float, float]], axis: int) -> 
         if end <= start:
             continue
         interpolation = (
-            f"({value_start:.6f}+({value_end - value_start:.6f})*"
-            f"(t-{start:.6f})/{end - start:.6f})"
+            f"({value_start:.6f}+({value_end - value_start:.6f})*(t-{start:.6f})/{end - start:.6f})"
         )
         expression = f"if(lt(t,{end:.6f}),{interpolation},{expression})"
     first_time, first_value = path[0][0], path[0][axis]
@@ -140,10 +139,7 @@ def _build_shot_render_command(
             raise ValueError("crop_paths must contain one path per clip")
         path = crop_paths[index] if crop_paths is not None else []
         if path:
-            if any(
-                not (0 <= x <= 1 and 0 <= y <= 1) or timestamp < 0
-                for timestamp, x, y in path
-            ):
+            if any(not (0 <= x <= 1 and 0 <= y <= 1) or timestamp < 0 for timestamp, x, y in path):
                 raise ValueError(
                     "crop path timestamps and coordinates must be non-negative and normalized"
                 )

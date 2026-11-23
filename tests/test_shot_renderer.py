@@ -172,7 +172,8 @@ def test_face_reframing_uses_detected_face_position(tmp_path, monkeypatch):
     from video_edit_agent.rendering.face_reframing import detect_face_crop_anchors
 
     anchors = detect_face_crop_anchors([(tmp_path / "clip.mp4", 0, 4, False, "cut", 0)])
-    assert anchors == [(0.6, 0.4)]
+    assert len(anchors) == 1
+    assert anchors[0] == pytest.approx((0.6, 0.4))
 
 
 def test_shot_renderer_uses_normalized_face_crop_anchor(tmp_path):
@@ -185,8 +186,8 @@ def test_shot_renderer_uses_normalized_face_crop_anchor(tmp_path):
         crop_anchors=[(0.72, 0.38)],
     )
     graph = command[command.index("-filter_complex") + 1]
-    assert "iw*0.720000-ow/2" in graph
-    assert "ih*0.380000-oh/2" in graph
+    assert "x='max(0,min(iw-ow,iw*(0.720000)-ow/2))'" in graph
+    assert "y='max(0,min(ih-oh,ih*(0.380000)-oh/2))'" in graph
 
 
 def test_shot_renderer_rejects_invalid_crop_anchors(tmp_path):
