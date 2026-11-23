@@ -99,9 +99,7 @@ def test_frame_sampler_reuses_existing_extracted_frames(monkeypatch, tmp_path: P
     def unexpected_extract(*args, **kwargs):
         raise AssertionError("existing frame should not be extracted again")
 
-    monkeypatch.setattr(
-        "video_edit_agent.media_runner.subprocess.run", unexpected_extract
-    )
+    monkeypatch.setattr("video_edit_agent.media_runner.subprocess.run", unexpected_extract)
     result = extract_representative_frames(video, 0.0, 10.0, frame_dir, samples_per_scene=1)
 
     assert result == [(5.0, existing)]
