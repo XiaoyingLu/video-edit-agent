@@ -1,6 +1,8 @@
 import json
 import shutil
 import subprocess
+import sys
+from types import SimpleNamespace
 from pathlib import Path
 
 import click
@@ -131,6 +133,72 @@ def test_shot_renderer_builds_crossfade_and_audio_crossfade_graph(tmp_path):
     assert "xfade=transition=fade:duration=0.500000:offset=2.500000" in graph
     assert "acrossfade=d=0.500000" in graph
     assert "[v0][a0][v1][a1]concat" not in graph
+
+
+
+def test_face_reframing_uses_detected_face_position(tmp_path, monkeypatch):
+    import numpy as np
+
+    class FakeCapture:
+        def isOpened(self):
+            return True
+
+        def set(self, *_args):
+            return True
+
+        def read(self):
+            return True, np.zeros((100, 200, 3), dtype=np.uint8)
+
+        def release(self):
+            return None
+
+    class FakeDetector:
+        def empty(self):
+            return False
+
+        def detectMultiScale(self, *_args, **_kwargs):
+            return [(100, 20, 40, 40)]
+
+    fake_cv2 = SimpleNamespace(
+        data=SimpleNamespace(haarcascades="/fake/"),
+        CascadeClassifier=lambda _path: FakeDetector(),
+        VideoCapture=lambda _path: FakeCapture(),
+        CAP_PROP_POS_MSEC=0,
+        COLOR_BGR2GRAY=1,
+        cvtColor=lambda frame, _code: frame[:, :, 0],
+    )
+    monkeypatch.setitem(sys.modules, "cv2", fake_cv2)
+
+    from video_edit_agent.rendering.face_reframing import detect_face_crop_anchors
+
+    anchors = detect_face_crop_anchors([(tmp_path / "clip.mp4", 0, 4, False, "cut", 0)])
+    assert anchors == [(0.6, 0.52)]
+
+
+def test_shot_renderer_uses_normalized_face_crop_anchor(tmp_path):
+    command = _build_shot_render_command(
+        "ffmpeg",
+        [(tmp_path / "one.mp4", 0, 2, False, "cut", 0)],
+        tmp_path / "out.mp4",
+        1080,
+        1920,
+        crop_anchors=[(0.72, 0.38)],
+    )
+    graph = command[command.index("-filter_complex") + 1]
+    assert "iw*0.720000-ow/2" in graph
+    assert "ih*0.380000-oh/2" in graph
+
+
+def test_shot_renderer_rejects_invalid_crop_anchors(tmp_path):
+    with pytest.raises(ValueError, match="normalized"):
+        _build_shot_render_command(
+            "ffmpeg",
+            [(tmp_path / "one.mp4", 0, 2, False, "cut", 0)],
+            tmp_path / "out.mp4",
+            1080,
+            1920,
+            crop_anchors=[(1.2, 0.5)],
+        )
 
 
 def test_shot_renderer_supports_crop_and_pad_fit_modes(tmp_path):
@@ -395,6 +463,43 @@ def test_render_social_exports_generates_three_preflights(tmp_path, monkeypatch)
     assert all(call["dry_run"] for call in calls)
     assert all(call["title_overlay_path"] == overlay_file for call in calls)
     assert "No MP4 files were written" in result.output
+
+
+
+def test_social_exports_cli_passes_face_reframing_option(tmp_path, monkeypatch):
+    calls = []
+
+    def fake_render(*args, **kwargs):
+        calls.append(kwargs)
+        return None
+
+    monkeypatch.setattr("video_edit_agent.cli.rendering.render_approved_shot_timeline", fake_render)
+    result = runner.invoke(
+        app,
+        ["render-social-exports", str(tmp_path), "--dry-run", "--reframe", "face"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert len(calls) == 3
+    assert all(call["reframe_mode"] == "face" for call in calls)
+
+
+def test_social_exports_cli_rejects_face_reframing_with_pad(tmp_path):
+    result = runner.invoke(
+        app,
+        [
+            "render-social-exports",
+            str(tmp_path),
+            "--dry-run",
+            "--fit-mode",
+            "pad",
+            "--reframe",
+            "face",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "--reframe face requires --fit-mode crop" in result.output
 
 
 def test_style_presets_cli_lists_available_profiles():

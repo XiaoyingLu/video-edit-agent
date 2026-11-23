@@ -18,6 +18,7 @@ from .renderer import (
     _validate_source_stream_metadata,
 )
 from .title_overlays import TitleOverlay
+from .face_reframing import detect_face_crop_anchors
 
 
 def _safe_source(root: Path, relative_path: str) -> Path:
@@ -86,6 +87,7 @@ def _build_shot_render_command(
     frame_rate: float = 30.0,
     fit_mode: str = "crop",
     title_overlays: list[TitleOverlay] | None = None,
+    crop_anchors: list[tuple[float, float]] | None = None,
     music_path: Path | None = None,
     music_mode: str = "blend",
     music_volume: float = 0.22,
@@ -104,8 +106,16 @@ def _build_shot_render_command(
     filters: list[str] = []
     for index, (_, start, end, has_audio, _, _) in enumerate(clips):
         duration = end - start
+        if crop_anchors is not None and len(crop_anchors) != len(clips):
+            raise ValueError("crop_anchors must contain one anchor per clip")
+        anchor_x, anchor_y = crop_anchors[index] if crop_anchors is not None else (0.5, 0.5)
+        if not (0 <= anchor_x <= 1 and 0 <= anchor_y <= 1):
+            raise ValueError("crop anchors must be normalized between 0 and 1")
         fit_filters = (
-            f"scale=w={width}:h={height}:force_original_aspect_ratio=increase,crop={width}:{height}"
+            f"scale=w={width}:h={height}:force_original_aspect_ratio=increase,"
+            f"crop={width}:{height}:"
+            f"x='max(0,min(iw-ow,iw*{anchor_x:.6f}-ow/2))':"
+            f"y='max(0,min(ih-oh,ih*{anchor_y:.6f}-oh/2))'"
             if fit_mode == "crop"
             else f"scale=w={width}:h={height}:force_original_aspect_ratio=decrease,"
             f"pad=width={width}:height={height}:x=(ow-iw)/2:y=(oh-ih)/2"
@@ -323,12 +333,17 @@ def render_approved_shot_timeline(
     music_ducking: bool = False,
     output_aspect_ratio: str | None = None,
     output_resolution: str | None = None,
+    reframe_mode: str = "center",
 ) -> RenderReport | None:
     """Render only approved shots after every proposed shot has a decision."""
     if timeout_seconds <= 0:
         raise ValueError("timeout_seconds must be greater than zero")
     if fit_mode not in {"crop", "pad"}:
         raise ValueError("fit_mode must be crop or pad")
+    if reframe_mode not in {"center", "face"}:
+        raise ValueError("reframe_mode must be center or face")
+    if reframe_mode == "face" and fit_mode != "crop":
+        raise ValueError("face-aware reframing requires fit_mode='crop'")
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise FileNotFoundError(f"Project folder does not exist: {root}")
@@ -486,6 +501,10 @@ def render_approved_shot_timeline(
         temporary_path = Path(temporary_file.name)
         temporary_file.close()
     try:
+        try:
+            crop_anchors = detect_face_crop_anchors(clip_inputs) if reframe_mode == "face" else None
+        except RuntimeError as exc:
+            raise RenderError(str(exc)) from exc
         command = _build_shot_render_command(
             ffmpeg,
             clip_inputs,
@@ -493,6 +512,7 @@ def render_approved_shot_timeline(
             width,
             height,
             fit_mode=fit_mode,
+            crop_anchors=crop_anchors,
             title_overlays=approved_titles,
             music_path=selected_music,
             music_mode=music_mode,
