@@ -222,7 +222,9 @@ def test_understanding_pipeline_builds_timestamped_scenes(monkeypatch, tmp_path:
     )
     events = []
     result = understand_folder(
-        tmp_path, progress_callback=lambda event, details: events.append((event, details))
+        tmp_path,
+        samples_per_scene=1,
+        progress_callback=lambda event, details: events.append((event, details)),
     )
     assert result.scene_count == 1
     assert result.scenes[0].start_seconds == 0.0
@@ -233,8 +235,13 @@ def test_understanding_pipeline_builds_timestamped_scenes(monkeypatch, tmp_path:
     assert "frame_started" in event_names
     assert "frame_completed" in event_names
     assert "scene_completed" in event_names
+    workload_event = next(details for event, details in events if event == "frame_workload_ready")
     frame_event = next(details for event, details in events if event == "frame_completed")
+    assert workload_event["total_frames"] == 1
     assert frame_event["elapsed_seconds"] >= 0
+    assert frame_event["completed_frames"] == 1
+    assert frame_event["total_frames"] == 1
+    assert frame_event["estimated_remaining_seconds"] == 0
 
 
 def test_ollama_analyzer_requests_json_schema(monkeypatch, tmp_path: Path) -> None:
