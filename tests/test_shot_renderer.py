@@ -156,7 +156,7 @@ def test_face_reframing_uses_detected_face_position(tmp_path, monkeypatch):
             return False
 
         def detectMultiScale(self, *_args, **_kwargs):
-            return [(100, 20, 40, 40)]
+            return [(40, 0, 40, 40)]
 
     fake_cv2 = SimpleNamespace(
         data=SimpleNamespace(haarcascades="/fake/"),
@@ -164,6 +164,7 @@ def test_face_reframing_uses_detected_face_position(tmp_path, monkeypatch):
         VideoCapture=lambda _path: FakeCapture(),
         CAP_PROP_POS_MSEC=0,
         COLOR_BGR2GRAY=1,
+        resize=lambda frame, _size: np.zeros((50, 100, 3), dtype=np.uint8),
         cvtColor=lambda frame, _code: frame[:, :, 0],
     )
     monkeypatch.setitem(sys.modules, "cv2", fake_cv2)
@@ -171,7 +172,8 @@ def test_face_reframing_uses_detected_face_position(tmp_path, monkeypatch):
     from video_edit_agent.rendering.face_reframing import detect_face_crop_anchors
 
     anchors = detect_face_crop_anchors([(tmp_path / "clip.mp4", 0, 4, False, "cut", 0)])
-    assert anchors == [(0.6, 0.4)]
+    assert len(anchors) == 1
+    assert anchors[0] == pytest.approx((0.6, 0.4))
 
 
 def test_shot_renderer_uses_normalized_face_crop_anchor(tmp_path):
@@ -184,8 +186,8 @@ def test_shot_renderer_uses_normalized_face_crop_anchor(tmp_path):
         crop_anchors=[(0.72, 0.38)],
     )
     graph = command[command.index("-filter_complex") + 1]
-    assert "iw*0.720000-ow/2" in graph
-    assert "ih*0.380000-oh/2" in graph
+    assert "x='max(0,min(iw-ow,iw*(0.720000)-ow/2))'" in graph
+    assert "y='max(0,min(ih-oh,ih*(0.380000)-oh/2))'" in graph
 
 
 def test_shot_renderer_rejects_invalid_crop_anchors(tmp_path):
@@ -821,3 +823,80 @@ def test_social_exports_cli_passes_manual_crop_anchors(tmp_path, monkeypatch):
     assert result.exit_code == 0, result.output
     assert len(calls) == 3
     assert all(call["crop_anchors_path"] == anchor_file for call in calls)
+
+
+def test_shot_renderer_builds_time_varying_face_crop_path(tmp_path):
+    command = _build_shot_render_command(
+        "ffmpeg",
+        [(tmp_path / "one.mp4", 0, 2, False, "cut", 0)],
+        tmp_path / "out.mp4",
+        1080,
+        1920,
+        crop_paths=[[(0.0, 0.25, 0.4), (1.0, 0.75, 0.6), (2.0, 0.6, 0.5)]],
+    )
+    graph = command[command.index("-filter_complex") + 1]
+    assert "if(lt(t,1.000000)" in graph
+    assert "iw*(if(" in graph
+    assert "ih*(if(" in graph
+
+
+def test_shot_renderer_rejects_crop_paths_for_wrong_clip_count(tmp_path):
+    with pytest.raises(ValueError, match="one path per clip"):
+        _build_shot_render_command(
+            "ffmpeg",
+            [
+                (tmp_path / "one.mp4", 0, 2, False, "cut", 0),
+                (tmp_path / "two.mp4", 0, 2, False, "cut", 0),
+            ],
+            tmp_path / "out.mp4",
+            1080,
+            1920,
+            crop_paths=[[(0.0, 0.5, 0.5)]],
+        )
+
+
+def test_face_reframing_returns_smoothed_per_clip_paths(tmp_path, monkeypatch):
+    import numpy as np
+
+    class FakeCapture:
+        def __init__(self):
+            self.read_count = 0
+
+        def isOpened(self):
+            return True
+
+        def set(self, *_args):
+            return True
+
+        def read(self):
+            self.read_count += 1
+            return True, np.zeros((100, 200, 3), dtype=np.uint8)
+
+        def release(self):
+            return None
+
+    class FakeDetector:
+        def empty(self):
+            return False
+
+        def detectMultiScale(self, *_args, **_kwargs):
+            return [(40, 0, 40, 40)]
+
+    fake_cv2 = SimpleNamespace(
+        data=SimpleNamespace(haarcascades="/fake/"),
+        CascadeClassifier=lambda _path: FakeDetector(),
+        VideoCapture=lambda _path: FakeCapture(),
+        CAP_PROP_POS_MSEC=0,
+        COLOR_BGR2GRAY=1,
+        resize=lambda frame, _size: np.zeros((50, 100, 3), dtype=np.uint8),
+        cvtColor=lambda frame, _code: frame[:, :, 0],
+    )
+    monkeypatch.setitem(sys.modules, "cv2", fake_cv2)
+
+    from video_edit_agent.rendering.face_reframing import detect_face_crop_paths
+
+    paths = detect_face_crop_paths([(tmp_path / "clip.mp4", 0, 2, False, "cut", 0)])
+    assert len(paths) == 1
+    assert len(paths[0]) >= 4
+    assert paths[0][0][0] == 0.0
+    assert paths[0][0][1:] == pytest.approx((0.6, 0.4))
