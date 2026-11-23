@@ -91,17 +91,21 @@ def _animation_expressions(
     fade_in_end = overlay.start_seconds + fade_seconds
     fade_out_start = overlay.end_seconds - fade_seconds
 
+    legacy_fade_exit = overlay.animation == "fade" and overlay.exit_animation == "auto"
     if overlay.animation == "fade":
-        fade_in = _ease_progress(
-            overlay.start_seconds, fade_seconds, overlay.easing
-        )
-        fade_out = _ease_progress(
-            fade_out_start, fade_seconds, overlay.easing, reverse=True
-        )
+        fade_in = _ease_progress(overlay.start_seconds, fade_seconds, overlay.easing)
         alpha = (
             f"if(lt(t,{_seconds(fade_in_end)}),{fade_in},"
-            f"if(gt(t,{_seconds(fade_out_start)}),{fade_out},1))"
+            "1)"
         )
+        if legacy_fade_exit:
+            fade_out = _ease_progress(
+                fade_out_start, fade_seconds, overlay.easing, reverse=True
+            )
+            alpha = (
+                f"if(lt(t,{_seconds(fade_in_end)}),{fade_in},"
+                f"if(gt(t,{_seconds(fade_out_start)}),{fade_out},1))"
+            )
     elif overlay.animation == "slide_up":
         slide_end = overlay.start_seconds + 0.45
         progress = _ease_progress(overlay.start_seconds, 0.45, overlay.easing)
@@ -122,7 +126,7 @@ def _animation_expressions(
     exit_animation = overlay.exit_animation
     if exit_animation == "auto":
         exit_animation = "fade" if overlay.animation == "fade" else "none"
-    if exit_animation == "fade" and overlay.animation != "fade":
+    if exit_animation == "fade" and not legacy_fade_exit:
         fade_out = _ease_progress(
             fade_out_start, fade_seconds, overlay.easing, reverse=True
         )
