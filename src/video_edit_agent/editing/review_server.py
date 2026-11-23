@@ -316,11 +316,14 @@ def create_review_server(
             except (ValueError, OSError, TypeError) as exc:
                 self._send_json(400, {"error": str(exc)})
                 return
-            self._send_json(200, {
-                "path": destination.relative_to(root).as_posix(),
-                "anchor_count": len(payload["anchors"]),
-                "timeline_sha256": hashlib.sha256(timeline_file.read_bytes()).hexdigest(),
-            })
+            self._send_json(
+                200,
+                {
+                    "path": destination.relative_to(root).as_posix(),
+                    "anchor_count": len(payload["anchors"]),
+                    "timeline_sha256": hashlib.sha256(timeline_file.read_bytes()).hexdigest(),
+                },
+            )
 
         def _save_timeline_review(self, payload):
             try:
