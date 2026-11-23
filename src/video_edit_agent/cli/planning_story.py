@@ -923,5 +923,3 @@ def draft_edit(
         "[yellow]All selections require human review. No existing timeline was changed "
         "and no video was rendered.[/yellow]"
     )
-
-

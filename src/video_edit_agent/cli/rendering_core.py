@@ -735,5 +735,3 @@ def render_social_exports(
             "[yellow]Framing uses a centered crop or letterbox; review each export for subject "
             "placement.[/yellow]"
         )
-
-
