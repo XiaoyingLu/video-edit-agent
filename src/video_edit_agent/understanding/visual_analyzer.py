@@ -5,6 +5,7 @@ import json
 import math
 from pathlib import Path
 from typing import Any
+
 from ..config import get_setting
 from ..editing.ollama_client import ModelClientError, OllamaClient
 from ..resource_manager import ResourceError, ensure_memory_available, required_vision_memory_gb
