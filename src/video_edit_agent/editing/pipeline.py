@@ -17,19 +17,45 @@ from .schemas import (
 )
 
 
+def _scene_preservation_role(scene: VideoScene) -> str | None:
+    """Return a conservative preservation role found at scene or frame level."""
+    roles = {scene.story_function}
+    roles.update(observation.visual_role for observation in scene.observations)
+    for role in ("scenic_breath", "establishing"):
+        if role in roles:
+            return role
+    return None
+
+
 def _scene_context(
     start_seconds: float,
     end_seconds: float,
     scenes: list[VideoScene],
-) -> tuple[str | None, str | None]:
-    """Return the scene with the greatest temporal overlap, if any."""
+) -> tuple[str | None, str | None, str | None, bool]:
+    """Return the best review context, preferring any overlapping preserve-worthy scene."""
     overlapping = [
         scene
         for scene in scenes
         if scene.start_seconds < end_seconds and scene.end_seconds > start_seconds
     ]
     if not overlapping:
-        return None, None
+        return None, None, None, False
+
+    preserving = [
+        (scene, role)
+        for scene in overlapping
+        if (role := _scene_preservation_role(scene)) is not None
+    ]
+    if preserving:
+        scene, role = max(
+            preserving,
+            key=lambda item: max(
+                0.0,
+                min(end_seconds, item[0].end_seconds) - max(start_seconds, item[0].start_seconds),
+            ),
+        )
+        return scene.scene_id, scene.summary, role, True
+
     scene = max(
         overlapping,
         key=lambda item: max(
@@ -37,7 +63,7 @@ def _scene_context(
             min(end_seconds, item.end_seconds) - max(start_seconds, item.start_seconds),
         ),
     )
-    return scene.scene_id, scene.summary
+    return scene.scene_id, scene.summary, scene.story_function, False
 
 
 def build_edit_proposal(folder: Path) -> ProjectEditProposal:
@@ -79,8 +105,21 @@ def build_edit_proposal(folder: Path) -> ProjectEditProposal:
         scenes = scenes_by_video.get(video.path, [])
         items: list[EditReviewItem] = []
         for index, candidate in enumerate(video.candidates, start=1):
-            scene_id, scene_summary = _scene_context(
+            scene_id, scene_summary, scene_role, preserve = _scene_context(
                 candidate.start_seconds, candidate.end_seconds, scenes
+            )
+            base_review_reason = (
+                "Quiet audio interval with no overlapping transcript speech. "
+                "Inspect the picture and listen for ambience, music, wind, or "
+                "intentional scenic pauses before deciding."
+            )
+            review_reason = (
+                f"Suggested action: preserve. The overlapping scene is classified as "
+                f"'{scene_role}', so keep this scenic/establishing moment by default. "
+                "Do not remove it based on silence alone. "
+                f"{base_review_reason}"
+                if preserve
+                else base_review_reason
             )
             items.append(
                 EditReviewItem(
@@ -88,13 +127,11 @@ def build_edit_proposal(folder: Path) -> ProjectEditProposal:
                     start_seconds=candidate.start_seconds,
                     end_seconds=candidate.end_seconds,
                     duration_seconds=candidate.duration_seconds,
-                    review_reason=(
-                        "Quiet audio interval with no overlapping transcript speech. "
-                        "Inspect the picture and listen for ambience, music, wind, or "
-                        "intentional scenic pauses before deciding."
-                    ),
+                    suggested_action="preserve" if preserve else "consider_removing",
+                    review_reason=review_reason,
                     scene_id=scene_id,
                     scene_summary=scene_summary,
+                    scene_role=scene_role,
                 )
             )
         item_count += len(items)
