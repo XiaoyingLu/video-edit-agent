@@ -60,7 +60,7 @@ def test_frame_sampler_uses_jpeg_compatible_pixel_format(monkeypatch, tmp_path: 
     def fake_run(command, **kwargs):
         captured["command"] = command
         Path(command[-1]).write_bytes(b"jpeg-frame")
-        return subprocess.CompletedProcess(command, 0, b"", b"")
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
 
     monkeypatch.setattr("video_edit_agent.media_runner.subprocess.run", fake_run)
 
