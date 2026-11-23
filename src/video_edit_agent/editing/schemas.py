@@ -14,12 +14,22 @@ class EditReviewItem(BaseModel):
     start_seconds: float = Field(ge=0)
     end_seconds: float = Field(gt=0)
     duration_seconds: float = Field(gt=0)
-    suggested_action: Literal["consider_removing"] = "consider_removing"
+    suggested_action: Literal["consider_removing", "preserve"] = "consider_removing"
     decision: Literal["pending", "approved", "rejected"] = "pending"
     review_required: bool = True
     review_reason: str
     scene_id: str | None = None
     scene_summary: str | None = None
+    scene_role: Literal[
+        "establishing",
+        "action",
+        "detail",
+        "reaction",
+        "transition",
+        "portrait",
+        "scenic_breath",
+        "unknown",
+    ] | None = None
 
     @model_validator(mode="after")
     def validate_interval(self) -> "EditReviewItem":
