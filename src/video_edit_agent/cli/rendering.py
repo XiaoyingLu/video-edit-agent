@@ -570,7 +570,10 @@ def init_social_crop_anchors(
     ] = None,
     output: Annotated[
         Path | None,
-        typer.Option("--output", help="Template path (default: .video-agent/social-crop-anchors.json)."),
+        typer.Option(
+            "--output",
+            help="Template path (default: .video-agent/social-crop-anchors.json).",
+        ),
     ] = None,
 ) -> None:
     """Create an editable per-clip crop-anchor template for the optimized timeline."""

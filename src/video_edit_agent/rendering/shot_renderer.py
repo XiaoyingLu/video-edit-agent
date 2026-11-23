@@ -10,7 +10,6 @@ from ..editing.planning_schemas import VideoProjectPlan
 from ..editing.timeline_schemas import ProjectDraftTimeline
 from .audio_mix import append_music_input, append_music_mix, resolve_selected_music
 from .face_reframing import detect_face_crop_anchors
-from .social_crop_anchors import load_crop_anchors
 from .renderer import (
     RenderError,
     RenderReport,
@@ -19,6 +18,7 @@ from .renderer import (
     _validate_filter_graph,
     _validate_source_stream_metadata,
 )
+from .social_crop_anchors import load_crop_anchors
 from .title_overlays import TitleOverlay
 
 
