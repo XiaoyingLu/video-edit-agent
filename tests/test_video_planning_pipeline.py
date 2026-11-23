@@ -197,7 +197,10 @@ def test_planner_discards_partial_model_footage_assignments(monkeypatch):
             return json.dumps({"message": {"content": json.dumps(generated)}}).encode()
 
     monkeypatch.setattr(planning_generation, "ensure_memory_available", lambda *args: None)
-    monkeypatch.setattr(planning_generation, "urlopen", lambda *args, **kwargs: FakeResponse())
+    monkeypatch.setattr(
+        "video_edit_agent.editing.ollama_client.urlopen",
+        lambda *args, **kwargs: FakeResponse(),
+    )
     planner = planning_generation.OllamaVideoPlanner(model="qwen2.5:1.5b")
 
     result = planner.generate("Create a cinematic travel film", {"target_duration_seconds": 90})

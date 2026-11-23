@@ -1,10 +1,7 @@
 """Natural-language editing intent parsing through a local Ollama model."""
 
-import json
 import os
 import warnings
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
 
 from pydantic import ValidationError
 
@@ -14,6 +11,13 @@ from ..resource_manager import (
     required_ollama_memory_gb,
 )
 from .intent_schemas import EditingPlan
+from .ollama_client import (
+    CHAT_TIMEOUT_SECONDS,
+    CONTROL_TIMEOUT_SECONDS,
+    ModelClient,
+    OllamaClient,
+    OllamaClientError,
+)
 
 
 class IntentParsingError(RuntimeError):
@@ -27,23 +31,22 @@ class OllamaIntentParser:
         self,
         model: str | None = None,
         base_url: str | None = None,
-        timeout_seconds: int = 180,
+        timeout_seconds: int = CHAT_TIMEOUT_SECONDS,
         memory_override_env: str = "OLLAMA_MIN_MEMORY_GB",
+        client: ModelClient | None = None,
     ) -> None:
         self.model = model or os.getenv("OLLAMA_MODEL", "qwen2.5vl:3b")
-        self.base_url = (base_url or os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")).rstrip(
-            "/"
-        )
+        self.client = client or OllamaClient(base_url=base_url)
         self.timeout_seconds = timeout_seconds
-        self.keep_alive = os.getenv("OLLAMA_KEEP_ALIVE", "5m")
         self._model_used = False
-        try:
-            ensure_memory_available(
-                required_ollama_memory_gb(self.model, memory_override_env),
-                f"Ollama intent model '{self.model}',",
-            )
-        except ResourceError as exc:
-            raise IntentParsingError(str(exc)) from exc
+        if isinstance(self.client, OllamaClient):
+            try:
+                ensure_memory_available(
+                    required_ollama_memory_gb(self.model, memory_override_env),
+                    f"Ollama intent model '{self.model}',",
+                )
+            except ResourceError as exc:
+                raise IntentParsingError(str(exc)) from exc
 
     def parse(self, prompt: str) -> EditingPlan:
         """Ask Ollama for structured intent, then validate it locally."""
@@ -74,45 +77,20 @@ class OllamaIntentParser:
             "never delete quiet scenic footage automatically. For cut transitions, set "
             "duration_seconds to 0."
         )
-        payload = json.dumps(
-            {
-                "model": self.model,
-                "keep_alive": self.keep_alive,
-                "stream": False,
-                "format": schema,
-                "messages": [
+        try:
+            parsed = self.client.chat_json(
+                self.model,
+                [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": normalized_prompt},
                 ],
-                "options": {"temperature": 0},
-            }
-        ).encode("utf-8")
-        request = Request(
-            f"{self.base_url}/api/chat",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        try:
-            with urlopen(request, timeout=self.timeout_seconds) as response:
-                raw_response = response.read()
-                self._model_used = True
-                result = json.loads(raw_response.decode("utf-8"))
-            content = result["message"]["content"]
-            parsed = json.loads(content)
-        except HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")
-            raise IntentParsingError(
-                f"Ollama returned HTTP {exc.code}: {detail}. "
-                f"Check that model '{self.model}' is installed."
-            ) from exc
-        except (URLError, TimeoutError) as exc:
-            raise IntentParsingError(
-                f"Could not reach Ollama at {self.base_url}. Start the Docker service "
-                "and verify OLLAMA_BASE_URL."
-            ) from exc
-        except (json.JSONDecodeError, UnicodeDecodeError, KeyError, TypeError) as exc:
-            raise IntentParsingError("Ollama returned an invalid structured response.") from exc
+                schema,
+                options={"temperature": 0},
+                timeout_seconds=self.timeout_seconds,
+            )
+            self._model_used = True
+        except OllamaClientError as exc:
+            raise IntentParsingError(str(exc)) from exc
 
         if not isinstance(parsed, dict):
             raise IntentParsingError("Ollama returned JSON, but the response was not an object.")
@@ -135,17 +113,14 @@ class OllamaIntentParser:
         """Ask Ollama to evict the intent model before another model phase begins."""
         if not self._model_used:
             return True
-        payload = json.dumps({"model": self.model, "keep_alive": 0}).encode("utf-8")
-        request = Request(
-            f"{self.base_url}/api/generate",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
         try:
-            with urlopen(request, timeout=min(self.timeout_seconds, 30)):
-                return True
-        except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError):
+            self.client.generate(
+                self.model,
+                timeout_seconds=CONTROL_TIMEOUT_SECONDS,
+                keep_alive=0,
+            )
+            return True
+        except OllamaClientError:
             return False
 
 
@@ -154,9 +129,14 @@ def parse_editing_intent(
     model: str | None = None,
     *,
     memory_override_env: str = "OLLAMA_MIN_MEMORY_GB",
+    client: ModelClient | None = None,
 ) -> EditingPlan:
     """Parse one natural-language request, then release the model from memory."""
-    parser = OllamaIntentParser(model=model, memory_override_env=memory_override_env)
+    parser = OllamaIntentParser(
+        model=model,
+        memory_override_env=memory_override_env,
+        client=client,
+    )
     try:
         return parser.parse(prompt)
     finally:
