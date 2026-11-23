@@ -73,7 +73,7 @@ def test_scenic_and_establishing_silence_is_marked_preserve(tmp_path: Path, role
     assert item.scene_id == scene.scene_id
     assert item.decision == "pending"
     assert item.review_required is True
-    assert "preserve this scenic/establishing moment by default" in item.review_reason
+    assert "keep this scenic/establishing moment by default" in item.review_reason
 
 
 def test_any_overlapping_scenic_frame_takes_precedence_over_larger_action_scene(
