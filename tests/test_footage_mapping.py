@@ -426,13 +426,10 @@ def test_footage_feedback_adjusts_similar_shot_candidate_scores(tmp_path):
     register_artifact(tmp_path, feedback_path)
 
     learned = suggest_storyboard_footage(tmp_path)
-    candidates = {
-        item.source_scene_id: item for item in learned.suggestions[0].candidates
-    }
+    candidates = {item.source_scene_id: item for item in learned.suggestions[0].candidates}
 
-    assert candidates[preferred.source_scene_id].score == preferred.score - 35
+    assert candidates[preferred.source_scene_id].score == pytest.approx(preferred.score - 35)
     assert any(
-        "previously rejected" in reason
-        for reason in candidates[preferred.source_scene_id].reasons
+        "previously rejected" in reason for reason in candidates[preferred.source_scene_id].reasons
     )
     assert learned.source_feedback == ".video-agent/footage-feedback.json"
