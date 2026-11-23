@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -27,11 +27,14 @@ jobs:
         run: ruff check .
       - name: Format check
         run: ruff format --check .
+      - name: Type check
+        run: mypy src/video_edit_agent
       - name: Test with coverage
         run: >-
           pytest
           --cov=video_edit_agent
           --cov-report=term-missing
+          --cov-fail-under=75
           --cov-report=xml:coverage-${{ matrix.python-version }}.xml
       - name: Upload coverage report
         if: always()

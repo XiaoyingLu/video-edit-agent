@@ -23,7 +23,7 @@ For the full workflow, configuration, hosted soundtrack providers, and review st
 
 ### Native Python
 
-Requirements: Python 3.11 or 3.12, FFmpeg/ffprobe, and Ollama (unless using an MLX provider).
+Requirements: Python 3.11, 3.12, or 3.13, FFmpeg/ffprobe, and Ollama (unless using an MLX provider).
 
 ```bash
 python3 -m venv .venv
