@@ -158,7 +158,7 @@ def test_cli_writes_json_and_standalone_html(tmp_path, monkeypatch):
     before, after = _media(tmp_path)
     _mock_tools(monkeypatch, before, after)
     monkeypatch.setattr(
-        "video_edit_agent.cli.rendering.register_artifact",
+        "video_edit_agent.cli.rendering_review.register_artifact",
         lambda *_args, **_kwargs: None,
     )
 

@@ -430,11 +430,11 @@ def test_critique_cli_writes_review_only_report(tmp_path, monkeypatch):
         ],
     )
     monkeypatch.setattr(
-        "video_edit_agent.cli.rendering.critique_rendered_draft",
+        "video_edit_agent.cli.rendering_review.critique_rendered_draft",
         lambda *a, **k: report,
     )
     monkeypatch.setattr(
-        "video_edit_agent.cli.rendering.register_artifact",
+        "video_edit_agent.cli.rendering_review.register_artifact",
         lambda *a, **k: None,
     )
     result = runner.invoke(app, ["critique-draft", str(tmp_path), "--samples", "1"])

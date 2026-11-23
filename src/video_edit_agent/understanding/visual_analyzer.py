@@ -5,10 +5,9 @@ import json
 import math
 from pathlib import Path
 from typing import Any
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
 
 from ..config import get_setting
+from ..editing.ollama_client import ModelClientError, OllamaClient
 from ..resource_manager import ResourceError, ensure_memory_available, required_vision_memory_gb
 
 
@@ -290,14 +289,15 @@ class OllamaVisionAnalyzer:
 
     def __init__(
         self,
-        model: str = "qwen2.5vl:7b",
+        model: str | None = None,
         base_url: str | None = None,
         timeout_seconds: int = 600,
     ) -> None:
-        self.model = model
+        self.model = model or get_setting("OLLAMA_MODEL")
         self.base_url = (base_url or get_setting("OLLAMA_BASE_URL")).rstrip("/")
         self.timeout_seconds = timeout_seconds
         self.keep_alive = get_setting("OLLAMA_KEEP_ALIVE")
+        self.client = OllamaClient(base_url=self.base_url, keep_alive=self.keep_alive)
         self._memory_checked = False
         self._model_used = False
 
@@ -331,50 +331,25 @@ class OllamaVisionAnalyzer:
         previous_error: VisionModelError | None = None
 
         for attempt, prompt in enumerate(prompts):
-            payload = json.dumps(
-                {
-                    "model": self.model,
-                    "keep_alive": self.keep_alive,
-                    "stream": False,
-                    "format": _VISION_RESPONSE_SCHEMA,
-                    "messages": [{"role": "user", "content": prompt, "images": [image]}],
-                    "options": {"temperature": 0, "num_predict": 256 if attempt == 0 else 192},
-                }
-            ).encode("utf-8")
-            request = Request(
-                f"{self.base_url}/api/chat",
-                data=payload,
-                headers={"Content-Type": "application/json"},
-                method="POST",
-            )
             try:
-                with urlopen(request, timeout=self.timeout_seconds) as response:
-                    raw_response = response.read()
-                    self._model_used = True
-                    result = json.loads(raw_response.decode("utf-8"))
-            except HTTPError as exc:
-                detail = exc.read().decode("utf-8", errors="replace")
+                result = self.client.chat_json(
+                    self.model,
+                    [{"role": "user", "content": prompt, "images": [image]}],
+                    _VISION_RESPONSE_SCHEMA,
+                    options={"temperature": 0, "num_predict": 256 if attempt == 0 else 192},
+                    timeout_seconds=self.timeout_seconds,
+                )
+                self._model_used = True
+            except ModelClientError as exc:
+                if attempt == 0 and "invalid structured chat response" in str(exc):
+                    previous_error = VisionModelError(str(exc))
+                    continue
                 raise VisionModelError(
-                    f"Ollama returned HTTP {exc.code}: {detail}. "
-                    f"Check that model '{self.model}' is installed."
-                ) from exc
-            except (URLError, TimeoutError) as exc:
-                raise VisionModelError(
-                    f"Could not reach Ollama at {self.base_url}. Start the Docker service "
-                    "and verify OLLAMA_BASE_URL."
-                ) from exc
-            except (json.JSONDecodeError, UnicodeDecodeError, KeyError, TypeError) as exc:
-                raise VisionModelError("Ollama returned an invalid response envelope.") from exc
-
-            try:
-                content = result["message"]["content"]
-            except (KeyError, TypeError) as exc:
-                raise VisionModelError(
-                    f"Ollama response for {frame_path} did not contain message.content."
+                    f"Ollama vision request failed for {frame_path}: {exc}"
                 ) from exc
 
             try:
-                return _parse_observation(content, frame_path)
+                return _parse_observation(json.dumps(result), frame_path)
             except VisionModelError as exc:
                 if attempt == 0:
                     previous_error = exc
@@ -421,38 +396,19 @@ class OllamaVisionAnalyzer:
             f"Expected editorial role: {expected_role}\n"
             f"Expected shot scale: {expected_scale}"
         )
-        payload = json.dumps(
-            {
-                "model": self.model,
-                "keep_alive": self.keep_alive,
-                "stream": False,
-                "format": _STORYBOARD_MATCH_SCHEMA,
-                "messages": [{"role": "user", "content": prompt, "images": [image]}],
-                "options": {"temperature": 0, "num_predict": 180},
-            }
-        ).encode("utf-8")
-        request = Request(
-            f"{self.base_url}/api/chat",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
         try:
-            with urlopen(request, timeout=self.timeout_seconds) as response:
-                result = json.loads(response.read().decode("utf-8"))
-                self._model_used = True
-            assessment = json.loads(result["message"]["content"])
-        except HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")
+            assessment = self.client.chat_json(
+                self.model,
+                [{"role": "user", "content": prompt, "images": [image]}],
+                _STORYBOARD_MATCH_SCHEMA,
+                options={"temperature": 0, "num_predict": 180},
+                timeout_seconds=self.timeout_seconds,
+            )
+            self._model_used = True
+        except ModelClientError as exc:
             raise VisionModelError(
-                f"Ollama returned HTTP {exc.code} during storyboard comparison: {detail}"
+                f"Ollama storyboard comparison failed at {self.base_url}: {exc}"
             ) from exc
-        except (URLError, TimeoutError, OSError) as exc:
-            raise VisionModelError(
-                f"Could not reach Ollama at {self.base_url} for storyboard comparison."
-            ) from exc
-        except (json.JSONDecodeError, UnicodeDecodeError, KeyError, TypeError) as exc:
-            raise VisionModelError("Ollama returned invalid storyboard comparison JSON.") from exc
 
         if not isinstance(assessment, dict):
             raise VisionModelError("Storyboard comparison must be a JSON object.")
@@ -566,38 +522,19 @@ class OllamaVisionAnalyzer:
             "movement. Changing subjects alone is not camera motion. Do not invent events "
             "between sampled frames. Return concise JSON matching the schema."
         )
-        payload = json.dumps(
-            {
-                "model": self.model,
-                "keep_alive": self.keep_alive,
-                "stream": False,
-                "format": response_schema,
-                "messages": [{"role": "user", "content": prompt, "images": images}],
-                "options": {"temperature": 0, "num_predict": 220},
-            }
-        ).encode("utf-8")
-        request = Request(
-            f"{self.base_url}/api/chat",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
         try:
-            with urlopen(request, timeout=self.timeout_seconds) as response:
-                result = json.loads(response.read().decode("utf-8"))
-                self._model_used = True
-            dynamics = json.loads(result["message"]["content"])
-        except HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")
+            dynamics = self.client.chat_json(
+                self.model,
+                [{"role": "user", "content": prompt, "images": images}],
+                response_schema,
+                options={"temperature": 0, "num_predict": 220},
+                timeout_seconds=self.timeout_seconds,
+            )
+            self._model_used = True
+        except ModelClientError as exc:
             raise VisionModelError(
-                f"Ollama returned HTTP {exc.code} during temporal scene analysis: {detail}"
+                f"Ollama temporal scene analysis failed at {self.base_url}: {exc}"
             ) from exc
-        except (URLError, TimeoutError, OSError) as exc:
-            raise VisionModelError(
-                f"Could not reach Ollama at {self.base_url} for temporal scene analysis."
-            ) from exc
-        except (json.JSONDecodeError, UnicodeDecodeError, KeyError, TypeError) as exc:
-            raise VisionModelError("Ollama returned invalid temporal scene analysis JSON.") from exc
 
         if not isinstance(dynamics, dict):
             raise VisionModelError("Temporal scene analysis must be a JSON object.")
@@ -651,16 +588,13 @@ class OllamaVisionAnalyzer:
         """Ask Ollama to evict this model from VRAM/RAM after the vision phase."""
         if not self._model_used:
             return True
-        payload = json.dumps({"model": self.model, "keep_alive": 0}).encode("utf-8")
-        request = Request(
-            f"{self.base_url}/api/generate",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
         try:
-            with urlopen(request, timeout=min(self.timeout_seconds, 30)):
-                return True
-        except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError):
+            self.client.generate(
+                self.model,
+                timeout_seconds=min(self.timeout_seconds, 30),
+                keep_alive=0,
+            )
+            return True
+        except ModelClientError:
             # A completed analysis must not be discarded just because best-effort eviction failed.
             return False

@@ -326,7 +326,7 @@ def test_render_draft_cli_invokes_approved_renderer(tmp_path, monkeypatch):
         audio_codec="aac",
     )
     monkeypatch.setattr(
-        "video_edit_agent.cli.rendering.render_approved_shot_timeline",
+        "video_edit_agent.cli.rendering_core.render_approved_shot_timeline",
         lambda *args, **kwargs: report,
     )
     result = runner.invoke(app, ["render-draft", str(tmp_path)])
@@ -359,7 +359,9 @@ def test_render_draft_cli_dry_run_reports_preflight_without_rendering(tmp_path, 
         calls.update(kwargs)
         return None
 
-    monkeypatch.setattr("video_edit_agent.cli.rendering.render_approved_shot_timeline", fake_render)
+    monkeypatch.setattr(
+        "video_edit_agent.cli.rendering_core.render_approved_shot_timeline", fake_render
+    )
     result = runner.invoke(app, ["render-draft", str(tmp_path), "--dry-run"])
 
     assert result.exit_code == 0, result.output
@@ -375,7 +377,9 @@ def test_render_draft_cli_applies_preset_and_explicit_overrides(tmp_path, monkey
         calls.update(kwargs)
         return None
 
-    monkeypatch.setattr("video_edit_agent.cli.rendering.render_approved_shot_timeline", fake_render)
+    monkeypatch.setattr(
+        "video_edit_agent.cli.rendering_core.render_approved_shot_timeline", fake_render
+    )
     result = runner.invoke(
         app,
         [
@@ -405,7 +409,9 @@ def test_render_draft_cli_passes_social_output_profile(tmp_path, monkeypatch):
         calls.update(kwargs)
         return None
 
-    monkeypatch.setattr("video_edit_agent.cli.rendering.render_approved_shot_timeline", fake_render)
+    monkeypatch.setattr(
+        "video_edit_agent.cli.rendering_core.render_approved_shot_timeline", fake_render
+    )
     result = runner.invoke(
         app,
         [
@@ -426,7 +432,7 @@ def test_render_draft_cli_passes_social_output_profile(tmp_path, monkeypatch):
 
 def test_render_draft_requires_aspect_ratio_and_resolution_together(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "video_edit_agent.cli.rendering.render_approved_shot_timeline",
+        "video_edit_agent.cli.rendering_core.render_approved_shot_timeline",
         lambda *args, **kwargs: None,
     )
     result = runner.invoke(
@@ -444,7 +450,9 @@ def test_render_social_exports_generates_three_preflights(tmp_path, monkeypatch)
         calls.append(kwargs)
         return None
 
-    monkeypatch.setattr("video_edit_agent.cli.rendering.render_approved_shot_timeline", fake_render)
+    monkeypatch.setattr(
+        "video_edit_agent.cli.rendering_core.render_approved_shot_timeline", fake_render
+    )
     overlay_file = tmp_path / ".video-agent" / "title-overlays.json"
     result = runner.invoke(
         app,
@@ -473,7 +481,9 @@ def test_social_exports_cli_passes_face_reframing_option(tmp_path, monkeypatch):
         calls.append(kwargs)
         return None
 
-    monkeypatch.setattr("video_edit_agent.cli.rendering.render_approved_shot_timeline", fake_render)
+    monkeypatch.setattr(
+        "video_edit_agent.cli.rendering_core.render_approved_shot_timeline", fake_render
+    )
     result = runner.invoke(
         app,
         ["render-social-exports", str(tmp_path), "--dry-run", "--reframe", "face"],
@@ -808,7 +818,9 @@ def test_social_exports_cli_passes_manual_crop_anchors(tmp_path, monkeypatch):
         calls.append(kwargs)
         return None
 
-    monkeypatch.setattr("video_edit_agent.cli.rendering.render_approved_shot_timeline", fake_render)
+    monkeypatch.setattr(
+        "video_edit_agent.cli.rendering_core.render_approved_shot_timeline", fake_render
+    )
     anchor_file = tmp_path / "anchors.json"
     result = runner.invoke(
         app,

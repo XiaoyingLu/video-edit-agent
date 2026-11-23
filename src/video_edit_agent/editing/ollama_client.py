@@ -155,12 +155,21 @@ class OllamaClient:
             },
             timeout_seconds,
         )
+        content = None
         try:
             content = payload["message"]["content"]
-            result = json.loads(content)
+            text = content
+            if isinstance(text, str) and text.strip().startswith("```"):
+                lines = text.strip().splitlines()[1:]
+                if lines and lines[-1].strip() == "```":
+                    lines = lines[:-1]
+                text = "\n".join(lines).strip()
+            result = json.loads(text)
         except (KeyError, TypeError, json.JSONDecodeError) as exc:
+            preview = " ".join(content.split())[:240] if isinstance(content, str) else repr(content)
             raise ModelClientError(
-                f"Ollama returned an invalid structured chat response: {exc}",
+                f"Ollama returned an invalid structured chat response: {exc}. "
+                f"Response preview: {preview!r}",
                 endpoint="/api/chat",
             ) from exc
         if not isinstance(result, dict):

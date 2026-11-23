@@ -28,6 +28,12 @@ mlx = [
   "mlx-vlm>=0.1.0",
 ]
 dev = [
+  "pytest>=9.0.3,<10",
+  "pytest-cov>=5,<7",
+  "ruff>=0.5,<1",
+  "mypy>=1.10,<2",
+  "pip-audit>=2.7,<3",
+  "setuptools>=84.1.0",
   "pytest>=8,<10",
   "pytest-cov>=5,<8",
   "ruff>=0.5,<1",
@@ -38,7 +44,7 @@ dev = [
 video-agent = "video_edit_agent.cli:app"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/video_edit_agent", "src/travel_video_agent"]
+packages = ["src/video_edit_agent"]
 force-include = { "src/video_edit_agent/editing/templates/timeline_visual_review.html" = "video_edit_agent/editing/templates/timeline_visual_review.html" }
 
 [tool.pytest.ini_options]
