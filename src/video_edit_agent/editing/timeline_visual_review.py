@@ -250,6 +250,7 @@ def render_timeline_visual_review_html(
         media_src = (media_sources or {}).get(clip.clip_id, "")
         cards.append(
             f'<article class="clip" data-clip-id="{html.escape(clip.clip_id, quote=True)}" '
+            f'data-has-crop-anchor="{"true" if clip.clip_id in report.crop_anchors else "false"}" '
             f'data-video-src="{html.escape(media_src, quote=True)}" '
             f'data-source-start="{clip.source_start_seconds:.3f}" '
             f'data-source-end="{clip.source_end_seconds:.3f}">'
@@ -462,7 +463,10 @@ for (const card of main.querySelectorAll(".clip")) {{
       preview.style.objectPosition = (x * 100) + "% " + (y * 100) + "%";
       input.nextElementSibling.textContent = Number(input.value).toFixed(2);
     }};
-    input.addEventListener("input", update);
+    input.addEventListener("input", () => {{
+      card.dataset.cropAnchorEdited = "true";
+      update();
+    }});
     update();
   }}
 }}
