@@ -13,7 +13,10 @@ def _timeline_digest(timeline_file: Path) -> str:
 
 
 def _resolve_project_file(root: Path, path: Path, label: str) -> Path:
-    resolved = path.expanduser().resolve()
+    expanded = path.expanduser()
+    if not expanded.is_absolute():
+        expanded = root / expanded
+    resolved = expanded.resolve()
     try:
         resolved.relative_to(root)
     except ValueError as exc:

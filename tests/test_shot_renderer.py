@@ -734,7 +734,13 @@ def test_manual_crop_anchor_template_is_timeline_bound_and_overrides_face(tmp_pa
     document["anchors"] = [{"clip_id": "two", "x": 0.72, "y": 0.38}]
     template.write_text(json.dumps(document), encoding="utf-8")
 
-    anchors = load_crop_anchors(tmp_path, timeline_file, timeline, template)
+    # Relative paths are interpreted from the project root, not the process cwd.
+    anchors = load_crop_anchors(
+        tmp_path,
+        timeline_file,
+        timeline,
+        Path(".video-agent/social-crop-anchors.json"),
+    )
     assert anchors == {"two": (0.72, 0.38)}
 
 
