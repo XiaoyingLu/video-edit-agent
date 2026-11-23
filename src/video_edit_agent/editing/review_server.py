@@ -172,6 +172,226 @@ class _ReviewWorkspaceServer(ThreadingHTTPServer):
     allow_reuse_address = True
 
 
+class _ReviewRequestHandler(SimpleHTTPRequestHandler):
+    server_version = "VideoAgentReview/1.0"
+    sys_version = ""
+
+    def __init__(self, *args, **kwargs):
+        server = args[2]
+        self.root = server.project_root
+        self.token = server.session_token
+        super().__init__(*args, directory=str(self.root), **kwargs)
+
+    def log_message(self, _format, *args):
+        # Do not log request query strings, which may contain the session token.
+        return
+
+    def translate_path(self, path):
+        translated = Path(super().translate_path(path)).resolve()
+        try:
+            relative = translated.relative_to(self.root)
+        except ValueError:
+            return str(self.root / "__video_agent_not_found__")
+        parts = relative.parts
+        if any(part in _BLOCKED_PARTS or part.startswith(".env") for part in parts):
+            return str(self.root / "__video_agent_not_found__")
+        if ".video-agent" not in parts and translated.suffix.lower() not in _MEDIA_SUFFIXES:
+            return str(self.root / "__video_agent_not_found__")
+        return str(translated)
+
+    def do_GET(self):
+        parsed = urlsplit(self.path)
+        if parsed.path in {
+            "/__video_agent__/timeline-edits",
+            "/__video_agent__/timeline-review",
+            "/__video_agent__/crop-anchors",
+        }:
+            self.send_error(405, "Method not allowed")
+            return
+        target = Path(self.translate_path(parsed.path))
+        if target.is_dir():
+            self.send_error(404, "Not found")
+            return
+        if target.is_file() and target.suffix.lower() in {".html", ".htm"}:
+            try:
+                content = target.read_text(encoding="utf-8")
+            except (OSError, UnicodeError):
+                self.send_error(404, "Not found")
+                return
+            if "<title>Visual Timeline Review</title>" in content:
+                content = content.replace("</header>", _SAVE_CONTROLS + "</header>", 1)
+            body = content.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        super().do_GET()
+
+    def do_POST(self):
+        parsed = urlsplit(self.path)
+        if parsed.path not in {
+            "/__video_agent__/timeline-edits",
+            "/__video_agent__/timeline-review",
+            "/__video_agent__/crop-anchors",
+        }:
+            self.send_error(404, "Not found")
+            return
+        expected_host = f"127.0.0.1:{self.server.server_port}"
+        allowed_hosts = {expected_host, f"localhost:{self.server.server_port}"}
+        if self.headers.get("Host", "").lower() not in allowed_hosts:
+            self.send_error(403, "Invalid host")
+            return
+        allowed_origins = {
+            f"http://127.0.0.1:{self.server.server_port}",
+            f"http://localhost:{self.server.server_port}",
+        }
+        if self.headers.get("Origin") not in allowed_origins:
+            self.send_error(403, "Invalid origin")
+            return
+        supplied_token = self.headers.get("X-Video-Agent-Token", "")
+        if not secrets.compare_digest(supplied_token, self.token):
+            self.send_error(403, "Invalid session token")
+            return
+        if self.headers.get_content_type() != "application/json":
+            self.send_error(415, "Expected application/json")
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            self.send_error(400, "Invalid content length")
+            return
+        if length <= 0 or length > 256 * 1024:
+            self.send_error(413, "Request body must be between 1 byte and 256 KiB")
+            return
+        try:
+            payload = json.loads(self.rfile.read(length))
+            if parsed.path == "/__video_agent__/timeline-review":
+                self._save_timeline_review(payload)
+                return
+            if parsed.path == "/__video_agent__/crop-anchors":
+                self._save_crop_anchors(payload)
+                return
+            edits = TimelineVisualEditExport.model_validate(payload)
+            if not edits.clips:
+                raise ValueError("At least one clip is required")
+            ids = [clip.clip_id for clip in edits.clips]
+            if len(ids) != len(set(ids)):
+                raise ValueError("Duplicate clip IDs are not allowed")
+            revision = apply_timeline_visual_edits(self.root, edits)
+        except (ValueError, OSError, TypeError) as exc:
+            self._send_json(400, {"error": str(exc)})
+            return
+        self._send_json(200, {"revision_path": revision.relative_to(self.root).as_posix()})
+
+    def _save_crop_anchors(self, payload):
+        try:
+            if not isinstance(payload, dict) or payload.get("schema_version") != "1.0":
+                raise ValueError("Unsupported crop-anchor schema version")
+            relative = Path(payload.get("timeline_path", ""))
+            if relative.is_absolute() or ".." in relative.parts:
+                raise ValueError("Timeline path must be project-relative")
+            timeline_file = (self.root / relative).resolve()
+            timeline_file.relative_to(self.root)
+            if not timeline_file.is_file() or not validate_artifact(self.root, timeline_file):
+                raise ValueError("Timeline is missing, stale, or untracked")
+            if hashlib.sha256(timeline_file.read_bytes()).hexdigest() != payload.get(
+                "timeline_sha256"
+            ):
+                raise ValueError("Timeline changed after review; reload the review page")
+            destination = save_crop_anchors(
+                self.root, timeline_path=timeline_file, anchors=payload.get("anchors")
+            )
+        except (ValueError, OSError, TypeError) as exc:
+            self._send_json(400, {"error": str(exc)})
+            return
+        self._send_json(
+            200,
+            {
+                "path": destination.relative_to(self.root).as_posix(),
+                "anchor_count": len(payload["anchors"]),
+                "timeline_sha256": hashlib.sha256(timeline_file.read_bytes()).hexdigest(),
+            },
+        )
+
+    def _save_timeline_review(self, payload):
+        try:
+            if payload.get("schema_version") != "1.0":
+                raise ValueError("Unsupported timeline review schema version")
+            relative = Path(payload.get("timeline_path", ""))
+            if relative.is_absolute() or ".." in relative.parts:
+                raise ValueError("Timeline path must be project-relative")
+            timeline_file = (self.root / relative).resolve()
+            timeline_file.relative_to(self.root)
+            if not timeline_file.is_file() or not validate_artifact(self.root, timeline_file):
+                raise ValueError("Timeline is missing, stale, or untracked")
+            if hashlib.sha256(timeline_file.read_bytes()).hexdigest() != payload.get(
+                "timeline_sha256"
+            ):
+                raise ValueError("Timeline changed after review; reload the review page")
+            timeline = ProjectDraftTimeline.model_validate_json(
+                timeline_file.read_text(encoding="utf-8")
+            )
+            if Path(timeline.project_path).resolve() != self.root:
+                raise ValueError("Timeline belongs to a different project folder")
+            decisions = payload.get("decisions")
+            if not isinstance(decisions, dict) or set(decisions) != {
+                c.clip_id for c in timeline.clips
+            }:
+                raise ValueError("Decisions must include every timeline clip exactly once")
+            if any(
+                value not in {"approved", "rejected", "pending"} for value in decisions.values()
+            ):
+                raise ValueError("Decisions must be approved, rejected, or pending")
+            updated = apply_timeline_review(
+                timeline,
+                {key for key, value in decisions.items() if value == "approved"},
+                {key for key, value in decisions.items() if value == "rejected"},
+            )
+            approve = payload.get("approve_timeline") is True
+            for clip in updated.clips:
+                if decisions[clip.clip_id] == "pending":
+                    clip.decision = "pending"
+            pending = sum(c.decision == "pending" for c in updated.clips)
+            approved = sum(c.decision == "approved" for c in updated.clips)
+            rejected = sum(c.decision == "rejected" for c in updated.clips)
+            if approve and (pending or not approved):
+                raise ValueError(
+                    "Resolve every clip and approve at least one before approving the timeline"
+                )
+            updated.timeline_approved = approve
+            updated = ProjectDraftTimeline.model_validate(updated.model_dump())
+            save_draft_timeline(updated, timeline_file)
+        except (ValueError, OSError, TypeError) as exc:
+            self._send_json(400, {"error": str(exc)})
+            return
+        self._send_json(
+            200,
+            {
+                "timeline_path": relative.as_posix(),
+                "timeline_approved": approve,
+                "approved_count": approved,
+                "rejected_count": rejected,
+                "pending_count": pending,
+                "timeline_sha256": hashlib.sha256(timeline_file.read_bytes()).hexdigest(),
+            },
+        )
+
+    def _send_json(self, status: int, payload: dict):
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.end_headers()
+        self.wfile.write(body)
+
+
+
 def create_review_server(
     folder: Path, *, host: str = "127.0.0.1", port: int = 0
 ) -> ThreadingHTTPServer:
@@ -181,224 +401,7 @@ def create_review_server(
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise NotADirectoryError(f"Project folder does not exist: {root}")
-    token = secrets.token_urlsafe(32)
-
-    class Handler(SimpleHTTPRequestHandler):
-        server_version = "VideoAgentReview/1.0"
-        sys_version = ""
-
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, directory=str(root), **kwargs)
-
-        def log_message(self, _format, *args):
-            # Do not log request query strings, which may contain the session token.
-            return
-
-        def translate_path(self, path):
-            translated = Path(super().translate_path(path)).resolve()
-            try:
-                relative = translated.relative_to(root)
-            except ValueError:
-                return str(root / "__video_agent_not_found__")
-            parts = relative.parts
-            if any(part in _BLOCKED_PARTS or part.startswith(".env") for part in parts):
-                return str(root / "__video_agent_not_found__")
-            if ".video-agent" not in parts and translated.suffix.lower() not in _MEDIA_SUFFIXES:
-                return str(root / "__video_agent_not_found__")
-            return str(translated)
-
-        def do_GET(self):
-            parsed = urlsplit(self.path)
-            if parsed.path in {
-                "/__video_agent__/timeline-edits",
-                "/__video_agent__/timeline-review",
-                "/__video_agent__/crop-anchors",
-            }:
-                self.send_error(405, "Method not allowed")
-                return
-            target = Path(self.translate_path(parsed.path))
-            if target.is_dir():
-                self.send_error(404, "Not found")
-                return
-            if target.is_file() and target.suffix.lower() in {".html", ".htm"}:
-                try:
-                    content = target.read_text(encoding="utf-8")
-                except (OSError, UnicodeError):
-                    self.send_error(404, "Not found")
-                    return
-                if "<title>Visual Timeline Review</title>" in content:
-                    content = content.replace("</header>", _SAVE_CONTROLS + "</header>", 1)
-                body = content.encode("utf-8")
-                self.send_response(200)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
-                self.send_header("Content-Length", str(len(body)))
-                self.send_header("Cache-Control", "no-store")
-                self.send_header("X-Content-Type-Options", "nosniff")
-                self.end_headers()
-                self.wfile.write(body)
-                return
-            super().do_GET()
-
-        def do_POST(self):
-            parsed = urlsplit(self.path)
-            if parsed.path not in {
-                "/__video_agent__/timeline-edits",
-                "/__video_agent__/timeline-review",
-                "/__video_agent__/crop-anchors",
-            }:
-                self.send_error(404, "Not found")
-                return
-            expected_host = f"127.0.0.1:{self.server.server_port}"
-            allowed_hosts = {expected_host, f"localhost:{self.server.server_port}"}
-            if self.headers.get("Host", "").lower() not in allowed_hosts:
-                self.send_error(403, "Invalid host")
-                return
-            allowed_origins = {
-                f"http://127.0.0.1:{self.server.server_port}",
-                f"http://localhost:{self.server.server_port}",
-            }
-            if self.headers.get("Origin") not in allowed_origins:
-                self.send_error(403, "Invalid origin")
-                return
-            supplied_token = self.headers.get("X-Video-Agent-Token", "")
-            if not secrets.compare_digest(supplied_token, token):
-                self.send_error(403, "Invalid session token")
-                return
-            if self.headers.get_content_type() != "application/json":
-                self.send_error(415, "Expected application/json")
-                return
-            try:
-                length = int(self.headers.get("Content-Length", "0"))
-            except ValueError:
-                self.send_error(400, "Invalid content length")
-                return
-            if length <= 0 or length > 256 * 1024:
-                self.send_error(413, "Request body must be between 1 byte and 256 KiB")
-                return
-            try:
-                payload = json.loads(self.rfile.read(length))
-                if parsed.path == "/__video_agent__/timeline-review":
-                    self._save_timeline_review(payload)
-                    return
-                if parsed.path == "/__video_agent__/crop-anchors":
-                    self._save_crop_anchors(payload)
-                    return
-                edits = TimelineVisualEditExport.model_validate(payload)
-                if not edits.clips:
-                    raise ValueError("At least one clip is required")
-                ids = [clip.clip_id for clip in edits.clips]
-                if len(ids) != len(set(ids)):
-                    raise ValueError("Duplicate clip IDs are not allowed")
-                revision = apply_timeline_visual_edits(root, edits)
-            except (ValueError, OSError, TypeError) as exc:
-                self._send_json(400, {"error": str(exc)})
-                return
-            self._send_json(200, {"revision_path": revision.relative_to(root).as_posix()})
-
-        def _save_crop_anchors(self, payload):
-            try:
-                if not isinstance(payload, dict) or payload.get("schema_version") != "1.0":
-                    raise ValueError("Unsupported crop-anchor schema version")
-                relative = Path(payload.get("timeline_path", ""))
-                if relative.is_absolute() or ".." in relative.parts:
-                    raise ValueError("Timeline path must be project-relative")
-                timeline_file = (root / relative).resolve()
-                timeline_file.relative_to(root)
-                if not timeline_file.is_file() or not validate_artifact(root, timeline_file):
-                    raise ValueError("Timeline is missing, stale, or untracked")
-                if hashlib.sha256(timeline_file.read_bytes()).hexdigest() != payload.get(
-                    "timeline_sha256"
-                ):
-                    raise ValueError("Timeline changed after review; reload the review page")
-                destination = save_crop_anchors(
-                    root, timeline_path=timeline_file, anchors=payload.get("anchors")
-                )
-            except (ValueError, OSError, TypeError) as exc:
-                self._send_json(400, {"error": str(exc)})
-                return
-            self._send_json(
-                200,
-                {
-                    "path": destination.relative_to(root).as_posix(),
-                    "anchor_count": len(payload["anchors"]),
-                    "timeline_sha256": hashlib.sha256(timeline_file.read_bytes()).hexdigest(),
-                },
-            )
-
-        def _save_timeline_review(self, payload):
-            try:
-                if payload.get("schema_version") != "1.0":
-                    raise ValueError("Unsupported timeline review schema version")
-                relative = Path(payload.get("timeline_path", ""))
-                if relative.is_absolute() or ".." in relative.parts:
-                    raise ValueError("Timeline path must be project-relative")
-                timeline_file = (root / relative).resolve()
-                timeline_file.relative_to(root)
-                if not timeline_file.is_file() or not validate_artifact(root, timeline_file):
-                    raise ValueError("Timeline is missing, stale, or untracked")
-                if hashlib.sha256(timeline_file.read_bytes()).hexdigest() != payload.get(
-                    "timeline_sha256"
-                ):
-                    raise ValueError("Timeline changed after review; reload the review page")
-                timeline = ProjectDraftTimeline.model_validate_json(
-                    timeline_file.read_text(encoding="utf-8")
-                )
-                if Path(timeline.project_path).resolve() != root:
-                    raise ValueError("Timeline belongs to a different project folder")
-                decisions = payload.get("decisions")
-                if not isinstance(decisions, dict) or set(decisions) != {
-                    c.clip_id for c in timeline.clips
-                }:
-                    raise ValueError("Decisions must include every timeline clip exactly once")
-                if any(
-                    value not in {"approved", "rejected", "pending"} for value in decisions.values()
-                ):
-                    raise ValueError("Decisions must be approved, rejected, or pending")
-                updated = apply_timeline_review(
-                    timeline,
-                    {key for key, value in decisions.items() if value == "approved"},
-                    {key for key, value in decisions.items() if value == "rejected"},
-                )
-                approve = payload.get("approve_timeline") is True
-                for clip in updated.clips:
-                    if decisions[clip.clip_id] == "pending":
-                        clip.decision = "pending"
-                pending = sum(c.decision == "pending" for c in updated.clips)
-                approved = sum(c.decision == "approved" for c in updated.clips)
-                rejected = sum(c.decision == "rejected" for c in updated.clips)
-                if approve and (pending or not approved):
-                    raise ValueError(
-                        "Resolve every clip and approve at least one before approving the timeline"
-                    )
-                updated.timeline_approved = approve
-                updated = ProjectDraftTimeline.model_validate(updated.model_dump())
-                save_draft_timeline(updated, timeline_file)
-            except (ValueError, OSError, TypeError) as exc:
-                self._send_json(400, {"error": str(exc)})
-                return
-            self._send_json(
-                200,
-                {
-                    "timeline_path": relative.as_posix(),
-                    "timeline_approved": approve,
-                    "approved_count": approved,
-                    "rejected_count": rejected,
-                    "pending_count": pending,
-                    "timeline_sha256": hashlib.sha256(timeline_file.read_bytes()).hexdigest(),
-                },
-            )
-
-        def _send_json(self, status: int, payload: dict):
-            body = json.dumps(payload).encode("utf-8")
-            self.send_response(status)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Content-Length", str(len(body)))
-            self.send_header("Cache-Control", "no-store")
-            self.send_header("X-Content-Type-Options", "nosniff")
-            self.end_headers()
-            self.wfile.write(body)
-
-    server = _ReviewWorkspaceServer((host, port), Handler)
-    server.session_token = token
+    server = _ReviewWorkspaceServer((host, port), _ReviewRequestHandler)
+    server.session_token = secrets.token_urlsafe(32)
     server.project_root = root
     return server

@@ -213,304 +213,102 @@ def build_timeline_visual_review(
     )
 
 
+def _render_timeline_review_card(
+    clip: TimelineVisualReviewClip,
+    report: TimelineVisualReviewReport,
+    media_sources: dict[str, str] | None,
+) -> str:
+    """Render one escaped clip card for the offline review page."""
+    image = clip.frame_data_uri
+    anchor_x, anchor_y = report.crop_anchors.get(clip.clip_id, (0.5, 0.5))
+    details = [
+        ("Scene", clip.scene_summary or "Not available"),
+        ("Action", clip.temporal_summary or "Not available"),
+        ("Editorial role", f"{clip.visual_role} · {clip.shot_scale} · {clip.mood}"),
+        ("Sequence rationale", clip.sequence_reason),
+        ("Continuity", clip.continuity_note),
+        ("Pacing", clip.pacing_note),
+        ("Music", f"{clip.music_energy} · {clip.music_pacing_note}"),
+        ("Incoming transition", f"{clip.transition_in} · {clip.transition_duration_seconds:.2f}s"),
+        ("Transcript", clip.transcript_excerpt or "Not available"),
+    ]
+    detail_html = "".join(
+        f"<p><strong>{html.escape(label)}:</strong> {html.escape(value)}</p>"
+        for label, value in details
+    )
+    media_src = (media_sources or {}).get(clip.clip_id, "")
+    approved_checked = "checked" if clip.decision == "approved" else ""
+    rejected_checked = "checked" if clip.decision == "rejected" else ""
+    pending_checked = "checked" if clip.decision == "pending" else ""
+    has_crop_anchor = "true" if clip.clip_id in report.crop_anchors else "false"
+    return (
+        f'<article class="clip" data-clip-id="{html.escape(clip.clip_id, quote=True)}" '
+        f'data-has-crop-anchor="{has_crop_anchor}" '
+        f'data-video-src="{html.escape(media_src, quote=True)}" '
+        f'data-source-start="{clip.source_start_seconds:.3f}" '
+        f'data-source-end="{clip.source_end_seconds:.3f}">'
+        f'<div class="image"><img src="{image}" alt="Representative frame for '
+        f'{html.escape(clip.clip_id, quote=True)}"></div>'
+        f'<div class="body"><section class="crop-editor" '
+        f'aria-label="Vertical crop for {html.escape(clip.clip_id, quote=True)}">'
+        f'<div class="crop-preview"><img class="crop-preview-image" '
+        f'src="{image}" alt="Vertical crop preview"></div>'
+        f'<label>Horizontal focal point <input class="crop-anchor" '
+        f'data-axis="x" type="range" min="0" max="1" step="0.01" '
+        f'value="{anchor_x:.2f}"> <output>{anchor_x:.2f}</output></label>'
+        f'<label>Vertical focal point <input class="crop-anchor" '
+        f'data-axis="y" type="range" min="0" max="1" step="0.01" '
+        f'value="{anchor_y:.2f}"> <output>{anchor_y:.2f}</output></label>'
+        f'</section><div class="heading"><h2>{clip.sequence_index}. '
+        f'{html.escape(clip.clip_id)}</h2><span class="duration">'
+        f"{clip.duration_seconds:.2f}s</span></div>"
+        f'<p class="source">{html.escape(clip.video_path)} · source '
+        f"{clip.source_start_seconds:.2f}–{clip.source_end_seconds:.2f}s</p>"
+        f'<div class="trim"><label>In (s) <input class="trim-start" type="number" '
+        f'min="{clip.source_start_seconds:.3f}" max="{clip.source_end_seconds - 1:.3f}" '
+        f'step="0.1" value="{clip.source_start_seconds:.3f}"></label>'
+        f'<label>Out (s) <input class="trim-end" type="number" '
+        f'min="{clip.source_start_seconds + 1:.3f}" max="{clip.source_end_seconds:.3f}" '
+        f'step="0.1" value="{clip.source_end_seconds:.3f}"></label></div>'
+        f"{detail_html}<fieldset><legend>Decision</legend>"
+        f'<label><input type="radio" name="decision-{clip.sequence_index}" value="approved" '
+        f"{approved_checked}> Approve</label>"
+        f'<label><input type="radio" name="decision-{clip.sequence_index}" value="rejected" '
+        f"{rejected_checked}> Reject</label>"
+        f'<label><input type="radio" name="decision-{clip.sequence_index}" value="pending" '
+        f"{pending_checked}> Skip / pending</label>"
+        f"</fieldset></div></article>"
+    )
+
+
 def render_timeline_visual_review_html(
     report: TimelineVisualReviewReport,
     *,
     media_sources: dict[str, str] | None = None,
 ) -> str:
-    """Render an offline review page with a browser preview and export controls."""
-    payload = report.model_dump(mode="json")
-    payload_json = json.dumps(payload, ensure_ascii=True).replace("<", "\\u003c")
+    """Render the offline timeline review using a separately maintained HTML template."""
+    payload_json = json.dumps(report.model_dump(mode="json"), ensure_ascii=True).replace(
+        "<", "\\u003c"
+    )
     crop_warning_html = (
         f'<p role="status">Existing crop anchors were not loaded: '
         f"{html.escape(report.crop_anchor_warning)}</p>"
         if report.crop_anchor_warning
         else ""
     )
-    cards = []
-    for clip in report.clips:
-        image = clip.frame_data_uri
-        anchor_x, anchor_y = report.crop_anchors.get(clip.clip_id, (0.5, 0.5))
-        details = [
-            ("Scene", clip.scene_summary or "Not available"),
-            ("Action", clip.temporal_summary or "Not available"),
-            ("Editorial role", f"{clip.visual_role} · {clip.shot_scale} · {clip.mood}"),
-            ("Sequence rationale", clip.sequence_reason),
-            ("Continuity", clip.continuity_note),
-            ("Pacing", clip.pacing_note),
-            ("Music", f"{clip.music_energy} · {clip.music_pacing_note}"),
-            (
-                "Incoming transition",
-                f"{clip.transition_in} · {clip.transition_duration_seconds:.2f}s",
-            ),
-            ("Transcript", clip.transcript_excerpt or "Not available"),
-        ]
-        detail_html = "".join(
-            f"<p><strong>{html.escape(label)}:</strong> {html.escape(value)}</p>"
-            for label, value in details
-        )
-        media_src = (media_sources or {}).get(clip.clip_id, "")
-        cards.append(
-            f'<article class="clip" data-clip-id="{html.escape(clip.clip_id, quote=True)}" '
-            f'data-has-crop-anchor="{"true" if clip.clip_id in report.crop_anchors else "false"}" '
-            f'data-video-src="{html.escape(media_src, quote=True)}" '
-            f'data-source-start="{clip.source_start_seconds:.3f}" '
-            f'data-source-end="{clip.source_end_seconds:.3f}">'
-            f'<div class="image"><img src="{image}" alt="Representative frame for '
-            f'{html.escape(clip.clip_id, quote=True)}"></div>'
-            f'<div class="body"><section class="crop-editor" '
-            f'aria-label="Vertical crop for {html.escape(clip.clip_id, quote=True)}">'
-            f'<div class="crop-preview"><img class="crop-preview-image" '
-            f'src="{image}" alt="Vertical crop preview"></div>'
-            f'<label>Horizontal focal point <input class="crop-anchor" '
-            f'data-axis="x" type="range" min="0" max="1" step="0.01" '
-            f'value="{anchor_x:.2f}"> <output>{anchor_x:.2f}</output></label>'
-            f'<label>Vertical focal point <input class="crop-anchor" '
-            f'data-axis="y" type="range" min="0" max="1" step="0.01" '
-            f'value="{anchor_y:.2f}"> <output>{anchor_y:.2f}</output></label>'
-            f'</section><div class="heading"><h2>{clip.sequence_index}. '
-            f'{html.escape(clip.clip_id)}</h2><span class="duration">'
-            f"{clip.duration_seconds:.2f}s</span></div>"
-            f'<p class="source">{html.escape(clip.video_path)} · source '
-            f"{clip.source_start_seconds:.2f}–{clip.source_end_seconds:.2f}s</p>"
-            f'<div class="trim"><label>In (s) <input class="trim-start" type="number" '
-            f'min="{clip.source_start_seconds:.3f}" max="{clip.source_end_seconds - 1:.3f}" '
-            f'step="0.1" value="{clip.source_start_seconds:.3f}"></label>'
-            f'<label>Out (s) <input class="trim-end" type="number" '
-            f'min="{clip.source_start_seconds + 1:.3f}" max="{clip.source_end_seconds:.3f}" '
-            f'step="0.1" value="{clip.source_end_seconds:.3f}"></label></div>'
-            f"{detail_html}<fieldset><legend>Decision</legend>"
-            f'<label><input type="radio" name="decision-{clip.sequence_index}" value="approved" '
-            f"{'checked' if clip.decision == 'approved' else ''}> Approve</label>"
-            f'<label><input type="radio" name="decision-{clip.sequence_index}" value="rejected" '
-            f"{'checked' if clip.decision == 'rejected' else ''}> Reject</label>"
-            f'<label><input type="radio" name="decision-{clip.sequence_index}" value="pending" '
-            f"{'checked' if clip.decision == 'pending' else ''}> Skip / pending</label>"
-            f"</fieldset></div></article>"
-        )
-    return f"""<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Visual Timeline Review</title>
-<style>
-:root {{ color-scheme: light dark; font-family:system-ui,sans-serif; }}
-body {{ max-width:1200px; margin:2rem auto; padding:0 1rem; }}
-header {{ position:sticky; top:0; z-index:2; padding:1rem; background:Canvas;
-          border-bottom:1px solid #8886; }}
-.clip {{ display:grid; grid-template-columns:minmax(240px,40%) 1fr; gap:1rem;
-         padding:1.25rem 0; border-bottom:1px solid #8886; }}
-.clip.dragging {{ opacity:.45; }} .clip.drag-over {{ outline:2px dashed #888; }}
-.image img {{ width:100%; height:auto; display:block; border-radius:8px; }}
-.crop-editor {{ display:grid; grid-template-columns:100px 1fr; gap:.65rem;
-               align-items:center; margin-top:.8rem; }}
-.crop-preview {{ width:100px; aspect-ratio:9/16; overflow:hidden;
-                 border-radius:8px; background:#111; }}
-.crop-preview img {{ width:100%; height:100%; object-fit:cover; }}
-.crop-editor label {{ display:grid; grid-template-columns:1fr auto; gap:.4rem; font-size:.9rem; }}
-.crop-editor input {{ grid-column:1 / -1; width:100%; }}
-.trim {{ display:flex; flex-wrap:wrap; gap:1rem; margin:.8rem 0; }}
-.trim input {{ width:7rem; padding:.35rem; }} .clip {{ cursor:grab; }}
-.heading {{ display:flex; justify-content:space-between; gap:1rem; align-items:baseline; }}
-h2 {{ margin:.2rem 0; }} p {{ margin:.45rem 0; }}
-.source {{ color:GrayText; overflow-wrap:anywhere; }}
-fieldset {{ display:flex; flex-wrap:wrap; gap:1rem; border:1px solid #8886;
-            border-radius:8px; margin-top:1rem; }}
-button {{ padding:.65rem 1rem; cursor:pointer; }} .duration {{ font-variant-numeric:tabular-nums; }}
-.player {{ margin:1rem 0; max-width:900px; }}
-.player video {{ display:block; width:100%; max-height:65vh; background:#111; border-radius:8px; }}
-.player-controls {{ display:flex; flex-wrap:wrap; align-items:center;
-                   gap:.5rem; margin-top:.6rem; }}
-#playback-status {{ color:GrayText; }}
-@media(max-width:700px) {{ .clip {{ grid-template-columns:1fr; }} header {{ position:static; }} }}
-</style></head><body>
-<header><h1>Visual Timeline Review</h1>
-<p>{len(report.clips)} shots · {report.proposed_duration_seconds:.2f}s proposed ·
-{report.target_duration_seconds:.2f}s target</p>
-{crop_warning_html}
-<p>Preview the proposed sequence below. Playback follows the current card order and trim
-points; transitions are represented as cuts. Drag shots to reorder them or adjust source in/out
-points. Changes remain proposals until imported with the CLI.</p>
-<section class="player">
-  <video id="sequence-preview" controls playsinline preload="metadata"></video>
-  <div class="player-controls">
-    <button id="play-sequence">Play sequence</button>
-    <button id="previous-clip">Previous shot</button>
-    <button id="next-clip">Next shot</button>
-    <span id="playback-status" aria-live="polite">Ready to preview</span>
-  </div>
-</section>
-<button id="export">Export visual edits (.json)</button>
-<button id="export-decisions">Export review decisions (.json)</button>
-<span id="status" aria-live="polite"></span></header>
-<main>{"".join(cards) if cards else "<p>No clips are present in this timeline.</p>"}</main>
-<script>
-const report = {payload_json};
-const main = document.querySelector("main");
-let dragged = null;
-const player = document.getElementById("sequence-preview");
-const playbackStatus = document.getElementById("playback-status");
-let playbackIndex = -1;
-let sequencePlaying = false;
-let clipEndedHandler = null;
-function orderedCards() {{ return Array.from(main.querySelectorAll(".clip")); }}
-function currentBounds(card) {{
-  return {{
-    start: Number(card.querySelector(".trim-start").value),
-    end: Number(card.querySelector(".trim-end").value)
-  }};
-}}
-function stopSequence() {{
-  sequencePlaying = false;
-  if (clipEndedHandler) player.removeEventListener("ended", clipEndedHandler);
-  clipEndedHandler = null;
-  player.pause();
-}}
-function loadPreviewClip(index, autoplay) {{
-  const cards = orderedCards();
-  if (index < 0 || index >= cards.length) {{
-    stopSequence();
-    playbackIndex = -1;
-    playbackStatus.textContent = "Sequence preview finished";
-    return;
-  }}
-  const card = cards[index];
-  const source = card.dataset.videoSrc;
-  if (!source) {{
-    stopSequence();
-    playbackStatus.textContent = "Preview media path unavailable; regenerate the review page.";
-    return;
-  }}
-  const bounds = currentBounds(card);
-  playbackIndex = index;
-  player.pause();
-  player.src = source;
-  player.load();
-  playbackStatus.textContent = "Shot " + (index + 1) + " of " + cards.length;
-  player.onloadedmetadata = () => {{
-    player.currentTime = Math.max(0, bounds.start);
-    if (autoplay) {{
-      const playResult = player.play();
-      if (playResult && playResult.catch) {{
-        playResult.catch(() => {{
-          playbackStatus.textContent = "Playback was blocked; press Play on the video controls.";
-        }});
-      }}
-    }}
-  }};
-  player.onerror = () => {{
-    playbackStatus.textContent = "Could not load this source video in the browser.";
-  }};
-  if (clipEndedHandler) player.removeEventListener("ended", clipEndedHandler);
-  clipEndedHandler = () => {{
-    if (sequencePlaying) {{
-      loadPreviewClip(playbackIndex + 1, true);
-    }} else {{
-      playbackStatus.textContent = "Shot preview finished";
-    }}
-  }};
-  player.addEventListener("ended", clipEndedHandler);
-}}
-player.addEventListener("timeupdate", () => {{
-  if (playbackIndex < 0) return;
-  const card = orderedCards()[playbackIndex];
-  if (!card) return;
-  if (player.currentTime >= currentBounds(card).end - 0.04) {{
-    if (sequencePlaying) {{
-      loadPreviewClip(playbackIndex + 1, true);
-    }} else {{
-      player.pause();
-      playbackStatus.textContent = "Shot preview finished";
-    }}
-  }}
-}});
-document.getElementById("play-sequence").addEventListener("click", () => {{
-  const cards = orderedCards();
-  if (!cards.length) return;
-  sequencePlaying = true;
-  loadPreviewClip(playbackIndex >= 0 ? playbackIndex : 0, true);
-}});
-document.getElementById("previous-clip").addEventListener("click", () => {{
-  stopSequence();
-  loadPreviewClip(Math.max(0, playbackIndex - 1), false);
-}});
-document.getElementById("next-clip").addEventListener("click", () => {{
-  stopSequence();
-  loadPreviewClip(playbackIndex + 1, false);
-}});
-for (const card of main.querySelectorAll(".clip")) {{
-  card.draggable = true;
-  card.addEventListener("dragstart", () => {{ dragged = card; card.classList.add("dragging"); }});
-  card.addEventListener("dragend", () => {{
-    card.classList.remove("dragging");
-    for (const item of main.querySelectorAll(".clip")) item.classList.remove("drag-over");
-  }});
-  card.addEventListener("dragover", event => {{
-    event.preventDefault();
-    if (dragged && dragged !== card) card.classList.add("drag-over");
-  }});
-  card.addEventListener("dragleave", () => card.classList.remove("drag-over"));
-  card.addEventListener("drop", event => {{
-    event.preventDefault();
-    if (!dragged || dragged === card) return;
-    const bounds = card.getBoundingClientRect();
-    stopSequence();
-    main.insertBefore(
-      dragged, event.clientY < bounds.top + bounds.height / 2 ? card : card.nextSibling
-    );
-    card.classList.remove("drag-over");
-    Array.from(main.querySelectorAll(".clip")).forEach((item, index) => {{
-      item.querySelector("h2").textContent = (index + 1) + ". " + item.dataset.clipId;
-    }});
-  }});
-}}
-for (const card of main.querySelectorAll(".clip")) {{
-  const preview = card.querySelector(".crop-preview-image");
-  for (const input of card.querySelectorAll(".crop-anchor")) {{
-    const update = () => {{
-      const x = Number(card.querySelector('.crop-anchor[data-axis="x"]').value);
-      const y = Number(card.querySelector('.crop-anchor[data-axis="y"]').value);
-      preview.style.objectPosition = (x * 100) + "% " + (y * 100) + "%";
-      input.nextElementSibling.textContent = Number(input.value).toFixed(2);
-    }};
-    input.addEventListener("input", () => {{
-      card.dataset.cropAnchorEdited = "true";
-      update();
-    }});
-    update();
-  }}
-}}
-function downloadJson(payload, filename) {{
-  const blob = new Blob([JSON.stringify(payload, null, 2) + "\\n"], {{type:"application/json"}});
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-}}
-document.getElementById("export").addEventListener("click", () => {{
-  const clips = Array.from(main.querySelectorAll(".clip")).map(card => ({{
-    clip_id: card.dataset.clipId,
-    source_start_seconds: Number(card.querySelector(".trim-start").value),
-    source_end_seconds: Number(card.querySelector(".trim-end").value)
-  }}));
-  downloadJson({{schema_version:"1.0", timeline_path:report.timeline_path,
-    timeline_sha256:report.timeline_sha256, clips}}, "timeline-visual-edits.json");
-  document.getElementById("status").textContent = " Visual edit proposal exported.";
-}});
-document.getElementById("export-decisions").addEventListener("click", () => {{
-  const decisions = {{}};
-  for (const clip of report.clips) {{
-    const selected = document.querySelector(
-      'input[name="decision-' + clip.sequence_index + '"]:checked'
-    );
-    decisions[clip.clip_id] = selected ? selected.value : "pending";
-  }}
-  downloadJson({{schema_version:"1.0", timeline_path:report.timeline_path,
-    timeline_sha256:report.timeline_sha256, decisions}}, "timeline-review-decisions.json");
-  document.getElementById("status").textContent = " Review decisions exported.";
-}});
-</script></body></html>"""
+    cards_html = "".join(
+        _render_timeline_review_card(clip, report, media_sources) for clip in report.clips
+    )
+    template_path = Path(__file__).with_name("templates") / "timeline_visual_review.html"
+    template = template_path.read_text(encoding="utf-8")
+    return (
+        template.replace("__CLIP_COUNT__", str(len(report.clips)))
+        .replace("__PROPOSED_DURATION__", f"{report.proposed_duration_seconds:.2f}")
+        .replace("__TARGET_DURATION__", f"{report.target_duration_seconds:.2f}")
+        .replace("__CROP_WARNING_HTML__", crop_warning_html)
+        .replace("__CLIP_CARDS__", cards_html or "<p>No clips are present in this timeline.</p>")
+        .replace("__PAYLOAD_JSON__", payload_json)
+    )
 
 
 def save_timeline_visual_review(

@@ -335,79 +335,12 @@ def _continuity_guidance(clip, previous) -> str:
     return "No strong continuity conflict was detected from the available scene metadata."
 
 
-def build_draft_timeline(
-    folder: Path,
-    selection_path: Path | None = None,
-    plan_path: Path | None = None,
-    music_analysis_path: Path | None = None,
-) -> ProjectDraftTimeline:
-    """Convert selected footage into an ordered, review-only shot timeline.
-
-    Clip source intervals are preserved exactly. Ordering, transitions, and pacing
-    are deterministic recommendations; this function never edits source files or
-    writes the renderer's timeline.json.
-    """
-    root = folder.expanduser().resolve()
-    artifact_dir = root / ".video-agent"
-    selection_file = (
-        (selection_path or artifact_dir / "draft-selection.json").expanduser().resolve()
-    )
-    plan_file = (plan_path or artifact_dir / "editing-plan.json").expanduser().resolve()
-    if not selection_file.is_file():
-        raise FileNotFoundError(f"Missing {selection_file}; run 'video-agent draft-edit' first.")
-    if not plan_file.is_file():
-        raise FileNotFoundError(f"Missing {plan_file}; run 'video-agent plan' first.")
-
-    validate_artifact(root, selection_file)
-    validate_artifact(root, plan_file)
-    selection = ProjectDraftSelection.model_validate_json(
-        selection_file.read_text(encoding="utf-8")
-    )
-    plan = EditingPlan.model_validate_json(plan_file.read_text(encoding="utf-8"))
-    music_file = (
-        (music_analysis_path or artifact_dir / "music-analysis.json").expanduser().resolve()
-        if music_analysis_path is not None
-        else None
-    )
-    music_analysis = None
-    if music_file is not None:
-        if not music_file.is_file():
-            raise FileNotFoundError(f"Music analysis not found: {music_file}")
-        if music_file in {selection_file, plan_file}:
-            raise ValueError("music analysis cannot overwrite or alias another input artifact")
-        validate_artifact(root, music_file)
-        music_analysis = MusicAnalysis.model_validate_json(music_file.read_text(encoding="utf-8"))
-        if Path(music_analysis.project_path).resolve() != root:
-            raise ValueError("music analysis belongs to a different project folder")
-        try:
-            music_file.relative_to(root)
-        except ValueError as exc:
-            raise ValueError("music analysis must be inside the project folder") from exc
-        soundtrack = Path(music_analysis.music_path)
-        if not soundtrack.is_absolute():
-            soundtrack = root / soundtrack
-        if not soundtrack.is_file():
-            raise FileNotFoundError(
-                f"Soundtrack referenced by music analysis is missing: {soundtrack}"
-            )
-    if Path(selection.project_path).resolve() != root:
-        raise ValueError("draft selection belongs to a different project folder")
-
-    selected = [clip for clip in selection.clips if clip.selected]
-    if "chronological_story" in plan.priorities or plan.style in {"vlog", "documentary"}:
-        selected.sort(key=lambda clip: (clip.video_path, clip.source_start_seconds))
-    else:
-        # Start from the relevance ranking, then apply a metadata-aware visual arc.
-        selected.sort(
-            key=lambda clip: (
-                -clip.combined_score,
-                clip.video_path,
-                clip.source_start_seconds,
-            )
-        )
-        if plan.style in {"cinematic", "social_media"}:
-            selected = _cinematic_order(selected)
-
+def _build_timeline_clips(
+    selected: list,
+    plan: EditingPlan,
+    music_analysis: MusicAnalysis | None,
+) -> list[DraftTimelineClip]:
+    """Apply deterministic pacing, transition, continuity, and music guidance to selections."""
     timeline_clips: list[DraftTimelineClip] = []
     previous_duration: float | None = None
     elapsed_seconds = 0.0
@@ -524,6 +457,85 @@ def build_draft_timeline(
         )
         previous_duration = clip.duration_seconds
         elapsed_seconds += max(0.0, clip.duration_seconds - transition_duration)
+
+
+    return timeline_clips
+
+
+def build_draft_timeline(
+    folder: Path,
+    selection_path: Path | None = None,
+    plan_path: Path | None = None,
+    music_analysis_path: Path | None = None,
+) -> ProjectDraftTimeline:
+    """Convert selected footage into an ordered, review-only shot timeline.
+
+    Clip source intervals are preserved exactly. Ordering, transitions, and pacing
+    are deterministic recommendations; this function never edits source files or
+    writes the renderer's timeline.json.
+    """
+    root = folder.expanduser().resolve()
+    artifact_dir = root / ".video-agent"
+    selection_file = (
+        (selection_path or artifact_dir / "draft-selection.json").expanduser().resolve()
+    )
+    plan_file = (plan_path or artifact_dir / "editing-plan.json").expanduser().resolve()
+    if not selection_file.is_file():
+        raise FileNotFoundError(f"Missing {selection_file}; run 'video-agent draft-edit' first.")
+    if not plan_file.is_file():
+        raise FileNotFoundError(f"Missing {plan_file}; run 'video-agent plan' first.")
+
+    validate_artifact(root, selection_file)
+    validate_artifact(root, plan_file)
+    selection = ProjectDraftSelection.model_validate_json(
+        selection_file.read_text(encoding="utf-8")
+    )
+    plan = EditingPlan.model_validate_json(plan_file.read_text(encoding="utf-8"))
+    music_file = (
+        (music_analysis_path or artifact_dir / "music-analysis.json").expanduser().resolve()
+        if music_analysis_path is not None
+        else None
+    )
+    music_analysis = None
+    if music_file is not None:
+        if not music_file.is_file():
+            raise FileNotFoundError(f"Music analysis not found: {music_file}")
+        if music_file in {selection_file, plan_file}:
+            raise ValueError("music analysis cannot overwrite or alias another input artifact")
+        validate_artifact(root, music_file)
+        music_analysis = MusicAnalysis.model_validate_json(music_file.read_text(encoding="utf-8"))
+        if Path(music_analysis.project_path).resolve() != root:
+            raise ValueError("music analysis belongs to a different project folder")
+        try:
+            music_file.relative_to(root)
+        except ValueError as exc:
+            raise ValueError("music analysis must be inside the project folder") from exc
+        soundtrack = Path(music_analysis.music_path)
+        if not soundtrack.is_absolute():
+            soundtrack = root / soundtrack
+        if not soundtrack.is_file():
+            raise FileNotFoundError(
+                f"Soundtrack referenced by music analysis is missing: {soundtrack}"
+            )
+    if Path(selection.project_path).resolve() != root:
+        raise ValueError("draft selection belongs to a different project folder")
+
+    selected = [clip for clip in selection.clips if clip.selected]
+    if "chronological_story" in plan.priorities or plan.style in {"vlog", "documentary"}:
+        selected.sort(key=lambda clip: (clip.video_path, clip.source_start_seconds))
+    else:
+        # Start from the relevance ranking, then apply a metadata-aware visual arc.
+        selected.sort(
+            key=lambda clip: (
+                -clip.combined_score,
+                clip.video_path,
+                clip.source_start_seconds,
+            )
+        )
+        if plan.style in {"cinematic", "social_media"}:
+            selected = _cinematic_order(selected)
+
+    timeline_clips = _build_timeline_clips(selected, plan, music_analysis)
 
     duration = sum(clip.duration_seconds for clip in timeline_clips) - sum(
         clip.transition_duration_seconds for clip in timeline_clips[1:]
