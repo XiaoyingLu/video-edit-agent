@@ -131,7 +131,7 @@ class OllamaStoryModel:
         client: ModelClient | None = None,
     ) -> None:
         self.model = model or os.getenv("VIDEO_PLANNER_MODEL", "qwen2.5:1.5b")
-        self.client = client or OllamaClient(base_url=base_url)
+        self.client = client if client is not None else OllamaClient(base_url=base_url)
         self.num_ctx = int(os.getenv("VIDEO_STORY_NUM_CTX", str(DEFAULT_NUM_CTX)))
         if isinstance(self.client, OllamaClient):
             try:

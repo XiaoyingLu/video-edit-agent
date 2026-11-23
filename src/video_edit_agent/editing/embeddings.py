@@ -18,7 +18,7 @@ def ollama_embed_texts(
     """Embed a batch of texts through the shared provider interface."""
     if not texts:
         return []
-    model_client = client or OllamaClient(base_url=base_url)
+    model_client = client if client is not None else OllamaClient(base_url=base_url)
     try:
         return model_client.embed(model, texts, timeout_seconds=timeout_seconds)
     except OllamaClientError as exc:

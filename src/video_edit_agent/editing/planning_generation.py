@@ -93,7 +93,7 @@ class OllamaVideoPlanner:
         client: ModelClient | None = None,
     ) -> None:
         self.model = model or os.getenv("VIDEO_PLANNER_MODEL", "qwen2.5:1.5b")
-        self.client = client or OllamaClient(base_url=base_url)
+        self.client = client if client is not None else OllamaClient(base_url=base_url)
         if isinstance(self.client, OllamaClient):
             try:
                 ensure_memory_available(

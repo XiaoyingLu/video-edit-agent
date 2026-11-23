@@ -87,7 +87,9 @@ class OllamaClient:
             base_url or os.getenv("OLLAMA_BASE_URL", DEFAULT_BASE_URL)
         ).rstrip("/")
         self.keep_alive = (
-            keep_alive if keep_alive is not None else os.getenv("OLLAMA_KEEP_ALIVE", DEFAULT_KEEP_ALIVE)
+            keep_alive
+            if keep_alive is not None
+            else os.getenv("OLLAMA_KEEP_ALIVE", DEFAULT_KEEP_ALIVE)
         )
         self.max_retries = max_retries
 

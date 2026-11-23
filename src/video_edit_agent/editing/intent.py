@@ -36,7 +36,7 @@ class OllamaIntentParser:
         client: ModelClient | None = None,
     ) -> None:
         self.model = model or os.getenv("OLLAMA_MODEL", "qwen2.5vl:3b")
-        self.client = client or OllamaClient(base_url=base_url)
+        self.client = client if client is not None else OllamaClient(base_url=base_url)
         self.timeout_seconds = timeout_seconds
         self._model_used = False
         if isinstance(self.client, OllamaClient):
