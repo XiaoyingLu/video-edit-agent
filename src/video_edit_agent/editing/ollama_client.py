@@ -158,7 +158,13 @@ class OllamaClient:
         content = None
         try:
             content = payload["message"]["content"]
-            result = json.loads(content)
+            text = content
+            if isinstance(text, str) and text.strip().startswith("```"):
+                lines = text.strip().splitlines()[1:]
+                if lines and lines[-1].strip() == "```":
+                    lines = lines[:-1]
+                text = "\n".join(lines).strip()
+            result = json.loads(text)
         except (KeyError, TypeError, json.JSONDecodeError) as exc:
             preview = " ".join(content.split())[:240] if isinstance(content, str) else repr(content)
             raise ModelClientError(

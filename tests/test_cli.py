@@ -334,7 +334,7 @@ def test_render_command_reports_verified_output(tmp_path: Path, monkeypatch, com
         return expected
 
     monkeypatch.setattr(
-        cli.rendering,
+        cli.rendering_core,
         "render_project",
         fake_render,
     )
@@ -369,7 +369,7 @@ def test_render_command_dry_run_reports_preflight(tmp_path: Path, monkeypatch) -
         return None
 
     monkeypatch.setattr(
-        cli.rendering,
+        cli.rendering_core,
         "render_project",
         fake_render,
     )
@@ -399,7 +399,7 @@ def test_plan_command_writes_validated_editing_plan(tmp_path: Path, monkeypatch)
         return expected
 
     monkeypatch.setattr(
-        cli.planning,
+        cli.planning_story,
         "parse_editing_intent",
         fake_parse,
     )
@@ -454,7 +454,7 @@ def test_draft_edit_command_writes_selection_json(tmp_path: Path, monkeypatch) -
         ],
     )
     monkeypatch.setattr(
-        cli.planning,
+        cli.planning_story,
         "build_draft_selection",
         lambda folder, plan_path=None: expected,
     )
@@ -535,7 +535,7 @@ def test_create_plan_command_writes_hierarchical_brief(tmp_path: Path, monkeypat
         return expected, destination
 
     monkeypatch.setattr(
-        cli.planning,
+        cli.planning_story,
         "create_video_project_plan",
         fake_create,
     )

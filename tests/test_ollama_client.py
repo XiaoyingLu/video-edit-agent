@@ -51,6 +51,29 @@ def test_chat_json_builds_structured_request_and_uses_environment(monkeypatch):
     assert captured["timeout"] == CHAT_TIMEOUT_SECONDS
 
 
+@pytest.mark.parametrize("fence", ["```json", "```"])
+def test_chat_json_accepts_fenced_json(monkeypatch, fence):
+    monkeypatch.setattr(
+        "video_edit_agent.editing.ollama_client.urlopen",
+        lambda *_args, **_kwargs: FakeResponse(
+            {"message": {"content": f' {fence}\n{{"title": "A story"}}\n``` '}}
+        ),
+    )
+
+    assert OllamaClient().chat_json("model", [], {}) == {"title": "A story"}
+
+
+@pytest.mark.parametrize("content", ["```json\nnot json\n```", "```json\n[]\n```"])
+def test_chat_json_rejects_invalid_fenced_json(monkeypatch, content):
+    monkeypatch.setattr(
+        "video_edit_agent.editing.ollama_client.urlopen",
+        lambda *_args, **_kwargs: FakeResponse({"message": {"content": content}}),
+    )
+
+    with pytest.raises(ModelClientError):
+        OllamaClient().chat_json("model", [], {})
+
+
 def test_client_retries_transient_http_error_once(monkeypatch):
     calls = []
 
