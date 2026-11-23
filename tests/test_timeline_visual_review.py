@@ -232,7 +232,6 @@ def test_review_timeline_rejects_decisions_for_changed_timeline(tmp_path, monkey
     assert "Timeline changed after visual review" in result.output
 
 
-
 def test_visual_review_recovers_from_stale_crop_anchor_template(tmp_path, monkeypatch):
     _timeline(tmp_path)
     anchor_file = tmp_path / ".video-agent" / "social-crop-anchors.json"

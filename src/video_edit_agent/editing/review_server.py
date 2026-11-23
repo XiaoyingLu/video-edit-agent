@@ -10,9 +10,9 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from ..artifact_tracking import validate_artifact
+from ..rendering.social_crop_anchors import save_crop_anchors
 from .timeline_pipeline import apply_timeline_review, save_draft_timeline
 from .timeline_schemas import ProjectDraftTimeline
-from ..rendering.social_crop_anchors import save_crop_anchors
 from .timeline_visual_editor import TimelineVisualEditExport, apply_timeline_visual_edits
 
 _MEDIA_SUFFIXES = {

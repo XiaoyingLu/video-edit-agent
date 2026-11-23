@@ -58,6 +58,8 @@ def test_review_server_injects_save_control_into_timeline_page(tmp_path: Path):
             content = response.read().decode()
             headers = response.headers
         assert "Save as draft revision" in content
+        assert "Save vertical crop positions" in content
+        assert "/__video_agent__/crop-anchors" in content
         assert "/__video_agent__/timeline-edits" in content
         assert headers["Cache-Control"] == "no-store"
     finally:
@@ -317,7 +319,6 @@ def test_live_review_rejects_timeline_approval_with_pending_clips(tmp_path, monk
         assert ProjectDraftTimeline.model_validate_json(path.read_text()).timeline_approved is False
     finally:
         _stop_server(server, thread)
-
 
 
 def test_review_server_saves_browser_crop_anchors_for_approved_timeline(tmp_path, monkeypatch):
