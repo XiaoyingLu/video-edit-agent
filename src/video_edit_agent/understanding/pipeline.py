@@ -155,22 +155,38 @@ def understand_folder(
             progress_callback(event, details)
 
     try:
+        detected: dict[Path, list[tuple[float, float]]] = {}
         for video_path in videos:
             relative_path = video_path.relative_to(root).as_posix()
             video_info = next(item for item in media.videos if item.path == relative_path)
-            video_key = hashlib.sha256(relative_path.encode("utf-8")).hexdigest()[:12]
-            frame_root = root / ".video-agent" / "frames" / video_key
             report("scene_detection_started", video_path=relative_path)
             detection_started = time.perf_counter()
             intervals = detect_scenes(
                 video_path, video_info.duration_seconds, show_progress=progress_callback is not None
             )
+            detected[video_path] = intervals
             report(
                 "scene_detection_completed",
                 video_path=relative_path,
                 scene_count=len(intervals),
                 elapsed_seconds=time.perf_counter() - detection_started,
             )
+
+        total_frames = sum(
+            len(intervals) * samples_per_scene for intervals in detected.values()
+        )
+        completed_frames = 0
+        frame_durations: list[float] = []
+        report(
+            "frame_workload_ready",
+            total_frames=total_frames,
+            cached_frames=0,
+        )
+        for video_path in videos:
+            relative_path = video_path.relative_to(root).as_posix()
+            intervals = detected[video_path]
+            video_key = hashlib.sha256(relative_path.encode("utf-8")).hexdigest()[:12]
+            frame_root = root / ".video-agent" / "frames" / video_key
             for scene_index, (start, end) in enumerate(intervals, start=1):
                 scene_id = f"{video_key}-scene-{scene_index:04d}"
                 report(
@@ -261,19 +277,29 @@ def understand_folder(
                             "observation": observation.model_dump(mode="json"),
                         }
                         _save_checkpoint(checkpoint_file, checkpoint)
+                        frame_durations.append(frame_elapsed)
+                        completed_frames += 1
+                        average_seconds = sum(frame_durations) / len(frame_durations)
                         report(
                             "frame_completed",
                             scene_id=scene_id,
                             frame_index=frame_index,
                             frame_count=len(frames),
                             elapsed_seconds=frame_elapsed,
+                            completed_frames=completed_frames,
+                            total_frames=total_frames,
+                            estimated_remaining_seconds=average_seconds
+                            * max(total_frames - completed_frames, 0),
                         )
                     else:
+                        completed_frames += 1
                         report(
                             "frame_cached",
                             scene_id=scene_id,
                             frame_index=frame_index,
                             frame_count=len(frames),
+                            completed_frames=completed_frames,
+                            total_frames=total_frames,
                         )
                     observations_by_path[frame_key] = observation
 
