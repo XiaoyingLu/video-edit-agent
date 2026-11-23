@@ -118,6 +118,9 @@ def test_html_embeds_frames_and_exports_version_bound_decisions(tmp_path, monkey
     assert "currentBounds(card).end" in rendered
     assert "transitions are represented as cuts" in rendered
     assert "timeline_sha256:report.timeline_sha256" in rendered
+    assert "crop-preview" in rendered
+    assert "crop-anchor" in rendered
+    assert "Vertical focal point" in rendered
     assert report.timeline_sha256 in rendered
     assert "review-timeline --decisions-file" not in rendered
 
@@ -227,3 +230,18 @@ def test_review_timeline_rejects_decisions_for_changed_timeline(tmp_path, monkey
 
     assert result.exit_code == 1
     assert "Timeline changed after visual review" in result.output
+
+
+def test_visual_review_recovers_from_stale_crop_anchor_template(tmp_path, monkeypatch):
+    _timeline(tmp_path)
+    anchor_file = tmp_path / ".video-agent" / "social-crop-anchors.json"
+    anchor_file.write_text(json.dumps({"schema_version": "0.9", "anchors": []}), encoding="utf-8")
+    _patch(monkeypatch)
+
+    report = build_timeline_visual_review(tmp_path)
+    rendered = render_timeline_visual_review_html(report)
+
+    assert report.crop_anchors == {}
+    assert "unsupported crop-anchor schema_version" in report.crop_anchor_warning
+    assert "Existing crop anchors were not loaded" in rendered
+    assert "crop-anchor" in rendered

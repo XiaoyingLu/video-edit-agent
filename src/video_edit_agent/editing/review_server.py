@@ -10,6 +10,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from ..artifact_tracking import validate_artifact
+from ..rendering.social_crop_anchors import save_crop_anchors
 from .timeline_pipeline import apply_timeline_review, save_draft_timeline
 from .timeline_schemas import ProjectDraftTimeline
 from .timeline_visual_editor import TimelineVisualEditExport, apply_timeline_visual_edits
@@ -40,6 +41,7 @@ _SAVE_CONTROLS = """
   <button id="save-draft-revision" type="button">Save as draft revision</button>
   <button id="save-clip-decisions" type="button">Save clip decisions</button>
   <button id="approve-complete-timeline" type="button">Approve complete timeline</button>
+  <button id="save-crop-anchors" type="button">Save vertical crop positions</button>
   <span id="live-save-status" role="status" aria-live="polite">
     Save clip decisions first; final timeline approval is a separate action.
   </span>
@@ -91,6 +93,37 @@ _SAVE_CONTROLS = """
         " approved, "+result.rejected_count+" rejected.";
     } catch(error) { status.textContent=" Could not approve: "+error.message; }
     finally { approveButton.disabled=false; }
+  });
+  const cropButton = document.getElementById("save-crop-anchors");
+  cropButton.addEventListener("click", async () => {
+    const token = new URL(window.parent.location.href).searchParams.get("token");
+    if (!token) {
+      status.textContent = "Open this page from the running review workspace to save.";
+      return;
+    }
+    const anchors = Array.from(document.querySelectorAll("main .clip"))
+      .filter(card =>
+        card.dataset.hasCropAnchor === "true" || card.dataset.cropAnchorEdited === "true"
+      )
+      .map(card => ({
+        clip_id: card.dataset.clipId,
+        x: Number(card.querySelector('.crop-anchor[data-axis="x"]').value),
+        y: Number(card.querySelector('.crop-anchor[data-axis="y"]').value)
+      }));
+    cropButton.disabled = true;
+    status.textContent = "Validating and saving crop positions…";
+    try {
+      const response = await fetch("/__video_agent__/crop-anchors", {
+        method:"POST", headers:{"Content-Type":"application/json","X-Video-Agent-Token":token},
+        body:JSON.stringify({schema_version:"1.0",timeline_path:report.timeline_path,
+          timeline_sha256:report.timeline_sha256,anchors})
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Crop-anchor save failed");
+      report.timeline_sha256 = result.timeline_sha256;
+      status.textContent = "Saved " + result.anchor_count + " crop positions to " + result.path;
+    } catch(error) { status.textContent = "Could not save crop positions: " + error.message; }
+    finally { cropButton.disabled = false; }
   });
   button.addEventListener("click", async () => {
     const token = new URL(window.parent.location.href).searchParams.get("token");
@@ -179,6 +212,7 @@ def create_review_server(
             if parsed.path in {
                 "/__video_agent__/timeline-edits",
                 "/__video_agent__/timeline-review",
+                "/__video_agent__/crop-anchors",
             }:
                 self.send_error(405, "Method not allowed")
                 return
@@ -210,6 +244,7 @@ def create_review_server(
             if parsed.path not in {
                 "/__video_agent__/timeline-edits",
                 "/__video_agent__/timeline-review",
+                "/__video_agent__/crop-anchors",
             }:
                 self.send_error(404, "Not found")
                 return
@@ -245,6 +280,9 @@ def create_review_server(
                 if parsed.path == "/__video_agent__/timeline-review":
                     self._save_timeline_review(payload)
                     return
+                if parsed.path == "/__video_agent__/crop-anchors":
+                    self._save_crop_anchors(payload)
+                    return
                 edits = TimelineVisualEditExport.model_validate(payload)
                 if not edits.clips:
                     raise ValueError("At least one clip is required")
@@ -256,6 +294,36 @@ def create_review_server(
                 self._send_json(400, {"error": str(exc)})
                 return
             self._send_json(200, {"revision_path": revision.relative_to(root).as_posix()})
+
+        def _save_crop_anchors(self, payload):
+            try:
+                if not isinstance(payload, dict) or payload.get("schema_version") != "1.0":
+                    raise ValueError("Unsupported crop-anchor schema version")
+                relative = Path(payload.get("timeline_path", ""))
+                if relative.is_absolute() or ".." in relative.parts:
+                    raise ValueError("Timeline path must be project-relative")
+                timeline_file = (root / relative).resolve()
+                timeline_file.relative_to(root)
+                if not timeline_file.is_file() or not validate_artifact(root, timeline_file):
+                    raise ValueError("Timeline is missing, stale, or untracked")
+                if hashlib.sha256(timeline_file.read_bytes()).hexdigest() != payload.get(
+                    "timeline_sha256"
+                ):
+                    raise ValueError("Timeline changed after review; reload the review page")
+                destination = save_crop_anchors(
+                    root, timeline_path=timeline_file, anchors=payload.get("anchors")
+                )
+            except (ValueError, OSError, TypeError) as exc:
+                self._send_json(400, {"error": str(exc)})
+                return
+            self._send_json(
+                200,
+                {
+                    "path": destination.relative_to(root).as_posix(),
+                    "anchor_count": len(payload["anchors"]),
+                    "timeline_sha256": hashlib.sha256(timeline_file.read_bytes()).hexdigest(),
+                },
+            )
 
         def _save_timeline_review(self, payload):
             try:

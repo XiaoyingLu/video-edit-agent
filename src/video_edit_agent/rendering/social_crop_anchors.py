@@ -67,6 +67,72 @@ def create_crop_anchor_template(
     return destination, clip_ids
 
 
+def save_crop_anchors(
+    folder: Path,
+    *,
+    timeline_path: Path | None = None,
+    anchors: list[dict[str, Any]],
+    output_path: Path | None = None,
+) -> Path:
+    """Validate and atomically save manual anchors for an approved timeline."""
+    root = folder.expanduser().resolve()
+    if not root.is_dir():
+        raise FileNotFoundError(f"Project folder does not exist: {root}")
+    timeline_file = _resolve_project_file(
+        root,
+        timeline_path or root / ".video-agent" / "optimized-timeline.json",
+        "Timeline path",
+    )
+    if not timeline_file.is_file():
+        raise FileNotFoundError(f"Missing optimized timeline: {timeline_file}")
+    timeline = ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
+    if Path(timeline.project_path).resolve() != root:
+        raise ValueError("optimized timeline belongs to a different project folder")
+    if not timeline.timeline_approved:
+        raise ValueError("approve the complete timeline before saving crop anchors")
+    clip_ids = [clip.clip_id for clip in timeline.clips]
+    if not isinstance(anchors, list):
+        raise ValueError("crop-anchor anchors must be a JSON array")
+    validated: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for entry in anchors:
+        if not isinstance(entry, dict) or set(entry) != {"clip_id", "x", "y"}:
+            raise ValueError("each crop anchor must contain only clip_id, x, and y")
+        clip_id = entry["clip_id"]
+        if not isinstance(clip_id, str) or clip_id not in clip_ids:
+            raise ValueError(f"unknown crop-anchor clip_id: {clip_id}")
+        if clip_id in seen:
+            raise ValueError(f"duplicate crop-anchor clip_id: {clip_id}")
+        seen.add(clip_id)
+        coordinates: dict[str, float] = {}
+        for axis in ("x", "y"):
+            value = entry[axis]
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValueError(f"crop-anchor {axis} must be a number between 0 and 1")
+            if not 0 <= value <= 1:
+                raise ValueError(f"crop-anchor {axis} must be between 0 and 1")
+            coordinates[axis] = float(value)
+        validated.append({"clip_id": clip_id, **coordinates})
+    destination = _resolve_project_file(
+        root,
+        output_path or root / ".video-agent" / "social-crop-anchors.json",
+        "Crop-anchor output path",
+    )
+    document = {
+        "schema_version": "1.0",
+        "project_path": str(root),
+        "source_timeline": timeline_file.relative_to(root).as_posix(),
+        "timeline_sha256": _timeline_digest(timeline_file),
+        "available_clip_ids": clip_ids,
+        "anchors": validated,
+    }
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_name(destination.name + ".tmp")
+    temporary.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(destination)
+    return destination
+
+
 def load_crop_anchors(
     root: Path,
     timeline_file: Path,

@@ -11,10 +11,10 @@ from video_edit_agent.editing.review_server import create_review_server
 from video_edit_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
 
 
-def _post(server, payload, *, token=None):
+def _post(server, payload, *, token=None, endpoint="/__video_agent__/timeline-edits"):
     host, port = server.server_address
     request = urllib.request.Request(
-        f"http://{host}:{port}/__video_agent__/timeline-edits",
+        f"http://{host}:{port}{endpoint}",
         data=json.dumps(payload).encode(),
         headers={
             "Content-Type": "application/json",
@@ -58,6 +58,8 @@ def test_review_server_injects_save_control_into_timeline_page(tmp_path: Path):
             content = response.read().decode()
             headers = response.headers
         assert "Save as draft revision" in content
+        assert "Save vertical crop positions" in content
+        assert "/__video_agent__/crop-anchors" in content
         assert "/__video_agent__/timeline-edits" in content
         assert headers["Cache-Control"] == "no-store"
     finally:
@@ -315,5 +317,98 @@ def test_live_review_rejects_timeline_approval_with_pending_clips(tmp_path, monk
             urllib.request.urlopen(request, timeout=3)
         assert error.value.code == 400
         assert ProjectDraftTimeline.model_validate_json(path.read_text()).timeline_approved is False
+    finally:
+        _stop_server(server, thread)
+
+
+def test_review_server_saves_browser_crop_anchors_for_approved_timeline(tmp_path, monkeypatch):
+    artifact_dir = tmp_path / ".video-agent"
+    artifact_dir.mkdir()
+    timeline = ProjectDraftTimeline(
+        project_path=str(tmp_path.resolve()),
+        style="cinematic",
+        pacing="moderate",
+        target_duration_seconds=4,
+        proposed_duration_seconds=4,
+        approved_duration_seconds=4,
+        proposed_clip_count=1,
+        timeline_approved=True,
+        clips=[
+            DraftTimelineClip(
+                clip_id="coast",
+                sequence_index=1,
+                video_path="coast.mp4",
+                source_start_seconds=0,
+                source_end_seconds=4,
+                duration_seconds=4,
+                combined_score=90,
+                pacing_note="Opening",
+                decision="approved",
+            )
+        ],
+    )
+    timeline_path = artifact_dir / "optimized-timeline.json"
+    timeline_path.write_text(timeline.model_dump_json(), encoding="utf-8")
+    monkeypatch.setattr("video_edit_agent.editing.review_server.validate_artifact", lambda *_: True)
+    payload = {
+        "schema_version": "1.0",
+        "timeline_path": ".video-agent/optimized-timeline.json",
+        "timeline_sha256": hashlib.sha256(timeline_path.read_bytes()).hexdigest(),
+        "anchors": [{"clip_id": "coast", "x": 0.68, "y": 0.42}],
+    }
+    server, thread = _start_server(tmp_path)
+    try:
+        with _post(server, payload, endpoint="/__video_agent__/crop-anchors") as response:
+            result = json.loads(response.read())
+        saved = json.loads((artifact_dir / "social-crop-anchors.json").read_text(encoding="utf-8"))
+        assert result["anchor_count"] == 1
+        assert result["path"] == ".video-agent/social-crop-anchors.json"
+        assert saved["schema_version"] == "1.0"
+        assert saved["anchors"] == payload["anchors"]
+    finally:
+        _stop_server(server, thread)
+
+
+def test_review_server_rejects_stale_crop_anchor_save(tmp_path, monkeypatch):
+    artifact_dir = tmp_path / ".video-agent"
+    artifact_dir.mkdir()
+    timeline = ProjectDraftTimeline(
+        project_path=str(tmp_path.resolve()),
+        style="cinematic",
+        pacing="moderate",
+        target_duration_seconds=4,
+        proposed_duration_seconds=4,
+        approved_duration_seconds=4,
+        proposed_clip_count=1,
+        timeline_approved=True,
+        clips=[
+            DraftTimelineClip(
+                clip_id="coast",
+                sequence_index=1,
+                video_path="coast.mp4",
+                source_start_seconds=0,
+                source_end_seconds=4,
+                duration_seconds=4,
+                combined_score=90,
+                pacing_note="Opening",
+                decision="approved",
+            )
+        ],
+    )
+    timeline_path = artifact_dir / "optimized-timeline.json"
+    timeline_path.write_text(timeline.model_dump_json(), encoding="utf-8")
+    monkeypatch.setattr("video_edit_agent.editing.review_server.validate_artifact", lambda *_: True)
+    payload = {
+        "schema_version": "1.0",
+        "timeline_path": ".video-agent/optimized-timeline.json",
+        "timeline_sha256": "stale",
+        "anchors": [{"clip_id": "coast", "x": 0.5, "y": 0.5}],
+    }
+    server, thread = _start_server(tmp_path)
+    try:
+        with pytest.raises(urllib.error.HTTPError) as error:
+            _post(server, payload, endpoint="/__video_agent__/crop-anchors")
+        assert error.value.code == 400
+        assert not (artifact_dir / "social-crop-anchors.json").exists()
     finally:
         _stop_server(server, thread)

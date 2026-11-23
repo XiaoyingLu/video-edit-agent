@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
 from ..rendering.critique import DraftCritiqueError, _run
+from ..rendering.social_crop_anchors import load_crop_anchors
 from .timeline_schemas import ProjectDraftTimeline
 
 
@@ -64,6 +65,8 @@ class TimelineVisualReviewReport(BaseModel):
     clips: list[TimelineVisualReviewClip] = Field(default_factory=list)
     review_required: bool = True
     timeline_modified: bool = False
+    crop_anchors: dict[str, tuple[float, float]] = Field(default_factory=dict)
+    crop_anchor_warning: str | None = None
 
 
 class TimelineVisualReviewDecisions(BaseModel):
@@ -152,6 +155,14 @@ def build_timeline_visual_review(
     timeline = ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root:
         raise TimelineVisualReviewError("Timeline belongs to a different project folder")
+    anchor_file = root / ".video-agent" / "social-crop-anchors.json"
+    crop_anchor_warning = None
+    crop_anchors = {}
+    if anchor_file.is_file():
+        try:
+            crop_anchors = load_crop_anchors(root, timeline_file, timeline, anchor_file)
+        except ValueError as exc:
+            crop_anchor_warning = str(exc)
     ffmpeg = shutil.which("ffmpeg")
     if timeline.clips and ffmpeg is None:
         raise TimelineVisualReviewError("ffmpeg must be installed and available on PATH")
@@ -195,6 +206,8 @@ def build_timeline_visual_review(
         proposed_duration_seconds=timeline.proposed_duration_seconds,
         target_duration_seconds=timeline.target_duration_seconds,
         timeline_approved=timeline.timeline_approved,
+        crop_anchors=crop_anchors,
+        crop_anchor_warning=crop_anchor_warning,
         clips=clips,
     )
 
@@ -207,9 +220,16 @@ def render_timeline_visual_review_html(
     """Render an offline review page with a browser preview and export controls."""
     payload = report.model_dump(mode="json")
     payload_json = json.dumps(payload, ensure_ascii=True).replace("<", "\\u003c")
+    crop_warning_html = (
+        f'<p role="status">Existing crop anchors were not loaded: '
+        f"{html.escape(report.crop_anchor_warning)}</p>"
+        if report.crop_anchor_warning
+        else ""
+    )
     cards = []
     for clip in report.clips:
         image = clip.frame_data_uri
+        anchor_x, anchor_y = report.crop_anchors.get(clip.clip_id, (0.5, 0.5))
         details = [
             ("Scene", clip.scene_summary or "Not available"),
             ("Action", clip.temporal_summary or "Not available"),
@@ -231,12 +251,23 @@ def render_timeline_visual_review_html(
         media_src = (media_sources or {}).get(clip.clip_id, "")
         cards.append(
             f'<article class="clip" data-clip-id="{html.escape(clip.clip_id, quote=True)}" '
+            f'data-has-crop-anchor="{"true" if clip.clip_id in report.crop_anchors else "false"}" '
             f'data-video-src="{html.escape(media_src, quote=True)}" '
             f'data-source-start="{clip.source_start_seconds:.3f}" '
             f'data-source-end="{clip.source_end_seconds:.3f}">'
             f'<div class="image"><img src="{image}" alt="Representative frame for '
             f'{html.escape(clip.clip_id, quote=True)}"></div>'
-            f'<div class="body"><div class="heading"><h2>{clip.sequence_index}. '
+            f'<div class="body"><section class="crop-editor" '
+            f'aria-label="Vertical crop for {html.escape(clip.clip_id, quote=True)}">'
+            f'<div class="crop-preview"><img class="crop-preview-image" '
+            f'src="{image}" alt="Vertical crop preview"></div>'
+            f'<label>Horizontal focal point <input class="crop-anchor" '
+            f'data-axis="x" type="range" min="0" max="1" step="0.01" '
+            f'value="{anchor_x:.2f}"> <output>{anchor_x:.2f}</output></label>'
+            f'<label>Vertical focal point <input class="crop-anchor" '
+            f'data-axis="y" type="range" min="0" max="1" step="0.01" '
+            f'value="{anchor_y:.2f}"> <output>{anchor_y:.2f}</output></label>'
+            f'</section><div class="heading"><h2>{clip.sequence_index}. '
             f'{html.escape(clip.clip_id)}</h2><span class="duration">'
             f"{clip.duration_seconds:.2f}s</span></div>"
             f'<p class="source">{html.escape(clip.video_path)} · source '
@@ -269,6 +300,13 @@ header {{ position:sticky; top:0; z-index:2; padding:1rem; background:Canvas;
          padding:1.25rem 0; border-bottom:1px solid #8886; }}
 .clip.dragging {{ opacity:.45; }} .clip.drag-over {{ outline:2px dashed #888; }}
 .image img {{ width:100%; height:auto; display:block; border-radius:8px; }}
+.crop-editor {{ display:grid; grid-template-columns:100px 1fr; gap:.65rem;
+               align-items:center; margin-top:.8rem; }}
+.crop-preview {{ width:100px; aspect-ratio:9/16; overflow:hidden;
+                 border-radius:8px; background:#111; }}
+.crop-preview img {{ width:100%; height:100%; object-fit:cover; }}
+.crop-editor label {{ display:grid; grid-template-columns:1fr auto; gap:.4rem; font-size:.9rem; }}
+.crop-editor input {{ grid-column:1 / -1; width:100%; }}
 .trim {{ display:flex; flex-wrap:wrap; gap:1rem; margin:.8rem 0; }}
 .trim input {{ width:7rem; padding:.35rem; }} .clip {{ cursor:grab; }}
 .heading {{ display:flex; justify-content:space-between; gap:1rem; align-items:baseline; }}
@@ -287,6 +325,7 @@ button {{ padding:.65rem 1rem; cursor:pointer; }} .duration {{ font-variant-nume
 <header><h1>Visual Timeline Review</h1>
 <p>{len(report.clips)} shots · {report.proposed_duration_seconds:.2f}s proposed ·
 {report.target_duration_seconds:.2f}s target</p>
+{crop_warning_html}
 <p>Preview the proposed sequence below. Playback follows the current card order and trim
 points; transitions are represented as cuts. Drag shots to reorder them or adjust source in/out
 points. Changes remain proposals until imported with the CLI.</p>
@@ -422,6 +461,22 @@ for (const card of main.querySelectorAll(".clip")) {{
       item.querySelector("h2").textContent = (index + 1) + ". " + item.dataset.clipId;
     }});
   }});
+}}
+for (const card of main.querySelectorAll(".clip")) {{
+  const preview = card.querySelector(".crop-preview-image");
+  for (const input of card.querySelectorAll(".crop-anchor")) {{
+    const update = () => {{
+      const x = Number(card.querySelector('.crop-anchor[data-axis="x"]').value);
+      const y = Number(card.querySelector('.crop-anchor[data-axis="y"]').value);
+      preview.style.objectPosition = (x * 100) + "% " + (y * 100) + "%";
+      input.nextElementSibling.textContent = Number(input.value).toFixed(2);
+    }};
+    input.addEventListener("input", () => {{
+      card.dataset.cropAnchorEdited = "true";
+      update();
+    }});
+    update();
+  }}
 }}
 function downloadJson(payload, filename) {{
   const blob = new Blob([JSON.stringify(payload, null, 2) + "\\n"], {{type:"application/json"}});
