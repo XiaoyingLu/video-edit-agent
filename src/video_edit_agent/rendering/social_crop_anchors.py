@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from ..atomic_io import write_json_atomic
 from ..editing.timeline_schemas import ProjectDraftTimeline
 
 
@@ -63,7 +64,7 @@ def create_crop_anchor_template(
         "anchors": [],
     }
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+    write_json_atomic(destination, document)
     return destination, clip_ids
 
 
@@ -127,9 +128,7 @@ def save_crop_anchors(
         "anchors": validated,
     }
     destination.parent.mkdir(parents=True, exist_ok=True)
-    temporary = destination.with_name(destination.name + ".tmp")
-    temporary.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
-    temporary.replace(destination)
+    write_json_atomic(destination, document)
     return destination
 
 

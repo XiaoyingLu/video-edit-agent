@@ -1,13 +1,12 @@
 """Human-reviewed, non-destructive soundtrack timing refinement."""
 
-import json
-import os
 from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from ..editing.timeline_schemas import ProjectDraftTimeline
 from ..media import probe_video
 from .sync import MusicSyncError, MusicSyncSuggestions
@@ -181,8 +180,6 @@ def apply_music_sync_review(
         (revision_file, revised.model_dump(mode="json")),
         (review_file, result.model_dump(mode="json")),
     ):
-        temporary = destination.with_suffix(destination.suffix + ".tmp")
-        temporary.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-        os.replace(temporary, destination)
+        write_json_atomic(destination, payload)
     register_artifact(root, revision_file, dependencies=[timeline_file, suggestions_file])
     return result

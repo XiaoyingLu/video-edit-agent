@@ -7,6 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from .timeline_schemas import ProjectDraftTimeline
 
 
@@ -216,10 +217,7 @@ def save_draft_revision_suggestions(
     if output.exists():
         raise FileExistsError(f"Suggestion output already exists: {output}")
     output.parent.mkdir(parents=True, exist_ok=True)
-    temporary = output.with_suffix(output.suffix + ".tmp")
-    payload = json.dumps(report.model_dump(mode="json"), indent=2) + "\n"
-    temporary.write_text(payload, encoding="utf-8")
-    temporary.replace(output)
+    write_json_atomic(output, report)
     register_artifact(
         root,
         output,

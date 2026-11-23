@@ -8,6 +8,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from ..editing.timeline_schemas import ProjectDraftTimeline
 from .schemas import MusicAnalysis
 from .sync import MusicSyncSuggestions
@@ -366,9 +367,7 @@ def save_music_timeline_preview(
     html_path.write_text(
         render_music_timeline_preview_html(report, audio_source=audio_source), encoding="utf-8"
     )
-    json_path.write_text(
-        json.dumps(report.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
-    )
+    write_json_atomic(json_path, report)
     register_artifact(
         root,
         json_path,

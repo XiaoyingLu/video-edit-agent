@@ -10,6 +10,7 @@ from urllib.parse import quote
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from .catalog import SoundtrackSearchRequest, SoundtrackSearchResponse
 from .providers import SoundstripeCatalogProvider
 from .ranking import SoundtrackCandidateRanking, rank_soundtrack_candidates
@@ -126,7 +127,7 @@ async def search_soundstripe_catalog(
     except ValueError as exc:
         raise SoundtrackReviewError("Candidate output must be inside the project folder") from exc
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(response.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    write_json_atomic(destination, response)
     register_artifact(root, destination, dependencies=dependencies)
     return response, destination
 
@@ -313,9 +314,7 @@ def save_soundtrack_candidate_review(
         ),
         encoding="utf-8",
     )
-    json_path.write_text(
-        json.dumps(report.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
-    )
+    write_json_atomic(json_path, report)
     register_artifact(
         root,
         json_path,
@@ -373,6 +372,6 @@ def select_soundtrack_candidate(
         selected_at=datetime.now(UTC),
     )
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(selection.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    write_json_atomic(destination, selection)
     register_artifact(root, destination, dependencies=[review_file])
     return selection, destination

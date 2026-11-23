@@ -1,6 +1,7 @@
 """Rendering and visual review commands."""
 
 # ruff: noqa: F403,F405,I001
+from ..atomic_io import write_json_atomic
 from .common import *  # noqa: F403
 from ..rendering.style_presets import STYLE_PRESETS, resolve_style_preset
 from ..rendering.social_crop_anchors import create_crop_anchor_template
@@ -821,7 +822,7 @@ def critique_draft(
         )
         raise typer.Exit(code=1)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(json.dumps(report.model_dump(mode="json"), indent=2), encoding="utf-8")
+    write_json_atomic(destination, report)
     register_artifact(
         root,
         destination,
@@ -1168,10 +1169,7 @@ def compare_drafts(
         raise typer.Exit(code=1)
 
     json_path.parent.mkdir(parents=True, exist_ok=True)
-    json_path.write_text(
-        json.dumps(report.model_dump(mode="json"), indent=2),
-        encoding="utf-8",
-    )
+    write_json_atomic(json_path, report)
     html_path.write_text(render_comparison_html(report), encoding="utf-8")
     dependencies = [root / report.before.path, root / report.after.path]
     register_artifact(root, json_path, dependencies=dependencies, config={"samples": samples})

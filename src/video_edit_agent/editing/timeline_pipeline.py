@@ -1,10 +1,10 @@
 """Build and review an ordered shot timeline without rendering media."""
 
-import json
 import re
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from ..music.schemas import MusicAnalysis
 from .draft_schemas import ProjectDraftSelection
 from .intent_schemas import EditingPlan
@@ -572,10 +572,7 @@ def load_draft_timeline(
 def save_draft_timeline(timeline: ProjectDraftTimeline, destination: Path) -> None:
     """Persist review decisions as JSON."""
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(timeline.model_dump(mode="json"), indent=2) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(destination, timeline)
     if (destination.parent / "artifact-manifest.json").is_file():
         root = Path(timeline.project_path).expanduser().resolve()
         dependencies = [

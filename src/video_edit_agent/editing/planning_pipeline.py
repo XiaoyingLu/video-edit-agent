@@ -1,9 +1,9 @@
 """Creation and persistence of hierarchical video project plans."""
 
-import json
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from ..config import get_setting
 from ..music.schemas import MusicAnalysis, MusicSection
 from ..story_proposal import StoryProposal
@@ -203,17 +203,11 @@ def create_video_project_plan(
     )
 
     artifact_dir.mkdir(parents=True, exist_ok=True)
-    editing_path.write_text(
-        json.dumps(editing_plan.model_dump(mode="json"), indent=2) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(editing_path, editing_plan)
     register_artifact(root, editing_path, config={"prompt": prompt, "planner_model": planner_model})
 
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(project_plan.model_dump(mode="json"), indent=2) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(destination, project_plan)
     dependencies = [editing_path]
     if music_analysis_file is not None:
         dependencies.append(music_analysis_file)

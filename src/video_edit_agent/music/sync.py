@@ -1,6 +1,5 @@
 """Reviewable beat-alignment suggestions for an approved or proposed shot timeline."""
 
-import json
 from bisect import bisect_left
 from pathlib import Path
 from typing import Literal
@@ -8,6 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import validate_artifact
+from ..atomic_io import write_json_atomic
 from ..editing.timeline_schemas import ProjectDraftTimeline
 from .schemas import MusicAnalysis
 
@@ -194,7 +194,4 @@ def suggest_music_sync(
 def save_music_sync_suggestions(suggestions: MusicSyncSuggestions, destination: Path) -> None:
     """Write the report as a standalone JSON artifact."""
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(suggestions.model_dump(mode="json"), indent=2) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(destination, suggestions)

@@ -1,9 +1,9 @@
 """Build a deterministic soundtrack brief from a video project plan."""
 
-import json
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from ..editing.planning_schemas import VideoProjectPlan
 from .schemas import SoundtrackBrief, SoundtrackEnergySegment
 
@@ -188,9 +188,6 @@ def create_soundtrack_brief(
 
     brief = build_soundtrack_brief(plan, source.relative_to(root).as_posix())
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(brief.model_dump(mode="json"), indent=2) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(destination, brief)
     register_artifact(root, destination, dependencies=[source])
     return brief, destination

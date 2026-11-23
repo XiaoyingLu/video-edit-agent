@@ -19,6 +19,7 @@ import traceback
 from pathlib import Path
 from typing import Any
 
+from video_edit_agent.atomic_io import write_json_atomic
 from video_edit_agent.understanding.smolvlm2_analyzer import (
     _FRAME_PROMPT,
     _TEMPORAL_PROMPT,
@@ -370,7 +371,7 @@ def main() -> None:
         print(f"{provider}: {run['status']}")
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
+    write_json_atomic(args.output, results)
     print(f"Benchmark written to {args.output}")
 
 

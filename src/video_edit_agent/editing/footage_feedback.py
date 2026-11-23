@@ -9,6 +9,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 
 FEEDBACK_FILENAME = "footage-feedback.json"
 
@@ -87,6 +88,6 @@ def record_footage_feedback(
     if len(feedback.entries) > 5000:
         feedback.entries = feedback.entries[-5000:]
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(feedback.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    write_json_atomic(path, feedback)
     register_artifact(root, path)
     return path

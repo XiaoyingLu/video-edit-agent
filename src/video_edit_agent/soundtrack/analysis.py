@@ -7,6 +7,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from ..music.pipeline import analyze_music
 from ..music.schemas import MusicAnalysis
 from .review import SoundtrackCandidateReview, SoundtrackSelection
@@ -175,8 +176,8 @@ def analyze_selected_soundtrack(
     )
     analysis_file.parent.mkdir(parents=True, exist_ok=True)
     record_file.parent.mkdir(parents=True, exist_ok=True)
-    analysis_file.write_text(analysis.model_dump_json(indent=2) + "\n", encoding="utf-8")
-    record_file.write_text(record.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    write_json_atomic(analysis_file, analysis)
+    write_json_atomic(record_file, record)
     register_artifact(
         root,
         analysis_file,

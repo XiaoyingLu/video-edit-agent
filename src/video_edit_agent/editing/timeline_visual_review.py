@@ -13,6 +13,7 @@ from urllib.parse import quote
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from ..rendering.critique import DraftCritiqueError, _run
 from ..rendering.social_crop_anchors import load_crop_anchors
 from .timeline_schemas import ProjectDraftTimeline
@@ -532,7 +533,7 @@ def save_timeline_visual_review(
     if json_file.exists() or html_file.exists():
         raise FileExistsError(f"Refusing to overwrite visual timeline review: {base}")
     json_file.parent.mkdir(parents=True, exist_ok=True)
-    json_file.write_text(report.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    write_json_atomic(json_file, report)
     media_sources = {
         clip.clip_id: quote(
             os.path.relpath(

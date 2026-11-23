@@ -1,12 +1,11 @@
 """Render explicitly approved timeline revisions as separate preview artifacts."""
 
-import json
-import os
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from ..rendering.renderer import RenderReport
 from ..rendering.shot_renderer import render_approved_shot_timeline
 from .planning_schemas import VideoProjectPlan
@@ -147,12 +146,7 @@ def render_timeline_revision_preview(
         source_video_count=report.source_video_count,
     )
     manifest_file.parent.mkdir(parents=True, exist_ok=True)
-    temporary = manifest_file.with_suffix(manifest_file.suffix + ".tmp")
-    temporary.write_text(
-        json.dumps(result.model_dump(mode="json"), indent=2) + "\n",
-        encoding="utf-8",
-    )
-    os.replace(temporary, manifest_file)
+    write_json_atomic(manifest_file, result)
     dependencies = [timeline_file, destination]
     if title_overlay_path is not None:
         overlay = title_overlay_path.expanduser()

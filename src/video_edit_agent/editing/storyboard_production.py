@@ -1,9 +1,9 @@
 """Explicit storyboard approval and deterministic production-timeline compilation."""
 
-import json
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from .footage_assignments import warn_for_overlapping_footage
 from .planning_schemas import VideoProjectPlan
 from .timeline_pipeline import _continuity_guidance, _pacing_guidance, save_draft_timeline
@@ -49,9 +49,7 @@ def approve_storyboard(
             raise ValueError(f"source interval is missing for {shot.shot_id}")
     plan.approved = True
     plan.planning_stage = "production_ready"
-    destination.write_text(
-        json.dumps(plan.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
-    )
+    write_json_atomic(destination, plan)
     register_artifact(root, destination)
     return plan, destination
 

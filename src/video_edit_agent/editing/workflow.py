@@ -1,9 +1,9 @@
 """End-to-end natural-language video creation workflow."""
 
-import json
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact
+from ..atomic_io import write_json_atomic
 from ..config import get_setting
 from ..highlights import find_highlights_folder
 from ..highlights.schemas import ProjectHighlights
@@ -28,10 +28,7 @@ def _save_artifact(
     """Persist JSON and register its source/dependency provenance."""
     destination = root / ".video-agent" / name
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(payload.model_dump(mode="json"), indent=2) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(destination, payload)
     register_artifact(root, destination, dependencies=dependencies, config=config)
     return destination
 

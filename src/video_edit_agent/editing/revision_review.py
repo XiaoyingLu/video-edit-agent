@@ -1,13 +1,12 @@
 """Human review and optional safe trims for critique-driven suggestions."""
 
-import json
-import os
 from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from .revision_suggestions import DraftRevisionSuggestions
 from .revisions import (
     TimelineIntervalEdit,
@@ -203,12 +202,7 @@ def review_draft_revision_suggestions(
     while (review_directory / f"review-{review_number:03}.json").exists():
         review_number += 1
     review_file = review_directory / f"review-{review_number:03}.json"
-    temporary = review_file.with_suffix(".json.tmp")
-    temporary.write_text(
-        json.dumps(result.model_dump(mode="json"), indent=2) + "\n",
-        encoding="utf-8",
-    )
-    os.replace(temporary, review_file)
+    write_json_atomic(review_file, result)
     dependencies = [suggestion_file, timeline_file]
     if revision is not None:
         dependencies.append(root / revision.revision_path)

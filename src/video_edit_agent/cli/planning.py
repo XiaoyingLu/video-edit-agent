@@ -2,6 +2,7 @@
 
 # ruff: noqa: F403,F405,I001
 from . import common
+from ..atomic_io import write_json_atomic
 from .common import *  # noqa: F403
 
 
@@ -45,9 +46,7 @@ def find_highlights(
     destination = output or folder.resolve() / ".video-agent" / "highlights.json"
     destination = destination.expanduser().resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(report.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
-    )
+    write_json_atomic(destination, report)
     common._track_artifact(
         folder,
         destination,
@@ -132,10 +131,7 @@ def create_video(
             )
             understanding_path = folder.resolve() / ".video-agent" / "understanding.json"
             understanding_path.parent.mkdir(parents=True, exist_ok=True)
-            understanding_path.write_text(
-                json.dumps(understanding.model_dump(mode="json"), indent=2) + "\n",
-                encoding="utf-8",
-            )
+            write_json_atomic(understanding_path, understanding)
             common._track_artifact(
                 folder,
                 understanding_path,
@@ -151,10 +147,7 @@ def create_video(
                 embedding_model=DEFAULT_FOOTAGE_EMBEDDING_MODEL,
             )
             suggestions_path = folder.resolve() / ".video-agent" / "footage-suggestions.json"
-            suggestions_path.write_text(
-                json.dumps(suggestions.model_dump(mode="json"), indent=2) + "\n",
-                encoding="utf-8",
-            )
+            write_json_atomic(suggestions_path, suggestions)
             common._track_artifact(
                 folder,
                 suggestions_path,
@@ -333,10 +326,7 @@ def plan_edit(
     destination = output or folder.resolve() / ".video-agent" / "editing-plan.json"
     destination = destination.expanduser().resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(editing_plan.model_dump(mode="json"), indent=2) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(destination, editing_plan)
     common._track_artifact(folder, destination, config={"prompt": prompt, "model": model})
     console.print("[bold]Validated Natural-language Editing Plan[/bold]")
     console.print(f"Target duration: {editing_plan.target_duration_seconds:.1f}s")
@@ -593,9 +583,7 @@ def suggest_footage(
     destination = output or folder.resolve() / ".video-agent" / "footage-suggestions.json"
     destination = destination.expanduser().resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(report.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
-    )
+    write_json_atomic(destination, report)
     common._track_artifact(
         folder,
         destination,
@@ -866,10 +854,7 @@ def draft_edit(
     destination = output or folder.resolve() / ".video-agent" / "draft-selection.json"
     destination = destination.expanduser().resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(draft.model_dump(mode="json"), indent=2) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(destination, draft)
     common._track_artifact(
         folder,
         destination,

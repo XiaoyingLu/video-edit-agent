@@ -5,6 +5,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from ..atomic_io import write_json_atomic
 from ..media import MediaToolError
 
 
@@ -88,9 +89,9 @@ def extract_representative_frames(
                 f"Could not extract frame at {timestamp:.2f}s from {video_path}: {detail}"
             ) from exc
         if destination.exists() and destination.stat().st_size:
-            timestamp_file.write_text(
-                json.dumps({"timestamp_seconds": timestamp, "source": source_fingerprint}) + "\n",
-                encoding="utf-8",
+            write_json_atomic(
+                timestamp_file,
+                {"timestamp_seconds": timestamp, "source": source_fingerprint},
             )
             extracted.append((timestamp, destination))
     return extracted

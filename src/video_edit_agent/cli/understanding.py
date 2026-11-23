@@ -2,6 +2,7 @@
 
 # ruff: noqa: F403,F405,I001
 from . import common
+from ..atomic_io import write_json_atomic
 from .common import *  # noqa: F403
 
 
@@ -37,9 +38,7 @@ def analyze(
     destination = output or folder.resolve() / ".video-agent" / "analysis.json"
     destination = destination.expanduser().resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(analysis.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
-    )
+    write_json_atomic(destination, analysis)
     common._track_artifact(folder, destination)
 
     table = Table(title="Travel Video Analysis")
@@ -203,9 +202,7 @@ def understand(
     destination = output or project_root / ".video-agent" / "understanding.json"
     destination = destination.expanduser().resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(understanding.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
-    )
+    write_json_atomic(destination, understanding)
     common._track_artifact(
         folder,
         destination,
@@ -314,9 +311,7 @@ def transcribe(
     destination = output or folder.resolve() / ".video-agent" / "transcription.json"
     destination = destination.expanduser().resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(transcription.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
-    )
+    write_json_atomic(destination, transcription)
     common._track_artifact(
         folder,
         destination,
@@ -405,9 +400,7 @@ def detect_silence(
     destination = output or folder.resolve() / ".video-agent" / "silence-analysis.json"
     destination = destination.expanduser().resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(report.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
-    )
+    write_json_atomic(destination, report)
     common._track_artifact(
         folder,
         destination,
@@ -471,9 +464,7 @@ def propose_edits(
     destination = output or folder.resolve() / ".video-agent" / "edit-proposal.json"
     destination = destination.expanduser().resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(proposal.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
-    )
+    write_json_atomic(destination, proposal)
     common._track_artifact(
         folder,
         destination,
@@ -617,9 +608,7 @@ def build_timeline(
     destination = output or folder.resolve() / ".video-agent" / "timeline.json"
     destination = destination.expanduser().resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(timeline.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
-    )
+    write_json_atomic(destination, timeline)
     common._track_artifact(folder, destination, dependencies=(".video-agent/edit-proposal.json",))
     table = Table(title="Validated Edit Timeline — No Rendering")
     table.add_column("Video", style="cyan")
