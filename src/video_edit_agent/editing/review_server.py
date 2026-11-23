@@ -97,9 +97,14 @@ _SAVE_CONTROLS = """
   const cropButton = document.getElementById("save-crop-anchors");
   cropButton.addEventListener("click", async () => {
     const token = new URL(window.parent.location.href).searchParams.get("token");
-    if (!token) { status.textContent = "Open this page from the running review workspace to save."; return; }
+    if (!token) {
+      status.textContent = "Open this page from the running review workspace to save.";
+      return;
+    }
     const anchors = Array.from(document.querySelectorAll("main .clip"))
-      .filter(card => card.dataset.hasCropAnchor === "true" || card.dataset.cropAnchorEdited === "true")
+      .filter(card =>
+        card.dataset.hasCropAnchor === "true" || card.dataset.cropAnchorEdited === "true"
+      )
       .map(card => ({
         clip_id: card.dataset.clipId,
         x: Number(card.querySelector('.crop-anchor[data-axis="x"]').value),
@@ -301,7 +306,10 @@ def create_review_server(
                 timeline_file.relative_to(root)
                 if not timeline_file.is_file() or not validate_artifact(root, timeline_file):
                     raise ValueError("Timeline is missing, stale, or untracked")
-                if hashlib.sha256(timeline_file.read_bytes()).hexdigest() != payload.get("timeline_sha256"):
+                if (
+                    hashlib.sha256(timeline_file.read_bytes()).hexdigest()
+                    != payload.get("timeline_sha256")
+                ):
                     raise ValueError("Timeline changed after review; reload the review page")
                 destination = save_crop_anchors(
                     root, timeline_path=timeline_file, anchors=payload.get("anchors")

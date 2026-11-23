@@ -221,7 +221,8 @@ def render_timeline_visual_review_html(
     payload = report.model_dump(mode="json")
     payload_json = json.dumps(payload, ensure_ascii=True).replace("<", "\\u003c")
     crop_warning_html = (
-        f'<p role="status">Existing crop anchors were not loaded: {html.escape(report.crop_anchor_warning)}</p>'
+        f'<p role="status">Existing crop anchors were not loaded: '
+        f'{html.escape(report.crop_anchor_warning)}</p>'
         if report.crop_anchor_warning
         else ""
     )
@@ -256,10 +257,16 @@ def render_timeline_visual_review_html(
             f'data-source-end="{clip.source_end_seconds:.3f}">'
             f'<div class="image"><img src="{image}" alt="Representative frame for '
             f'{html.escape(clip.clip_id, quote=True)}"></div>'
-            f'<div class="body"><section class="crop-editor" aria-label="Vertical crop for {html.escape(clip.clip_id, quote=True)}">'
-            f'<div class="crop-preview"><img class="crop-preview-image" src="{image}" alt="Vertical crop preview"></div>'
-            f'<label>Horizontal focal point <input class="crop-anchor" data-axis="x" type="range" min="0" max="1" step="0.01" value="{anchor_x:.2f}"> <output>{anchor_x:.2f}</output></label>'
-            f'<label>Vertical focal point <input class="crop-anchor" data-axis="y" type="range" min="0" max="1" step="0.01" value="{anchor_y:.2f}"> <output>{anchor_y:.2f}</output></label>'
+            f'<div class="body"><section class="crop-editor" '
+            f'aria-label="Vertical crop for {html.escape(clip.clip_id, quote=True)}">'
+            f'<div class="crop-preview"><img class="crop-preview-image" '
+            f'src="{image}" alt="Vertical crop preview"></div>'
+            f'<label>Horizontal focal point <input class="crop-anchor" '
+            f'data-axis="x" type="range" min="0" max="1" step="0.01" '
+            f'value="{anchor_x:.2f}"> <output>{anchor_x:.2f}</output></label>'
+            f'<label>Vertical focal point <input class="crop-anchor" '
+            f'data-axis="y" type="range" min="0" max="1" step="0.01" '
+            f'value="{anchor_y:.2f}"> <output>{anchor_y:.2f}</output></label>'
             f'</section><div class="heading"><h2>{clip.sequence_index}. '
             f'{html.escape(clip.clip_id)}</h2><span class="duration">'
             f"{clip.duration_seconds:.2f}s</span></div>"
@@ -293,8 +300,10 @@ header {{ position:sticky; top:0; z-index:2; padding:1rem; background:Canvas;
          padding:1.25rem 0; border-bottom:1px solid #8886; }}
 .clip.dragging {{ opacity:.45; }} .clip.drag-over {{ outline:2px dashed #888; }}
 .image img {{ width:100%; height:auto; display:block; border-radius:8px; }}
-.crop-editor {{ display:grid; grid-template-columns:100px 1fr; gap:.65rem; align-items:center; margin-top:.8rem; }}
-.crop-preview {{ width:100px; aspect-ratio:9/16; overflow:hidden; border-radius:8px; background:#111; }}
+.crop-editor {{ display:grid; grid-template-columns:100px 1fr; gap:.65rem;
+               align-items:center; margin-top:.8rem; }}
+.crop-preview {{ width:100px; aspect-ratio:9/16; overflow:hidden;
+                 border-radius:8px; background:#111; }}
 .crop-preview img {{ width:100%; height:100%; object-fit:cover; }}
 .crop-editor label {{ display:grid; grid-template-columns:1fr auto; gap:.4rem; font-size:.9rem; }}
 .crop-editor input {{ grid-column:1 / -1; width:100%; }}
