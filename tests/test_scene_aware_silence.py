@@ -56,9 +56,7 @@ def _scene_id(index: int) -> str:
 
 
 @pytest.mark.parametrize("role", ["scenic_breath", "establishing"])
-def test_scenic_and_establishing_silence_is_marked_preserve(
-    tmp_path: Path, role: str
-) -> None:
+def test_scenic_and_establishing_silence_is_marked_preserve(tmp_path: Path, role: str) -> None:
     scene = VideoScene(
         scene_id=_scene_id(1),
         start_seconds=2,
