@@ -2,16 +2,16 @@
 
 import re
 import shutil
-import subprocess
 from pathlib import Path
 
+from ..media_runner import MediaError, run_ffmpeg
 from .schemas import SilenceInterval
 
 _SILENCE_START = re.compile(r"silence_start:\s*(-?\d+(?:\.\d+)?)")
 _SILENCE_END = re.compile(r"silence_end:\s*(-?\d+(?:\.\d+)?).*?silence_duration:\s*(\d+(?:\.\d+)?)")
 
 
-class SilenceDetectionError(RuntimeError):
+class SilenceDetectionError(MediaError):
     """Raised when FFmpeg is unavailable or cannot analyze an audio stream."""
 
 
@@ -48,23 +48,12 @@ class FFmpegSilenceDetector:
             "null",
             "-",
         ]
-        try:
-            result = subprocess.run(
-                command,
-                check=True,
-                capture_output=True,
-                text=True,
-                timeout=3600,
-            )
-        except subprocess.TimeoutExpired as exc:
-            raise SilenceDetectionError(
-                f"FFmpeg silence detection timed out for {media_path}"
-            ) from exc
-        except subprocess.CalledProcessError as exc:
-            detail = exc.stderr.strip() or "unknown FFmpeg error"
-            raise SilenceDetectionError(
-                f"Could not analyze audio in {media_path}: {detail}"
-            ) from exc
+        result = run_ffmpeg(
+            command,
+            timeout=3600,
+            label=f"FFmpeg silence detection for {media_path}",
+            error_type=SilenceDetectionError,
+        )
 
         return self.parse_output(result.stderr, duration_seconds)
 

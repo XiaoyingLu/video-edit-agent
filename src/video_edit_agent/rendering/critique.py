@@ -3,10 +3,9 @@
 import json
 import re
 import shutil
-import subprocess
 import tempfile
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import cv2
 from pydantic import BaseModel, ConfigDict, Field
@@ -15,9 +14,10 @@ from ..artifact_tracking import validate_artifact
 from ..config import get_setting
 from ..editing.planning_schemas import VideoProjectPlan
 from ..editing.timeline_schemas import ProjectDraftTimeline
+from ..media_runner import MediaError, run_ffmpeg
 
 
-class DraftCritiqueError(RuntimeError):
+class DraftCritiqueError(MediaError):
     """Raised when a rendered draft cannot be safely inspected."""
 
 
@@ -89,11 +89,13 @@ class DraftCritiqueReport(BaseModel):
     rendered_video_modified: Literal[False] = False
 
 
-def _run(command: list[str], *, timeout: float = 120) -> subprocess.CompletedProcess[str]:
-    try:
-        return subprocess.run(command, capture_output=True, text=True, timeout=timeout, check=False)
-    except subprocess.TimeoutExpired as exc:
-        raise DraftCritiqueError("Media inspection exceeded its time limit.") from exc
+def _run(command: list[str], *, timeout: float = 120) -> Any:
+    return run_ffmpeg(
+        command,
+        timeout=timeout,
+        label=f"Media inspection ({Path(command[0]).name})",
+        error_type=DraftCritiqueError,
+    )
 
 
 def _safe_project_file(root: Path, path: Path, label: str) -> Path:

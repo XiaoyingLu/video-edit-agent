@@ -2,11 +2,11 @@
 
 import json
 import shutil
-import subprocess
 from pathlib import Path
 
 from ..atomic_io import write_json_atomic
 from ..media import MediaToolError
+from ..media_runner import run_ffmpeg
 
 
 def extract_representative_frames(
@@ -79,15 +79,13 @@ def extract_representative_frames(
             "-y",
             str(destination),
         ]
-        try:
-            subprocess.run(command, check=True, capture_output=True, timeout=60)
-        except subprocess.TimeoutExpired as exc:
-            raise MediaToolError(f"Frame extraction timed out for {video_path}") from exc
-        except subprocess.CalledProcessError as exc:
-            detail = exc.stderr.decode(errors="replace").strip()
-            raise MediaToolError(
-                f"Could not extract frame at {timestamp:.2f}s from {video_path}: {detail}"
-            ) from exc
+        run_ffmpeg(
+            command,
+            timeout=60,
+            label=f"Frame extraction at {timestamp:.2f}s from {video_path}",
+            text=False,
+            error_type=MediaToolError,
+        )
         if destination.exists() and destination.stat().st_size:
             write_json_atomic(
                 timestamp_file,

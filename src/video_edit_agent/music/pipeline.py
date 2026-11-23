@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 
 import numpy as np
 
+from ..media_runner import MediaError, run_ffmpeg
 from .schemas import MusicAnalysis, MusicSection
 
 _SAMPLE_RATE = 11_025
@@ -14,7 +14,7 @@ _FRAME_SIZE = 2_048
 _HOP_SIZE = 256
 
 
-class MusicAnalysisError(RuntimeError):
+class MusicAnalysisError(MediaError):
     """Raised when soundtrack decoding or analysis fails."""
 
 
@@ -34,13 +34,13 @@ def _decode_audio(path: Path) -> np.ndarray:
         "f32le",
         "pipe:1",
     ]
-    try:
-        result = subprocess.run(command, capture_output=True, check=False, timeout=300)
-    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
-        raise MusicAnalysisError(f"Could not decode soundtrack with FFmpeg: {exc}") from exc
-    if result.returncode:
-        detail = result.stderr.decode("utf-8", errors="replace")[-1200:]
-        raise MusicAnalysisError(f"FFmpeg could not decode {path.name}: {detail}")
+    result = run_ffmpeg(
+        command,
+        timeout=300,
+        label=f"FFmpeg soundtrack decode for {path.name}",
+        text=False,
+        error_type=MusicAnalysisError,
+    )
     samples = np.frombuffer(result.stdout, dtype="<f4").copy()
     if samples.size < _SAMPLE_RATE * 3:
         raise MusicAnalysisError("Soundtrack must contain at least 3 seconds of decodable audio.")

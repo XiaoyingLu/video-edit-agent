@@ -2,16 +2,16 @@
 
 import json
 import shutil
-import subprocess
 from pathlib import Path
 from typing import Any
 
+from .media_runner import MediaError, run_ffmpeg
 from .models import MediaInfo, ProjectAnalysis, relative_media_path
 
 SUPPORTED_VIDEO_SUFFIXES = {".mp4", ".mov", ".mkv", ".avi", ".m4v", ".webm"}
 
 
-class MediaToolError(RuntimeError):
+class MediaToolError(MediaError):
     """Raised when ffprobe is unavailable or cannot inspect a media file."""
 
 
@@ -63,19 +63,12 @@ def probe_video(path: Path, project_root: Path) -> MediaInfo:
         "json",
         str(path),
     ]
-    try:
-        result = subprocess.run(
-            command,
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-    except subprocess.TimeoutExpired as exc:
-        raise MediaToolError(f"ffprobe timed out while inspecting {path}") from exc
-    except subprocess.CalledProcessError as exc:
-        detail = exc.stderr.strip() or "unknown ffprobe error"
-        raise MediaToolError(f"Could not inspect {path}: {detail}") from exc
+    result = run_ffmpeg(
+        command,
+        timeout=60,
+        label=f"ffprobe while inspecting {path}",
+        error_type=MediaToolError,
+    )
 
     try:
         payload: dict[str, Any] = json.loads(result.stdout)

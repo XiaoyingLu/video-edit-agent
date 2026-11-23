@@ -31,7 +31,7 @@ def test_probe_video_reads_embedded_creation_timestamp(tmp_path: Path, monkeypat
     video.touch()
     monkeypatch.setattr("video_edit_agent.media.shutil.which", lambda name: "/usr/bin/ffprobe")
     monkeypatch.setattr(
-        "video_edit_agent.media.subprocess.run",
+        "video_edit_agent.media.run_ffmpeg",
         lambda *args, **kwargs: SimpleNamespace(
             stdout=json.dumps(
                 {
