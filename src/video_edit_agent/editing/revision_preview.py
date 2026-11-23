@@ -7,6 +7,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..editing.planning_schemas import VideoProjectPlan
 from ..rendering.renderer import RenderReport
 from ..rendering.shot_renderer import render_approved_shot_timeline
 from .timeline_schemas import ProjectDraftTimeline
@@ -25,6 +26,7 @@ class RevisionPreviewReport(BaseModel):
     source_timeline_path: str
     preview_video_path: str
     render_report_path: str
+    preview_resolution: str = "source"
     duration_seconds: float = Field(gt=0)
     width: int = Field(gt=0)
     height: int = Field(gt=0)
@@ -47,7 +49,7 @@ def render_timeline_revision_preview(
     fit_mode: str = "crop",
     title_overlay_path: Path | None = None,
 ) -> tuple[RenderReport | None, Path | None]:
-    """Render an approved project-local timeline revision to a unique MP4 and manifest."""
+    """Render an approved revision as a fast 720p preview when a project profile exists."""
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise NotADirectoryError(f"Project folder does not exist: {root}")
@@ -78,6 +80,18 @@ def render_timeline_revision_preview(
             "timeline revision is not fully approved; run 'video-agent review-timeline' first"
         )
 
+    preview_aspect_ratio = None
+    preview_resolution = "source"
+    plan_file = root / ".video-agent" / "video-project-plan.json"
+    if plan_file.is_file():
+        if not validate_artifact(root, plan_file):
+            raise RevisionPreviewError("video project plan is stale; regenerate it before previewing")
+        plan = VideoProjectPlan.model_validate_json(plan_file.read_text(encoding="utf-8"))
+        if Path(plan.project_path).resolve() != root:
+            raise RevisionPreviewError("video project plan belongs to a different project folder")
+        preview_aspect_ratio = plan.brief.aspect_ratio
+        preview_resolution = "720p"
+
     default_output = root / ".video-agent" / "revision-previews" / f"{timeline_file.stem}.mp4"
     destination = (output_path or default_output).expanduser()
     destination = (
@@ -95,6 +109,12 @@ def render_timeline_revision_preview(
             f"Revision preview already exists: {destination}; choose a new --output path"
         )
 
+    render_options = {}
+    if preview_aspect_ratio is not None:
+        render_options = {
+            "output_aspect_ratio": preview_aspect_ratio,
+            "output_resolution": "720p",
+        }
     report = render_approved_shot_timeline(
         root,
         timeline_path=timeline_file,
@@ -104,6 +124,7 @@ def render_timeline_revision_preview(
         dry_run=dry_run,
         fit_mode=fit_mode,
         title_overlay_path=title_overlay_path,
+        **render_options,
     )
     if dry_run:
         return None, None
@@ -114,6 +135,7 @@ def render_timeline_revision_preview(
         source_timeline_path=timeline_file.relative_to(root).as_posix(),
         preview_video_path=destination.relative_to(root).as_posix(),
         render_report_path=manifest_file.relative_to(root).as_posix(),
+        preview_resolution=preview_resolution,
         duration_seconds=report.actual_duration_seconds,
         width=report.width,
         height=report.height,
