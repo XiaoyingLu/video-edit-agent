@@ -9,6 +9,7 @@ from ..artifact_tracking import register_artifact, validate_artifact
 from ..editing.planning_schemas import VideoProjectPlan
 from ..editing.timeline_schemas import ProjectDraftTimeline
 from ..media_runner import run_ffmpeg
+from ..music.schemas import MusicAnalysis
 from .audio_mix import append_music_input, append_music_mix, resolve_selected_music
 from .face_reframing import detect_face_crop_paths
 from .overlay_filters import _append_title_overlay_filters
@@ -73,7 +74,7 @@ def _requested_output_dimensions(aspect_ratio: str, resolution: str) -> tuple[in
     return short_side, short_side
 
 
-def _crop_path_expression(path: list[tuple[float, float, float]], axis: int) -> str:
+def _crop_path_expression(path: list[tuple[float, ...]], axis: int) -> str:
     """Build a piecewise-linear FFmpeg expression for a normalized crop coordinate."""
     if len(path) == 1:
         return f"{path[0][axis]:.6f}"
@@ -103,6 +104,63 @@ _XFADE_TRANSITIONS = {
     "slideleft": "slideleft",
     "circleopen": "circleopen",
 }
+
+
+def _build_beat_zoom_paths(
+    root: Path,
+    selected_music: Path | None,
+    clips: list[tuple[Path, float, float, bool, str, float]],
+) -> list[list[tuple[float, float, float]]] | None:
+    """Create short centered zoom pulses from a validated soundtrack beat grid."""
+    analysis_file = root / ".video-agent" / "music-analysis.json"
+    if selected_music is None or not analysis_file.is_file():
+        return None
+    try:
+        validate_artifact(root, analysis_file)
+        analysis = MusicAnalysis.model_validate_json(analysis_file.read_text(encoding="utf-8"))
+        analyzed_music = Path(analysis.music_path).expanduser().resolve()
+    except (OSError, ValueError) as exc:
+        raise RenderError(f"could not load beat analysis for punch-in: {exc}") from exc
+    if analyzed_music != selected_music.resolve() or analysis.beat_confidence < 0.1:
+        return None
+    beats = sorted(analysis.beat_times_seconds)
+    if not beats:
+        return None
+
+    paths: list[list[tuple[float, float, float]]] = []
+    timeline_start = 0.0
+    for index, clip in enumerate(clips):
+        duration = clip[2] - clip[1]
+        points: dict[float, float] = {0.0: 1.0, round(duration, 4): 1.0}
+        for beat in beats:
+            local_beat = beat - timeline_start
+            if 0 <= local_beat <= duration:
+                for offset, zoom in (
+                    (-0.06, 1.0),
+                    (0.0, 1.06),
+                    (0.08, 1.06),
+                    (0.24, 1.0),
+                ):
+                    timestamp = round(min(duration, max(0.0, local_beat + offset)), 4)
+                    points[timestamp] = zoom
+        paths.append([(time, zoom, zoom) for time, zoom in sorted(points.items())])
+        timeline_start += duration
+        if index + 1 < len(clips) and clips[index + 1][4] != "cut":
+            timeline_start -= clips[index + 1][5]
+    return paths
+
+
+def _beat_zoom_filter(
+    path: list[tuple[float, float, float]], width: int, height: int
+) -> str:
+    """Return a frame-evaluated centered zoom filter for a normalized zoom path."""
+    if not path:
+        return ""
+    expression = _crop_path_expression(path, 1)
+    return (
+        f"scale=w='iw*({expression})':h='ih*({expression})':eval=frame,"
+        f"crop={width}:{height}:(iw-ow)/2:(ih-oh)/2,"
+    )
 
 
 def _validate_xfade_transitions(
@@ -152,6 +210,7 @@ def _build_shot_render_command(
     title_overlays: list[TitleOverlay] | None = None,
     crop_anchors: list[tuple[float, float]] | None = None,
     crop_paths: list[list[tuple[float, float, float]]] | None = None,
+    zoom_paths: list[list[tuple[float, float, float]]] | None = None,
     music_path: Path | None = None,
     music_mode: str = "blend",
     music_volume: float = 0.22,
@@ -178,6 +237,9 @@ def _build_shot_render_command(
         if crop_paths is not None and len(crop_paths) != len(clips):
             raise ValueError("crop_paths must contain one path per clip")
         path = crop_paths[index] if crop_paths is not None else []
+        if zoom_paths is not None and len(zoom_paths) != len(clips):
+            raise ValueError("zoom_paths must contain one path per clip")
+        zoom_path = zoom_paths[index] if zoom_paths is not None else []
         if path:
             if any(not (0 <= x <= 1 and 0 <= y <= 1) or timestamp < 0 for timestamp, x, y in path):
                 raise ValueError(
@@ -201,6 +263,7 @@ def _build_shot_render_command(
             f"[{index}:v:0]trim=start={_seconds(start)}:end={_seconds(end)},"
             f"setpts=PTS-STARTPTS,{fit_filters},"
             f"setsar=1,fps={_seconds(frame_rate)},settb=AVTB,"
+            f"{_beat_zoom_filter(zoom_path, width, height)}"
             f"format=yuv420p[v{index}]"
         )
         if has_audio:
@@ -408,6 +471,7 @@ def _render_and_validate_shot_output(
     fit_mode: str,
     reframe_mode: str,
     crop_anchors_path: Path | None,
+    beat_punch_in: bool,
     clip_inputs: list[tuple[Path, float, float, bool, str, float]],
 ) -> tuple[dict, dict, dict, float] | None:
     """Build, execute, and verify FFmpeg output without registering project artifacts."""
@@ -422,6 +486,11 @@ def _render_and_validate_shot_output(
         try:
             crop_paths = detect_face_crop_paths(clip_inputs) if reframe_mode == "face" else None
             crop_anchors = None
+            zoom_paths = (
+                _build_beat_zoom_paths(root, selected_music, clip_inputs)
+                if beat_punch_in and fit_mode == "crop"
+                else None
+            )
             if crop_anchors_path is not None:
                 manual_anchors = load_crop_anchors(root, timeline_file, timeline, crop_anchors_path)
                 if crop_paths is None:
@@ -444,6 +513,7 @@ def _render_and_validate_shot_output(
             fit_mode=fit_mode,
             crop_anchors=crop_anchors,
             crop_paths=crop_paths,
+            zoom_paths=zoom_paths,
             title_overlays=approved_titles,
             music_path=selected_music,
             music_mode=music_mode,
@@ -519,6 +589,7 @@ def render_approved_shot_timeline(
     output_resolution: str | None = None,
     reframe_mode: str = "center",
     crop_anchors_path: Path | None = None,
+    beat_punch_in: bool = False,
 ) -> RenderReport | None:
     """Render only approved shots after every proposed shot has a decision."""
     if timeout_seconds <= 0:
@@ -644,6 +715,7 @@ def render_approved_shot_timeline(
         fit_mode=fit_mode,
         reframe_mode=reframe_mode,
         crop_anchors_path=crop_anchors_path,
+        beat_punch_in=beat_punch_in,
         clip_inputs=clip_inputs,
     )
     if render_result is None:
@@ -655,6 +727,9 @@ def render_approved_shot_timeline(
         dependencies.append(title_file)
     if selected_music is not None:
         dependencies.append(selected_music)
+    music_analysis_file = root / ".video-agent" / "music-analysis.json"
+    if beat_punch_in and music_analysis_file.is_file():
+        dependencies.append(music_analysis_file)
     plan_file = root / ".video-agent" / "video-project-plan.json"
     if plan_file.is_file():
         dependencies.append(plan_file)

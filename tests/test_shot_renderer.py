@@ -20,6 +20,7 @@ from video_edit_agent.rendering import RenderError, RenderReport, render_approve
 from video_edit_agent.rendering.shot_renderer import (
     _build_shot_render_command,
     _requested_output_dimensions,
+    _build_beat_zoom_paths,
     _resolve_output_dimensions,
 )
 
@@ -874,6 +875,62 @@ def test_shot_renderer_builds_time_varying_face_crop_path(tmp_path):
     assert "if(lt(t,1.000000)" in graph
     assert "iw*(if(" in graph
     assert "ih*(if(" in graph
+
+
+def test_shot_renderer_builds_centered_beat_zoom_filter(tmp_path):
+    command = _build_shot_render_command(
+        "ffmpeg",
+        [(tmp_path / "one.mp4", 0, 2, False, "cut", 0)],
+        tmp_path / "out.mp4",
+        1080,
+        1920,
+        zoom_paths=[[(0.0, 1.0, 1.0), (0.5, 1.06, 1.06), (0.74, 1.0, 1.0), (2.0, 1.0, 1.0)]],
+    )
+    graph = command[command.index("-filter_complex") + 1]
+    assert "eval=frame" in graph
+    assert "1.060000" in graph
+    assert "crop=1080:1920:(iw-ow)/2:(ih-oh)/2" in graph
+
+
+def test_beat_zoom_paths_follow_music_beats_and_transition_overlaps(tmp_path):
+    from video_edit_agent.artifact_tracking import register_artifact
+    from video_edit_agent.music.schemas import MusicAnalysis
+
+    artifact = tmp_path / ".video-agent"
+    artifact.mkdir()
+    soundtrack = tmp_path / "music.wav"
+    soundtrack.write_bytes(b"audio")
+    analysis_path = artifact / "music-analysis.json"
+    analysis = MusicAnalysis(
+        project_path=str(tmp_path.resolve()),
+        music_path=str(soundtrack.resolve()),
+        duration_seconds=10,
+        sample_rate=44100,
+        bpm=120,
+        beat_confidence=0.9,
+        beat_interval_seconds=0.5,
+        beat_times_seconds=[0.5, 1.0, 1.5, 2.0],
+    )
+    analysis_path.write_text(analysis.model_dump_json(), encoding="utf-8")
+    register_artifact(tmp_path, analysis_path, dependencies=[soundtrack])
+    clips = [
+        (tmp_path / "a.mp4", 0, 1.5, False, "cut", 0),
+        (tmp_path / "b.mp4", 0, 1.5, False, "crossfade", 0.5),
+    ]
+
+    paths = _build_beat_zoom_paths(tmp_path, soundtrack, clips)
+
+    assert paths is not None
+    assert len(paths) == 2
+    assert any(point[1] == 1.06 for point in paths[0])
+    assert any(point[1] == 1.06 for point in paths[1])
+
+
+def test_beat_zoom_paths_skip_missing_music_analysis(tmp_path):
+    soundtrack = tmp_path / "music.wav"
+    soundtrack.write_bytes(b"audio")
+    clips = [(tmp_path / "a.mp4", 0, 2, False, "cut", 0)]
+    assert _build_beat_zoom_paths(tmp_path, soundtrack, clips) is None
 
 
 def test_shot_renderer_rejects_crop_paths_for_wrong_clip_count(tmp_path):
