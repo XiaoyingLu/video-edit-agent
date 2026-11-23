@@ -95,6 +95,24 @@ def test_xfade_preflight_accepts_supported_transition_names(monkeypatch, tmp_pat
     _validate_xfade_transitions("ffmpeg", clip_inputs)
 
 
+def test_xfade_preflight_accepts_ffmpeg_help_with_flags_and_descriptions(monkeypatch, tmp_path):
+    help_text = """
+       fade       0    ..FV....... fade transition
+       wipeleft   1    ..FV....... wipe left transition
+    """
+
+    def fake_run(command, **kwargs):
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr=help_text)
+
+    monkeypatch.setattr("video_edit_agent.media_runner.subprocess.run", fake_run)
+    clip_inputs = [
+        (tmp_path / "clip.mp4", 0, 2, True, "crossfade", 0.4),
+        (tmp_path / "clip.mp4", 2, 4, True, "wipeleft", 0.4),
+    ]
+
+    _validate_xfade_transitions("ffmpeg", clip_inputs)
+
+
 def test_xfade_preflight_rejects_transition_missing_from_installed_build(monkeypatch, tmp_path):
     help_text = """
     transition <int> (default fade)

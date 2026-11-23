@@ -121,7 +121,13 @@ def _validate_xfade_transitions(
         error_type=RenderError,
     )
     help_text = "\n".join(filter(None, (result.stdout or "", result.stderr or "")))
-    supported = set(re.findall(r"^\s+([a-z][a-z0-9_]*)\s+-?\d+\s*$", help_text, re.MULTILINE))
+    supported = set(
+        re.findall(
+            r"^[ \t]+([a-z][a-z0-9_]*)[ \t]+-?\d+(?:[ \t]+[.A-Z]+(?:[ \t]+[^\r\n]*)?)?[ \t]*$",
+            help_text,
+            re.MULTILINE,
+        )
+    )
     unsupported = sorted(
         transition
         for transition in requested
