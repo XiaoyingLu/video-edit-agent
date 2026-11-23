@@ -2,8 +2,8 @@ import json
 import shutil
 import subprocess
 import sys
-from types import SimpleNamespace
 from pathlib import Path
+from types import SimpleNamespace
 
 import click
 import pytest
@@ -133,7 +133,6 @@ def test_shot_renderer_builds_crossfade_and_audio_crossfade_graph(tmp_path):
     assert "xfade=transition=fade:duration=0.500000:offset=2.500000" in graph
     assert "acrossfade=d=0.500000" in graph
     assert "[v0][a0][v1][a1]concat" not in graph
-
 
 
 def test_face_reframing_uses_detected_face_position(tmp_path, monkeypatch):
@@ -463,7 +462,6 @@ def test_render_social_exports_generates_three_preflights(tmp_path, monkeypatch)
     assert all(call["dry_run"] for call in calls)
     assert all(call["title_overlay_path"] == overlay_file for call in calls)
     assert "No MP4 files were written" in result.output
-
 
 
 def test_social_exports_cli_passes_face_reframing_option(tmp_path, monkeypatch):

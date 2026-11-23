@@ -17,8 +17,8 @@ from .renderer import (
     _validate_filter_graph,
     _validate_source_stream_metadata,
 )
-from .title_overlays import TitleOverlay
 from .face_reframing import detect_face_crop_anchors
+from .title_overlays import TitleOverlay
 
 
 def _safe_source(root: Path, relative_path: str) -> Path:
@@ -502,7 +502,9 @@ def render_approved_shot_timeline(
         temporary_file.close()
     try:
         try:
-            crop_anchors = detect_face_crop_anchors(clip_inputs) if reframe_mode == "face" else None
+            crop_anchors = (
+                detect_face_crop_anchors(clip_inputs) if reframe_mode == "face" else None
+            )
         except RuntimeError as exc:
             raise RenderError(str(exc)) from exc
         command = _build_shot_render_command(
