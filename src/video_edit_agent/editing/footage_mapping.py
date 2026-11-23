@@ -7,10 +7,10 @@ from collections.abc import Callable
 from pathlib import Path
 
 from ..artifact_tracking import validate_artifact
-from .footage_feedback import load_footage_feedback, shot_feedback_tokens
 from ..media import discover_videos
 from ..understanding.schemas import VideoUnderstanding
 from .embeddings import ollama_embed_texts
+from .footage_feedback import load_footage_feedback, shot_feedback_tokens
 from .footage_schemas import (
     FootageMatchCandidate,
     ProjectFootageSuggestions,

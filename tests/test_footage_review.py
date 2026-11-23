@@ -183,7 +183,6 @@ def test_review_footage_warns_but_allows_duplicate_source_interval(tmp_path):
     ]
 
 
-
 def test_review_footage_records_selected_candidate(tmp_path):
     import json
 
@@ -206,7 +205,6 @@ def test_review_footage_records_selected_candidate(tmp_path):
     assert entry["selected_scene_id"] == chosen.source_scene_id
     assert entry["shot_tokens"]
     assert feedback["schema_version"] == "1.0"
-
 
 
 def test_review_footage_records_rejected_candidates(tmp_path):

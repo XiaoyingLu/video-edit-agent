@@ -384,7 +384,6 @@ def test_suggest_storyboard_footage_fails_if_must_include_scene_is_unavailable(t
         suggest_storyboard_footage(tmp_path)
 
 
-
 def test_footage_feedback_adjusts_similar_shot_candidate_scores(tmp_path):
     from video_edit_agent.artifact_tracking import register_artifact
     from video_edit_agent.editing.footage_feedback import (
