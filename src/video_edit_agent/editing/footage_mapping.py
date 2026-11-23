@@ -151,9 +151,7 @@ def _semantic_scene_scores(
     ] + [_scene_text(scene) for _, scene in scenes]
     vectors = (embedder or ollama_embed_texts)(texts, embedding_model)
     if len(vectors) != len(texts):
-        raise ValueError(
-            "embedding provider returned a different number of vectors than requested"
-        )
+        raise ValueError("embedding provider returned a different number of vectors than requested")
     shot_vectors = vectors[: len(shot_items)]
     scene_vectors = vectors[len(shot_items) :]
     if shot_vectors and any(len(vector) != len(shot_vectors[0]) for vector in vectors):
@@ -169,9 +167,7 @@ def _semantic_scene_scores(
                 if shot_norm and scene_norm
                 else 0.0
             )
-            scores[(shot.shot_id, scene.scene_id)] = max(
-                0.0, min(1.0, (similarity + 1.0) / 2.0)
-            )
+            scores[(shot.shot_id, scene.scene_id)] = max(0.0, min(1.0, (similarity + 1.0) / 2.0))
     return scores
 
 
@@ -390,9 +386,7 @@ def suggest_storyboard_footage(
 
     shot_items = [shot for planned_scene in plan.scenes for shot in planned_scene.shots]
     shot_items = [shot for planned_scene in plan.scenes for shot in planned_scene.shots]
-    semantic_scores = _semantic_scene_scores(
-        shot_items, scenes, embedding_model, embedder
-    )
+    semantic_scores = _semantic_scene_scores(shot_items, scenes, embedding_model, embedder)
     suggestions, candidate_count, matched_shot_count = _rank_shot_suggestions(
         plan, scenes, semantic_scores, feedback, max_candidates_per_shot
     )

@@ -555,7 +555,6 @@ def _quality_critique_findings(
             )
         )
 
-
     return findings
 
 

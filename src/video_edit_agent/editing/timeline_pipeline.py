@@ -458,7 +458,6 @@ def _build_timeline_clips(
         previous_duration = clip.duration_seconds
         elapsed_seconds += max(0.0, clip.duration_seconds - transition_duration)
 
-
     return timeline_clips
 
 

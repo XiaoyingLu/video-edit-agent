@@ -422,7 +422,6 @@ def _probe_approved_clip_inputs(
         )
         previous_sequence_index = clip.sequence_index
 
-
     return source_cache, clip_inputs, source_paths
 
 
@@ -448,7 +447,6 @@ def _resolve_shot_output_dimensions(
         width, height = _resolve_output_dimensions(root, width, height)
     else:
         width, height = _requested_output_dimensions(output_aspect_ratio, output_resolution)
-
 
     return width, height
 
@@ -565,7 +563,6 @@ def _render_and_validate_shot_output(
             temporary_path.unlink(missing_ok=True)
         raise
 
-
     return output_probe, output_video, output_audio, actual_duration
 
 
@@ -664,9 +661,7 @@ def render_approved_shot_timeline(
     if ffprobe is None or ffmpeg is None:
         raise RenderError("ffmpeg and ffprobe must be installed and available on PATH")
 
-    source_cache, clip_inputs, source_paths = _probe_approved_clip_inputs(
-        root, approved, ffprobe
-    )
+    source_cache, clip_inputs, source_paths = _probe_approved_clip_inputs(root, approved, ffprobe)
     if destination in source_paths:
         raise RenderError("render output cannot overwrite a source video")
     if selected_music is not None and destination == selected_music:

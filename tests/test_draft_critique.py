@@ -342,9 +342,7 @@ def test_critique_rejects_invalid_sample_count(tmp_path):
 def test_quality_critique_findings_are_pure_and_do_not_require_ffmpeg(tmp_path):
     _, timeline_path, plan_path = _write_inputs(tmp_path)
     plan = VideoProjectPlan.model_validate_json(plan_path.read_text(encoding="utf-8"))
-    timeline = ProjectDraftTimeline.model_validate_json(
-        timeline_path.read_text(encoding="utf-8")
-    )
+    timeline = ProjectDraftTimeline.model_validate_json(timeline_path.read_text(encoding="utf-8"))
 
     findings = _quality_critique_findings(
         plan=plan,

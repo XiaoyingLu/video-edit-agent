@@ -391,7 +391,6 @@ class _ReviewRequestHandler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
 
-
 def create_review_server(
     folder: Path, *, host: str = "127.0.0.1", port: int = 0
 ) -> ThreadingHTTPServer:

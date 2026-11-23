@@ -300,7 +300,6 @@ def _understand_detected_scenes(
                 )
             )
 
-
     return scenes
 
 
@@ -346,6 +345,7 @@ def understand_folder(
         sources=sources,
         resume=resume,
     )
+
     def report(event: str, **details: Any) -> None:
         if progress_callback is not None:
             progress_callback(event, details)

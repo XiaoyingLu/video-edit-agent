@@ -123,8 +123,7 @@ def _create_storyboard_video_draft(
     missing = [
         shot.shot_id
         for shot in shots
-        if not suggestions_by_id.get(shot.shot_id)
-        or not suggestions_by_id[shot.shot_id].candidates
+        if not suggestions_by_id.get(shot.shot_id) or not suggestions_by_id[shot.shot_id].candidates
     ]
     if missing:
         raise ValueError(
@@ -167,9 +166,7 @@ def _create_storyboard_video_draft(
     timeline = build_storyboard_timeline(folder, plan_path=plan_path)
     timeline_path = folder.resolve() / ".video-agent" / "optimized-timeline.json"
     save_storyboard_timeline(timeline, timeline_path)
-    timeline = apply_timeline_review(
-        timeline, {clip.clip_id for clip in timeline.clips}, set()
-    )
+    timeline = apply_timeline_review(timeline, {clip.clip_id for clip in timeline.clips}, set())
     save_draft_timeline(timeline, timeline_path)
     plan = project_plan.brief
     console.print(
@@ -195,9 +192,7 @@ def _create_highlight_video_draft(
         whisper_model=whisper_model,
         samples_per_scene=samples_per_scene,
     )
-    console.print(
-        "[bold green]Analysis and automatic draft planning complete.[/bold green]"
-    )
+    console.print("[bold green]Analysis and automatic draft planning complete.[/bold green]")
     console.print(
         f"Intent: {plan.style}, {plan.target_duration_seconds:.0f}s, "
         f"{plan.aspect_ratio}, {plan.resolution}"
@@ -211,9 +206,7 @@ def _create_highlight_video_draft(
     if review:
         decision = console.input("Render this automatically assembled first draft? [y/N]: ")
         if decision.strip().lower() not in {"y", "yes"}:
-            console.print(
-                "[yellow]Rendering cancelled. The draft timeline was preserved.[/yellow]"
-            )
+            console.print("[yellow]Rendering cancelled. The draft timeline was preserved.[/yellow]")
             raise typer.Exit(code=2)
     approve_ids = {clip.clip_id for clip in timeline.clips}
     timeline = apply_timeline_review(timeline, approve_ids, set())
