@@ -55,7 +55,7 @@ def detect_face_crop_anchors(
                         min(1.0, max(0.0, (float(x) + float(face_width) / 2) / width)),
                         min(
                             1.0,
-                            max(0.0, (float(y) + float(face_height) * 0.8) / height),
+                            max(0.0, (float(y) + float(face_height) / 2) / height),
                         ),
                     )
                 )
