@@ -45,7 +45,7 @@ video-agent = "video_edit_agent.cli:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/video_edit_agent"]
-force-include = { "src/video_edit_agent/editing/templates/timeline_visual_review.html" = "video_edit_agent/editing/templates/timeline_visual_review.html" }
+force-include = { "src/video_edit_agent/editing/templates/timeline_visual_review.html" = "video_edit_agent/editing/templates/timeline_visual_review.html", "src/video_edit_agent/rendering/fonts/Lato-Regular.ttf" = "video_edit_agent/rendering/fonts/Lato-Regular.ttf", "src/video_edit_agent/rendering/fonts/Lato-OFL.txt" = "video_edit_agent/rendering/fonts/Lato-OFL.txt" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

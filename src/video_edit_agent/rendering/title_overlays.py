@@ -25,6 +25,8 @@ class TitleOverlay(BaseModel):
     placement: Literal["top", "center", "bottom"] = "bottom"
     style: Literal["cinematic", "minimal", "bold"] = "cinematic"
     animation: Literal["none", "fade", "slide_up"] = "fade"
+    easing: Literal["linear", "ease_in", "ease_out", "ease_in_out"] = "linear"
+    exit_animation: Literal["auto", "none", "fade", "slide_down", "slide_up"] = "auto"
     sequence_role: Literal["standard", "opening", "closing"] = "standard"
     decision: Literal["pending", "approved", "rejected"] = "pending"
 
