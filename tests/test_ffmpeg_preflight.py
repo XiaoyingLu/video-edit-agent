@@ -5,11 +5,11 @@ import subprocess
 import pytest
 
 from video_edit_agent.rendering import RenderError
-from video_edit_agent.rendering.shot_renderer import _validate_xfade_transitions
 from video_edit_agent.rendering.renderer import (
     _validate_filter_graph,
     _validate_source_stream_metadata,
 )
+from video_edit_agent.rendering.shot_renderer import _validate_xfade_transitions
 
 
 def test_filter_graph_preflight_uses_null_muxer_and_short_probe(monkeypatch):
@@ -118,9 +118,7 @@ def test_xfade_preflight_skips_cut_only_timelines(monkeypatch, tmp_path):
         raise AssertionError("xfade capability check should not run for cut-only timelines")
 
     monkeypatch.setattr("video_edit_agent.media_runner.subprocess.run", unexpected_run)
-    _validate_xfade_transitions(
-        "ffmpeg", [(tmp_path / "clip.mp4", 0, 2, True, "cut", 0)]
-    )
+    _validate_xfade_transitions("ffmpeg", [(tmp_path / "clip.mp4", 0, 2, True, "cut", 0)])
 
 
 def test_source_metadata_validation_checks_dimensions_and_audio_fields(tmp_path):
