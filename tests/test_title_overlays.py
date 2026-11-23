@@ -149,7 +149,13 @@ def test_renderer_builds_safe_lower_third_for_all_aspect_ratios(
 def test_legacy_linear_fade_and_slide_up_filter_expressions_are_unchanged():
     fade = _overlay(start_seconds=0, end_seconds=3, animation="fade")
     alpha, y_position = _animation_expressions(fade, "h*0.12")
-    assert alpha == "if(lt(t,0.450000),(t-0.000000)/0.450000,if(gt(t,2.550000),(3.000000-t)/0.450000,1))"
+    expected_alpha = "".join(
+        [
+            "if(lt(t,0.450000),(t-0.000000)/0.450000,",
+            "if(gt(t,2.550000),(3.000000-t)/0.450000,1))",
+        ]
+    )
+    assert alpha == expected_alpha
     assert y_position == "h*0.12"
 
     slide = _overlay(start_seconds=0, end_seconds=3, animation="slide_up")
@@ -212,7 +218,13 @@ def test_renderer_keeps_legacy_linear_fade_and_slide_filter_strings(tmp_path: Pa
         title_overlays=[_overlay(animation="fade")],
     )
     fade_graph = fade_command[fade_command.index("-filter_complex") + 1]
-    assert "alpha='if(lt(t,0.450000),(t-0.000000)/0.450000,if(gt(t,2.550000),(3.000000-t)/0.450000,1))'" in fade_graph
+    expected_fade_alpha = "".join(
+        [
+            "alpha='if(lt(t,0.450000),(t-0.000000)/0.450000,",
+            "if(gt(t,2.550000),(3.000000-t)/0.450000,1))'",
+        ]
+    )
+    assert expected_fade_alpha in fade_graph
 
     slide_command = _build_shot_render_command(
         "ffmpeg",
@@ -223,7 +235,13 @@ def test_renderer_keeps_legacy_linear_fade_and_slide_filter_strings(tmp_path: Pa
         title_overlays=[_overlay(animation="slide_up")],
     )
     slide_graph = slide_command[slide_command.index("-filter_complex") + 1]
-    assert "y='if(lt(t,0.450000),(h-text_h-h*0.12)+80*(0.450000-t)/0.45,(h-text_h-h*0.12))'" in slide_graph
+    expected_slide_y = "".join(
+        [
+            "y='if(lt(t,0.450000),(h-text_h-h*0.12)+80*(0.450000-t)/0.45,",
+            "(h-text_h-h*0.12))'",
+        ]
+    )
+    assert expected_slide_y in slide_graph
 
 
 def test_explicit_exit_animation_replaces_legacy_fade_out():

@@ -110,7 +110,9 @@ def _animation_expressions(
                 f"({base_y}))"
             )
         else:
-            y_position = f"if(lt(t,{_seconds(slide_end)}),({base_y})+80*(1-({progress})),({base_y}))"
+            slide_condition = f"if(lt(t,{_seconds(slide_end)}),"
+            slide_motion = f"({base_y})+80*(1-({progress})),({base_y}))"
+            y_position = slide_condition + slide_motion
 
     exit_animation = overlay.exit_animation
     if exit_animation == "auto":
