@@ -10,6 +10,7 @@ from ..editing.timeline_schemas import ProjectDraftTimeline
 from ..media_runner import run_ffmpeg
 from .audio_mix import append_music_input, append_music_mix, resolve_selected_music
 from .face_reframing import detect_face_crop_paths
+from .overlay_filters import _append_title_overlay_filters
 from .renderer import (
     RenderError,
     RenderReport,
@@ -18,7 +19,6 @@ from .renderer import (
     _validate_filter_graph,
     _validate_source_stream_metadata,
 )
-from .overlay_filters import _append_title_overlay_filters
 from .social_crop_anchors import load_crop_anchors
 from .title_overlays import TitleOverlay
 
@@ -70,6 +70,28 @@ def _requested_output_dimensions(aspect_ratio: str, resolution: str) -> tuple[in
     if aspect_ratio == "9:16":
         return short_side, long_side
     return short_side, short_side
+
+
+def _crop_path_expression(path: list[tuple[float, float, float]], axis: int) -> str:
+    """Build a piecewise-linear FFmpeg expression for a normalized crop coordinate."""
+    if len(path) == 1:
+        return f"{path[0][axis]:.6f}"
+    expression = f"{path[-1][axis]:.6f}"
+    for index in range(len(path) - 2, -1, -1):
+        current = path[index]
+        following = path[index + 1]
+        start, end = current[0], following[0]
+        value_start, value_end = current[axis], following[axis]
+        if end <= start:
+            continue
+        interpolation = (
+            f"({value_start:.6f}+({value_end - value_start:.6f})*(t-{start:.6f})/{end - start:.6f})"
+        )
+        expression = f"if(lt(t,{end:.6f}),{interpolation},{expression})"
+    first_time, first_value = path[0][0], path[0][axis]
+    if first_time > 0:
+        expression = f"if(lt(t,{first_time:.6f}),{first_value:.6f},{expression})"
+    return expression
 
 
 def _build_shot_render_command(
