@@ -10,7 +10,6 @@ from ..editing.planning_schemas import VideoProjectPlan
 from ..editing.timeline_schemas import ProjectDraftTimeline
 from .audio_mix import append_music_input, append_music_mix, resolve_selected_music
 from .face_reframing import detect_face_crop_anchors
-from .social_crop_anchors import load_crop_anchors
 from .renderer import (
     RenderError,
     RenderReport,
@@ -19,6 +18,7 @@ from .renderer import (
     _validate_filter_graph,
     _validate_source_stream_metadata,
 )
+from .social_crop_anchors import load_crop_anchors
 from .title_overlays import TitleOverlay
 
 
@@ -506,9 +506,7 @@ def render_approved_shot_timeline(
         try:
             crop_anchors = detect_face_crop_anchors(clip_inputs) if reframe_mode == "face" else None
             if crop_anchors_path is not None:
-                manual_anchors = load_crop_anchors(
-                    root, timeline_file, timeline, crop_anchors_path
-                )
+                manual_anchors = load_crop_anchors(root, timeline_file, timeline, crop_anchors_path)
                 if crop_anchors is None:
                     crop_anchors = [(0.5, 0.5) for _ in approved]
                 for index, clip in enumerate(approved):

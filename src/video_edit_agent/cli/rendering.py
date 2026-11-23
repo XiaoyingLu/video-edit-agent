@@ -570,7 +570,9 @@ def init_social_crop_anchors(
     ] = None,
     output: Annotated[
         Path | None,
-        typer.Option("--output", help="Template path (default: .video-agent/social-crop-anchors.json)."),
+        typer.Option(
+            "--output", help="Template path (default: .video-agent/social-crop-anchors.json)."
+        ),
     ] = None,
 ) -> None:
     """Create an editable per-clip crop-anchor template for the optimized timeline."""
@@ -666,8 +668,11 @@ def render_social_exports(
             raise ValueError("fit_mode must be crop or pad")
         if reframe not in {"center", "face"}:
             raise ValueError("--reframe must be center or face")
-        if (reframe == "face" or crop_anchors is not None) and resolved_fit_mode != "crop":
-            raise ValueError("--reframe face and --crop-anchors require --fit-mode crop")
+        if resolved_fit_mode != "crop":
+            if reframe == "face":
+                raise ValueError("--reframe face requires --fit-mode crop")
+            if crop_anchors is not None:
+                raise ValueError("--crop-anchors requires --fit-mode crop")
         outputs = []
         for label, aspect_ratio in profiles:
             destination = export_dir / f"{label}-{resolution}.mp4"

@@ -500,6 +500,24 @@ def test_social_exports_cli_rejects_face_reframing_with_pad(tmp_path):
     assert "--reframe face requires --fit-mode crop" in result.output
 
 
+def test_social_exports_cli_rejects_crop_anchors_with_pad(tmp_path):
+    result = runner.invoke(
+        app,
+        [
+            "render-social-exports",
+            str(tmp_path),
+            "--dry-run",
+            "--fit-mode",
+            "pad",
+            "--crop-anchors",
+            str(tmp_path / "anchors.json"),
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "--crop-anchors requires --fit-mode crop" in result.output
+
+
 def test_style_presets_cli_lists_available_profiles():
     result = runner.invoke(app, ["style-presets"])
     assert result.exit_code == 0, result.output
@@ -697,7 +715,6 @@ def test_create_video_help_exposes_single_final_review_option(tmp_path, monkeypa
     assert "--review" in help_text
     assert "--storyboard" in help_text
     assert "automatically assembled" in " ".join(help_text.replace("│", " ").split())
-
 
 
 def test_manual_crop_anchor_template_is_timeline_bound_and_overrides_face(tmp_path):
