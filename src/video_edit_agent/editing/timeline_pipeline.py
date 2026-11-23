@@ -1,11 +1,11 @@
 """Build and review an ordered shot timeline without rendering media."""
 
-from ..atomic_io import write_json_atomic
 import json
 import re
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from ..music.schemas import MusicAnalysis
 from .draft_schemas import ProjectDraftSelection
 from .intent_schemas import EditingPlan

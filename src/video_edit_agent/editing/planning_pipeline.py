@@ -1,10 +1,9 @@
 """Creation and persistence of hierarchical video project plans."""
 
-from ..atomic_io import write_json_atomic
-import json
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from ..config import get_setting
 from ..music.schemas import MusicAnalysis, MusicSection
 from ..story_proposal import StoryProposal

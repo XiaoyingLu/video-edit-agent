@@ -4,15 +4,14 @@ Run this script natively on Apple Silicon for MLX acceleration:
     python scripts/benchmark_vision.py frame-1.jpg frame-2.jpg --output benchmark.json
 """
 
-from video_edit_agent.atomic_io import write_json_atomic
 import argparse
-import json
 import platform
 import statistics
 import time
 from pathlib import Path
 from typing import Any
 
+from video_edit_agent.atomic_io import write_json_atomic
 from video_edit_agent.understanding.provider import create_vision_analyzer
 
 

@@ -1,11 +1,11 @@
 """Safe, reviewable per-shot revisions for an approved draft timeline."""
 
-from ..atomic_io import write_json_atomic
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from .timeline_schemas import ProjectDraftTimeline
 
 

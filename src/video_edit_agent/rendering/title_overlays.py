@@ -1,13 +1,12 @@
 """Declarative, reviewable title overlays for approved draft timelines."""
 
-from ..atomic_io import write_json_atomic
-import json
 from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from ..editing.planning_schemas import VideoProjectPlan
 from ..editing.timeline_schemas import ProjectDraftTimeline
 

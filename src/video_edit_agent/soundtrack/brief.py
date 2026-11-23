@@ -1,10 +1,9 @@
 """Build a deterministic soundtrack brief from a video project plan."""
 
-from ..atomic_io import write_json_atomic
-import json
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from ..editing.planning_schemas import VideoProjectPlan
 from .schemas import SoundtrackBrief, SoundtrackEnergySegment
 

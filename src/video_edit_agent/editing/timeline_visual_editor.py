@@ -1,12 +1,12 @@
 """Apply browser-authored sequence and trim edits as a separate timeline revision."""
 
-from ..atomic_io import write_json_atomic
 import hashlib
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from .timeline_schemas import ProjectDraftTimeline
 
 

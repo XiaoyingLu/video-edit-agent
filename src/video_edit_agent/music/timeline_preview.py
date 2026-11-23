@@ -1,6 +1,5 @@
 """Read-only browser preview of soundtrack energy, beat grid, and shot timing."""
 
-from ..atomic_io import write_json_atomic
 import html
 import json
 import os
@@ -9,6 +8,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from ..editing.timeline_schemas import ProjectDraftTimeline
 from .schemas import MusicAnalysis
 from .sync import MusicSyncSuggestions

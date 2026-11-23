@@ -13,7 +13,6 @@ Manifest format:
 
 from __future__ import annotations
 
-from video_edit_agent.atomic_io import write_json_atomic
 import argparse
 import gc
 import json
@@ -23,6 +22,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from video_edit_agent.atomic_io import write_json_atomic
 from video_edit_agent.understanding.schemas import FrameObservation, SceneDynamics
 from video_edit_agent.understanding.smolvlm2_analyzer import (
     _FRAME_PROMPT,

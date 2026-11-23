@@ -9,7 +9,6 @@ records raw outputs for human review; it does not declare semantic equivalence.
 
 from __future__ import annotations
 
-from video_edit_agent.atomic_io import write_json_atomic
 import argparse
 import gc
 import json
@@ -20,6 +19,7 @@ import traceback
 from pathlib import Path
 from typing import Any
 
+from video_edit_agent.atomic_io import write_json_atomic
 from video_edit_agent.understanding.smolvlm2_analyzer import (
     _FRAME_PROMPT,
     _TEMPORAL_PROMPT,

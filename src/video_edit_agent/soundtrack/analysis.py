@@ -1,6 +1,5 @@
 """Analyze the explicitly selected soundtrack and retain its licensing provenance."""
 
-from ..atomic_io import write_json_atomic
 import hashlib
 from datetime import UTC, datetime
 from pathlib import Path
@@ -8,6 +7,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from ..music.pipeline import analyze_music
 from ..music.schemas import MusicAnalysis
 from .review import SoundtrackCandidateReview, SoundtrackSelection

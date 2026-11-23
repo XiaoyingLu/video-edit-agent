@@ -1,6 +1,5 @@
 """Orchestration for local, resumable scene-level video understanding."""
 
-from ..atomic_io import write_json_atomic
 import hashlib
 import json
 import time
@@ -12,6 +11,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from ..atomic_io import write_json_atomic
 from ..config import get_setting
 from ..media import analyze_folder, discover_videos
 from .frame_sampler import extract_representative_frames

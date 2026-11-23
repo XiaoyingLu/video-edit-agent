@@ -1,10 +1,9 @@
 """Human-reviewed assignment of suggested source footage to storyboard shots."""
 
-from ..atomic_io import write_json_atomic
-import json
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from .footage_assignments import warn_for_overlapping_footage
 from .footage_feedback import FootageFeedbackEntry, record_footage_feedback, shot_feedback_tokens
 from .footage_schemas import ProjectFootageSuggestions

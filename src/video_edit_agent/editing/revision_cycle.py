@@ -1,6 +1,5 @@
 """Traceable, read-only summary of a complete rendered revision iteration."""
 
-from ..atomic_io import write_json_atomic
 import html
 import json
 import os
@@ -10,6 +9,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 
 
 class RevisionCycleError(ValueError):

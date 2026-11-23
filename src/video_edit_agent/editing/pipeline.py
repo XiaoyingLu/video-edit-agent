@@ -1,11 +1,11 @@
 """Build deterministic edit proposals and validated retained timelines."""
 
-from ..atomic_io import write_json_atomic
 import hashlib
 import json
 from pathlib import Path
 
 from ..artifact_tracking import validate_artifact
+from ..atomic_io import write_json_atomic
 from ..silence.schemas import ProjectSilenceAnalysis
 from ..understanding.schemas import VideoScene, VideoUnderstanding
 from .schemas import (

@@ -1,6 +1,5 @@
 """Visual, read-only before/after review for timeline revisions."""
 
-from ..atomic_io import write_json_atomic
 import base64
 import html
 import shutil
@@ -10,6 +9,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from ..rendering.critique import DraftCritiqueError, _run
 from .revisions import compare_timeline_files
 from .timeline_schemas import ProjectDraftTimeline

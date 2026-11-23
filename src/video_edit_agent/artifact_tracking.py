@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from .atomic_io import write_json_atomic
 import hashlib
 import json
 from pathlib import Path
 from typing import Any
 
+from .atomic_io import write_json_atomic
 from .media import discover_videos
 
 MANIFEST_NAME = "artifact-manifest.json"

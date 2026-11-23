@@ -1,11 +1,11 @@
 """Render explicitly approved timeline revisions as separate preview artifacts."""
 
-from ..atomic_io import write_json_atomic
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from ..rendering.renderer import RenderReport
 from ..rendering.shot_renderer import render_approved_shot_timeline
 from .planning_schemas import VideoProjectPlan

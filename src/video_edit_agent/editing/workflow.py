@@ -1,10 +1,9 @@
 """End-to-end natural-language video creation workflow."""
 
-from ..atomic_io import write_json_atomic
-import json
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact
+from ..atomic_io import write_json_atomic
 from ..config import get_setting
 from ..highlights import find_highlights_folder
 from ..highlights.schemas import ProjectHighlights

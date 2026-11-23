@@ -1,6 +1,5 @@
 """Browser-based visual review for a proposed shot timeline."""
 
-from ..atomic_io import write_json_atomic
 import base64
 import hashlib
 import html
@@ -14,6 +13,7 @@ from urllib.parse import quote
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from ..rendering.critique import DraftCritiqueError, _run
 from ..rendering.social_crop_anchors import load_crop_anchors
 from .timeline_schemas import ProjectDraftTimeline

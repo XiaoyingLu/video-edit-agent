@@ -1,6 +1,5 @@
 """Translate rendered-draft critique evidence into reviewable shot-level suggestions."""
 
-from ..atomic_io import write_json_atomic
 import json
 from pathlib import Path
 from typing import Literal
@@ -8,6 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from .timeline_schemas import ProjectDraftTimeline
 
 

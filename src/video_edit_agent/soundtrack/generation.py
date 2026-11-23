@@ -1,6 +1,5 @@
 """Project-level Stable Audio generation workflow and provenance artifacts."""
 
-from ..atomic_io import write_json_atomic
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -8,6 +7,7 @@ from uuid import uuid4
 from pydantic import BaseModel, ConfigDict
 
 from ..artifact_tracking import register_artifact
+from ..atomic_io import write_json_atomic
 from .providers.stable_audio import (
     StableAudioGenerationProvider,
     StableAudioGenerationRequest,

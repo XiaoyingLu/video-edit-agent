@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from ..atomic_io import write_json_atomic
 import re
 from pathlib import Path
 from typing import Literal
@@ -10,6 +9,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 
 FEEDBACK_FILENAME = "footage-feedback.json"
 

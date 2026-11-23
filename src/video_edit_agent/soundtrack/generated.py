@@ -1,10 +1,10 @@
 """Normalize generated audio into the shared soundtrack review workflow."""
 
-from ..atomic_io import write_json_atomic
 import hashlib
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from ..atomic_io import write_json_atomic
 from ..music import analyze_music
 from ..music.pipeline import MusicAnalysisError
 from .catalog import SoundtrackSearchResponse

@@ -1,7 +1,5 @@
 """Reviewable beat-alignment suggestions for an approved or proposed shot timeline."""
 
-from ..atomic_io import write_json_atomic
-import json
 from bisect import bisect_left
 from pathlib import Path
 from typing import Literal
@@ -9,6 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import validate_artifact
+from ..atomic_io import write_json_atomic
 from ..editing.timeline_schemas import ProjectDraftTimeline
 from .schemas import MusicAnalysis
 

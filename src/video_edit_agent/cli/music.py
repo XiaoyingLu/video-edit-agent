@@ -1,7 +1,7 @@
 """Soundtrack and music commands."""
 
-from ..atomic_io import write_json_atomic
 # ruff: noqa: F403,F405,I001
+from ..atomic_io import write_json_atomic
 from .common import *  # noqa: F403
 
 
