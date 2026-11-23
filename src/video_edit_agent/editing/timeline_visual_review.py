@@ -66,6 +66,7 @@ class TimelineVisualReviewReport(BaseModel):
     review_required: bool = True
     timeline_modified: bool = False
     crop_anchors: dict[str, tuple[float, float]] = Field(default_factory=dict)
+    crop_anchor_warning: str | None = None
 
 
 class TimelineVisualReviewDecisions(BaseModel):
@@ -155,11 +156,13 @@ def build_timeline_visual_review(
     if Path(timeline.project_path).resolve() != root:
         raise TimelineVisualReviewError("Timeline belongs to a different project folder")
     anchor_file = root / ".video-agent" / "social-crop-anchors.json"
-    crop_anchors = (
-        load_crop_anchors(root, timeline_file, timeline, anchor_file)
-        if anchor_file.is_file()
-        else {}
-    )
+    crop_anchor_warning = None
+    crop_anchors = {}
+    if anchor_file.is_file():
+        try:
+            crop_anchors = load_crop_anchors(root, timeline_file, timeline, anchor_file)
+        except ValueError as exc:
+            crop_anchor_warning = str(exc)
     ffmpeg = shutil.which("ffmpeg")
     if timeline.clips and ffmpeg is None:
         raise TimelineVisualReviewError("ffmpeg must be installed and available on PATH")
@@ -204,6 +207,7 @@ def build_timeline_visual_review(
         target_duration_seconds=timeline.target_duration_seconds,
         timeline_approved=timeline.timeline_approved,
         crop_anchors=crop_anchors,
+        crop_anchor_warning=crop_anchor_warning,
         clips=clips,
     )
 
@@ -216,6 +220,11 @@ def render_timeline_visual_review_html(
     """Render an offline review page with a browser preview and export controls."""
     payload = report.model_dump(mode="json")
     payload_json = json.dumps(payload, ensure_ascii=True).replace("<", "\\u003c")
+    crop_warning_html = (
+        f'<p role="status">Existing crop anchors were not loaded: {html.escape(report.crop_anchor_warning)}</p>'
+        if report.crop_anchor_warning
+        else ""
+    )
     cards = []
     for clip in report.clips:
         image = clip.frame_data_uri
@@ -307,6 +316,7 @@ button {{ padding:.65rem 1rem; cursor:pointer; }} .duration {{ font-variant-nume
 <header><h1>Visual Timeline Review</h1>
 <p>{len(report.clips)} shots · {report.proposed_duration_seconds:.2f}s proposed ·
 {report.target_duration_seconds:.2f}s target</p>
+{crop_warning_html}
 <p>Preview the proposed sequence below. Playback follows the current card order and trim
 points; transitions are represented as cuts. Drag shots to reorder them or adjust source in/out
 points. Changes remain proposals until imported with the CLI.</p>
