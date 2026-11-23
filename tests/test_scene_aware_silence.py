@@ -66,8 +66,10 @@ def test_scenic_and_establishing_silence_is_marked_preserve(tmp_path: Path, role
     )
     _write_analysis_artifacts(tmp_path, [scene])
 
-    item = build_edit_proposal(tmp_path).videos[0].review_items[0]
+    proposal = build_edit_proposal(tmp_path)
+    item = proposal.videos[0].review_items[0]
 
+    assert proposal.schema_version == "1.1"
     assert item.suggested_action == "preserve"
     assert item.scene_role == role
     assert item.scene_id == scene.scene_id
