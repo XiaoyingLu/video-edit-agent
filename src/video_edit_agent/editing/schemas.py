@@ -58,7 +58,7 @@ class ProjectEditProposal(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    schema_version: str = "1.0"
+    schema_version: str = "1.1"
     project_path: str
     source_artifacts: list[str]
     video_count: int = Field(ge=0)
