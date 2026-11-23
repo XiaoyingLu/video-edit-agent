@@ -35,10 +35,7 @@ def test_review_edits_displays_scene_preservation_hint(tmp_path: Path) -> None:
                         end_seconds=7,
                         duration_seconds=4,
                         suggested_action="preserve",
-                        review_reason=(
-                            "Suggested action: preserve. The overlapping scene is classified as "
-                            "'scenic_breath', so keep this scenic/establishing moment by default."
-                        ),
+                        review_reason="Suggested action: preserve (scenic_breath).",
                         scene_role="scenic_breath",
                         scene_id="scene-1",
                         scene_summary="A quiet mountain panorama",
@@ -53,7 +50,6 @@ def test_review_edits_displays_scene_preservation_hint(tmp_path: Path) -> None:
 
     assert result.exit_code == 0, result.output
     assert "Suggested action: preserve" in result.output
-    assert "classified as 'scenic_breath'" in result.output
     assert "0 approved, 0 rejected, 1 pending" in result.output
     saved = json.loads((artifact_dir / "edit-proposal.json").read_text(encoding="utf-8"))
     assert saved["videos"][0]["review_items"][0]["decision"] == "pending"
