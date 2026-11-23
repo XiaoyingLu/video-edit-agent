@@ -66,7 +66,9 @@ class DraftTimelineClip(BaseModel):
     continuity_note: str = "No previous shot is available for a continuity comparison."
     sequence_reason: str = "Ranked by source score; no scene-role metadata available."
     pacing_target_seconds: float = Field(default=3.5, gt=0, le=12)
-    transition_in: Literal["cut", "crossfade", "dissolve"] = "cut"
+    transition_in: Literal[
+        "cut", "crossfade", "dissolve", "fadeblack", "wipeleft", "slideleft", "circleopen"
+    ] = "cut"
     transition_duration_seconds: float = Field(default=0, ge=0, le=2)
     pacing_fit: Literal["short", "within", "long"] = "within"
     pacing_note: str
