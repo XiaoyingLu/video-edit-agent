@@ -1,6 +1,5 @@
 """Build and review an ordered shot timeline without rendering media."""
 
-import json
 import re
 from pathlib import Path
 

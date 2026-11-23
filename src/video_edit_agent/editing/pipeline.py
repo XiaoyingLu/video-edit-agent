@@ -1,7 +1,6 @@
 """Build deterministic edit proposals and validated retained timelines."""
 
 import hashlib
-import json
 from pathlib import Path
 
 from ..artifact_tracking import validate_artifact
