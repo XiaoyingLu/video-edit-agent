@@ -18,9 +18,9 @@ from video_edit_agent.editing.timeline_schemas import (
 )
 from video_edit_agent.rendering import RenderError, RenderReport, render_approved_shot_timeline
 from video_edit_agent.rendering.shot_renderer import (
+    _build_beat_zoom_paths,
     _build_shot_render_command,
     _requested_output_dimensions,
-    _build_beat_zoom_paths,
     _resolve_output_dimensions,
 )
 
