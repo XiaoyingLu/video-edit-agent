@@ -7,7 +7,7 @@ import pytest
 from video_edit_agent.editing.ollama_client import (
     CHAT_TIMEOUT_SECONDS,
     OllamaClient,
-    OllamaClientError,
+    ModelClientError,
 )
 
 
@@ -87,7 +87,7 @@ def test_client_does_not_retry_permanent_http_error(monkeypatch):
         )
 
     monkeypatch.setattr("video_edit_agent.editing.ollama_client.urlopen", fake_urlopen)
-    with pytest.raises(OllamaClientError, match="HTTP 404") as error:
+    with pytest.raises(ModelClientError, match="HTTP 404") as error:
         OllamaClient().embed("missing-model", ["one"])
     assert error.value.status_code == 404
     assert len(calls) == 1
@@ -102,7 +102,7 @@ def test_client_retries_connection_errors_and_then_raises(monkeypatch):
 
     monkeypatch.setattr("video_edit_agent.editing.ollama_client.urlopen", fake_urlopen)
     monkeypatch.setattr("video_edit_agent.editing.ollama_client.time.sleep", lambda *_: None)
-    with pytest.raises(OllamaClientError, match="Could not reach Ollama"):
+    with pytest.raises(ModelClientError, match="Could not reach Ollama"):
         OllamaClient().embed("embed-model", ["one"])
     assert len(calls) == 2
 
@@ -112,7 +112,7 @@ def test_embed_validates_vector_count_and_dimensions(monkeypatch):
         "video_edit_agent.editing.ollama_client.urlopen",
         lambda *_args, **_kwargs: FakeResponse({"embeddings": [[0.1], [0.2, 0.3]]}),
     )
-    with pytest.raises(OllamaClientError, match="inconsistent dimensions"):
+    with pytest.raises(ModelClientError, match="inconsistent dimensions"):
         OllamaClient().embed("embed-model", ["one", "two"])
 
 

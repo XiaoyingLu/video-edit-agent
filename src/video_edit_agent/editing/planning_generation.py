@@ -12,7 +12,7 @@ from .ollama_client import (
     CONTROL_TIMEOUT_SECONDS,
     ModelClient,
     OllamaClient,
-    OllamaClientError,
+    ModelClientError,
 )
 from .planning_schemas import PlannedScene, StoryTreatment
 
@@ -111,7 +111,7 @@ class OllamaVideoPlanner:
                 timeout_seconds=CONTROL_TIMEOUT_SECONDS,
                 keep_alive=0,
             )
-        except OllamaClientError:
+        except ModelClientError:
             return
 
     def generate(
@@ -193,7 +193,7 @@ class OllamaVideoPlanner:
                     shot.pop("footage_end_seconds", None)
                     shot.pop("assignment_status", None)
             return GeneratedVideoPlanContent.model_validate(parsed)
-        except OllamaClientError as exc:
+        except ModelClientError as exc:
             raise VideoPlanningError(str(exc)) from exc
         except (TypeError, ValidationError) as exc:
             raise VideoPlanningError(

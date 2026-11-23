@@ -16,7 +16,7 @@ from .ollama_client import (
     CONTROL_TIMEOUT_SECONDS,
     ModelClient,
     OllamaClient,
-    OllamaClientError,
+    ModelClientError,
 )
 
 
@@ -89,7 +89,7 @@ class OllamaIntentParser:
                 timeout_seconds=self.timeout_seconds,
             )
             self._model_used = True
-        except OllamaClientError as exc:
+        except ModelClientError as exc:
             raise IntentParsingError(str(exc)) from exc
 
         if not isinstance(parsed, dict):
@@ -120,7 +120,7 @@ class OllamaIntentParser:
                 keep_alive=0,
             )
             return True
-        except OllamaClientError:
+        except ModelClientError:
             return False
 
 

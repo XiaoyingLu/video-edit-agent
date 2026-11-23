@@ -21,7 +21,7 @@ from .editing.ollama_client import (
     LONG_CONTEXT_CHAT_TIMEOUT_SECONDS,
     ModelClient,
     OllamaClient,
-    OllamaClientError,
+    ModelClientError,
 )
 from .editing.planning_generation import explicit_duration_seconds
 from .highlights.schemas import ProjectHighlights
@@ -149,7 +149,7 @@ class OllamaStoryModel:
                 timeout_seconds=CONTROL_TIMEOUT_SECONDS,
                 keep_alive=0,
             )
-        except OllamaClientError:
+        except ModelClientError:
             return
 
     def generate_json(self, system_prompt: str, user_content: str, schema: dict) -> dict:
@@ -173,7 +173,7 @@ class OllamaStoryModel:
                 options={"temperature": 0.3, "num_ctx": self.num_ctx},
                 timeout_seconds=LONG_CONTEXT_CHAT_TIMEOUT_SECONDS,
             )
-        except OllamaClientError as exc:
+        except ModelClientError as exc:
             raise StoryProposalError(str(exc)) from exc
 
 

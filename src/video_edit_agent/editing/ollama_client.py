@@ -23,7 +23,7 @@ RETRY_DELAY_SECONDS = 0.5
 _RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
 
 
-class OllamaClientError(RuntimeError):
+class ModelClientError(RuntimeError):
     """Raised when Ollama cannot return a valid model response."""
 
     def __init__(
@@ -36,6 +36,10 @@ class OllamaClientError(RuntimeError):
         super().__init__(message)
         self.status_code = status_code
         self.endpoint = endpoint
+
+
+# Kept as an alias for callers that name the concrete Ollama implementation.
+OllamaClientError = ModelClientError
 
 
 class ModelClient(Protocol):
@@ -105,7 +109,7 @@ class OllamaClient:
                 with urlopen(request, timeout=timeout_seconds) as response:
                     result = json.loads(response.read().decode("utf-8"))
                 if not isinstance(result, dict):
-                    raise OllamaClientError(
+                    raise ModelClientError(
                         f"Ollama returned a non-object response from {endpoint}.",
                         endpoint=endpoint,
                     )
@@ -115,7 +119,7 @@ class OllamaClient:
                 if exc.code in _RETRYABLE_STATUS_CODES and attempt < self.max_retries:
                     time.sleep(RETRY_DELAY_SECONDS)
                     continue
-                raise OllamaClientError(
+                raise ModelClientError(
                     f"Ollama returned HTTP {exc.code} from {endpoint}: {detail}",
                     status_code=exc.code,
                     endpoint=endpoint,
@@ -124,16 +128,16 @@ class OllamaClient:
                 if attempt < self.max_retries:
                     time.sleep(RETRY_DELAY_SECONDS)
                     continue
-                raise OllamaClientError(
+                raise ModelClientError(
                     f"Could not reach Ollama at {self.base_url}{endpoint}: {exc}",
                     endpoint=endpoint,
                 ) from exc
             except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-                raise OllamaClientError(
+                raise ModelClientError(
                     f"Ollama returned invalid JSON from {endpoint}: {exc}",
                     endpoint=endpoint,
                 ) from exc
-        raise OllamaClientError(f"Ollama request failed: {endpoint}", endpoint=endpoint)
+        raise ModelClientError(f"Ollama request failed: {endpoint}", endpoint=endpoint)
 
     def chat_json(
         self,
@@ -162,12 +166,12 @@ class OllamaClient:
             content = payload["message"]["content"]
             result = json.loads(content)
         except (KeyError, TypeError, json.JSONDecodeError) as exc:
-            raise OllamaClientError(
+            raise ModelClientError(
                 f"Ollama returned an invalid structured chat response: {exc}",
                 endpoint="/api/chat",
             ) from exc
         if not isinstance(result, dict):
-            raise OllamaClientError(
+            raise ModelClientError(
                 "Ollama returned structured JSON, but it was not an object.",
                 endpoint="/api/chat",
             )
@@ -223,13 +227,13 @@ class OllamaClient:
                 for vector in vectors
             )
         ):
-            raise OllamaClientError(
+            raise ModelClientError(
                 f"Ollama embedding model '{model}' returned an invalid vector batch.",
                 endpoint="/api/embed",
             )
         dimensions = {len(vector) for vector in vectors}
         if len(dimensions) != 1:
-            raise OllamaClientError(
+            raise ModelClientError(
                 "Ollama returned embeddings with inconsistent dimensions.",
                 endpoint="/api/embed",
             )

@@ -1,6 +1,6 @@
 """Embedding adapter backed by the shared model-client interface."""
 
-from .ollama_client import EMBED_TIMEOUT_SECONDS, ModelClient, OllamaClient, OllamaClientError
+from .ollama_client import EMBED_TIMEOUT_SECONDS, ModelClient, OllamaClient, ModelClientError
 
 
 class EmbeddingModelError(RuntimeError):
@@ -21,5 +21,5 @@ def ollama_embed_texts(
     model_client = client if client is not None else OllamaClient(base_url=base_url)
     try:
         return model_client.embed(model, texts, timeout_seconds=timeout_seconds)
-    except OllamaClientError as exc:
+    except ModelClientError as exc:
         raise EmbeddingModelError(str(exc)) from exc
