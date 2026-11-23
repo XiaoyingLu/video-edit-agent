@@ -3,6 +3,7 @@
 # ruff: noqa: F403,F405,I001
 from .common import *  # noqa: F403
 from ..rendering.style_presets import STYLE_PRESETS, resolve_style_preset
+from ..rendering.social_crop_anchors import create_crop_anchor_template
 
 
 @app.command()
@@ -557,6 +558,34 @@ def render_draft(
     console.print("[yellow]Original source videos were not modified.[/yellow]")
 
 
+@app.command("init-social-crop-anchors")
+def init_social_crop_anchors(
+    folder: Annotated[
+        Path,
+        typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True),
+    ],
+    timeline: Annotated[
+        Path | None,
+        typer.Option("--timeline", help="Approved/reviewed optimized timeline JSON."),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", help="Template path (default: .video-agent/social-crop-anchors.json)."),
+    ] = None,
+) -> None:
+    """Create an editable per-clip crop-anchor template for the optimized timeline."""
+    try:
+        destination, clip_ids = create_crop_anchor_template(
+            folder, timeline_path=timeline, output_path=output
+        )
+    except (FileNotFoundError, FileExistsError, ValueError, OSError) as exc:
+        console.print(f"[red]Could not initialize crop anchors:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    console.print(f"Crop-anchor template created at [green]{destination}[/green]")
+    console.print("Add entries to the anchors array using normalized x/y coordinates (0.0–1.0).")
+    console.print(f"Available clip IDs: {', '.join(clip_ids)}")
+
+
 @app.command("render-social-exports")
 def render_social_exports(
     folder: Annotated[
@@ -604,6 +633,13 @@ def render_social_exports(
             help="Crop positioning: center (default) or face (local face detection per shot).",
         ),
     ] = "center",
+    crop_anchors: Annotated[
+        Path | None,
+        typer.Option(
+            "--crop-anchors",
+            help="Optional manual per-clip crop-anchor JSON; overrides face detection.",
+        ),
+    ] = None,
     dry_run: Annotated[
         bool,
         typer.Option(
@@ -630,8 +666,8 @@ def render_social_exports(
             raise ValueError("fit_mode must be crop or pad")
         if reframe not in {"center", "face"}:
             raise ValueError("--reframe must be center or face")
-        if reframe == "face" and resolved_fit_mode != "crop":
-            raise ValueError("--reframe face requires --fit-mode crop")
+        if (reframe == "face" or crop_anchors is not None) and resolved_fit_mode != "crop":
+            raise ValueError("--reframe face and --crop-anchors require --fit-mode crop")
         outputs = []
         for label, aspect_ratio in profiles:
             destination = export_dir / f"{label}-{resolution}.mp4"
@@ -643,6 +679,7 @@ def render_social_exports(
                 dry_run=dry_run,
                 fit_mode=resolved_fit_mode,
                 reframe_mode=reframe,
+                crop_anchors_path=crop_anchors,
                 output_aspect_ratio=aspect_ratio,
                 output_resolution=resolution,
                 title_overlay_path=title_overlays,
