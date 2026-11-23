@@ -333,10 +333,6 @@ def test_critique_rejects_invalid_sample_count(tmp_path):
         critique_rendered_draft(tmp_path, sample_count=25)
 
 
-@pytest.mark.parametrize(
-    ("value", "expected"),
-    [("30/1", 30), ("30000/1001", pytest.approx(30000 / 1001)), ("0/0", None), ("N/A", None)],
-)
 def test_quality_critique_findings_are_pure_and_do_not_require_ffmpeg(tmp_path):
     _, timeline_path, plan_path = _write_inputs(tmp_path)
     plan = VideoProjectPlan.model_validate_json(plan_path.read_text(encoding="utf-8"))
@@ -390,7 +386,10 @@ def test_semantic_critique_findings_are_pure_and_thresholded():
     assert "shot-1" in findings[0].message
 
 
-
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [("30/1", 30), ("30000/1001", pytest.approx(30000 / 1001)), ("0/0", None), ("N/A", None)],
+)
 def test_parse_frame_rate(value, expected):
     assert _parse_frame_rate(value) == expected
 
