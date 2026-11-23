@@ -15,6 +15,7 @@ class RenderStylePreset:
     music_fade_in: float
     music_fade_out: float
     music_ducking: bool
+    beat_punch_in: bool = False
 
 
 STYLE_PRESETS: dict[str, RenderStylePreset] = {
@@ -47,6 +48,7 @@ STYLE_PRESETS: dict[str, RenderStylePreset] = {
         music_fade_in=1.5,
         music_fade_out=2.5,
         music_ducking=False,
+        beat_punch_in=True,
     ),
     "social": RenderStylePreset(
         name="social",
@@ -57,6 +59,7 @@ STYLE_PRESETS: dict[str, RenderStylePreset] = {
         music_fade_in=0.25,
         music_fade_out=0.8,
         music_ducking=True,
+        beat_punch_in=True,
     ),
 }
 

@@ -392,6 +392,7 @@ def list_style_presets() -> None:
     table.add_column("Framing")
     table.add_column("Music", justify="right")
     table.add_column("Ducking")
+    table.add_column("Beat zoom")
     for preset in STYLE_PRESETS.values():
         table.add_row(
             preset.name,
@@ -399,6 +400,7 @@ def list_style_presets() -> None:
             preset.fit_mode,
             f"{preset.music_volume:.2f}",
             "on" if preset.music_ducking else "off",
+            "on" if preset.beat_punch_in else "off",
         )
     console.print(table)
     console.print(
@@ -538,6 +540,7 @@ def render_draft(
                 if music_ducking is not None
                 else (preset.music_ducking if preset else False)
             ),
+            beat_punch_in=preset.beat_punch_in if preset else False,
         )
     except (FileNotFoundError, FileExistsError, ValueError, RenderError) as exc:
         console.print(f"[red]Draft render failed:[/red] {exc}")
@@ -703,6 +706,7 @@ def render_social_exports(
                 music_fade_in=preset.music_fade_in if preset else 1.0,
                 music_fade_out=preset.music_fade_out if preset else 1.5,
                 music_ducking=preset.music_ducking if preset else False,
+                beat_punch_in=preset.beat_punch_in if preset else False,
             )
             outputs.append((label, aspect_ratio, report))
     except (FileNotFoundError, FileExistsError, ValueError, RenderError) as exc:
