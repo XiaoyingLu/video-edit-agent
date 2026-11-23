@@ -127,7 +127,25 @@ def understand(
     try:
 
         def report_progress(event: str, details: dict) -> None:
-            if event == "scene_detection_started":
+            if event == "frame_workload_ready":
+                console.print(
+                    f"[dim]Detected workload: {details['total_frames']} representative frame(s). "
+                    "ETA will appear after the first model response.[/dim]"
+                )
+            elif event == "frame_completed":
+                eta = details["estimated_remaining_seconds"]
+                console.print(
+                    f"  [green]Frame analyzed[/green] in {details['elapsed_seconds']:.1f}s · "
+                    f"{details['completed_frames']}/{details['total_frames']} frames · "
+                    f"frame-analysis ETA: {eta / 60:.1f} min"
+                )
+            elif event == "frame_cached":
+                console.print(
+                    f"  [dim]Reused cached frame {details['frame_index']}/"
+                    f"{details['frame_count']} · {details['completed_frames']}/"
+                    f"{details['total_frames']} total[/dim]"
+                )
+            elif event == "scene_detection_started":
                 console.print(f"[cyan]Detecting scene boundaries:[/cyan] {details['video_path']}")
             elif event == "scene_detection_completed":
                 console.print(
@@ -148,15 +166,6 @@ def understand(
             elif event == "frame_started":
                 console.print(
                     f"  Analyzing frame {details['frame_index']}/{details['frame_count']}..."
-                )
-            elif event == "frame_completed":
-                console.print(
-                    f"  [green]Frame analyzed[/green] in {details['elapsed_seconds']:.1f}s"
-                )
-            elif event == "frame_cached":
-                console.print(
-                    "  [dim]Reused cached frame "
-                    f"{details['frame_index']}/{details['frame_count']}[/dim]"
                 )
             elif event == "temporal_analysis_started":
                 console.print("  Analyzing temporal action and camera movement...")
