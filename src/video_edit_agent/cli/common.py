@@ -131,8 +131,18 @@ from ..understanding.visual_analyzer import VisionModelError
 
 app = typer.Typer(
     name="video-agent",
-    help="Analyze and edit local personal video footage with an AI-assisted workflow.",
+    help=(
+        "Create a first draft with create-video, or use the story, music, and render "
+        "command groups for focused advanced workflows."
+    ),
     no_args_is_help=True,
+)
+story_app = typer.Typer(
+    name="story", help="Story planning, footage selection, and timeline editing."
+)
+music_app = typer.Typer(name="music", help="Soundtrack discovery, analysis, and synchronization.")
+render_app = typer.Typer(
+    name="render", help="Video rendering, social exports, and visual quality review."
 )
 console = Console()
 DEFAULT_VISION_PROVIDER = get_setting("VISION_PROVIDER")

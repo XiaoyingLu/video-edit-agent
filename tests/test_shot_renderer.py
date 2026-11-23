@@ -335,7 +335,7 @@ def test_render_draft_cli_invokes_approved_renderer(tmp_path, monkeypatch):
 
 
 def test_cli_help_includes_render_draft():
-    result = runner.invoke(app, ["--help"])
+    result = runner.invoke(app, ["render", "--help"])
     assert result.exit_code == 0
     assert "render-draft" in result.output
     assert "style-presets" in result.output
@@ -347,7 +347,7 @@ def test_cli_help_includes_render_draft():
     assert "--music-ducking" in click.unstyle(result.output)
     assert "--aspect-ratio" in click.unstyle(result.output)
     assert "--resolution" in click.unstyle(result.output)
-    result = runner.invoke(app, ["render", "--help"])
+    result = runner.invoke(app, ["render", "video", "--help"])
     assert result.exit_code == 0
     assert "--music-mode" in click.unstyle(result.output)
 

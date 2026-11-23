@@ -5,7 +5,8 @@ from ..atomic_io import write_json_atomic
 from .common import *  # noqa: F403
 
 
-@app.command("suggest-soundtrack")
+@music_app.command("suggest-soundtrack")
+@app.command("suggest-soundtrack", hidden=True)
 def suggest_soundtrack_command(
     folder: Annotated[
         Path,
@@ -50,7 +51,8 @@ def suggest_soundtrack_command(
     )
 
 
-@app.command("search-soundtrack")
+@music_app.command("search-soundtrack")
+@app.command("search-soundtrack", hidden=True)
 def search_soundtrack_command(
     folder: Annotated[
         Path, typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True)
@@ -94,7 +96,8 @@ def search_soundtrack_command(
     console.print("[dim]No audio was downloaded and no timeline or video was changed.[/dim]")
 
 
-@app.command("generate-soundtrack")
+@music_app.command("generate-soundtrack")
+@app.command("generate-soundtrack", hidden=True)
 def generate_soundtrack_command(
     folder: Annotated[
         Path, typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True)
@@ -145,7 +148,8 @@ def generate_soundtrack_command(
     )
 
 
-@app.command("prepare-soundtrack-candidates")
+@music_app.command("prepare-soundtrack-candidates")
+@app.command("prepare-soundtrack-candidates", hidden=True)
 def prepare_soundtrack_candidates_command(
     folder: Annotated[
         Path, typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True)
@@ -189,7 +193,8 @@ def prepare_soundtrack_candidates_command(
     )
 
 
-@app.command("review-soundtrack")
+@music_app.command("review-soundtrack")
+@app.command("review-soundtrack", hidden=True)
 def review_soundtrack_command(
     folder: Annotated[
         Path, typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True)
@@ -247,7 +252,8 @@ def review_soundtrack_command(
     )
 
 
-@app.command("select-soundtrack")
+@music_app.command("select-soundtrack")
+@app.command("select-soundtrack", hidden=True)
 def select_soundtrack_command(
     folder: Annotated[
         Path, typer.Argument(..., exists=True, file_okay=False, dir_okay=True, readable=True)
@@ -284,7 +290,8 @@ def select_soundtrack_command(
     )
 
 
-@app.command("analyze-selected-soundtrack")
+@music_app.command("analyze-selected-soundtrack")
+@app.command("analyze-selected-soundtrack", hidden=True)
 def analyze_selected_soundtrack_command(
     folder: Annotated[
         Path,
@@ -346,7 +353,8 @@ def analyze_selected_soundtrack_command(
     )
 
 
-@app.command("analyze-music")
+@music_app.command("analyze-music")
+@app.command("analyze-music", hidden=True)
 def analyze_music_command(
     folder: Annotated[
         Path,
@@ -411,7 +419,8 @@ def analyze_music_command(
         console.print(f"[dim]• {note}[/dim]")
 
 
-@app.command("suggest-music-sync")
+@music_app.command("suggest-music-sync")
+@app.command("suggest-music-sync", hidden=True)
 def suggest_music_sync_command(
     folder: Annotated[
         Path,
@@ -510,7 +519,8 @@ def suggest_music_sync_command(
     )
 
 
-@app.command("review-music-timeline")
+@music_app.command("review-music-timeline")
+@app.command("review-music-timeline", hidden=True)
 def review_music_timeline(
     folder: Annotated[
         Path,
@@ -550,7 +560,8 @@ def review_music_timeline(
     )
 
 
-@app.command("review-music-sync")
+@music_app.command("review-music-sync")
+@app.command("review-music-sync", hidden=True)
 def review_music_sync(
     folder: Annotated[
         Path,

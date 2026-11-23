@@ -120,20 +120,13 @@ def test_cli_help_is_available() -> None:
     assert "transcribe" in result.output
     assert "detect-silence" in result.output
     assert "subtitles" in result.output
-    assert "find-highlights" in result.output
-    assert "plan" in result.output
-    assert "draft-edit" in result.output
     assert "create-video" in result.output
-    assert "create-plan" in result.output
-    assert "suggest-soundtrack" in result.output
-    assert "generate-soundtrack" in result.output
-    assert "prepare-soundtrack-candidates" in result.output
-    assert "search-soundtrack" in result.output
-    assert "review-soundtrack" in result.output
-    assert "select-soundtrack" in result.output
-    assert "analyze-selected-soundtrack" in result.output
-    assert "review-footage" in result.output
-    assert "review-storyboard" in result.output
+    assert "story" in result.output
+    assert "music" in result.output
+    assert "render" in result.output
+    assert "find-highlights" not in result.output
+    assert "suggest-soundtrack" not in result.output
+    assert "render-social-exports" not in result.output
     assert "validate-artifacts" in result.output
 
 
@@ -210,7 +203,7 @@ def test_cli_help_includes_propose_edits() -> None:
 
 
 def test_render_help_includes_subtitle_style() -> None:
-    result = runner.invoke(app, ["render", "--help"])
+    result = runner.invoke(app, ["render", "video", "--help"])
     assert result.exit_code == 0
     assert "--subtitle-style" in click.unstyle(result.output)
 
@@ -316,7 +309,8 @@ def test_build_timeline_requires_all_review_items_decided(tmp_path: Path) -> Non
     assert "all review items must be approved or rejected" in result.output
 
 
-def test_render_command_reports_verified_output(tmp_path: Path, monkeypatch) -> None:
+@pytest.mark.parametrize("command", [["render", "video"], ["render-video"]])
+def test_render_command_reports_verified_output(tmp_path: Path, monkeypatch, command) -> None:
     from video_edit_agent import cli
     from video_edit_agent.rendering import RenderReport
 
@@ -348,7 +342,7 @@ def test_render_command_reports_verified_output(tmp_path: Path, monkeypatch) -> 
     result = runner.invoke(
         app,
         [
-            "render",
+            *command,
             str(tmp_path),
             "--output",
             str(output),
@@ -379,7 +373,7 @@ def test_render_command_dry_run_reports_preflight(tmp_path: Path, monkeypatch) -
         "render_project",
         fake_render,
     )
-    result = runner.invoke(app, ["render", str(tmp_path), "--dry-run"])
+    result = runner.invoke(app, ["render-video", str(tmp_path), "--dry-run"])
 
     assert result.exit_code == 0, result.output
     assert captured["dry_run"] is True
@@ -866,3 +860,28 @@ def test_analyze_selected_soundtrack_command_invokes_provenance_workflow(tmp_pat
     assert captured["music_path"] == Path(".video-agent/imported-track.mp3")
     assert captured["analysis_output_path"] == Path(".video-agent/custom-analysis.json")
     assert "no timeline approval or rendering occurred" in " ".join(result.output.split())
+
+
+@pytest.mark.parametrize(
+    ("group", "expected_commands"),
+    [
+        ("story", ["find-highlights", "create-plan", "propose-story", "review-timeline"]),
+        ("music", ["suggest-soundtrack", "analyze-music", "review-music-sync"]),
+        ("render", ["video", "render-social-exports", "critique-draft"]),
+    ],
+)
+def test_cli_subcommand_groups_have_focused_help(group: str, expected_commands: list[str]) -> None:
+    result = runner.invoke(app, [group, "--help"])
+    assert result.exit_code == 0, result.output
+    for command in expected_commands:
+        assert command in result.output
+
+
+def test_legacy_advanced_commands_remain_available_as_hidden_aliases() -> None:
+    result = runner.invoke(app, ["find-highlights", "--help"])
+    assert result.exit_code == 0
+    assert "Folder containing video files" in result.output
+
+    render_result = runner.invoke(app, ["render-video", "--help"])
+    assert render_result.exit_code == 0
+    assert "--overwrite" in click.unstyle(render_result.output)
