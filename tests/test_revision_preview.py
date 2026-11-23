@@ -81,9 +81,7 @@ def _mock_renderer(monkeypatch):
             ("9:16", "720p"): (720, 1280),
             ("1:1", "720p"): (720, 720),
         }
-        width, height = dimensions.get(
-            (output_aspect_ratio, output_resolution), (1920, 1080)
-        )
+        width, height = dimensions.get((output_aspect_ratio, output_resolution), (1920, 1080))
         return RenderReport(
             output_path=str(output_path),
             source_timeline=str(timeline_path),
