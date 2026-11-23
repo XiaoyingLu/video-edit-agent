@@ -128,9 +128,7 @@ def save_crop_anchors(
         "anchors": validated,
     }
     destination.parent.mkdir(parents=True, exist_ok=True)
-    temporary = destination.with_name(destination.name + ".tmp")
-    write_json_atomic(temporary, document)
-    temporary.replace(destination)
+    write_json_atomic(destination, document)
     return destination
 
 
