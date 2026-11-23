@@ -32,13 +32,14 @@ dev = [
   "pytest-cov>=5,<7",
   "ruff>=0.5,<1",
   "mypy>=1.10,<2",
+  "pip-audit>=2.7,<3",
 ]
 
 [project.scripts]
 video-agent = "video_edit_agent.cli:app"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/video_edit_agent", "src/travel_video_agent"]
+packages = ["src/video_edit_agent"]
 force-include = { "src/video_edit_agent/editing/templates/timeline_visual_review.html" = "video_edit_agent/editing/templates/timeline_visual_review.html" }
 
 [tool.pytest.ini_options]
