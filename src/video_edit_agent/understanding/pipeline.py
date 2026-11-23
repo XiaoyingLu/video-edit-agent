@@ -1,8 +1,8 @@
 """Orchestration for local, resumable scene-level video understanding."""
 
+from ..atomic_io import write_json_atomic
 import hashlib
 import json
-import os
 import time
 import warnings
 from collections import Counter
@@ -101,10 +101,7 @@ def _load_checkpoint(
 
 def _save_checkpoint(path: Path, checkpoint: dict[str, Any]) -> None:
     """Atomically persist progress so interruption loses at most one model request."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(json.dumps(checkpoint, indent=2) + "\n", encoding="utf-8")
-    os.replace(temporary, path)
+    write_json_atomic(path, checkpoint)
 
 
 def understand_folder(

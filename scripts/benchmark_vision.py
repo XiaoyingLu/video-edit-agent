@@ -4,6 +4,7 @@ Run this script natively on Apple Silicon for MLX acceleration:
     python scripts/benchmark_vision.py frame-1.jpg frame-2.jpg --output benchmark.json
 """
 
+from video_edit_agent.atomic_io import write_json_atomic
 import argparse
 import json
 import platform
@@ -73,7 +74,7 @@ def main() -> None:
         results["runs"].append(run_provider("mlx", args.mlx_model, frames))
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
+    write_json_atomic(args.output, results)
     for run in results["runs"]:
         print(
             f"{run['provider']} ({run['model']}): "

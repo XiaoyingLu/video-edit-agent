@@ -8,6 +8,7 @@ nothing here assigns footage, approves a plan, edits media, or renders video.
 
 from __future__ import annotations
 
+from .atomic_io import write_json_atomic
 import json
 from pathlib import Path
 from typing import Literal, Protocol
@@ -403,5 +404,5 @@ def _write(
     root: Path, path: Path, proposal: StoryProposal, *, dependencies: list[Path] | None
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(proposal.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8")
+    write_json_atomic(path, proposal)
     register_artifact(root, path, dependencies=dependencies)

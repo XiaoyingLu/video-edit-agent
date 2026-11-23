@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ..atomic_io import write_json_atomic
 import re
 from pathlib import Path
 from typing import Literal
@@ -87,6 +88,6 @@ def record_footage_feedback(
     if len(feedback.entries) > 5000:
         feedback.entries = feedback.entries[-5000:]
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(feedback.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    write_json_atomic(path, feedback)
     register_artifact(root, path)
     return path

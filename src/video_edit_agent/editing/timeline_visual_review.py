@@ -1,5 +1,6 @@
 """Browser-based visual review for a proposed shot timeline."""
 
+from ..atomic_io import write_json_atomic
 import base64
 import hashlib
 import html
@@ -532,7 +533,7 @@ def save_timeline_visual_review(
     if json_file.exists() or html_file.exists():
         raise FileExistsError(f"Refusing to overwrite visual timeline review: {base}")
     json_file.parent.mkdir(parents=True, exist_ok=True)
-    json_file.write_text(report.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    write_json_atomic(json_file, report)
     media_sources = {
         clip.clip_id: quote(
             os.path.relpath(

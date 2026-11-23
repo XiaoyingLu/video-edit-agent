@@ -1,5 +1,6 @@
 """Human-reviewed assignment of suggested source footage to storyboard shots."""
 
+from ..atomic_io import write_json_atomic
 import json
 from pathlib import Path
 
@@ -147,9 +148,7 @@ def review_storyboard_footage(
     all_assigned = all(shot.assignment_status != "unassigned" for shot in shots.values())
     plan.planning_stage = "footage_mapped" if all_assigned else "storyboard_ready"
     plan.approved = False
-    plan_file.write_text(
-        json.dumps(plan.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
-    )
+    write_json_atomic(plan_file, plan)
     register_artifact(root, plan_file)
     record_footage_feedback(root, entries=feedback_entries)
     return plan, plan_file

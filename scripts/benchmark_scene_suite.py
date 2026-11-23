@@ -13,6 +13,7 @@ Manifest format:
 
 from __future__ import annotations
 
+from video_edit_agent.atomic_io import write_json_atomic
 import argparse
 import gc
 import json
@@ -469,7 +470,7 @@ def main() -> None:
         results["runs"].append(result)
         print(f"{provider}: {result['status']}")
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
+    write_json_atomic(args.output, results)
     print(f"Benchmark written to {args.output}")
 
 

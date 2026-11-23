@@ -1,5 +1,6 @@
 """Build deterministic edit proposals and validated retained timelines."""
 
+from ..atomic_io import write_json_atomic
 import hashlib
 import json
 from pathlib import Path
@@ -137,10 +138,7 @@ def load_edit_proposal(
 
 def save_edit_proposal(proposal: ProjectEditProposal, destination: Path) -> None:
     """Persist review decisions without touching source media."""
-    destination.write_text(
-        json.dumps(proposal.model_dump(mode="json"), indent=2) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(destination, proposal)
 
 
 def apply_review_decisions(

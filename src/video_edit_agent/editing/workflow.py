@@ -1,5 +1,6 @@
 """End-to-end natural-language video creation workflow."""
 
+from ..atomic_io import write_json_atomic
 import json
 from pathlib import Path
 
@@ -28,10 +29,7 @@ def _save_artifact(
     """Persist JSON and register its source/dependency provenance."""
     destination = root / ".video-agent" / name
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(payload.model_dump(mode="json"), indent=2) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(destination, payload)
     register_artifact(root, destination, dependencies=dependencies, config=config)
     return destination
 

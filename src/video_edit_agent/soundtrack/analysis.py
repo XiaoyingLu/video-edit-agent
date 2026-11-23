@@ -1,5 +1,6 @@
 """Analyze the explicitly selected soundtrack and retain its licensing provenance."""
 
+from ..atomic_io import write_json_atomic
 import hashlib
 from datetime import UTC, datetime
 from pathlib import Path
@@ -175,8 +176,8 @@ def analyze_selected_soundtrack(
     )
     analysis_file.parent.mkdir(parents=True, exist_ok=True)
     record_file.parent.mkdir(parents=True, exist_ok=True)
-    analysis_file.write_text(analysis.model_dump_json(indent=2) + "\n", encoding="utf-8")
-    record_file.write_text(record.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    write_json_atomic(analysis_file, analysis)
+    write_json_atomic(record_file, record)
     register_artifact(
         root,
         analysis_file,

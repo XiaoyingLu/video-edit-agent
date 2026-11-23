@@ -1,5 +1,6 @@
 """Project-level Stable Audio generation workflow and provenance artifacts."""
 
+from ..atomic_io import write_json_atomic
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -129,7 +130,7 @@ async def generate_soundtrack_from_brief(
         generated_at=datetime.now(UTC),
     )
     metadata_path.parent.mkdir(parents=True, exist_ok=True)
-    metadata_path.write_text(artifact.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    write_json_atomic(metadata_path, artifact)
     register_artifact(root, destination, dependencies=[brief_file])
     register_artifact(root, metadata_path, dependencies=[brief_file, destination])
     return artifact, metadata_path

@@ -1,5 +1,6 @@
 """Soundtrack and music commands."""
 
+from ..atomic_io import write_json_atomic
 # ruff: noqa: F403,F405,I001
 from .common import *  # noqa: F403
 
@@ -388,9 +389,7 @@ def analyze_music_command(
     destination = output or folder.resolve() / ".video-agent" / "music-analysis.json"
     destination = destination.expanduser().resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(report.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
-    )
+    write_json_atomic(destination, report)
     register_artifact(folder, destination, dependencies=[music.expanduser().resolve()])
 
     table = Table(title="Soundtrack Analysis")

@@ -1,8 +1,7 @@
 """Apply browser-authored sequence and trim edits as a separate timeline revision."""
 
+from ..atomic_io import write_json_atomic
 import hashlib
-import json
-import os
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -173,11 +172,6 @@ def apply_timeline_visual_edits(
     while (directory / f"visual-edit-{number:03}.json").exists():
         number += 1
     destination = directory / f"visual-edit-{number:03}.json"
-    temporary = destination.with_suffix(".json.tmp")
-    temporary.write_text(
-        json.dumps(revised.model_dump(mode="json"), indent=2) + "\n",
-        encoding="utf-8",
-    )
-    os.replace(temporary, destination)
+    write_json_atomic(destination, revised)
     register_artifact(root, destination, dependencies=[source_file])
     return destination

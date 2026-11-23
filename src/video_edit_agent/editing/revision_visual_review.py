@@ -1,9 +1,8 @@
 """Visual, read-only before/after review for timeline revisions."""
 
+from ..atomic_io import write_json_atomic
 import base64
 import html
-import json
-import os
 import shutil
 import tempfile
 from pathlib import Path
@@ -245,10 +244,7 @@ def save_timeline_revision_visual_review(
     if json_file.exists() or html_file.exists():
         raise FileExistsError(f"Refusing to overwrite revision review: {base}")
     json_file.parent.mkdir(parents=True, exist_ok=True)
-    payload = json.dumps(report.model_dump(mode="json"), indent=2) + "\n"
-    temporary = json_file.with_suffix(".json.tmp")
-    temporary.write_text(payload, encoding="utf-8")
-    os.replace(temporary, json_file)
+    write_json_atomic(json_file, report)
     html_file.write_text(render_timeline_revision_review_html(report), encoding="utf-8")
     before_file = root / report.before_timeline_path
     after_file = root / report.after_timeline_path

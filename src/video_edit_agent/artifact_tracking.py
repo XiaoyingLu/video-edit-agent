@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from .atomic_io import write_json_atomic
 import hashlib
 import json
-import os
 from pathlib import Path
 from typing import Any
 
@@ -74,10 +74,7 @@ def _load_manifest(root: Path) -> dict[str, Any]:
 
 def _write_manifest(root: Path, manifest: dict[str, Any]) -> None:
     path = _manifest_path(root)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(".tmp")
-    temporary.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-    os.replace(temporary, path)
+    write_json_atomic(path, manifest)
 
 
 def _source_snapshot(

@@ -1,7 +1,6 @@
 """Safe, reviewable per-shot revisions for an approved draft timeline."""
 
-import json
-import os
+from ..atomic_io import write_json_atomic
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -215,13 +214,8 @@ def create_timeline_revision(
         after_duration_seconds=revised_duration,
         timeline=revised,
     )
-    for destination, payload in (
-        (revision_file, revised.model_dump(mode="json")),
-        (review_file, result.model_dump(mode="json")),
-    ):
-        temporary = destination.with_suffix(destination.suffix + ".tmp")
-        temporary.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-        os.replace(temporary, destination)
+    for destination, payload in (\n        (revision_file, revised.model_dump(mode="json")),
+        (review_file, result.model_dump(mode="json")),\n    ):\n        write_json_atomic(destination, payload)
     register_artifact(root, revision_file, dependencies=[source_file])
     return result
 

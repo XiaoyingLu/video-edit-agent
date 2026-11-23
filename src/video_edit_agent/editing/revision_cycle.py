@@ -1,5 +1,6 @@
 """Traceable, read-only summary of a complete rendered revision iteration."""
 
+from ..atomic_io import write_json_atomic
 import html
 import json
 import os
@@ -183,7 +184,7 @@ def save_revision_cycle_report(
     if json_file.exists() or html_file.exists():
         raise FileExistsError(f"Revision-cycle report already exists: {base}")
     json_file.parent.mkdir(parents=True, exist_ok=True)
-    json_file.write_text(report.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    write_json_atomic(json_file, report)
     html_file.write_text(
         render_revision_cycle_html(report, report_path=html_file), encoding="utf-8"
     )

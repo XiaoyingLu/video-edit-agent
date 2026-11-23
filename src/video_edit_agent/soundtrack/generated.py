@@ -1,5 +1,6 @@
 """Normalize generated audio into the shared soundtrack review workflow."""
 
+from ..atomic_io import write_json_atomic
 import hashlib
 from pathlib import Path
 
@@ -161,6 +162,6 @@ def prepare_generated_soundtrack_candidates(
         candidates=candidates,
     )
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(collection.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    write_json_atomic(destination, collection)
     register_artifact(root, destination, dependencies=dependencies)
     return collection, destination
