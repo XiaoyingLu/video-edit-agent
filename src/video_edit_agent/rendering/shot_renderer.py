@@ -96,6 +96,9 @@ def _crop_path_expression(path: list[tuple[float, float, float]], axis: int) -> 
             f"(t-{start:.6f})/{end - start:.6f})"
         )
         expression = f"if(lt(t,{end:.6f}),{interpolation},{expression})"
+    first_time, first_value = path[0][0], path[0][axis]
+    if first_time > 0:
+        expression = f"if(lt(t,{first_time:.6f}),{first_value:.6f},{expression})"
     return expression
 
 
@@ -141,7 +144,9 @@ def _build_shot_render_command(
                 not (0 <= x <= 1 and 0 <= y <= 1) or timestamp < 0
                 for timestamp, x, y in path
             ):
-                raise ValueError("crop path timestamps and coordinates must be non-negative and normalized")
+                raise ValueError(
+                    "crop path timestamps and coordinates must be non-negative and normalized"
+                )
             x_position = _crop_path_expression(path, 1)
             y_position = _crop_path_expression(path, 2)
         else:

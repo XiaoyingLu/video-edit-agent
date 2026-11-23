@@ -824,7 +824,6 @@ def test_social_exports_cli_passes_manual_crop_anchors(tmp_path, monkeypatch):
     assert all(call["crop_anchors_path"] == anchor_file for call in calls)
 
 
-
 def test_shot_renderer_builds_time_varying_face_crop_path(tmp_path):
     command = _build_shot_render_command(
         "ffmpeg",
