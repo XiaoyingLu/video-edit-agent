@@ -184,7 +184,7 @@ def test_optimize_and_review_timeline_cli_commands(tmp_path):
 
 
 def test_cli_help_includes_timeline_commands():
-    result = runner.invoke(app, ["--help"])
+    result = runner.invoke(app, ["story", "--help"])
     assert result.exit_code == 0
     help_text = Text.from_ansi(result.output).plain
     assert "optimize-timeline" in help_text

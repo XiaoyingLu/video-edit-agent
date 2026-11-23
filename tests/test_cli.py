@@ -309,7 +309,8 @@ def test_build_timeline_requires_all_review_items_decided(tmp_path: Path) -> Non
     assert "all review items must be approved or rejected" in result.output
 
 
-def test_render_command_reports_verified_output(tmp_path: Path, monkeypatch) -> None:
+@pytest.mark.parametrize("command", [["render", "video"], ["render-video"]])
+def test_render_command_reports_verified_output(tmp_path: Path, monkeypatch, command) -> None:
     from video_edit_agent import cli
     from video_edit_agent.rendering import RenderReport
 
@@ -341,7 +342,7 @@ def test_render_command_reports_verified_output(tmp_path: Path, monkeypatch) -> 
     result = runner.invoke(
         app,
         [
-            "render",
+            *command,
             str(tmp_path),
             "--output",
             str(output),
@@ -876,11 +877,11 @@ def test_cli_subcommand_groups_have_focused_help(group: str, expected_commands: 
         assert command in result.output
 
 
-def test_legacy_advanced_commands_remain_available_as_hidden_aliases(tmp_path: Path) -> None:
+def test_legacy_advanced_commands_remain_available_as_hidden_aliases() -> None:
     result = runner.invoke(app, ["find-highlights", "--help"])
     assert result.exit_code == 0
     assert "Folder containing video files" in result.output
 
     render_result = runner.invoke(app, ["render-video", "--help"])
     assert render_result.exit_code == 0
-    assert "--overwrite" in render_result.output
+    assert "--overwrite" in click.unstyle(render_result.output)
