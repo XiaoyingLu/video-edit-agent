@@ -5,9 +5,9 @@ import subprocess
 import pytest
 
 from video_edit_agent.rendering import RenderError
+from video_edit_agent.rendering.shot_renderer import _validate_xfade_transitions
 from video_edit_agent.rendering.renderer import (
     _validate_filter_graph,
-    _validate_xfade_transitions,
     _validate_source_stream_metadata,
 )
 

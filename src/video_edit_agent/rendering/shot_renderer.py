@@ -120,10 +120,9 @@ def _validate_xfade_transitions(
         label="FFmpeg xfade capability preflight",
         error_type=RenderError,
     )
-    help_text = f"{result.stdout or ''}
-{result.stderr or ''}"
+    help_text = "\n".join(filter(None, (result.stdout or "", result.stderr or "")))
     supported = set(
-        re.findall(r"^s+([a-z][a-z0-9_]*)s+-?d+s*$", help_text, re.MULTILINE)
+        re.findall(r"^\s+([a-z][a-z0-9_]*)\s+-?\d+\s*$", help_text, re.MULTILINE)
     )
     unsupported = sorted(
         transition
