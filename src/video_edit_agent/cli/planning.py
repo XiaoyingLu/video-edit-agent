@@ -576,6 +576,8 @@ def suggest_footage(
     ] = DEFAULT_FOOTAGE_EMBEDDING_MODEL,
 ) -> None:
     """Rank analyzed source scenes for storyboard shots; never assign footage automatically."""
+    if (folder.resolve() / ".video-agent" / "footage-feedback.json").is_file():
+        console.print("[dim]Applying preferences from previous footage reviews.[/dim]")
     try:
         report = suggest_storyboard_footage(
             folder,
@@ -597,7 +599,8 @@ def suggest_footage(
     common._track_artifact(
         folder,
         destination,
-        dependencies=(report.source_plan, report.source_understanding),
+        dependencies=(report.source_plan, report.source_understanding)
+        + ((report.source_feedback,) if report.source_feedback else ()),
         config={
             "max_candidates_per_shot": max_candidates,
             "embedding_model": embedding_model,

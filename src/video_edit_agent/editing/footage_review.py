@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
+from .footage_feedback import FootageFeedbackEntry, record_footage_feedback, shot_feedback_tokens
 from .footage_assignments import warn_for_overlapping_footage
 from .footage_schemas import ProjectFootageSuggestions
 from .planning_schemas import VideoProjectPlan
@@ -86,6 +87,37 @@ def review_storyboard_footage(
         shot.composition = candidate.composition
         shot.assignment_status = "approved"
 
+    feedback_entries = []
+    for shot_id, candidate_number in selections.items():
+        shot = shots[shot_id]
+        suggestion = suggestion_by_id[shot_id]
+        chosen = suggestion.candidates[candidate_number - 1]
+        feedback_entries.append(
+            FootageFeedbackEntry(
+                shot_tokens=shot_feedback_tokens(shot),
+                shot_scale=shot.shot_scale,
+                visual_role=shot.visual_role,
+                selected_scene_id=chosen.source_scene_id,
+                rejected_scene_ids=[
+                    item.source_scene_id
+                    for item in suggestion.candidates
+                    if item.source_scene_id != chosen.source_scene_id
+                ],
+            )
+        )
+    for shot_id in rejected:
+        shot = shots[shot_id]
+        suggestion = suggestion_by_id.get(shot_id)
+        if suggestion is not None:
+            feedback_entries.append(
+                FootageFeedbackEntry(
+                    shot_tokens=shot_feedback_tokens(shot),
+                    shot_scale=shot.shot_scale,
+                    visual_role=shot.visual_role,
+                    rejected_scene_ids=[item.source_scene_id for item in suggestion.candidates],
+                )
+            )
+
     for shot_id in rejected:
         shot = shots[shot_id]
         shot.footage_path = None
@@ -119,4 +151,5 @@ def review_storyboard_footage(
         json.dumps(plan.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
     )
     register_artifact(root, plan_file)
+    record_footage_feedback(root, entries=feedback_entries)
     return plan, plan_file

@@ -62,6 +62,7 @@ class ProjectFootageSuggestions(BaseModel):
     project_path: str
     source_plan: str
     source_understanding: str
+    source_feedback: str | None = None
     suggestions: list[ShotFootageSuggestions] = Field(default_factory=list)
     candidate_count: int = Field(ge=0)
     matched_shot_count: int = Field(ge=0)
