@@ -5,7 +5,6 @@ from pathlib import Path
 import pytest
 
 from video_edit_agent.config import get_setting
-
 from video_edit_agent.understanding.frame_sampler import extract_representative_frames
 from video_edit_agent.understanding.pipeline import understand_folder
 from video_edit_agent.understanding.scene_detection import detect_scenes
