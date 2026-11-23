@@ -20,8 +20,8 @@ from .editing.ollama_client import (
     CONTROL_TIMEOUT_SECONDS,
     LONG_CONTEXT_CHAT_TIMEOUT_SECONDS,
     ModelClient,
-    OllamaClient,
     ModelClientError,
+    OllamaClient,
 )
 from .editing.planning_generation import explicit_duration_seconds
 from .highlights.schemas import ProjectHighlights

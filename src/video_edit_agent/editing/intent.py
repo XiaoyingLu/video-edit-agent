@@ -15,8 +15,8 @@ from .ollama_client import (
     CHAT_TIMEOUT_SECONDS,
     CONTROL_TIMEOUT_SECONDS,
     ModelClient,
-    OllamaClient,
     ModelClientError,
+    OllamaClient,
 )
 
 

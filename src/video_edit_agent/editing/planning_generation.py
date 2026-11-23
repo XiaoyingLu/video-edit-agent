@@ -11,8 +11,8 @@ from .ollama_client import (
     CHAT_TIMEOUT_SECONDS,
     CONTROL_TIMEOUT_SECONDS,
     ModelClient,
-    OllamaClient,
     ModelClientError,
+    OllamaClient,
 )
 from .planning_schemas import PlannedScene, StoryTreatment
 
@@ -199,6 +199,7 @@ class OllamaVideoPlanner:
             raise VideoPlanningError(
                 f"Ollama returned an invalid story or storyboard: {exc}"
             ) from exc
+
 
 def normalize_storyboard_ids(content: GeneratedVideoPlanContent) -> GeneratedVideoPlanContent:
     """Replace model-generated identifiers with deterministic, globally unique IDs."""

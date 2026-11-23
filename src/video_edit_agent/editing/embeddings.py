@@ -1,6 +1,6 @@
 """Embedding adapter backed by the shared model-client interface."""
 
-from .ollama_client import EMBED_TIMEOUT_SECONDS, ModelClient, OllamaClient, ModelClientError
+from .ollama_client import EMBED_TIMEOUT_SECONDS, ModelClient, ModelClientError, OllamaClient
 
 
 class EmbeddingModelError(RuntimeError):

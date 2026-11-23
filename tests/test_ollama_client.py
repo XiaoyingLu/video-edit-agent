@@ -6,8 +6,8 @@ import pytest
 
 from video_edit_agent.editing.ollama_client import (
     CHAT_TIMEOUT_SECONDS,
-    OllamaClient,
     ModelClientError,
+    OllamaClient,
 )
 
 

@@ -87,9 +87,7 @@ class OllamaClient:
     ) -> None:
         if max_retries < 0:
             raise ValueError("max_retries must not be negative")
-        self.base_url = (
-            base_url or os.getenv("OLLAMA_BASE_URL", DEFAULT_BASE_URL)
-        ).rstrip("/")
+        self.base_url = (base_url or os.getenv("OLLAMA_BASE_URL", DEFAULT_BASE_URL)).rstrip("/")
         self.keep_alive = (
             keep_alive
             if keep_alive is not None
