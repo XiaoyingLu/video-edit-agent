@@ -23,34 +23,32 @@ def test_discover_videos_rejects_missing_folder(tmp_path: Path) -> None:
 
 def test_probe_video_reads_embedded_creation_timestamp(tmp_path: Path, monkeypatch) -> None:
     import json
-    from types import SimpleNamespace
+    import subprocess
 
     from video_edit_agent.media import probe_video
 
     video = tmp_path / "clip.mp4"
     video.touch()
     monkeypatch.setattr("video_edit_agent.media.shutil.which", lambda name: "/usr/bin/ffprobe")
+    payload = {
+        "format": {
+            "duration": "12.5",
+            "tags": {"creation_time": "2026-06-12T09:30:00.000000Z"},
+        },
+        "streams": [
+            {
+                "codec_type": "video",
+                "codec_name": "h264",
+                "width": 1920,
+                "height": 1080,
+                "avg_frame_rate": "30/1",
+            }
+        ],
+    }
     monkeypatch.setattr(
-        "video_edit_agent.media.run_ffmpeg",
-        lambda *args, **kwargs: SimpleNamespace(
-            stdout=json.dumps(
-                {
-                    "format": {
-                        "duration": "12.5",
-                        "tags": {"creation_time": "2026-06-12T09:30:00.000000Z"},
-                    },
-                    "streams": [
-                        {
-                            "codec_type": "video",
-                            "codec_name": "h264",
-                            "width": 1920,
-                            "height": 1080,
-                            "avg_frame_rate": "30/1",
-                        }
-                    ],
-                }
-            ),
-            stderr="",
+        "video_edit_agent.media_runner.subprocess.run",
+        lambda command, **kwargs: subprocess.CompletedProcess(
+            command, 0, stdout=json.dumps(payload), stderr=""
         ),
     )
 
