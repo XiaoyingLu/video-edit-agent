@@ -571,7 +571,8 @@ def init_social_crop_anchors(
     output: Annotated[
         Path | None,
         typer.Option(
-            "--output", help="Template path (default: .video-agent/social-crop-anchors.json)."
+            "--output",
+            help="Template path (default: .video-agent/social-crop-anchors.json).",
         ),
     ] = None,
 ) -> None:
