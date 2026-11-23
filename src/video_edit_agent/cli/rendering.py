@@ -7,7 +7,8 @@ from ..rendering.style_presets import STYLE_PRESETS, resolve_style_preset
 from ..rendering.social_crop_anchors import create_crop_anchor_template
 
 
-@app.command()
+@render_app.command("video")
+@app.command("render-video", hidden=True)
 def render(
     folder: Annotated[
         Path,
@@ -143,7 +144,8 @@ def render(
     console.print("[yellow]Original source videos were not modified.[/yellow]")
 
 
-@app.command("init-title-overlays")
+@render_app.command("init-title-overlays")
+@app.command("init-title-overlays", hidden=True)
 def init_title_overlays(
     folder: Annotated[
         Path,
@@ -184,7 +186,8 @@ def init_title_overlays(
     console.print("Add overlay entries to the JSON, then review them with review-title-overlays.")
 
 
-@app.command("suggest-title-sequences")
+@render_app.command("suggest-title-sequences")
+@app.command("suggest-title-sequences", hidden=True)
 def suggest_title_sequences(
     folder: Annotated[
         Path,
@@ -236,7 +239,8 @@ def suggest_title_sequences(
     console.print("Nothing is approved automatically; use review-title-overlays before rendering.")
 
 
-@app.command("review-title-overlays")
+@render_app.command("review-title-overlays")
+@app.command("review-title-overlays", hidden=True)
 def review_titles(
     folder: Annotated[
         Path,
@@ -291,7 +295,8 @@ def review_titles(
     console.print(f"Title overlay review saved to [green]{destination}[/green]")
 
 
-@app.command("render-revision-preview")
+@render_app.command("render-revision-preview")
+@app.command("render-revision-preview", hidden=True)
 def render_revision_preview(
     folder: Annotated[
         Path,
@@ -378,7 +383,8 @@ def render_revision_preview(
     console.print("[yellow]Original timeline and source media were not modified.[/yellow]")
 
 
-@app.command("style-presets")
+@render_app.command("style-presets")
+@app.command("style-presets", hidden=True)
 def list_style_presets() -> None:
     """List available render style presets."""
     table = Table(title="Render Style Presets")
@@ -401,7 +407,8 @@ def list_style_presets() -> None:
     )
 
 
-@app.command("render-draft")
+@render_app.command("render-draft")
+@app.command("render-draft", hidden=True)
 def render_draft(
     folder: Annotated[
         Path,
@@ -559,7 +566,8 @@ def render_draft(
     console.print("[yellow]Original source videos were not modified.[/yellow]")
 
 
-@app.command("init-social-crop-anchors")
+@render_app.command("init-social-crop-anchors")
+@app.command("init-social-crop-anchors", hidden=True)
 def init_social_crop_anchors(
     folder: Annotated[
         Path,
@@ -590,7 +598,8 @@ def init_social_crop_anchors(
     console.print(f"Available clip IDs: {', '.join(clip_ids)}")
 
 
-@app.command("render-social-exports")
+@render_app.command("render-social-exports")
+@app.command("render-social-exports", hidden=True)
 def render_social_exports(
     folder: Annotated[
         Path,
@@ -729,7 +738,8 @@ def render_social_exports(
         )
 
 
-@app.command("critique-draft")
+@render_app.command("critique-draft")
+@app.command("critique-draft", hidden=True)
 def critique_draft(
     folder: Annotated[
         Path,
@@ -861,7 +871,8 @@ def critique_draft(
     )
 
 
-@app.command("suggest-revisions")
+@render_app.command("suggest-revisions")
+@app.command("suggest-revisions", hidden=True)
 def suggest_revisions(
     folder: Annotated[
         Path,
@@ -946,7 +957,8 @@ def suggest_revisions(
     )
 
 
-@app.command("review-revision-suggestions")
+@render_app.command("review-revision-suggestions")
+@app.command("review-revision-suggestions", hidden=True)
 def review_revision_suggestions(
     folder: Annotated[
         Path,
@@ -1097,7 +1109,8 @@ def review_revision_suggestions(
         )
 
 
-@app.command("compare-drafts")
+@render_app.command("compare-drafts")
+@app.command("compare-drafts", hidden=True)
 def compare_drafts(
     folder: Annotated[
         Path,
@@ -1208,7 +1221,8 @@ def compare_drafts(
     )
 
 
-@app.command("review-workspace")
+@render_app.command("review-workspace")
+@app.command("review-workspace", hidden=True)
 def review_workspace(
     folder: Annotated[
         Path,

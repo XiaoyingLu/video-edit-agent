@@ -210,7 +210,7 @@ def test_cli_help_includes_propose_edits() -> None:
 
 
 def test_render_help_includes_subtitle_style() -> None:
-    result = runner.invoke(app, ["render", "--help"])
+    result = runner.invoke(app, ["render", "video", "--help"])
     assert result.exit_code == 0
     assert "--subtitle-style" in click.unstyle(result.output)
 
@@ -379,7 +379,7 @@ def test_render_command_dry_run_reports_preflight(tmp_path: Path, monkeypatch) -
         "render_project",
         fake_render,
     )
-    result = runner.invoke(app, ["render", str(tmp_path), "--dry-run"])
+    result = runner.invoke(app, ["render-video", str(tmp_path), "--dry-run"])
 
     assert result.exit_code == 0, result.output
     assert captured["dry_run"] is True

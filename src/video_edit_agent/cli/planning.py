@@ -6,7 +6,8 @@ from ..atomic_io import write_json_atomic
 from .common import *  # noqa: F403
 
 
-@app.command("find-highlights")
+@story_app.command("find-highlights")
+@app.command("find-highlights", hidden=True)
 def find_highlights(
     folder: Annotated[
         Path,
@@ -307,7 +308,8 @@ def create_video(
     )
 
 
-@app.command("plan")
+@story_app.command("plan")
+@app.command("plan", hidden=True)
 def plan_edit(
     folder: Annotated[
         Path,
@@ -360,7 +362,8 @@ def plan_edit(
     )
 
 
-@app.command("create-plan")
+@story_app.command("create-plan")
+@app.command("create-plan", hidden=True)
 def create_plan(
     folder: Annotated[
         Path,
@@ -441,7 +444,8 @@ def create_plan(
     )
 
 
-@app.command("propose-story")
+@story_app.command("propose-story")
+@app.command("propose-story", hidden=True)
 def propose_story_command(
     folder: Annotated[
         Path,
@@ -520,7 +524,8 @@ def propose_story_command(
     )
 
 
-@app.command("select-story")
+@story_app.command("select-story")
+@app.command("select-story", hidden=True)
 def select_story_command(
     folder: Annotated[
         Path,
@@ -541,7 +546,8 @@ def select_story_command(
     console.print(f"Saved to [green]{destination}[/green]")
 
 
-@app.command("suggest-footage")
+@story_app.command("suggest-footage")
+@app.command("suggest-footage", hidden=True)
 def suggest_footage(
     folder: Annotated[
         Path,
@@ -655,7 +661,8 @@ def suggest_footage(
     )
 
 
-@app.command("approve-storyboard")
+@story_app.command("approve-storyboard")
+@app.command("approve-storyboard", hidden=True)
 def approve_storyboard_command(
     folder: Annotated[
         Path,
@@ -678,7 +685,8 @@ def approve_storyboard_command(
     console.print("[yellow]No timeline was built and no video was rendered.[/yellow]")
 
 
-@app.command("build-storyboard-timeline")
+@story_app.command("build-storyboard-timeline")
+@app.command("build-storyboard-timeline", hidden=True)
 def build_storyboard_timeline_command(
     folder: Annotated[
         Path,
@@ -739,7 +747,8 @@ def build_storyboard_timeline_command(
     )
 
 
-@app.command("review-storyboard")
+@story_app.command("review-storyboard")
+@app.command("review-storyboard", hidden=True)
 def review_storyboard(
     folder: Annotated[
         Path,
@@ -773,7 +782,8 @@ def review_storyboard(
     )
 
 
-@app.command("review-footage")
+@story_app.command("review-footage")
+@app.command("review-footage", hidden=True)
 def review_footage(
     folder: Annotated[
         Path,
@@ -840,7 +850,8 @@ def review_footage(
     )
 
 
-@app.command("draft-edit")
+@story_app.command("draft-edit")
+@app.command("draft-edit", hidden=True)
 def draft_edit(
     folder: Annotated[
         Path,
@@ -914,7 +925,8 @@ def draft_edit(
     )
 
 
-@app.command("optimize-timeline")
+@story_app.command("optimize-timeline")
+@app.command("optimize-timeline", hidden=True)
 def optimize_timeline(
     folder: Annotated[
         Path,
@@ -1010,7 +1022,8 @@ def optimize_timeline(
     )
 
 
-@app.command("review-timeline")
+@story_app.command("review-timeline")
+@app.command("review-timeline", hidden=True)
 def review_timeline(
     folder: Annotated[
         Path,
@@ -1150,7 +1163,8 @@ def review_timeline(
     console.print("[yellow]No renderer timeline was created and no video was rendered.[/yellow]")
 
 
-@app.command("review-timeline-visual")
+@story_app.command("review-timeline-visual")
+@app.command("review-timeline-visual", hidden=True)
 def review_timeline_visual(
     folder: Annotated[
         Path,
@@ -1194,7 +1208,8 @@ def review_timeline_visual(
     )
 
 
-@app.command("apply-timeline-visual-edits")
+@story_app.command("apply-timeline-visual-edits")
+@app.command("apply-timeline-visual-edits", hidden=True)
 def apply_timeline_visual_edits_command(
     folder: Annotated[
         Path,
@@ -1226,7 +1241,8 @@ def apply_timeline_visual_edits_command(
     )
 
 
-@app.command("revise-timeline")
+@story_app.command("revise-timeline")
+@app.command("revise-timeline", hidden=True)
 def revise_timeline(
     folder: Annotated[
         Path,
@@ -1294,7 +1310,8 @@ def revise_timeline(
     )
 
 
-@app.command("review-timeline-revision")
+@story_app.command("review-timeline-revision")
+@app.command("review-timeline-revision", hidden=True)
 def review_timeline_revision(
     folder: Annotated[
         Path,
@@ -1357,7 +1374,8 @@ def review_timeline_revision(
     )
 
 
-@app.command("compare-timelines")
+@story_app.command("compare-timelines")
+@app.command("compare-timelines", hidden=True)
 def compare_timelines(
     folder: Annotated[
         Path,
