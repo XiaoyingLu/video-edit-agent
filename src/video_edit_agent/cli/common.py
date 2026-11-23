@@ -137,9 +137,13 @@ app = typer.Typer(
     ),
     no_args_is_help=True,
 )
-story_app = typer.Typer(name="story", help="Story planning, footage selection, and timeline editing.")
+story_app = typer.Typer(
+    name="story", help="Story planning, footage selection, and timeline editing."
+)
 music_app = typer.Typer(name="music", help="Soundtrack discovery, analysis, and synchronization.")
-render_app = typer.Typer(name="render", help="Video rendering, social exports, and visual quality review.")
+render_app = typer.Typer(
+    name="render", help="Video rendering, social exports, and visual quality review."
+)
 console = Console()
 DEFAULT_VISION_PROVIDER = get_setting("VISION_PROVIDER")
 DEFAULT_FOOTAGE_EMBEDDING_MODEL = get_setting("FOOTAGE_EMBEDDING_MODEL")
