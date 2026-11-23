@@ -153,9 +153,7 @@ def _build_beat_zoom_paths(
     return paths
 
 
-def _beat_zoom_filter(
-    path: list[tuple[float, float, float]], width: int, height: int
-) -> str:
+def _beat_zoom_filter(path: list[tuple[float, float, float]], width: int, height: int) -> str:
     """Return a frame-evaluated centered zoom filter for a normalized zoom path."""
     if not path:
         return ""
