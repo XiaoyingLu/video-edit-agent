@@ -136,113 +136,49 @@ def _candidate_score(
     return round(score, 1), reasons, round(lexical_score, 1)
 
 
-def suggest_storyboard_footage(
-    folder: Path,
-    *,
-    plan_path: Path | None = None,
-    understanding_path: Path | None = None,
-    max_candidates_per_shot: int = 3,
-    embedding_model: str | None = None,
-    embedder: Callable[[list[str], str], list[list[float]]] | None = None,
-    feedback_path: Path | None = None,
-) -> ProjectFootageSuggestions:
-    """Rank analyzed source scenes for each storyboard shot without assigning footage."""
-    if not 1 <= max_candidates_per_shot <= 10:
-        raise ValueError("max_candidates_per_shot must be between 1 and 10")
-
-    root = folder.expanduser().resolve()
-    artifact_dir = root / ".video-agent"
-    plan_file = (plan_path or artifact_dir / "video-project-plan.json").expanduser().resolve()
-    understanding_file = (
-        (understanding_path or artifact_dir / "understanding.json").expanduser().resolve()
-    )
-    for path, label in (
-        (plan_file, "video project plan"),
-        (understanding_file, "video understanding"),
-    ):
-        try:
-            path.relative_to(root)
-        except ValueError as exc:
-            raise ValueError(f"{label} must be inside the project folder") from exc
-        if not path.is_file():
-            raise FileNotFoundError(f"Missing {path}; generate the {label} first.")
-        validate_artifact(root, path)
-
-    plan = VideoProjectPlan.model_validate_json(plan_file.read_text(encoding="utf-8"))
-    feedback = load_footage_feedback(root, feedback_path=feedback_path)
-    feedback_file = (feedback_path or artifact_dir / "footage-feedback.json").expanduser()
-    feedback_file = (
-        (root / feedback_file).resolve()
-        if not feedback_file.is_absolute()
-        else feedback_file.resolve()
-    )
-    source_feedback = (
-        feedback_file.relative_to(root).as_posix() if feedback_file.is_file() else None
-    )
-    if Path(plan.project_path).resolve() != root:
-        raise ValueError("video project plan belongs to a different project folder")
-    if plan.planning_stage != "storyboard_ready":
-        raise ValueError("footage suggestions require a storyboard_ready plan")
-
-    understanding = VideoUnderstanding.model_validate_json(
-        understanding_file.read_text(encoding="utf-8")
-    )
-    video_paths = {}
-    for path in discover_videos(root):
-        relative_path = path.relative_to(root).as_posix()
-        video_key = hashlib.sha256(relative_path.encode("utf-8")).hexdigest()[:12]
-        video_paths[video_key] = relative_path
-
-    scenes = []
-    for source_scene in understanding.scenes:
-        video_key = source_scene.scene_id.split("-scene-", maxsplit=1)[0]
-        video_path = video_paths.get(video_key)
-        if video_path is not None and source_scene.end_seconds > source_scene.start_seconds:
-            scenes.append((video_path, source_scene))
-
-    available_scene_ids = {source_scene.scene_id for _, source_scene in scenes}
-    required_scene_ids = {
-        scene_id
-        for planned_scene in plan.scenes
-        for scene_id in planned_scene.must_include_scene_ids
-    }
-    missing_required = sorted(required_scene_ids - available_scene_ids)
-    if missing_required:
-        raise ValueError(
-            "chapter must-include scenes are missing from analyzed source footage: "
-            + ", ".join(missing_required)
-        )
-
-    shot_items = [shot for planned_scene in plan.scenes for shot in planned_scene.shots]
-    semantic_scores: dict[tuple[str, str], float] = {}
-    if embedding_model:
-        texts = [
-            f"Storyboard intent: {shot.purpose}. Visual requirements: {shot.visual_description}"
-            for shot in shot_items
-        ] + [_scene_text(source_scene) for _, source_scene in scenes]
-        vectors = (embedder or ollama_embed_texts)(texts, embedding_model)
-        if len(vectors) != len(texts):
-            raise ValueError(
-                "embedding provider returned a different number of vectors than requested"
+def _semantic_scene_scores(
+    shot_items: list,
+    scenes: list,
+    embedding_model: str | None,
+    embedder: Callable[[list[str], str], list[list[float]]] | None,
+) -> dict[tuple[str, str], float]:
+    """Calculate normalized shot-to-scene similarity without media I/O."""
+    if not embedding_model:
+        return {}
+    texts = [
+        f"Storyboard intent: {shot.purpose}. Visual requirements: {shot.visual_description}"
+        for shot in shot_items
+    ] + [_scene_text(scene) for _, scene in scenes]
+    vectors = (embedder or ollama_embed_texts)(texts, embedding_model)
+    if len(vectors) != len(texts):
+        raise ValueError("embedding provider returned a different number of vectors than requested")
+    shot_vectors = vectors[: len(shot_items)]
+    scene_vectors = vectors[len(shot_items) :]
+    if shot_vectors and any(len(vector) != len(shot_vectors[0]) for vector in vectors):
+        raise ValueError("embedding provider returned inconsistent vector dimensions")
+    scores: dict[tuple[str, str], float] = {}
+    for shot, shot_vector in zip(shot_items, shot_vectors, strict=True):
+        shot_norm = math.sqrt(sum(value * value for value in shot_vector))
+        for (_, scene), scene_vector in zip(scenes, scene_vectors, strict=True):
+            scene_norm = math.sqrt(sum(value * value for value in scene_vector))
+            similarity = (
+                sum(a * b for a, b in zip(shot_vector, scene_vector, strict=True))
+                / (shot_norm * scene_norm)
+                if shot_norm and scene_norm
+                else 0.0
             )
-        shot_vectors = vectors[: len(shot_items)]
-        scene_vectors = vectors[len(shot_items) :]
-        if any(len(vector) != len(shot_vectors[0]) for vector in vectors):
-            raise ValueError("embedding provider returned inconsistent vector dimensions")
-        for shot_index, shot_vector in enumerate(shot_vectors):
-            shot_norm = math.sqrt(sum(value * value for value in shot_vector))
-            for scene_index, scene_vector in enumerate(scene_vectors):
-                scene_norm = math.sqrt(sum(value * value for value in scene_vector))
-                similarity = (
-                    sum(a * b for a, b in zip(shot_vector, scene_vector, strict=True))
-                    / (shot_norm * scene_norm)
-                    if shot_norm and scene_norm
-                    else 0.0
-                )
-                semantic_scores[
-                    (shot_items[shot_index].shot_id, scenes[scene_index][1].scene_id)
-                ] = max(0.0, min(1.0, (similarity + 1.0) / 2.0))
+            scores[(shot.shot_id, scene.scene_id)] = max(0.0, min(1.0, (similarity + 1.0) / 2.0))
+    return scores
 
+
+def _rank_shot_suggestions(
+    plan: VideoProjectPlan,
+    scenes: list,
+    semantic_scores: dict[tuple[str, str], float],
+    feedback,
+    max_candidates_per_shot: int,
+) -> tuple[list[ShotFootageSuggestions], int, int]:
+    """Rank scenes per shot, applying chapter constraints and learned review feedback."""
     suggestions = []
     candidate_count = 0
     matched_shot_count = 0
@@ -252,6 +188,7 @@ def suggest_storyboard_footage(
         chapter_must_include = set(planned_scene.must_include_scene_ids)
         for shot in planned_scene.shots:
             ranked = []
+            shot_tokens = set(shot_feedback_tokens(shot))
             for video_path, source_scene in scenes:
                 semantic_similarity = semantic_scores.get((shot.shot_id, source_scene.scene_id))
                 score, reasons, lexical_score = _candidate_score(
@@ -268,7 +205,6 @@ def suggest_storyboard_footage(
                     reasons.append(
                         "Reuse discouraged: this source scene was top-ranked for an earlier shot."
                     )
-                shot_tokens = set(shot_feedback_tokens(shot))
                 for entry in feedback.entries:
                     entry_tokens = set(entry.shot_tokens)
                     union = shot_tokens | entry_tokens
@@ -368,7 +304,92 @@ def suggest_storyboard_footage(
                     candidates=candidates,
                 )
             )
+    return suggestions, candidate_count, matched_shot_count
 
+
+def suggest_storyboard_footage(
+    folder: Path,
+    *,
+    plan_path: Path | None = None,
+    understanding_path: Path | None = None,
+    max_candidates_per_shot: int = 3,
+    embedding_model: str | None = None,
+    embedder: Callable[[list[str], str], list[list[float]]] | None = None,
+    feedback_path: Path | None = None,
+) -> ProjectFootageSuggestions:
+    """Rank analyzed source scenes for each storyboard shot without assigning footage."""
+    if not 1 <= max_candidates_per_shot <= 10:
+        raise ValueError("max_candidates_per_shot must be between 1 and 10")
+
+    root = folder.expanduser().resolve()
+    artifact_dir = root / ".video-agent"
+    plan_file = (plan_path or artifact_dir / "video-project-plan.json").expanduser().resolve()
+    understanding_file = (
+        (understanding_path or artifact_dir / "understanding.json").expanduser().resolve()
+    )
+    for path, label in (
+        (plan_file, "video project plan"),
+        (understanding_file, "video understanding"),
+    ):
+        try:
+            path.relative_to(root)
+        except ValueError as exc:
+            raise ValueError(f"{label} must be inside the project folder") from exc
+        if not path.is_file():
+            raise FileNotFoundError(f"Missing {path}; generate the {label} first.")
+        validate_artifact(root, path)
+
+    plan = VideoProjectPlan.model_validate_json(plan_file.read_text(encoding="utf-8"))
+    feedback = load_footage_feedback(root, feedback_path=feedback_path)
+    feedback_file = (feedback_path or artifact_dir / "footage-feedback.json").expanduser()
+    feedback_file = (
+        (root / feedback_file).resolve()
+        if not feedback_file.is_absolute()
+        else feedback_file.resolve()
+    )
+    source_feedback = (
+        feedback_file.relative_to(root).as_posix() if feedback_file.is_file() else None
+    )
+    if Path(plan.project_path).resolve() != root:
+        raise ValueError("video project plan belongs to a different project folder")
+    if plan.planning_stage != "storyboard_ready":
+        raise ValueError("footage suggestions require a storyboard_ready plan")
+
+    understanding = VideoUnderstanding.model_validate_json(
+        understanding_file.read_text(encoding="utf-8")
+    )
+    video_paths = {}
+    for path in discover_videos(root):
+        relative_path = path.relative_to(root).as_posix()
+        video_key = hashlib.sha256(relative_path.encode("utf-8")).hexdigest()[:12]
+        video_paths[video_key] = relative_path
+
+    scenes = []
+    for source_scene in understanding.scenes:
+        video_key = source_scene.scene_id.split("-scene-", maxsplit=1)[0]
+        video_path = video_paths.get(video_key)
+        if video_path is not None and source_scene.end_seconds > source_scene.start_seconds:
+            scenes.append((video_path, source_scene))
+
+    available_scene_ids = {source_scene.scene_id for _, source_scene in scenes}
+    required_scene_ids = {
+        scene_id
+        for planned_scene in plan.scenes
+        for scene_id in planned_scene.must_include_scene_ids
+    }
+    missing_required = sorted(required_scene_ids - available_scene_ids)
+    if missing_required:
+        raise ValueError(
+            "chapter must-include scenes are missing from analyzed source footage: "
+            + ", ".join(missing_required)
+        )
+
+    shot_items = [shot for planned_scene in plan.scenes for shot in planned_scene.shots]
+    shot_items = [shot for planned_scene in plan.scenes for shot in planned_scene.shots]
+    semantic_scores = _semantic_scene_scores(shot_items, scenes, embedding_model, embedder)
+    suggestions, candidate_count, matched_shot_count = _rank_shot_suggestions(
+        plan, scenes, semantic_scores, feedback, max_candidates_per_shot
+    )
     return ProjectFootageSuggestions(
         project_path=str(root),
         source_plan=plan_file.relative_to(root).as_posix(),

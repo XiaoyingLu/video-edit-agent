@@ -342,130 +342,49 @@ def _review_semantic_frames(
     return selected_model, reviews
 
 
-def critique_rendered_draft(
-    folder: Path,
-    *,
-    video_path: Path | None = None,
-    timeline_path: Path | None = None,
-    plan_path: Path | None = None,
-    sample_count: int = 8,
-    semantic: bool = False,
-    semantic_samples: int = 8,
-    vision_model: str | None = None,
-) -> DraftCritiqueReport:
-    """Inspect a rendered draft against its approved timeline and creative brief."""
-    if not 1 <= sample_count <= 24:
-        raise ValueError("sample_count must be between 1 and 24")
-    if not 1 <= semantic_samples <= 12:
-        raise ValueError("semantic_samples must be between 1 and 12")
-    if vision_model is not None and not vision_model.strip():
-        raise ValueError("vision_model cannot be empty")
-    root = folder.expanduser().resolve()
-    if not root.is_dir():
-        raise NotADirectoryError(f"Project folder does not exist: {root}")
-    video = _safe_project_file(
-        root,
-        video_path or root / ".video-agent" / "rendered-draft.mp4",
-        "Rendered video",
-    )
-    timeline_file = _safe_project_file(
-        root,
-        timeline_path or root / ".video-agent" / "optimized-timeline.json",
-        "Approved timeline",
-    )
-    plan_file = _safe_project_file(
-        root,
-        plan_path or root / ".video-agent" / "video-project-plan.json",
-        "Creative project plan",
-    )
-    for artifact in (video, timeline_file, plan_file):
-        validate_artifact(root, artifact)
-
-    timeline = ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
-    plan = VideoProjectPlan.model_validate_json(plan_file.read_text(encoding="utf-8"))
-    if Path(timeline.project_path).resolve() != root or Path(plan.project_path).resolve() != root:
-        raise DraftCritiqueError("Timeline and creative plan must belong to this project folder.")
-    if not timeline.timeline_approved or any(clip.decision == "pending" for clip in timeline.clips):
-        raise DraftCritiqueError("The source timeline must be fully reviewed and approved.")
-    if not plan.scenes:
-        raise DraftCritiqueError("The creative plan must contain a completed storyboard.")
-
-    ffprobe = shutil.which("ffprobe")
-    ffmpeg = shutil.which("ffmpeg")
-    if ffprobe is None or ffmpeg is None:
-        raise DraftCritiqueError("ffmpeg and ffprobe must be installed and available on PATH.")
-    probe = _run(
-        [
-            ffprobe,
-            "-v",
-            "error",
-            "-show_entries",
-            "format=duration:stream=codec_type,codec_name,width,height,avg_frame_rate",
-            "-of",
-            "json",
-            str(video),
-        ],
-        timeout=60,
-    )
-    if probe.returncode != 0:
-        detail = probe.stderr.strip()
-        raise DraftCritiqueError(f"ffprobe could not inspect the rendered video: {detail}")
-    try:
-        payload = json.loads(probe.stdout)
-        duration = float(payload["format"]["duration"])
-        streams = payload["streams"]
-    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
-        raise DraftCritiqueError("ffprobe returned incomplete rendered-video metadata.") from exc
-    video_stream = next((item for item in streams if item.get("codec_type") == "video"), None)
-    if video_stream is None:
-        raise DraftCritiqueError("Rendered output does not contain a video stream.")
-    width = int(video_stream.get("width") or 0)
-    height = int(video_stream.get("height") or 0)
-    if video.suffix.lower() != ".mp4":
-        raise DraftCritiqueError("Rendered video must use the .mp4 extension.")
-    if duration <= 0 or width <= 0 or height <= 0:
-        raise DraftCritiqueError("Rendered output has invalid duration or dimensions.")
-    audio_stream = next((item for item in streams if item.get("codec_type") == "audio"), None)
-
-    frames = _sample_frames(ffmpeg, video, duration, sample_count)
-    audio = _analyze_audio(ffmpeg, video, audio_stream is not None)
+def _semantic_critique_findings(
+    semantic_reviews: list[SemanticFrameReview],
+) -> list[CritiqueFinding]:
+    """Turn storyboard comparison results into actionable findings."""
     findings: list[CritiqueFinding] = []
-    semantic_model = None
-    semantic_reviews: list[SemanticFrameReview] = []
-    if semantic:
-        approved_clips_for_review = [clip for clip in timeline.clips if clip.decision == "approved"]
-        semantic_model, semantic_reviews = _review_semantic_frames(
-            ffmpeg,
-            video,
-            duration,
-            approved_clips_for_review,
-            plan,
-            sample_limit=semantic_samples,
-            model=vision_model,
-        )
-        concerns = [
-            review
-            for review in semantic_reviews
-            if review.match in {"partial", "mismatch"} and review.confidence >= 0.55
-        ]
-        for review in concerns:
-            severity = "warning" if review.match == "mismatch" else "info"
-            findings.append(
-                CritiqueFinding(
-                    severity=severity,
-                    category="story",
-                    message=(
-                        f"Rendered shot {review.shot_id} may not match its storyboard intent "
-                        f"({review.match}, score {review.score:.2f})."
-                    ),
-                    evidence=(
-                        f"At {review.timestamp_seconds:.1f}s, confidence "
-                        f"{review.confidence:.2f}: {review.evidence} "
-                        f"Suggested review: {review.suggestion}"
-                    ),
-                )
+    concerns = [
+        review
+        for review in semantic_reviews
+        if review.match in {"partial", "mismatch"} and review.confidence >= 0.55
+    ]
+    for review in concerns:
+        severity = "warning" if review.match == "mismatch" else "info"
+        findings.append(
+            CritiqueFinding(
+                severity=severity,
+                category="story",
+                message=(
+                    f"Rendered shot {review.shot_id} may not match its storyboard intent "
+                    f"({review.match}, score {review.score:.2f})."
+                ),
+                evidence=(
+                    f"At {review.timestamp_seconds:.1f}s, confidence "
+                    f"{review.confidence:.2f}: {review.evidence} "
+                    f"Suggested review: {review.suggestion}"
+                ),
             )
+        )
+    return findings
 
+
+def _quality_critique_findings(
+    plan: VideoProjectPlan,
+    timeline: ProjectDraftTimeline,
+    duration: float,
+    width: int,
+    height: int,
+    frames: list[FrameQualitySample],
+    audio: AudioQualitySummary,
+    semantic: bool,
+    semantic_reviews: list[SemanticFrameReview],
+) -> list[CritiqueFinding]:
+    """Evaluate measurable render quality and timeline consistency without media I/O."""
+    findings: list[CritiqueFinding] = []
     target_duration = plan.brief.target_duration_seconds
     duration_delta = duration - target_duration
     duration_tolerance = max(2.0, target_duration * 0.1)
@@ -635,6 +554,118 @@ def critique_rendered_draft(
                 ),
             )
         )
+
+    return findings
+
+
+def critique_rendered_draft(
+    folder: Path,
+    *,
+    video_path: Path | None = None,
+    timeline_path: Path | None = None,
+    plan_path: Path | None = None,
+    sample_count: int = 8,
+    semantic: bool = False,
+    semantic_samples: int = 8,
+    vision_model: str | None = None,
+) -> DraftCritiqueReport:
+    """Inspect a rendered draft against its approved timeline and creative brief."""
+    if not 1 <= sample_count <= 24:
+        raise ValueError("sample_count must be between 1 and 24")
+    if not 1 <= semantic_samples <= 12:
+        raise ValueError("semantic_samples must be between 1 and 12")
+    if vision_model is not None and not vision_model.strip():
+        raise ValueError("vision_model cannot be empty")
+    root = folder.expanduser().resolve()
+    if not root.is_dir():
+        raise NotADirectoryError(f"Project folder does not exist: {root}")
+    video = _safe_project_file(
+        root,
+        video_path or root / ".video-agent" / "rendered-draft.mp4",
+        "Rendered video",
+    )
+    timeline_file = _safe_project_file(
+        root,
+        timeline_path or root / ".video-agent" / "optimized-timeline.json",
+        "Approved timeline",
+    )
+    plan_file = _safe_project_file(
+        root,
+        plan_path or root / ".video-agent" / "video-project-plan.json",
+        "Creative project plan",
+    )
+    for artifact in (video, timeline_file, plan_file):
+        validate_artifact(root, artifact)
+
+    timeline = ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
+    plan = VideoProjectPlan.model_validate_json(plan_file.read_text(encoding="utf-8"))
+    if Path(timeline.project_path).resolve() != root or Path(plan.project_path).resolve() != root:
+        raise DraftCritiqueError("Timeline and creative plan must belong to this project folder.")
+    if not timeline.timeline_approved or any(clip.decision == "pending" for clip in timeline.clips):
+        raise DraftCritiqueError("The source timeline must be fully reviewed and approved.")
+    if not plan.scenes:
+        raise DraftCritiqueError("The creative plan must contain a completed storyboard.")
+
+    ffprobe = shutil.which("ffprobe")
+    ffmpeg = shutil.which("ffmpeg")
+    if ffprobe is None or ffmpeg is None:
+        raise DraftCritiqueError("ffmpeg and ffprobe must be installed and available on PATH.")
+    probe = _run(
+        [
+            ffprobe,
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration:stream=codec_type,codec_name,width,height,avg_frame_rate",
+            "-of",
+            "json",
+            str(video),
+        ],
+        timeout=60,
+    )
+    if probe.returncode != 0:
+        detail = probe.stderr.strip()
+        raise DraftCritiqueError(f"ffprobe could not inspect the rendered video: {detail}")
+    try:
+        payload = json.loads(probe.stdout)
+        duration = float(payload["format"]["duration"])
+        streams = payload["streams"]
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise DraftCritiqueError("ffprobe returned incomplete rendered-video metadata.") from exc
+    video_stream = next((item for item in streams if item.get("codec_type") == "video"), None)
+    if video_stream is None:
+        raise DraftCritiqueError("Rendered output does not contain a video stream.")
+    width = int(video_stream.get("width") or 0)
+    height = int(video_stream.get("height") or 0)
+    if video.suffix.lower() != ".mp4":
+        raise DraftCritiqueError("Rendered video must use the .mp4 extension.")
+    if duration <= 0 or width <= 0 or height <= 0:
+        raise DraftCritiqueError("Rendered output has invalid duration or dimensions.")
+    audio_stream = next((item for item in streams if item.get("codec_type") == "audio"), None)
+
+    frames = _sample_frames(ffmpeg, video, duration, sample_count)
+    audio = _analyze_audio(ffmpeg, video, audio_stream is not None)
+    findings: list[CritiqueFinding] = []
+    semantic_model = None
+    semantic_reviews: list[SemanticFrameReview] = []
+    if semantic:
+        approved_clips_for_review = [clip for clip in timeline.clips if clip.decision == "approved"]
+        semantic_model, semantic_reviews = _review_semantic_frames(
+            ffmpeg,
+            video,
+            duration,
+            approved_clips_for_review,
+            plan,
+            sample_limit=semantic_samples,
+            model=vision_model,
+        )
+        findings.extend(_semantic_critique_findings(semantic_reviews))
+
+    findings.extend(
+        _quality_critique_findings(
+            plan, timeline, duration, width, height, frames, audio, semantic, semantic_reviews
+        )
+    )
 
     return DraftCritiqueReport(
         project_path=str(root),

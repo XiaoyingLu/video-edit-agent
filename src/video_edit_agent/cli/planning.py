@@ -78,6 +78,142 @@ def find_highlights(
     )
 
 
+def _create_storyboard_video_draft(
+    folder: Path,
+    prompt: str,
+    model: str | None,
+    samples_per_scene: int,
+):
+    """Build, explicitly confirm, and approve a storyboard-driven first draft."""
+    understanding = understand_folder(
+        folder,
+        model=model or get_setting("OLLAMA_MODEL"),
+        samples_per_scene=samples_per_scene,
+    )
+    understanding_path = folder.resolve() / ".video-agent" / "understanding.json"
+    understanding_path.parent.mkdir(parents=True, exist_ok=True)
+    write_json_atomic(understanding_path, understanding)
+    common._track_artifact(
+        folder,
+        understanding_path,
+        config={
+            "model": getattr(understanding, "model", model),
+            "samples_per_scene": samples_per_scene,
+        },
+    )
+    project_plan, plan_path = create_video_project_plan(folder, prompt)
+    suggestions = suggest_storyboard_footage(
+        folder,
+        plan_path=plan_path,
+        embedding_model=DEFAULT_FOOTAGE_EMBEDDING_MODEL,
+    )
+    suggestions_path = folder.resolve() / ".video-agent" / "footage-suggestions.json"
+    write_json_atomic(suggestions_path, suggestions)
+    common._track_artifact(
+        folder,
+        suggestions_path,
+        dependencies=(
+            ".video-agent/video-project-plan.json",
+            ".video-agent/understanding.json",
+        ),
+        config={"matching_method": suggestions.matching_method},
+    )
+    shots = [shot for scene in project_plan.scenes for shot in scene.shots]
+    suggestions_by_id = {item.shot_id: item for item in suggestions.suggestions}
+    missing = [
+        shot.shot_id
+        for shot in shots
+        if not suggestions_by_id.get(shot.shot_id) or not suggestions_by_id[shot.shot_id].candidates
+    ]
+    if missing:
+        raise ValueError(
+            "Footage matching found no candidates for "
+            f"{len(missing)} storyboard shot(s): {', '.join(missing[:8])}. "
+            "No footage was assigned; inspect footage-suggestions.json."
+        )
+    selections = {shot.shot_id: 1 for shot in shots}
+    scores = [suggestions_by_id[shot.shot_id].candidates[0].score for shot in shots]
+    console.print(
+        f"Storyboard: {project_plan.story_treatment.working_title} — "
+        f"{len(project_plan.scenes)} scene(s), {len(shots)} shot(s)."
+    )
+    console.print(
+        f"{suggestions.matching_method.title()} matching produced a top-ranked candidate "
+        "for every shot "
+        f"(score range {min(scores):.1f}–{max(scores):.1f})."
+    )
+    console.print(
+        "[yellow]Review the saved footage-suggestions.json. The next confirmation "
+        "explicitly approves the top-ranked match for every storyboard shot; "
+        "matching scores are recommendations, not guarantees.[/yellow]"
+    )
+    decision = console.input(
+        "Approve all top-ranked footage matches and render this storyboard? [y/N]: "
+    )
+    if decision.strip().lower() not in {"y", "yes"}:
+        console.print(
+            "[yellow]Rendering cancelled. Storyboard and footage suggestions "
+            "were preserved.[/yellow]"
+        )
+        raise typer.Exit(code=2)
+    project_plan, plan_path = review_storyboard_footage(
+        folder,
+        selections=selections,
+        plan_path=plan_path,
+        suggestions_path=suggestions_path,
+    )
+    project_plan, plan_path = approve_storyboard(folder, plan_path=plan_path)
+    timeline = build_storyboard_timeline(folder, plan_path=plan_path)
+    timeline_path = folder.resolve() / ".video-agent" / "optimized-timeline.json"
+    save_storyboard_timeline(timeline, timeline_path)
+    timeline = apply_timeline_review(timeline, {clip.clip_id for clip in timeline.clips}, set())
+    save_draft_timeline(timeline, timeline_path)
+    plan = project_plan.brief
+    console.print(
+        f"Approved storyboard: {len(shots)} footage assignments; "
+        f"timeline saved to [green]{timeline_path}[/green]."
+    )
+    return plan, timeline_path
+
+
+def _create_highlight_video_draft(
+    folder: Path,
+    prompt: str,
+    model: str | None,
+    whisper_model: str,
+    samples_per_scene: int,
+    review: bool,
+):
+    """Build and optionally confirm a relevance-ranked highlight draft."""
+    plan, highlights, selection, timeline, timeline_path = create_video_draft(
+        folder,
+        prompt,
+        vision_model=model,
+        whisper_model=whisper_model,
+        samples_per_scene=samples_per_scene,
+    )
+    console.print("[bold green]Analysis and automatic draft planning complete.[/bold green]")
+    console.print(
+        f"Intent: {plan.style}, {plan.target_duration_seconds:.0f}s, "
+        f"{plan.aspect_ratio}, {plan.resolution}"
+    )
+    console.print(
+        f"Found {highlights.candidate_count} highlights; selected "
+        f"{selection.selected_clip_count} shots "
+        f"({selection.selected_duration_seconds:.1f}s)."
+    )
+    console.print(f"Draft timeline: [green]{timeline_path}[/green]")
+    if review:
+        decision = console.input("Render this automatically assembled first draft? [y/N]: ")
+        if decision.strip().lower() not in {"y", "yes"}:
+            console.print("[yellow]Rendering cancelled. The draft timeline was preserved.[/yellow]")
+            raise typer.Exit(code=2)
+    approve_ids = {clip.clip_id for clip in timeline.clips}
+    timeline = apply_timeline_review(timeline, approve_ids, set())
+    save_draft_timeline(timeline, timeline_path)
+    return plan, timeline_path
+
+
 @app.command("create-video")
 def create_video(
     folder: Annotated[
@@ -124,128 +260,13 @@ def create_video(
     """Create and render a first draft; use advanced commands for shot-by-shot review."""
     try:
         if storyboard:
-            understanding = understand_folder(
-                folder,
-                model=model or get_setting("OLLAMA_MODEL"),
-                samples_per_scene=samples_per_scene,
-            )
-            understanding_path = folder.resolve() / ".video-agent" / "understanding.json"
-            understanding_path.parent.mkdir(parents=True, exist_ok=True)
-            write_json_atomic(understanding_path, understanding)
-            common._track_artifact(
-                folder,
-                understanding_path,
-                config={
-                    "model": getattr(understanding, "model", model),
-                    "samples_per_scene": samples_per_scene,
-                },
-            )
-            project_plan, plan_path = create_video_project_plan(folder, prompt)
-            suggestions = suggest_storyboard_footage(
-                folder,
-                plan_path=plan_path,
-                embedding_model=DEFAULT_FOOTAGE_EMBEDDING_MODEL,
-            )
-            suggestions_path = folder.resolve() / ".video-agent" / "footage-suggestions.json"
-            write_json_atomic(suggestions_path, suggestions)
-            common._track_artifact(
-                folder,
-                suggestions_path,
-                dependencies=(
-                    ".video-agent/video-project-plan.json",
-                    ".video-agent/understanding.json",
-                ),
-                config={"matching_method": suggestions.matching_method},
-            )
-            shots = [shot for scene in project_plan.scenes for shot in scene.shots]
-            suggestions_by_id = {item.shot_id: item for item in suggestions.suggestions}
-            missing = [
-                shot.shot_id
-                for shot in shots
-                if not suggestions_by_id.get(shot.shot_id)
-                or not suggestions_by_id[shot.shot_id].candidates
-            ]
-            if missing:
-                raise ValueError(
-                    "Footage matching found no candidates for "
-                    f"{len(missing)} storyboard shot(s): {', '.join(missing[:8])}. "
-                    "No footage was assigned; inspect footage-suggestions.json."
-                )
-            selections = {shot.shot_id: 1 for shot in shots}
-            scores = [suggestions_by_id[shot.shot_id].candidates[0].score for shot in shots]
-            console.print(
-                f"Storyboard: {project_plan.story_treatment.working_title} — "
-                f"{len(project_plan.scenes)} scene(s), {len(shots)} shot(s)."
-            )
-            console.print(
-                f"{suggestions.matching_method.title()} matching produced a top-ranked candidate "
-                "for every shot "
-                f"(score range {min(scores):.1f}–{max(scores):.1f})."
-            )
-            console.print(
-                "[yellow]Review the saved footage-suggestions.json. The next confirmation "
-                "explicitly approves the top-ranked match for every storyboard shot; "
-                "matching scores are recommendations, not guarantees.[/yellow]"
-            )
-            decision = console.input(
-                "Approve all top-ranked footage matches and render this storyboard? [y/N]: "
-            )
-            if decision.strip().lower() not in {"y", "yes"}:
-                console.print(
-                    "[yellow]Rendering cancelled. Storyboard and footage suggestions "
-                    "were preserved.[/yellow]"
-                )
-                raise typer.Exit(code=2)
-            project_plan, plan_path = review_storyboard_footage(
-                folder,
-                selections=selections,
-                plan_path=plan_path,
-                suggestions_path=suggestions_path,
-            )
-            project_plan, plan_path = approve_storyboard(folder, plan_path=plan_path)
-            timeline = build_storyboard_timeline(folder, plan_path=plan_path)
-            timeline_path = folder.resolve() / ".video-agent" / "optimized-timeline.json"
-            save_storyboard_timeline(timeline, timeline_path)
-            timeline = apply_timeline_review(
-                timeline, {clip.clip_id for clip in timeline.clips}, set()
-            )
-            save_draft_timeline(timeline, timeline_path)
-            plan = project_plan.brief
-            console.print(
-                f"Approved storyboard: {len(shots)} footage assignments; "
-                f"timeline saved to [green]{timeline_path}[/green]."
+            plan, timeline_path = _create_storyboard_video_draft(
+                folder, prompt, model, samples_per_scene
             )
         else:
-            plan, highlights, selection, timeline, timeline_path = create_video_draft(
-                folder,
-                prompt,
-                vision_model=model,
-                whisper_model=whisper_model,
-                samples_per_scene=samples_per_scene,
+            plan, timeline_path = _create_highlight_video_draft(
+                folder, prompt, model, whisper_model, samples_per_scene, review
             )
-            console.print(
-                "[bold green]Analysis and automatic draft planning complete.[/bold green]"
-            )
-            console.print(
-                f"Intent: {plan.style}, {plan.target_duration_seconds:.0f}s, "
-                f"{plan.aspect_ratio}, {plan.resolution}"
-            )
-            console.print(
-                f"Found {highlights.candidate_count} highlights; selected "
-                f"{selection.selected_clip_count} shots "
-                f"({selection.selected_duration_seconds:.1f}s)."
-            )
-            console.print(f"Draft timeline: [green]{timeline_path}[/green]")
-            if review:
-                decision = console.input("Render this automatically assembled first draft? [y/N]: ")
-                if decision.strip().lower() not in {"y", "yes"}:
-                    console.print(
-                        "[yellow]Rendering cancelled. The draft timeline was preserved.[/yellow]"
-                    )
-                    raise typer.Exit(code=2)
-            approve_ids = {clip.clip_id for clip in timeline.clips}
-            timeline = apply_timeline_review(timeline, approve_ids, set())
-            save_draft_timeline(timeline, timeline_path)
 
         report = render_approved_shot_timeline(
             folder,

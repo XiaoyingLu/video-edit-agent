@@ -101,6 +101,113 @@ def _crop_path_expression(path: list[tuple[float, float, float]], axis: int) -> 
     return expression
 
 
+def _append_title_overlay_filters(
+    filters: list[str],
+    title_overlays: list[TitleOverlay] | None,
+    width: int,
+    height: int,
+    current_video: str,
+) -> str:
+    """Append approved title and lower-third filters, returning the final video label."""
+    video_label = current_video
+    for index, overlay in enumerate(title_overlays or []):
+        if overlay.decision != "approved":
+            continue
+        escaped_text = _escape_drawtext(overlay.text)
+        next_label = f"vtitle{index}"
+        if overlay.overlay_kind == "lower_third":
+            # Percentage-based geometry keeps the card inside safe margins for
+            # landscape, portrait, and square output profiles.
+            card_width = "w*0.88" if height > width else "w*0.62"
+            card_height = "h*0.16"
+            card_y = "h*0.76"
+            filters.append(
+                f"[{video_label}]drawbox=x=w*0.06:y={card_y}:w={card_width}:"
+                f"h={card_height}:color=black@0.62:t=fill:"
+                f"enable='between(t,{_seconds(overlay.start_seconds)},{_seconds(overlay.end_seconds)})'"
+                f"[{next_label}bg]"
+            )
+            primary_size = max(26, min(64, int(width * 0.034)))
+            secondary_size = max(20, min(42, int(width * 0.022)))
+            alpha = "1"
+            if overlay.animation == "fade":
+                fade_seconds = min(0.45, (overlay.end_seconds - overlay.start_seconds) / 2)
+                fade_in_end = overlay.start_seconds + fade_seconds
+                fade_out_start = overlay.end_seconds - fade_seconds
+                alpha = (
+                    f"if(lt(t,{_seconds(fade_in_end)}),"
+                    f"(t-{_seconds(overlay.start_seconds)})/{_seconds(fade_seconds)},"
+                    f"if(gt(t,{_seconds(fade_out_start)}),"
+                    f"({_seconds(overlay.end_seconds)}-t)/{_seconds(fade_seconds)},1))"
+                )
+            elif overlay.animation == "slide_up":
+                alpha = (
+                    f"if(lt(t,{_seconds(overlay.start_seconds + 0.45)}),"
+                    f"(t-{_seconds(overlay.start_seconds)})/0.45,1)"
+                )
+            primary_label = f"vtitle{index}primary"
+            filters.append(
+                f"[{next_label}bg]drawtext=text='{escaped_text}':expansion=none:"
+                f"font='DejaVu Sans':fontsize={primary_size}:fontcolor=white:"
+                f"x=w*0.09:y=h*0.785:alpha='{alpha}':"
+                f"enable='between(t,{_seconds(overlay.start_seconds)},{_seconds(overlay.end_seconds)})'"
+                f"[{primary_label}]"
+            )
+            if overlay.secondary_text:
+                secondary_label = f"vtitle{index}secondary"
+                filters.append(
+                    f"[{primary_label}]drawtext=text='{_escape_drawtext(overlay.secondary_text)}':"
+                    f"expansion=none:font='DejaVu Sans':fontsize={secondary_size}:"
+                    f"fontcolor=white@0.88:x=w*0.09:y=h*0.835:alpha='{alpha}':"
+                    f"enable='between(t,{_seconds(overlay.start_seconds)},{_seconds(overlay.end_seconds)})'"
+                    f"[{secondary_label}]"
+                )
+                video_label = secondary_label
+            else:
+                video_label = primary_label
+            continue
+        font_size = max(32, min(96, int(width * 0.045)))
+        if overlay.style == "minimal":
+            font_size = max(28, int(width * 0.035))
+            box_options = "box=0"
+        elif overlay.style == "bold":
+            font_size = max(40, min(112, int(width * 0.055)))
+            box_options = "box=1:boxcolor=black@0.62:boxborderw=22"
+        else:
+            box_options = "box=1:boxcolor=black@0.42:boxborderw=18"
+        base_y = {"top": "h*0.12", "center": "(h-text_h)/2", "bottom": "h-text_h-h*0.12"}[
+            overlay.placement
+        ]
+        alpha = "1"
+        y_position = base_y
+        if overlay.animation == "fade":
+            fade_seconds = min(0.45, (overlay.end_seconds - overlay.start_seconds) / 2)
+            fade_in_end = overlay.start_seconds + fade_seconds
+            fade_out_start = overlay.end_seconds - fade_seconds
+            alpha = (
+                f"if(lt(t,{_seconds(fade_in_end)}),"
+                f"(t-{_seconds(overlay.start_seconds)})/{_seconds(fade_seconds)},"
+                f"if(gt(t,{_seconds(fade_out_start)}),"
+                f"({_seconds(overlay.end_seconds)}-t)/{_seconds(fade_seconds)},1))"
+            )
+        elif overlay.animation == "slide_up":
+            y_position = (
+                f"if(lt(t,{_seconds(overlay.start_seconds + 0.45)}),"
+                f"({base_y})+80*({_seconds(overlay.start_seconds + 0.45)}-t)/0.45,"
+                f"({base_y}))"
+            )
+        filters.append(
+            f"[{video_label}]drawtext=text='{escaped_text}':expansion=none:"
+            f"font='DejaVu Sans':fontsize={font_size}:fontcolor=white:"
+            f"x=(w-text_w)/2:y='{y_position}':alpha='{alpha}':{box_options}:"
+            f"enable='between(t,{_seconds(overlay.start_seconds)},{_seconds(overlay.end_seconds)})'"
+            f"[{next_label}]"
+        )
+        video_label = next_label
+    filters.append(f"[{video_label}]format=yuv420p[vfinal]")
+    return video_label
+
+
 def _build_shot_render_command(
     ffmpeg: str,
     clips: list[tuple[Path, float, float, bool, str, float]],
@@ -215,102 +322,7 @@ def _build_shot_render_command(
         current_video = output_video
         current_audio = output_audio
 
-    video_label = current_video
-    for index, overlay in enumerate(title_overlays or []):
-        if overlay.decision != "approved":
-            continue
-        escaped_text = _escape_drawtext(overlay.text)
-        next_label = f"vtitle{index}"
-        if overlay.overlay_kind == "lower_third":
-            # Percentage-based geometry keeps the card inside safe margins for
-            # landscape, portrait, and square output profiles.
-            card_width = "w*0.88" if height > width else "w*0.62"
-            card_height = "h*0.16"
-            card_y = "h*0.76"
-            filters.append(
-                f"[{video_label}]drawbox=x=w*0.06:y={card_y}:w={card_width}:"
-                f"h={card_height}:color=black@0.62:t=fill:"
-                f"enable='between(t,{_seconds(overlay.start_seconds)},{_seconds(overlay.end_seconds)})'"
-                f"[{next_label}bg]"
-            )
-            primary_size = max(26, min(64, int(width * 0.034)))
-            secondary_size = max(20, min(42, int(width * 0.022)))
-            alpha = "1"
-            if overlay.animation == "fade":
-                fade_seconds = min(0.45, (overlay.end_seconds - overlay.start_seconds) / 2)
-                fade_in_end = overlay.start_seconds + fade_seconds
-                fade_out_start = overlay.end_seconds - fade_seconds
-                alpha = (
-                    f"if(lt(t,{_seconds(fade_in_end)}),"
-                    f"(t-{_seconds(overlay.start_seconds)})/{_seconds(fade_seconds)},"
-                    f"if(gt(t,{_seconds(fade_out_start)}),"
-                    f"({_seconds(overlay.end_seconds)}-t)/{_seconds(fade_seconds)},1))"
-                )
-            elif overlay.animation == "slide_up":
-                alpha = (
-                    f"if(lt(t,{_seconds(overlay.start_seconds + 0.45)}),"
-                    f"(t-{_seconds(overlay.start_seconds)})/0.45,1)"
-                )
-            primary_label = f"vtitle{index}primary"
-            filters.append(
-                f"[{next_label}bg]drawtext=text='{escaped_text}':expansion=none:"
-                f"font='DejaVu Sans':fontsize={primary_size}:fontcolor=white:"
-                f"x=w*0.09:y=h*0.785:alpha='{alpha}':"
-                f"enable='between(t,{_seconds(overlay.start_seconds)},{_seconds(overlay.end_seconds)})'"
-                f"[{primary_label}]"
-            )
-            if overlay.secondary_text:
-                secondary_label = f"vtitle{index}secondary"
-                filters.append(
-                    f"[{primary_label}]drawtext=text='{_escape_drawtext(overlay.secondary_text)}':"
-                    f"expansion=none:font='DejaVu Sans':fontsize={secondary_size}:"
-                    f"fontcolor=white@0.88:x=w*0.09:y=h*0.835:alpha='{alpha}':"
-                    f"enable='between(t,{_seconds(overlay.start_seconds)},{_seconds(overlay.end_seconds)})'"
-                    f"[{secondary_label}]"
-                )
-                video_label = secondary_label
-            else:
-                video_label = primary_label
-            continue
-        font_size = max(32, min(96, int(width * 0.045)))
-        if overlay.style == "minimal":
-            font_size = max(28, int(width * 0.035))
-            box_options = "box=0"
-        elif overlay.style == "bold":
-            font_size = max(40, min(112, int(width * 0.055)))
-            box_options = "box=1:boxcolor=black@0.62:boxborderw=22"
-        else:
-            box_options = "box=1:boxcolor=black@0.42:boxborderw=18"
-        base_y = {"top": "h*0.12", "center": "(h-text_h)/2", "bottom": "h-text_h-h*0.12"}[
-            overlay.placement
-        ]
-        alpha = "1"
-        y_position = base_y
-        if overlay.animation == "fade":
-            fade_seconds = min(0.45, (overlay.end_seconds - overlay.start_seconds) / 2)
-            fade_in_end = overlay.start_seconds + fade_seconds
-            fade_out_start = overlay.end_seconds - fade_seconds
-            alpha = (
-                f"if(lt(t,{_seconds(fade_in_end)}),"
-                f"(t-{_seconds(overlay.start_seconds)})/{_seconds(fade_seconds)},"
-                f"if(gt(t,{_seconds(fade_out_start)}),"
-                f"({_seconds(overlay.end_seconds)}-t)/{_seconds(fade_seconds)},1))"
-            )
-        elif overlay.animation == "slide_up":
-            y_position = (
-                f"if(lt(t,{_seconds(overlay.start_seconds + 0.45)}),"
-                f"({base_y})+80*({_seconds(overlay.start_seconds + 0.45)}-t)/0.45,"
-                f"({base_y}))"
-            )
-        filters.append(
-            f"[{video_label}]drawtext=text='{escaped_text}':expansion=none:"
-            f"font='DejaVu Sans':fontsize={font_size}:fontcolor=white:"
-            f"x=(w-text_w)/2:y='{y_position}':alpha='{alpha}':{box_options}:"
-            f"enable='between(t,{_seconds(overlay.start_seconds)},{_seconds(overlay.end_seconds)})'"
-            f"[{next_label}]"
-        )
-        video_label = next_label
-    filters.append(f"[{video_label}]format=yuv420p[vfinal]")
+    _append_title_overlay_filters(filters, title_overlays, width, height, current_video)
     filters.append(f"[{current_audio}]aresample=48000[baseaudio]")
     audio_output = append_music_mix(
         filters,
@@ -350,6 +362,208 @@ def _build_shot_render_command(
         ]
     )
     return command
+
+
+def _probe_approved_clip_inputs(
+    root: Path,
+    approved: list,
+    ffprobe: str,
+) -> tuple[
+    dict[Path, tuple[dict, float]],
+    list[tuple[Path, float, float, bool, str, float]],
+    set[Path],
+]:
+    """Validate and probe approved sources before any render output is created."""
+    source_cache: dict[Path, tuple[dict, float]] = {}
+    clip_inputs: list[tuple[Path, float, float, bool, str, float]] = []
+    source_paths: set[Path] = set()
+    previous_sequence_index: int | None = None
+    for clip in approved:
+        source = _safe_source(root, clip.video_path)
+        source_paths.add(source)
+        if source not in source_cache:
+            payload = _run_probe(ffprobe, source)
+            streams = payload.get("streams", [])
+            video_stream = next(
+                (item for item in streams if item.get("codec_type") == "video"), None
+            )
+            if video_stream is None:
+                raise RenderError(f"Timeline source has no video stream: {source}")
+            _validate_source_stream_metadata(payload, source)
+            duration = float(payload.get("format", {}).get("duration") or 0)
+            if duration <= 0:
+                raise RenderError(f"Timeline source has an invalid duration: {source}")
+            source_cache[source] = (payload, duration)
+
+        payload, source_duration = source_cache[source]
+        if clip.source_end_seconds > source_duration + 0.01:
+            raise RenderError(f"Approved clip exceeds source duration: {clip.clip_id}")
+        if clip.source_start_seconds < 0 or clip.source_end_seconds <= clip.source_start_seconds:
+            raise RenderError(f"Approved clip has invalid source bounds: {clip.clip_id}")
+        streams = payload.get("streams", [])
+        has_audio = any(item.get("codec_type") == "audio" for item in streams)
+        # The first approved shot always starts with a hard cut, even if earlier
+        # proposed shots carrying its transition metadata were rejected.
+        adjacent_to_previous = (
+            previous_sequence_index is not None
+            and clip.sequence_index == previous_sequence_index + 1
+        )
+        transition = clip.transition_in if adjacent_to_previous else "cut"
+        transition_duration = clip.transition_duration_seconds if adjacent_to_previous else 0.0
+        clip_inputs.append(
+            (
+                source,
+                clip.source_start_seconds,
+                clip.source_end_seconds,
+                has_audio,
+                transition,
+                transition_duration,
+            )
+        )
+        previous_sequence_index = clip.sequence_index
+
+    return source_cache, clip_inputs, source_paths
+
+
+def _resolve_shot_output_dimensions(
+    root: Path,
+    clip_inputs: list[tuple[Path, float, float, bool, str, float]],
+    source_cache: dict[Path, tuple[dict, float]],
+    output_aspect_ratio: str | None,
+    output_resolution: str | None,
+) -> tuple[int, int]:
+    """Resolve a valid even-sized output profile from source metadata or explicit options."""
+    first_payload = source_cache[clip_inputs[0][0]][0]
+    first_video = next(
+        item for item in first_payload["streams"] if item.get("codec_type") == "video"
+    )
+    width = int(first_video.get("width") or 0)
+    height = int(first_video.get("height") or 0)
+    width -= width % 2
+    height -= height % 2
+    if width < 2 or height < 2:
+        raise RenderError("could not determine a valid output resolution from the first source")
+    if output_aspect_ratio is None and output_resolution is None:
+        width, height = _resolve_output_dimensions(root, width, height)
+    else:
+        width, height = _requested_output_dimensions(output_aspect_ratio, output_resolution)
+
+    return width, height
+
+
+def _render_and_validate_shot_output(
+    *,
+    root: Path,
+    timeline_file: Path,
+    timeline: ProjectDraftTimeline,
+    approved: list,
+    approved_titles: list[TitleOverlay],
+    selected_music: Path | None,
+    music_mode: str,
+    music_volume: float,
+    music_fade_in: float,
+    music_fade_out: float,
+    music_ducking: bool,
+    ffmpeg: str,
+    ffprobe: str,
+    destination: Path,
+    width: int,
+    height: int,
+    expected_duration: float,
+    timeout_seconds: float,
+    dry_run: bool,
+    fit_mode: str,
+    reframe_mode: str,
+    crop_anchors_path: Path | None,
+    clip_inputs: list[tuple[Path, float, float, bool, str, float]],
+) -> tuple[dict, dict, dict, float] | None:
+    """Build, execute, and verify FFmpeg output without registering project artifacts."""
+    temporary_path = destination
+    if not dry_run:
+        temporary_file = tempfile.NamedTemporaryFile(
+            prefix=".video-agent-shot-render-", suffix=".mp4", dir=destination.parent, delete=False
+        )
+        temporary_path = Path(temporary_file.name)
+        temporary_file.close()
+    try:
+        try:
+            crop_paths = detect_face_crop_paths(clip_inputs) if reframe_mode == "face" else None
+            crop_anchors = None
+            if crop_anchors_path is not None:
+                manual_anchors = load_crop_anchors(root, timeline_file, timeline, crop_anchors_path)
+                if crop_paths is None:
+                    crop_anchors = [(0.5, 0.5) for _ in approved]
+                for index, clip in enumerate(approved):
+                    if clip.clip_id in manual_anchors:
+                        if crop_anchors is None:
+                            crop_anchors = [(0.5, 0.5) for _ in approved]
+                        crop_anchors[index] = manual_anchors[clip.clip_id]
+                        if crop_paths is not None:
+                            crop_paths[index] = []
+        except (RuntimeError, ValueError, OSError) as exc:
+            raise RenderError(str(exc)) from exc
+        command = _build_shot_render_command(
+            ffmpeg,
+            clip_inputs,
+            temporary_path,
+            width,
+            height,
+            fit_mode=fit_mode,
+            crop_anchors=crop_anchors,
+            crop_paths=crop_paths,
+            title_overlays=approved_titles,
+            music_path=selected_music,
+            music_mode=music_mode,
+            music_volume=music_volume,
+            music_fade_in=music_fade_in,
+            music_fade_out=music_fade_out,
+            music_ducking=music_ducking,
+        )
+        if dry_run:
+            _validate_filter_graph(command, timeout=min(timeout_seconds, 120))
+            return None
+        run_ffmpeg(
+            command,
+            timeout=timeout_seconds,
+            label="FFmpeg shot render",
+            error_type=RenderError,
+        )
+        if not temporary_path.is_file() or temporary_path.stat().st_size == 0:
+            raise RenderError("FFmpeg completed without producing a non-empty MP4")
+
+        output_probe = _run_probe(ffprobe, temporary_path)
+        output_streams = output_probe.get("streams", [])
+        output_video = next(
+            (item for item in output_streams if item.get("codec_type") == "video"), None
+        )
+        output_audio = next(
+            (item for item in output_streams if item.get("codec_type") == "audio"), None
+        )
+        actual_duration = float(output_probe.get("format", {}).get("duration") or 0)
+        if output_video is None or output_audio is None or actual_duration <= 0:
+            raise RenderError("rendered MP4 is missing a valid video or audio stream")
+        if output_video.get("codec_name") != "h264" or output_audio.get("codec_name") != "aac":
+            raise RenderError("rendered MP4 does not contain the expected H.264/AAC streams")
+        actual_width = int(output_video.get("width") or 0)
+        actual_height = int(output_video.get("height") or 0)
+        if (actual_width, actual_height) != (width, height):
+            raise RenderError(
+                f"rendered dimensions mismatch: expected {width}x{height}, "
+                f"got {actual_width}x{actual_height}"
+            )
+        tolerance = max(0.75, len(clip_inputs) / 30.0 * 2)
+        if abs(actual_duration - expected_duration) > tolerance:
+            raise RenderError(
+                f"rendered duration mismatch: expected about {expected_duration:.2f}s, "
+                f"got {actual_duration:.2f}s"
+            )
+        temporary_path.replace(destination)
+    except Exception:
+        if not dry_run:
+            temporary_path.unlink(missing_ok=True)
+        raise
+
+    return output_probe, output_video, output_audio, actual_duration
 
 
 def render_approved_shot_timeline(
@@ -447,72 +661,14 @@ def render_approved_shot_timeline(
     if ffprobe is None or ffmpeg is None:
         raise RenderError("ffmpeg and ffprobe must be installed and available on PATH")
 
-    source_cache: dict[Path, tuple[dict, float]] = {}
-    clip_inputs: list[tuple[Path, float, float, bool, str, float]] = []
-    source_paths: set[Path] = set()
-    previous_sequence_index: int | None = None
-    for clip in approved:
-        source = _safe_source(root, clip.video_path)
-        source_paths.add(source)
-        if source not in source_cache:
-            payload = _run_probe(ffprobe, source)
-            streams = payload.get("streams", [])
-            video_stream = next(
-                (item for item in streams if item.get("codec_type") == "video"), None
-            )
-            if video_stream is None:
-                raise RenderError(f"Timeline source has no video stream: {source}")
-            _validate_source_stream_metadata(payload, source)
-            duration = float(payload.get("format", {}).get("duration") or 0)
-            if duration <= 0:
-                raise RenderError(f"Timeline source has an invalid duration: {source}")
-            source_cache[source] = (payload, duration)
-
-        payload, source_duration = source_cache[source]
-        if clip.source_end_seconds > source_duration + 0.01:
-            raise RenderError(f"Approved clip exceeds source duration: {clip.clip_id}")
-        if clip.source_start_seconds < 0 or clip.source_end_seconds <= clip.source_start_seconds:
-            raise RenderError(f"Approved clip has invalid source bounds: {clip.clip_id}")
-        streams = payload.get("streams", [])
-        has_audio = any(item.get("codec_type") == "audio" for item in streams)
-        # The first approved shot always starts with a hard cut, even if earlier
-        # proposed shots carrying its transition metadata were rejected.
-        adjacent_to_previous = (
-            previous_sequence_index is not None
-            and clip.sequence_index == previous_sequence_index + 1
-        )
-        transition = clip.transition_in if adjacent_to_previous else "cut"
-        transition_duration = clip.transition_duration_seconds if adjacent_to_previous else 0.0
-        clip_inputs.append(
-            (
-                source,
-                clip.source_start_seconds,
-                clip.source_end_seconds,
-                has_audio,
-                transition,
-                transition_duration,
-            )
-        )
-        previous_sequence_index = clip.sequence_index
-
+    source_cache, clip_inputs, source_paths = _probe_approved_clip_inputs(root, approved, ffprobe)
     if destination in source_paths:
         raise RenderError("render output cannot overwrite a source video")
     if selected_music is not None and destination == selected_music:
         raise RenderError("render output cannot overwrite the selected soundtrack")
-    first_payload = source_cache[clip_inputs[0][0]][0]
-    first_video = next(
-        item for item in first_payload["streams"] if item.get("codec_type") == "video"
+    width, height = _resolve_shot_output_dimensions(
+        root, clip_inputs, source_cache, output_aspect_ratio, output_resolution
     )
-    width = int(first_video.get("width") or 0)
-    height = int(first_video.get("height") or 0)
-    width -= width % 2
-    height -= height % 2
-    if width < 2 or height < 2:
-        raise RenderError("could not determine a valid output resolution from the first source")
-    if output_aspect_ratio is None and output_resolution is None:
-        width, height = _resolve_output_dimensions(root, width, height)
-    else:
-        width, height = _requested_output_dimensions(output_aspect_ratio, output_resolution)
 
     expected_duration = sum(end - start for _, start, end, *_ in clip_inputs) - sum(
         transition_duration
@@ -531,90 +687,34 @@ def render_approved_shot_timeline(
             raise RenderError(
                 f"title overlay {title.overlay_id} exceeds rendered timeline duration"
             )
-    temporary_path = destination
-    if not dry_run:
-        temporary_file = tempfile.NamedTemporaryFile(
-            prefix=".video-agent-shot-render-", suffix=".mp4", dir=destination.parent, delete=False
-        )
-        temporary_path = Path(temporary_file.name)
-        temporary_file.close()
-    try:
-        try:
-            crop_paths = detect_face_crop_paths(clip_inputs) if reframe_mode == "face" else None
-            crop_anchors = None
-            if crop_anchors_path is not None:
-                manual_anchors = load_crop_anchors(root, timeline_file, timeline, crop_anchors_path)
-                if crop_paths is None:
-                    crop_anchors = [(0.5, 0.5) for _ in approved]
-                for index, clip in enumerate(approved):
-                    if clip.clip_id in manual_anchors:
-                        if crop_anchors is None:
-                            crop_anchors = [(0.5, 0.5) for _ in approved]
-                        crop_anchors[index] = manual_anchors[clip.clip_id]
-                        if crop_paths is not None:
-                            crop_paths[index] = []
-        except (RuntimeError, ValueError, OSError) as exc:
-            raise RenderError(str(exc)) from exc
-        command = _build_shot_render_command(
-            ffmpeg,
-            clip_inputs,
-            temporary_path,
-            width,
-            height,
-            fit_mode=fit_mode,
-            crop_anchors=crop_anchors,
-            crop_paths=crop_paths,
-            title_overlays=approved_titles,
-            music_path=selected_music,
-            music_mode=music_mode,
-            music_volume=music_volume,
-            music_fade_in=music_fade_in,
-            music_fade_out=music_fade_out,
-            music_ducking=music_ducking,
-        )
-        if dry_run:
-            _validate_filter_graph(command, timeout=min(timeout_seconds, 120))
-            return None
-        run_ffmpeg(
-            command,
-            timeout=timeout_seconds,
-            label="FFmpeg shot render",
-            error_type=RenderError,
-        )
-        if not temporary_path.is_file() or temporary_path.stat().st_size == 0:
-            raise RenderError("FFmpeg completed without producing a non-empty MP4")
-
-        output_probe = _run_probe(ffprobe, temporary_path)
-        output_streams = output_probe.get("streams", [])
-        output_video = next(
-            (item for item in output_streams if item.get("codec_type") == "video"), None
-        )
-        output_audio = next(
-            (item for item in output_streams if item.get("codec_type") == "audio"), None
-        )
-        actual_duration = float(output_probe.get("format", {}).get("duration") or 0)
-        if output_video is None or output_audio is None or actual_duration <= 0:
-            raise RenderError("rendered MP4 is missing a valid video or audio stream")
-        if output_video.get("codec_name") != "h264" or output_audio.get("codec_name") != "aac":
-            raise RenderError("rendered MP4 does not contain the expected H.264/AAC streams")
-        actual_width = int(output_video.get("width") or 0)
-        actual_height = int(output_video.get("height") or 0)
-        if (actual_width, actual_height) != (width, height):
-            raise RenderError(
-                f"rendered dimensions mismatch: expected {width}x{height}, "
-                f"got {actual_width}x{actual_height}"
-            )
-        tolerance = max(0.75, len(clip_inputs) / 30.0 * 2)
-        if abs(actual_duration - expected_duration) > tolerance:
-            raise RenderError(
-                f"rendered duration mismatch: expected about {expected_duration:.2f}s, "
-                f"got {actual_duration:.2f}s"
-            )
-        temporary_path.replace(destination)
-    except Exception:
-        if not dry_run:
-            temporary_path.unlink(missing_ok=True)
-        raise
+    render_result = _render_and_validate_shot_output(
+        root=root,
+        timeline_file=timeline_file,
+        timeline=timeline,
+        approved=approved,
+        approved_titles=approved_titles,
+        selected_music=selected_music,
+        music_mode=music_mode,
+        music_volume=music_volume,
+        music_fade_in=music_fade_in,
+        music_fade_out=music_fade_out,
+        music_ducking=music_ducking,
+        ffmpeg=ffmpeg,
+        ffprobe=ffprobe,
+        destination=destination,
+        width=width,
+        height=height,
+        expected_duration=expected_duration,
+        timeout_seconds=timeout_seconds,
+        dry_run=dry_run,
+        fit_mode=fit_mode,
+        reframe_mode=reframe_mode,
+        crop_anchors_path=crop_anchors_path,
+        clip_inputs=clip_inputs,
+    )
+    if render_result is None:
+        return None
+    output_probe, output_video, output_audio, actual_duration = render_result
 
     dependencies = [timeline_file]
     if title_file is not None:

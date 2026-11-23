@@ -23,7 +23,10 @@ from video_edit_agent.rendering.critique import (
     DraftCritiqueError,
     DraftCritiqueReport,
     FrameQualitySample,
+    SemanticFrameReview,
     _parse_frame_rate,
+    _quality_critique_findings,
+    _semantic_critique_findings,
     critique_rendered_draft,
 )
 
@@ -328,6 +331,59 @@ def test_critique_rejects_paths_outside_project(tmp_path):
 def test_critique_rejects_invalid_sample_count(tmp_path):
     with pytest.raises(ValueError, match="between 1 and 24"):
         critique_rendered_draft(tmp_path, sample_count=25)
+
+
+def test_quality_critique_findings_are_pure_and_do_not_require_ffmpeg(tmp_path):
+    _, timeline_path, plan_path = _write_inputs(tmp_path)
+    plan = VideoProjectPlan.model_validate_json(plan_path.read_text(encoding="utf-8"))
+    timeline = ProjectDraftTimeline.model_validate_json(timeline_path.read_text(encoding="utf-8"))
+
+    findings = _quality_critique_findings(
+        plan=plan,
+        timeline=timeline,
+        duration=8.0,
+        width=640,
+        height=360,
+        frames=[_frame()],
+        audio=AudioQualitySummary(has_audio=True, mean_volume_db=-18.0),
+        semantic=False,
+        semantic_reviews=[],
+    )
+
+    categories = {finding.category for finding in findings}
+    assert "format" in categories
+    assert "render" in categories
+    assert all(isinstance(finding, CritiqueFinding) for finding in findings)
+
+
+def test_semantic_critique_findings_are_pure_and_thresholded():
+    findings = _semantic_critique_findings(
+        [
+            SemanticFrameReview(
+                shot_id="shot-1",
+                timestamp_seconds=2.5,
+                match="mismatch",
+                score=0.3,
+                confidence=0.9,
+                evidence="The rendered shot shows a city instead of the planned mountains.",
+                suggestion="Review the selected source clip.",
+            ),
+            SemanticFrameReview(
+                shot_id="shot-2",
+                timestamp_seconds=5.0,
+                match="partial",
+                score=0.6,
+                confidence=0.2,
+                evidence="Low confidence comparison.",
+                suggestion="Review if needed.",
+            ),
+        ]
+    )
+
+    assert len(findings) == 1
+    assert findings[0].category == "story"
+    assert findings[0].severity == "warning"
+    assert "shot-1" in findings[0].message
 
 
 @pytest.mark.parametrize(
