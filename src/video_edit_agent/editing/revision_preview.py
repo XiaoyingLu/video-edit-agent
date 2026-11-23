@@ -7,7 +7,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..artifact_tracking import register_artifact, validate_artifact
-from ..editing.planning_schemas import VideoProjectPlan
+from .planning_schemas import VideoProjectPlan
 from ..rendering.renderer import RenderReport
 from ..rendering.shot_renderer import render_approved_shot_timeline
 from .timeline_schemas import ProjectDraftTimeline
@@ -85,7 +85,9 @@ def render_timeline_revision_preview(
     plan_file = root / ".video-agent" / "video-project-plan.json"
     if plan_file.is_file():
         if not validate_artifact(root, plan_file):
-            raise RevisionPreviewError("video project plan is stale; regenerate it before previewing")
+            raise RevisionPreviewError(
+                "video project plan is stale; regenerate it before previewing"
+            )
         plan = VideoProjectPlan.model_validate_json(plan_file.read_text(encoding="utf-8"))
         if Path(plan.project_path).resolve() != root:
             raise RevisionPreviewError("video project plan belongs to a different project folder")
