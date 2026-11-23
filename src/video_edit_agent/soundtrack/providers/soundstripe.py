@@ -9,7 +9,6 @@ from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import Request, urlopen
 
 from ...config import get_setting
-
 from ..catalog import SoundtrackSearchRequest, SoundtrackSearchResponse
 from ..schemas import SoundtrackCandidate, SoundtrackLicense
 

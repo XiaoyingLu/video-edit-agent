@@ -295,9 +295,7 @@ class OllamaVisionAnalyzer:
         timeout_seconds: int = 600,
     ) -> None:
         self.model = model
-        self.base_url = (base_url or get_setting("OLLAMA_BASE_URL")).rstrip(
-            "/"
-        )
+        self.base_url = (base_url or get_setting("OLLAMA_BASE_URL")).rstrip("/")
         self.timeout_seconds = timeout_seconds
         self.keep_alive = get_setting("OLLAMA_KEEP_ALIVE")
         self._memory_checked = False

@@ -87,11 +87,7 @@ class OllamaClient:
         if max_retries < 0:
             raise ValueError("max_retries must not be negative")
         self.base_url = (base_url or get_setting("OLLAMA_BASE_URL")).rstrip("/")
-        self.keep_alive = (
-            keep_alive
-            if keep_alive is not None
-            else get_setting("OLLAMA_KEEP_ALIVE")
-        )
+        self.keep_alive = keep_alive if keep_alive is not None else get_setting("OLLAMA_KEEP_ALIVE")
         self.max_retries = max_retries
 
     def _request(self, endpoint: str, payload: dict, timeout_seconds: int) -> dict:

@@ -12,13 +12,9 @@ def create_vision_analyzer(provider: str, model: str | None = None):
     if selected == "ollama":
         return OllamaVisionAnalyzer(model=model or get_setting("OLLAMA_MODEL"))
     if selected == "qwen3-vl":
-        return Qwen3VLMLXAnalyzer(
-            model=model or get_setting("QWEN3_VL_MODEL")
-        )
+        return Qwen3VLMLXAnalyzer(model=model or get_setting("QWEN3_VL_MODEL"))
     if selected == "mlx":
-        return SmolVLM2MLXAnalyzer(
-            model=model or get_setting("MLX_VISION_MODEL")
-        )
+        return SmolVLM2MLXAnalyzer(model=model or get_setting("MLX_VISION_MODEL"))
     raise ValueError(
         f"Unsupported vision provider '{provider}'. Choose 'ollama', 'mlx', or 'qwen3-vl'."
     )
