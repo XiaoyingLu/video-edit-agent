@@ -322,9 +322,7 @@ def _build_shot_render_command(
         current_video = output_video
         current_audio = output_audio
 
-    video_label = _append_title_overlay_filters(
-        filters, title_overlays, width, height, current_video
-    )
+    _append_title_overlay_filters(filters, title_overlays, width, height, current_video)
     filters.append(f"[{current_audio}]aresample=48000[baseaudio]")
     audio_output = append_music_mix(
         filters,
@@ -370,7 +368,11 @@ def _probe_approved_clip_inputs(
     root: Path,
     approved: list,
     ffprobe: str,
-) -> tuple[dict[Path, tuple[dict, float]], list[tuple[Path, float, float, bool, str, float]], set[Path]]:
+) -> tuple[
+    dict[Path, tuple[dict, float]],
+    list[tuple[Path, float, float, bool, str, float]],
+    set[Path],
+]:
     """Validate and probe approved sources before any render output is created."""
     source_cache: dict[Path, tuple[dict, float]] = {}
     clip_inputs: list[tuple[Path, float, float, bool, str, float]] = []
@@ -476,7 +478,7 @@ def _render_and_validate_shot_output(
     reframe_mode: str,
     crop_anchors_path: Path | None,
     clip_inputs: list[tuple[Path, float, float, bool, str, float]],
-) -> tuple[dict, float] | None:
+) -> tuple[dict, dict, dict, float] | None:
     """Build, execute, and verify FFmpeg output without registering project artifacts."""
     temporary_path = destination
     if not dry_run:
@@ -564,7 +566,7 @@ def _render_and_validate_shot_output(
         raise
 
 
-    return output_probe, actual_duration
+    return output_probe, output_video, output_audio, actual_duration
 
 
 def render_approved_shot_timeline(
@@ -717,7 +719,7 @@ def render_approved_shot_timeline(
     )
     if render_result is None:
         return None
-    output_probe, actual_duration = render_result
+    output_probe, output_video, output_audio, actual_duration = render_result
 
     dependencies = [timeline_file]
     if title_file is not None:
