@@ -9,7 +9,7 @@ from ..artifact_tracking import register_artifact, validate_artifact
 from ..editing.planning_schemas import VideoProjectPlan
 from ..editing.timeline_schemas import ProjectDraftTimeline
 from .audio_mix import append_music_input, append_music_mix, resolve_selected_music
-from .face_reframing import detect_face_crop_anchors
+from .face_reframing import detect_face_crop_paths
 from .renderer import (
     RenderError,
     RenderReport,
@@ -79,6 +79,26 @@ def _escape_drawtext(value: str) -> str:
     return escaped
 
 
+def _crop_path_expression(path: list[tuple[float, float, float]], axis: int) -> str:
+    """Build a piecewise-linear FFmpeg expression for a normalized crop coordinate."""
+    if len(path) == 1:
+        return f"{path[0][axis]:.6f}"
+    expression = f"{path[-1][axis]:.6f}"
+    for index in range(len(path) - 2, -1, -1):
+        current = path[index]
+        following = path[index + 1]
+        start, end = current[0], following[0]
+        value_start, value_end = current[axis], following[axis]
+        if end <= start:
+            continue
+        interpolation = (
+            f"({value_start:.6f}+({value_end - value_start:.6f})*"
+            f"(t-{start:.6f})/{end - start:.6f})"
+        )
+        expression = f"if(lt(t,{end:.6f}),{interpolation},{expression})"
+    return expression
+
+
 def _build_shot_render_command(
     ffmpeg: str,
     clips: list[tuple[Path, float, float, bool, str, float]],
@@ -89,6 +109,7 @@ def _build_shot_render_command(
     fit_mode: str = "crop",
     title_overlays: list[TitleOverlay] | None = None,
     crop_anchors: list[tuple[float, float]] | None = None,
+    crop_paths: list[list[tuple[float, float, float]]] | None = None,
     music_path: Path | None = None,
     music_mode: str = "blend",
     music_volume: float = 0.22,
@@ -112,11 +133,25 @@ def _build_shot_render_command(
         anchor_x, anchor_y = crop_anchors[index] if crop_anchors is not None else (0.5, 0.5)
         if not (0 <= anchor_x <= 1 and 0 <= anchor_y <= 1):
             raise ValueError("crop anchors must be normalized between 0 and 1")
+        if crop_paths is not None and len(crop_paths) != len(clips):
+            raise ValueError("crop_paths must contain one path per clip")
+        path = crop_paths[index] if crop_paths is not None else []
+        if path:
+            if any(
+                not (0 <= x <= 1 and 0 <= y <= 1) or timestamp < 0
+                for timestamp, x, y in path
+            ):
+                raise ValueError("crop path timestamps and coordinates must be non-negative and normalized")
+            x_position = _crop_path_expression(path, 1)
+            y_position = _crop_path_expression(path, 2)
+        else:
+            x_position = f"{anchor_x:.6f}"
+            y_position = f"{anchor_y:.6f}"
         fit_filters = (
             f"scale=w={width}:h={height}:force_original_aspect_ratio=increase,"
             f"crop={width}:{height}:"
-            f"x='max(0,min(iw-ow,iw*{anchor_x:.6f}-ow/2))':"
-            f"y='max(0,min(ih-oh,ih*{anchor_y:.6f}-oh/2))'"
+            f"x='max(0,min(iw-ow,iw*({x_position})-ow/2))':"
+            f"y='max(0,min(ih-oh,ih*({y_position})-oh/2))'"
             if fit_mode == "crop"
             else f"scale=w={width}:h={height}:force_original_aspect_ratio=decrease,"
             f"pad=width={width}:height={height}:x=(ow-iw)/2:y=(oh-ih)/2"
@@ -504,14 +539,19 @@ def render_approved_shot_timeline(
         temporary_file.close()
     try:
         try:
-            crop_anchors = detect_face_crop_anchors(clip_inputs) if reframe_mode == "face" else None
+            crop_paths = detect_face_crop_paths(clip_inputs) if reframe_mode == "face" else None
+            crop_anchors = None
             if crop_anchors_path is not None:
                 manual_anchors = load_crop_anchors(root, timeline_file, timeline, crop_anchors_path)
-                if crop_anchors is None:
+                if crop_paths is None:
                     crop_anchors = [(0.5, 0.5) for _ in approved]
                 for index, clip in enumerate(approved):
                     if clip.clip_id in manual_anchors:
+                        if crop_anchors is None:
+                            crop_anchors = [(0.5, 0.5) for _ in approved]
                         crop_anchors[index] = manual_anchors[clip.clip_id]
+                        if crop_paths is not None:
+                            crop_paths[index] = []
         except (RuntimeError, ValueError, OSError) as exc:
             raise RenderError(str(exc)) from exc
         command = _build_shot_render_command(
@@ -522,6 +562,7 @@ def render_approved_shot_timeline(
             height,
             fit_mode=fit_mode,
             crop_anchors=crop_anchors,
+            crop_paths=crop_paths,
             title_overlays=approved_titles,
             music_path=selected_music,
             music_mode=music_mode,
