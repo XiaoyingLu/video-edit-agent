@@ -338,7 +338,6 @@ def test_critique_rejects_invalid_sample_count(tmp_path):
     [("30/1", 30), ("30000/1001", pytest.approx(30000 / 1001)), ("0/0", None), ("N/A", None)],
 )
 
-
 def test_quality_critique_findings_are_pure_and_do_not_require_ffmpeg(tmp_path):
     _, timeline_path, plan_path = _write_inputs(tmp_path)
     plan = VideoProjectPlan.model_validate_json(plan_path.read_text(encoding="utf-8"))
