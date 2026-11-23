@@ -861,7 +861,6 @@ def test_analyze_selected_soundtrack_command_invokes_provenance_workflow(tmp_pat
     assert "no timeline approval or rendering occurred" in " ".join(result.output.split())
 
 
-
 @pytest.mark.parametrize(
     ("group", "expected_commands"),
     [
