@@ -20,16 +20,19 @@ class EditReviewItem(BaseModel):
     review_reason: str
     scene_id: str | None = None
     scene_summary: str | None = None
-    scene_role: Literal[
-        "establishing",
-        "action",
-        "detail",
-        "reaction",
-        "transition",
-        "portrait",
-        "scenic_breath",
-        "unknown",
-    ] | None = None
+    scene_role: (
+        Literal[
+            "establishing",
+            "action",
+            "detail",
+            "reaction",
+            "transition",
+            "portrait",
+            "scenic_breath",
+            "unknown",
+        ]
+        | None
+    ) = None
 
     @model_validator(mode="after")
     def validate_interval(self) -> "EditReviewItem":
