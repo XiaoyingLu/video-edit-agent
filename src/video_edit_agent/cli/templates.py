@@ -6,7 +6,7 @@ from typing import Annotated
 import typer
 from rich.table import Table
 
-from ..rendering.template_preview import render_template_previews
+from ..rendering.template_preview import TemplatePreviewError, render_template_previews
 from ..rendering.title_overlays import suggest_narrative_title_sequences
 from ..templates import available_template_ids, load_template
 from .common import console
@@ -199,7 +199,7 @@ def preview_templates(
         index_file, preview_files, timestamp = render_template_previews(
             folder, template_ids, output_dir
         )
-    except (FileNotFoundError, FileExistsError, OSError, ValueError) as exc:
+    except (FileNotFoundError, FileExistsError, OSError, ValueError, TemplatePreviewError) as exc:
         console.print(f"[red]Template preview failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
