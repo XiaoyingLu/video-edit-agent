@@ -1,12 +1,12 @@
 from pathlib import Path
 
 import pytest
+from typer.testing import CliRunner
 
+from video_edit_agent.cli import app
 from video_edit_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
 from video_edit_agent.rendering.template_capture import save_template_from_project
 from video_edit_agent.templates import load_template
-from video_edit_agent.cli import app
-from typer.testing import CliRunner
 
 
 def _project(tmp_path: Path, *, title_overlays: bool = True) -> Path:
@@ -45,24 +45,24 @@ def _project(tmp_path: Path, *, title_overlays: bool = True) -> Path:
     )
     if title_overlays:
         (metadata / "title-overlays.json").write_text(
-            """{
+            f"""{{
               "schema_version": "1.1",
-              "project_path": "%s",
+              "project_path": "{str(root)}",
               "source_timeline": ".video-agent/optimized-timeline.json",
               "overlays": [
-                {"overlay_id":"title","text":"Do not copy me","start_seconds":0,"end_seconds":2,
+                {{"overlay_id":"title","text":"Do not copy me","start_seconds":0,"end_seconds":2,
                  "placement":"center","style":"bold","animation":"fade",
-                 "sequence_role":"opening","decision":"approved"},
-                {"overlay_id":"logline","text":"Private wording","start_seconds":0,"end_seconds":2,
+                 "sequence_role":"opening","decision":"approved"}},
+                {{"overlay_id":"logline","text":"Private wording","start_seconds":0,"end_seconds":2,
                  "placement":"bottom","style":"minimal","animation":"none",
-                 "sequence_role":"opening","decision":"approved"},
-                {"overlay_id":"closing","text":"Private ending","start_seconds":6,"end_seconds":8,
+                 "sequence_role":"opening","decision":"approved"}},
+                {{"overlay_id":"closing","text":"Private ending","start_seconds":6,"end_seconds":8,
                  "placement":"bottom","style":"cinematic","animation":"fade",
-                 "sequence_role":"closing","decision":"approved"},
-                {"overlay_id":"pending","text":"Not approved","start_seconds":2,"end_seconds":4,
-                 "placement":"top","style":"bold","sequence_role":"opening","decision":"pending"}
+                 "sequence_role":"closing","decision":"approved"}},
+                {{"overlay_id":"pending","text":"Not approved","start_seconds":2,"end_seconds":4,
+                 "placement":"top","style":"bold","sequence_role":"opening","decision":"pending"}}
               ]
-            }""" % str(root),
+            }}""",
             encoding="utf-8",
         )
     return root
@@ -140,7 +140,6 @@ def test_saved_template_can_be_loaded_by_template_library(tmp_path):
     loaded, source = load_template("saved", project_root=tmp_path, home_dir=tmp_path / "home")
     assert loaded.id == "saved"
     assert source == output.resolve()
-
 
 
 def test_template_save_cli_requires_from_project_flag(tmp_path):

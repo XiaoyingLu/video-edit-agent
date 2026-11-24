@@ -8,7 +8,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Literal
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 from ..artifact_tracking import validate_artifact
 from ..editing.timeline_schemas import ProjectDraftTimeline
@@ -110,9 +110,7 @@ def save_template_from_project(
     if not timeline_path.is_file():
         raise FileNotFoundError(f"Missing optimized timeline: {timeline_path}")
     validate_artifact(root, timeline_path)
-    timeline = ProjectDraftTimeline.model_validate_json(
-        timeline_path.read_text(encoding="utf-8")
-    )
+    timeline = ProjectDraftTimeline.model_validate_json(timeline_path.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root:
         raise ValueError("optimized timeline belongs to a different project folder")
     if not timeline.timeline_approved:
@@ -160,7 +158,9 @@ def save_template_from_project(
             "opening": [{"slot": "{title}", "style": "opening"}],
             "closing": [{"slot": "{closing_line}", "style": "closing"}],
         }
-        notes.append("Used safe built-in title defaults because no approved title styles were found.")
+        notes.append(
+            "Used safe built-in title defaults because no approved title styles were found."
+        )
 
     transitions = [
         _TRANSITIONS[clip.transition_in]
@@ -194,7 +194,9 @@ def save_template_from_project(
     if destination.suffix.lower() not in {".yaml", ".yml"}:
         raise ValueError("template output must use a .yaml or .yml extension")
     if destination.exists():
-        raise FileExistsError(f"Template already exists: {destination}; choose another output path.")
+        raise FileExistsError(
+            f"Template already exists: {destination}; choose another output path."
+        )
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     payload = yaml.safe_dump(

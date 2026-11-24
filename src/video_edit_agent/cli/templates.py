@@ -215,7 +215,6 @@ def preview_templates(
     console.print("Previews are visual comparisons only; no template or title was applied.")
 
 
-
 @template_app.command("save")
 def save_template(
     folder: Annotated[
@@ -248,22 +247,16 @@ def save_template(
     ] = None,
     music_mode: Annotated[
         Literal["original", "music_only", "blend"] | None,
-        typer.Option("--music-mode", help="Override inferred profile: original, music_only, or blend."),
+        typer.Option(
+            "--music-mode", help="Override inferred profile: original, music_only, or blend."
+        ),
     ] = None,
-    music_volume: Annotated[
-        float | None, typer.Option("--music-volume", min=0.01, max=2.0)
-    ] = None,
-    music_fade_in: Annotated[
-        float | None, typer.Option("--music-fade-in", min=0, max=30)
-    ] = None,
-    music_fade_out: Annotated[
-        float | None, typer.Option("--music-fade-out", min=0, max=30)
-    ] = None,
+    music_volume: Annotated[float | None, typer.Option("--music-volume", min=0.01, max=2.0)] = None,
+    music_fade_in: Annotated[float | None, typer.Option("--music-fade-in", min=0, max=30)] = None,
+    music_fade_out: Annotated[float | None, typer.Option("--music-fade-out", min=0, max=30)] = None,
     music_ducking: Annotated[
         bool | None,
-        typer.Option(
-            "--music-ducking/--no-music-ducking", help="Override inferred music ducking."
-        ),
+        typer.Option("--music-ducking/--no-music-ducking", help="Override inferred music ducking."),
     ] = None,
 ) -> None:
     """Save a reusable template from reviewed project settings."""
