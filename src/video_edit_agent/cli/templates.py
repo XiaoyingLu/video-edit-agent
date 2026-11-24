@@ -168,6 +168,5 @@ def apply_template(
         f"proposal saved to [green]{destination}[/green]."
     )
     console.print(
-        "All generated overlays remain pending review; "
-        "nothing is approved automatically."
+        "All generated overlays remain pending review; nothing is approved automatically."
     )

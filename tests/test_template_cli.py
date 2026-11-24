@@ -51,12 +51,14 @@ def test_template_apply_creates_review_only_proposal(tmp_path: Path, monkeypatch
 
     calls = {}
     overlay = SimpleNamespace(
-        overlay_id="opening-1", sequence_role="opening", text="A journey",
-        start_seconds=0.0, end_seconds=3.0, decision="pending",
+        overlay_id="opening-1",
+        sequence_role="opening",
+        text="A journey",
+        start_seconds=0.0,
+        end_seconds=3.0,
+        decision="pending",
     )
-    document = SimpleNamespace(
-        template_id="travel-montage", template_version=1, overlays=[overlay]
-    )
+    document = SimpleNamespace(template_id="travel-montage", template_version=1, overlays=[overlay])
     destination = tmp_path / ".video-agent" / "title-overlays.json"
 
     def fake_suggest(folder, **kwargs):
