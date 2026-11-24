@@ -1,0 +1,47 @@
+id: cinematic
+version: 1
+typography:
+  font: Lato
+  color: "#FFFFFF"
+  accent: "#F2B544"
+title_styles:
+  opening:
+    placement: center
+    size: 1.0
+    box: 0.42
+    animation: fade
+  minimal:
+    placement: bottom
+    size: 0.72
+    box: 0.0
+    animation: fade
+  closing:
+    placement: center
+    size: 1.0
+    box: 0.42
+    animation: slide_up
+sequences:
+  opening:
+    - slot: "{title}"
+      style: opening
+    - slot: "{logline}"
+      style: minimal
+  closing:
+    - slot: "{closing_line}"
+      style: closing
+transitions:
+  default: crossfade
+  on_scene_change: fadeblack
+  on_beat: cut
+music:
+  mode: blend
+  volume: 0.16
+  fade_in: 1.8
+  fade_out: 2.5
+  ducking: true
+render:
+  fit_mode: crop
+  beat_punch_in: false
+tags:
+  mood: [cinematic, calm, reflective]
+  best_for: [travel, documentary, family]

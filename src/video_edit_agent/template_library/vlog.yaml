@@ -1,0 +1,30 @@
+id: vlog
+version: 1
+extends: cinematic
+typography:
+  font: Lato
+  color: "#FFFFFF"
+  accent: "#62C7B7"
+title_styles:
+  opening:
+    placement: bottom
+    size: 0.9
+    box: 0.0
+    animation: fade
+  closing:
+    placement: bottom
+    size: 0.85
+    box: 0.0
+    animation: fade
+music:
+  mode: blend
+  volume: 0.18
+  fade_in: 0.5
+  fade_out: 1.0
+  ducking: true
+render:
+  fit_mode: pad
+  beat_punch_in: false
+tags:
+  mood: [natural, casual, personal]
+  best_for: [vlog, daily-life, family]
