@@ -13,7 +13,7 @@ import yaml
 from ..artifact_tracking import validate_artifact
 from ..editing.timeline_schemas import ProjectDraftTimeline
 from ..templates import MusicSpec, TemplateSpec, TitleStyleSpec
-from .title_overlays import TitleOverlayDocument
+from .title_overlays import TitleOverlay, TitleOverlayDocument
 
 _TRANSITIONS = {
     "cut": "cut",
@@ -37,7 +37,7 @@ def _majority(values: list[str], default: str) -> str:
     return Counter(values).most_common(1)[0][0] if values else default
 
 
-def _style_from_overlay(overlay) -> TitleStyleSpec:
+def _style_from_overlay(overlay: TitleOverlay) -> TitleStyleSpec:
     size = {"minimal": 0.8, "cinematic": 1.0, "bold": 1.2}[overlay.style]
     box = {"minimal": 0.0, "cinematic": 0.35, "bold": 0.55}[overlay.style]
     return TitleStyleSpec(
@@ -48,7 +48,9 @@ def _style_from_overlay(overlay) -> TitleStyleSpec:
     )
 
 
-def _capture_title_sequences(document: TitleOverlayDocument | None):
+def _capture_title_sequences(
+    document: TitleOverlayDocument | None,
+) -> tuple[dict[str, TitleStyleSpec], dict[str, list[dict[str, str]]], list[str]]:
     styles: dict[str, TitleStyleSpec] = {}
     sequences: dict[str, list[dict[str, str]]] = {"opening": [], "closing": []}
     notes: list[str] = []
@@ -141,6 +143,10 @@ def save_template_from_project(
             raise ValueError("title overlays reference a different optimized timeline")
 
     title_styles, sequences, notes = _capture_title_sequences(overlay_document)
+    notes.append(
+        "Music mix values are inferred from the creative-style profile unless explicitly overridden; "
+        "past render-draft overrides are not stored in project artifacts."
+    )
     if not title_styles:
         title_styles = {
             "opening": TitleStyleSpec(),
