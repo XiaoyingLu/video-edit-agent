@@ -43,6 +43,22 @@ video-agent template apply ./my-project travel-montage
 Optional `--timeline`, `--plan`, and `--output` arguments select the input
 and output files. The command refuses to overwrite an existing proposal.
 
+## Preview and compare templates
+
+Render two or three opening-card designs over the same frame from the first
+approved timeline clip:
+
+```bash
+video-agent template preview ./my-project cinematic vlog travel-montage
+```
+
+The command samples the midpoint of the first approved source clip, uses the
+story treatment's working title and logline, and renders one JPEG per template.
+It also writes `.video-agent/template-previews/index.html` for a side-by-side
+comparison. Use `--output-dir` to choose another directory inside the project.
+Existing preview files are never overwritten. Previewing does not create or
+approve a title-overlay artifact and does not modify source media.
+
 ## Schema
 
 Each file declares `id` and `version`. Optional `extends` inherits the

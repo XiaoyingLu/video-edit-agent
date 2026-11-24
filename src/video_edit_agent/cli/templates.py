@@ -6,6 +6,7 @@ from typing import Annotated
 import typer
 from rich.table import Table
 
+from ..rendering.template_preview import TemplatePreviewError, render_template_previews
 from ..rendering.title_overlays import suggest_narrative_title_sequences
 from ..templates import available_template_ids, load_template
 from .common import console
@@ -170,3 +171,44 @@ def apply_template(
     console.print(
         "All generated overlays remain pending review; nothing is approved automatically."
     )
+
+
+@template_app.command("preview")
+def preview_templates(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder with an approved optimized timeline and story treatment.",
+        ),
+    ],
+    template_ids: Annotated[
+        list[str], typer.Argument(help="Two or three template IDs to compare.")
+    ],
+    output_dir: Annotated[
+        Path | None,
+        typer.Option("--output-dir", help="Project-local preview output directory."),
+    ] = None,
+) -> None:
+    """Render side-by-side opening-card previews without applying a template."""
+    try:
+        index_file, preview_files, timestamp = render_template_previews(
+            folder, template_ids, output_dir
+        )
+    except (FileNotFoundError, FileExistsError, OSError, ValueError, TemplatePreviewError) as exc:
+        console.print(f"[red]Template preview failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    table = Table(title="Template Opening-Card Previews")
+    table.add_column("Template", style="cyan")
+    table.add_column("Preview")
+    for template_id, preview_file in zip(template_ids, preview_files, strict=True):
+        table.add_row(template_id, str(preview_file))
+    console.print(table)
+    console.print(f"Sampled approved footage at {timestamp:.2f}s.")
+    console.print(f"Comparison page: [green]{index_file}[/green]")
+    console.print("Previews are visual comparisons only; no template or title was applied.")
