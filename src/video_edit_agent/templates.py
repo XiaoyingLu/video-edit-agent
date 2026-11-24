@@ -192,20 +192,25 @@ def _resolve_template(
     declared_id = raw.get("id")
     if declared_id != template_id:
         raise ValueError(f"template filename {source.name!r} does not match id {declared_id!r}")
+    assets = raw.get("assets", [])
+    if not isinstance(assets, list) or not all(isinstance(asset, str) for asset in assets):
+        raise ValueError("template assets must be a list of relative paths")
+    _validate_template_assets(assets, source.parent)
     parent_id = raw.get("extends")
     if parent_id is None:
         effective = raw
     else:
         parent, _ = _resolve_template(parent_id, directories, (*stack, template_id))
         effective = _merge(parent.model_dump(mode="python"), raw)
+        if "assets" not in raw:
+            effective["assets"] = []
     spec = TemplateSpec.model_validate(effective)
-    _validate_template_assets(spec, source.parent)
     return spec, source
 
 
-def _validate_template_assets(spec: TemplateSpec, template_dir: Path) -> None:
+def _validate_template_assets(assets: list[str], template_dir: Path) -> None:
     root = template_dir.resolve()
-    for asset in spec.assets:
+    for asset in assets:
         relative = Path(asset)
         if relative.is_absolute() or "\\" in asset:
             raise ValueError("template asset paths must be relative POSIX paths")
