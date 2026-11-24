@@ -5,6 +5,8 @@ import pytest
 from video_edit_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
 from video_edit_agent.rendering.template_capture import save_template_from_project
 from video_edit_agent.templates import load_template
+from video_edit_agent.cli import app
+from typer.testing import CliRunner
 
 
 def _project(tmp_path: Path, *, title_overlays: bool = True) -> Path:
@@ -138,3 +140,60 @@ def test_saved_template_can_be_loaded_by_template_library(tmp_path):
     loaded, source = load_template("saved", project_root=tmp_path, home_dir=tmp_path / "home")
     assert loaded.id == "saved"
     assert source == output.resolve()
+
+
+
+def test_template_save_cli_requires_from_project_flag(tmp_path):
+    result = CliRunner().invoke(app, ["template", "save", str(tmp_path), "example"])
+    assert result.exit_code == 1
+    assert "Specify --from-project" in result.output
+
+
+def test_template_save_cli_reports_saved_template(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    import video_edit_agent.cli.templates as template_cli
+
+    captured = {}
+
+    def fake_save(folder, template_id, **kwargs):
+        captured["folder"] = folder
+        captured["template_id"] = template_id
+        captured.update(kwargs)
+        template = SimpleNamespace(
+            id=template_id,
+            version=1,
+            title_styles={"opening": object()},
+            sequences={"opening": [object()]},
+            transitions=SimpleNamespace(default="crossfade"),
+            music=SimpleNamespace(
+                mode="blend",
+                volume=0.3,
+                fade_in=1.0,
+                fade_out=2.0,
+                ducking=False,
+            ),
+        )
+        return template, tmp_path / "example.yaml", []
+
+    monkeypatch.setattr(template_cli, "save_template_from_project", fake_save)
+    result = CliRunner().invoke(
+        app,
+        [
+            "template",
+            "save",
+            str(tmp_path),
+            "example",
+            "--from-project",
+            "--music-volume",
+            "0.3",
+            "--no-music-ducking",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert captured["folder"] == tmp_path
+    assert captured["template_id"] == "example"
+    assert captured["music_volume"] == 0.3
+    assert captured["music_ducking"] is False
+    assert "No footage" in result.output

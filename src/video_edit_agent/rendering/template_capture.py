@@ -50,7 +50,11 @@ def _style_from_overlay(overlay: TitleOverlay) -> TitleStyleSpec:
 
 def _capture_title_sequences(
     document: TitleOverlayDocument | None,
-) -> tuple[dict[str, TitleStyleSpec], dict[str, list[dict[str, str]]], list[str]]:
+) -> tuple[
+    dict[str, TitleStyleSpec],
+    dict[str, list[dict[str, str]]],
+    list[str],
+]:
     styles: dict[str, TitleStyleSpec] = {}
     sequences: dict[str, list[dict[str, str]]] = {"opening": [], "closing": []}
     notes: list[str] = []
@@ -144,8 +148,8 @@ def save_template_from_project(
 
     title_styles, sequences, notes = _capture_title_sequences(overlay_document)
     notes.append(
-        "Music mix values are inferred from the creative-style profile unless explicitly overridden; "
-        "past render-draft overrides are not stored in project artifacts."
+        "Music mix values are inferred from the creative-style profile unless explicitly "
+        "overridden; past render-draft overrides are not stored in project artifacts."
     )
     if not title_styles:
         title_styles = {
