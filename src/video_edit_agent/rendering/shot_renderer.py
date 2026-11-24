@@ -12,7 +12,7 @@ from ..media_runner import run_ffmpeg
 from ..music.schemas import MusicAnalysis
 from .audio_mix import append_music_input, append_music_mix, resolve_selected_music
 from .face_reframing import detect_face_crop_paths
-from .overlay_filters import _append_title_overlay_filters
+from .overlay_filters import _append_asset_overlay_filters, _append_title_overlay_filters
 from .renderer import (
     RenderError,
     RenderReport,
@@ -22,7 +22,7 @@ from .renderer import (
     _validate_source_stream_metadata,
 )
 from .social_crop_anchors import load_crop_anchors
-from .title_overlays import TitleOverlay
+from .title_overlays import TitleOverlay, resolve_asset_overlays
 
 
 def _safe_source(root: Path, relative_path: str) -> Path:
@@ -209,6 +209,7 @@ def _build_shot_render_command(
     frame_rate: float = 30.0,
     fit_mode: str = "crop",
     title_overlays: list[TitleOverlay] | None = None,
+    asset_overlays: list[tuple[TitleOverlay, Path]] | None = None,
     crop_anchors: list[tuple[float, float]] | None = None,
     crop_paths: list[list[tuple[float, float, float]]] | None = None,
     zoom_paths: list[list[tuple[float, float, float]]] | None = None,
@@ -225,6 +226,20 @@ def _build_shot_render_command(
     command = [ffmpeg, "-hide_banner", "-nostdin", "-y"]
     for source, *_ in clips:
         command.extend(["-i", str(source)])
+    for overlay, asset_path in asset_overlays or []:
+        if overlay.asset_format == "webm":
+            command.extend(["-stream_loop", "-1", "-i", str(asset_path)])
+        else:
+            command.extend(
+                [
+                    "-framerate",
+                    str(overlay.asset_fps),
+                    "-stream_loop",
+                    "-1",
+                    "-i",
+                    str(asset_path),
+                ]
+            )
     music_input_index = append_music_input(command, music_path)
 
     filters: list[str] = []
@@ -319,7 +334,14 @@ def _build_shot_render_command(
         current_video = output_video
         current_audio = output_audio
 
-    _append_title_overlay_filters(filters, title_overlays, width, height, current_video)
+    current_video = _append_title_overlay_filters(
+        filters, title_overlays, width, height, current_video
+    )
+    if asset_overlays:
+        current_video = _append_asset_overlay_filters(
+            filters, asset_overlays, width, height, current_video, len(clips)
+        )
+    filters.append(f"[{current_video}]format=yuv420p[vfinal]")
     filters.append(f"[{current_audio}]aresample=48000[baseaudio]")
     audio_output = append_music_mix(
         filters,
@@ -455,6 +477,7 @@ def _render_and_validate_shot_output(
     timeline: ProjectDraftTimeline,
     approved: list,
     approved_titles: list[TitleOverlay],
+    asset_overlays: list[tuple[TitleOverlay, Path]],
     selected_music: Path | None,
     music_mode: str,
     music_volume: float,
@@ -516,6 +539,7 @@ def _render_and_validate_shot_output(
             crop_paths=crop_paths,
             zoom_paths=zoom_paths,
             title_overlays=approved_titles,
+            asset_overlays=asset_overlays,
             music_path=selected_music,
             music_mode=music_mode,
             music_volume=music_volume,
@@ -693,12 +717,22 @@ def render_approved_shot_timeline(
             raise RenderError(
                 f"title overlay {title.overlay_id} exceeds rendered timeline duration"
             )
+    try:
+        approved_assets = resolve_asset_overlays(root, approved_titles)
+    except (FileNotFoundError, ValueError, OSError) as exc:
+        raise RenderError(str(exc)) from exc
+    for asset_overlay, _asset_path in approved_assets:
+        if asset_overlay.end_seconds > expected_duration + 0.01:
+            raise RenderError(
+                f"asset overlay {asset_overlay.overlay_id} exceeds rendered timeline duration"
+            )
     render_result = _render_and_validate_shot_output(
         root=root,
         timeline_file=timeline_file,
         timeline=timeline,
         approved=approved,
         approved_titles=approved_titles,
+        asset_overlays=approved_assets,
         selected_music=selected_music,
         music_mode=music_mode,
         music_volume=music_volume,
@@ -726,6 +760,12 @@ def render_approved_shot_timeline(
     dependencies = [timeline_file]
     if title_file is not None:
         dependencies.append(title_file)
+    for asset_overlay, asset_path in approved_assets:
+        if asset_overlay.asset_format == "webm":
+            dependencies.append(asset_path)
+        else:
+            frame_pattern = re.sub(r"%0\d+d", "*", asset_path.name)
+            dependencies.extend(asset_path.parent.glob(frame_pattern))
     if selected_music is not None:
         dependencies.append(selected_music)
     music_analysis_file = root / ".video-agent" / "music-analysis.json"

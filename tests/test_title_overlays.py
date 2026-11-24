@@ -8,6 +8,7 @@ from video_edit_agent.rendering.shot_renderer import _build_shot_render_command
 from video_edit_agent.rendering.title_overlays import (
     TitleOverlay,
     TitleOverlayDocument,
+    resolve_asset_overlays,
     review_title_overlays,
 )
 
@@ -254,3 +255,120 @@ def test_explicit_exit_animation_replaces_legacy_fade_out():
     assert alpha.startswith("if(lt(t,0.450000),")
     assert "gt(t,2.550000)" not in alpha
     assert "gt(t,2.550000)" in y_position
+
+
+def test_asset_overlay_schema_requires_template_path_and_format():
+    asset = _overlay(
+        overlay_kind="asset",
+        text=None,
+        asset_path="templates/overlays/logo.webm",
+        asset_format="webm",
+    )
+    assert asset.overlay_kind == "asset"
+    with pytest.raises(ValidationError, match="templates/overlays"):
+        _overlay(
+            overlay_kind="asset",
+            text=None,
+            asset_path="../logo.webm",
+            asset_format="webm",
+        )
+    with pytest.raises(ValidationError, match="numbered"):
+        _overlay(
+            overlay_kind="asset",
+            text=None,
+            asset_path="templates/overlays/sticker.png",
+            asset_format="png_sequence",
+        )
+
+
+def test_resolve_asset_overlay_enforces_template_folder_and_png_pattern(tmp_path: Path):
+    asset_dir = tmp_path / "templates" / "overlays"
+    asset_dir.mkdir(parents=True)
+    webm = asset_dir / "logo.webm"
+    webm.write_bytes(b"webm")
+    sequence = asset_dir / "spark-%04d.png"
+    (asset_dir / "spark-0001.png").write_bytes(b"png")
+    webm_overlay = _overlay(
+        overlay_kind="asset",
+        text=None,
+        asset_path="templates/overlays/logo.webm",
+        asset_format="webm",
+    )
+    png_overlay = _overlay(
+        overlay_id="spark",
+        overlay_kind="asset",
+        text=None,
+        asset_path="templates/overlays/spark-%04d.png",
+        asset_format="png_sequence",
+    )
+    resolved = resolve_asset_overlays(tmp_path, [webm_overlay, png_overlay])
+    assert [path for _, path in resolved] == [webm.resolve(), sequence.resolve()]
+    outside = _overlay(
+        overlay_id="outside",
+        overlay_kind="asset",
+        text=None,
+        asset_path="templates/overlays/../../outside.webm",
+        asset_format="webm",
+    )
+    with pytest.raises(ValueError, match="inside templates/overlays"):
+        resolve_asset_overlays(tmp_path, [outside])
+
+
+def test_renderer_builds_webm_and_png_asset_inputs_and_overlay_filters(tmp_path: Path):
+    webm = _overlay(
+        overlay_kind="asset",
+        text=None,
+        asset_path="templates/overlays/logo.webm",
+        asset_format="webm",
+        start_seconds=1,
+        end_seconds=3,
+        asset_x=0.1,
+        asset_y=0.2,
+        asset_scale=0.25,
+    )
+    png = _overlay(
+        overlay_id="spark",
+        overlay_kind="asset",
+        text=None,
+        asset_path="templates/overlays/spark-%04d.png",
+        asset_format="png_sequence",
+        start_seconds=0,
+        end_seconds=2,
+        asset_fps=24,
+    )
+    command = _build_shot_render_command(
+        "ffmpeg",
+        [(tmp_path / "clip.mp4", 0, 4, False, "cut", 0)],
+        tmp_path / "output.mp4",
+        1920,
+        1080,
+        asset_overlays=[
+            (webm, tmp_path / "logo.webm"),
+            (png, tmp_path / "spark-%04d.png"),
+        ],
+    )
+    graph = command[command.index("-filter_complex") + 1]
+    assert command.count("-stream_loop") == 2
+    assert "-framerate" in command
+    assert "scale=480:-1" in graph
+    assert "between(t,1.000000,3.000000)" in graph
+    assert "between(t,0.000000,2.000000)" in graph
+    assert "overlay=x='(main_w-overlay_w)*0.100000'" in graph
+
+
+def test_resolve_asset_overlay_rejects_symlinked_template_directory(tmp_path: Path):
+    outside = tmp_path / "external-assets"
+    outside.mkdir()
+    (outside / "logo.webm").write_bytes(b"webm")
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "templates").mkdir()
+    (project / "templates" / "overlays").symlink_to(outside, target_is_directory=True)
+    overlay = _overlay(
+        overlay_kind="asset",
+        text=None,
+        asset_path="templates/overlays/logo.webm",
+        asset_format="webm",
+    )
+    with pytest.raises(ValueError, match="template folder must be inside"):
+        resolve_asset_overlays(project, [overlay])
