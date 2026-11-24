@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from typing import Literal
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 _TEMPLATE_ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
@@ -25,7 +25,7 @@ class TypographySpec(BaseModel):
     accent: str = "#F2B544"
 
     @model_validator(mode="after")
-    def validate_colors(self) -> "TypographySpec":
+    def validate_colors(self) -> TypographySpec:
         for name in ("color", "accent"):
             if not _COLOR.fullmatch(getattr(self, name)):
                 raise ValueError(f"typography.{name} must be a six-digit hex color")
@@ -55,7 +55,7 @@ class SequenceItemSpec(BaseModel):
     style: str
 
     @model_validator(mode="after")
-    def validate_slot(self) -> "SequenceItemSpec":
+    def validate_slot(self) -> SequenceItemSpec:
         if self.slot not in {f"{{{slot}}}" for slot in _ALLOWED_SLOTS}:
             raise ValueError(f"unsupported template slot {self.slot!r}")
         return self
@@ -72,9 +72,7 @@ class TransitionSpec(BaseModel):
     on_scene_change: Literal[
         "cut", "crossfade", "fadeblack", "wipeleft", "slideleft", "circleopen"
     ] = "fadeblack"
-    on_beat: Literal[
-        "cut", "crossfade", "fadeblack", "wipeleft", "slideleft", "circleopen"
-    ] = "cut"
+    on_beat: Literal["cut", "crossfade", "fadeblack", "wipeleft", "slideleft", "circleopen"] = "cut"
 
 
 class MusicSpec(BaseModel):
@@ -116,7 +114,7 @@ class TemplateSpec(BaseModel):
     assets: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def validate_template(self) -> "TemplateSpec":
+    def validate_template(self) -> TemplateSpec:
         if not _TEMPLATE_ID.fullmatch(self.id):
             raise ValueError("template id must contain lowercase letters, digits, and hyphens")
         if self.extends is not None and not _TEMPLATE_ID.fullmatch(self.extends):

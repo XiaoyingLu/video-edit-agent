@@ -26,28 +26,38 @@ def test_template_schema_rejects_unknown_fields_and_raw_filter_strings():
     with pytest.raises(ValidationError):
         TemplateSpec.model_validate({"id": "safe", "version": 1, "ffmpeg": "drawtext=..."})
     with pytest.raises(ValidationError):
-        TemplateSpec.model_validate({
-            "id": "safe",
-            "version": 1,
-            "title_styles": {"opening": {"animation": "sendcmd"}},
-        })
+        TemplateSpec.model_validate(
+            {
+                "id": "safe",
+                "version": 1,
+                "title_styles": {"opening": {"animation": "sendcmd"}},
+            }
+        )
 
 
 def test_project_template_overrides_home_and_builtin(tmp_path: Path):
     home = tmp_path / "home"
     project = tmp_path / "project"
-    _write_template(home / ".video-agent" / "templates", "cinematic", """
+    _write_template(
+        home / ".video-agent" / "templates",
+        "cinematic",
+        """
 id: cinematic
 version: 1
 music:
   volume: 0.11
-""")
-    _write_template(project / ".video-agent" / "templates", "cinematic", """
+""",
+    )
+    _write_template(
+        project / ".video-agent" / "templates",
+        "cinematic",
+        """
 id: cinematic
 version: 1
 music:
   volume: 0.12
-""")
+""",
+    )
     spec, source = load_template("cinematic", project, home_dir=home)
     assert spec.music.volume == 0.12
     assert source.parent == project / ".video-agent" / "templates"
@@ -63,23 +73,31 @@ def test_template_inheritance_rejects_cycles(tmp_path: Path):
 
 def test_template_assets_must_stay_inside_template_folder(tmp_path: Path):
     library = tmp_path / "library"
-    _write_template(library, "assets", """
+    _write_template(
+        library,
+        "assets",
+        """
 id: assets
 version: 1
 assets:
   - ../outside.webm
-""")
+""",
+    )
     with pytest.raises(ValueError, match="escapes its template folder"):
         load_template("assets", home_dir=tmp_path / "home", library_dir=library)
 
 
 def test_template_assets_must_exist(tmp_path: Path):
     library = tmp_path / "library"
-    _write_template(library, "assets", """
+    _write_template(
+        library,
+        "assets",
+        """
 id: assets
 version: 1
 assets:
   - overlays/logo.webm
-""")
+""",
+    )
     with pytest.raises(FileNotFoundError, match="template asset does not exist"):
         load_template("assets", home_dir=tmp_path / "home", library_dir=library)
