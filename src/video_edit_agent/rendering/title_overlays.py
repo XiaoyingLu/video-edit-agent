@@ -51,15 +51,16 @@ class TitleOverlay(BaseModel):
             if self.asset_format == "webm" and not self.asset_path.lower().endswith(".webm"):
                 raise ValueError("webm assets must use a .webm file")
             if self.asset_format == "png_sequence" and not (
-                self.asset_path.lower().endswith(".png")
-                and re.search(r"%0\d+d", self.asset_path)
+                self.asset_path.lower().endswith(".png") and re.search(r"%0\d+d", self.asset_path)
             ):
                 raise ValueError(
                     "PNG sequences must use a numbered .png pattern such as frame-%04d.png"
                 )
         else:
-            if self.text is None or not self.text.strip() or any(
-                ord(character) < 32 for character in self.text
+            if (
+                self.text is None
+                or not self.text.strip()
+                or any(ord(character) < 32 for character in self.text)
             ):
                 raise ValueError("title text must be non-empty and contain no control characters")
             if self.asset_path is not None or self.asset_format is not None:
@@ -163,9 +164,7 @@ def resolve_asset_overlays(
         if overlay.overlay_kind != "asset" or overlay.decision != "approved":
             continue
         if overlay.asset_path is None or overlay.asset_format is None:
-            raise ValueError(
-                f"asset overlay {overlay.overlay_id} is missing its asset reference"
-            )
+            raise ValueError(f"asset overlay {overlay.overlay_id} is missing its asset reference")
         asset = (root / overlay.asset_path).resolve()
         try:
             asset.relative_to(allowed)
