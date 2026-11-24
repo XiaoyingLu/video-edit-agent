@@ -115,9 +115,7 @@ def test_template_preview_delegates_and_reports_comparison(tmp_path: Path, monke
         return index_file, previews, 12.5
 
     monkeypatch.setattr(template_cli, "render_template_previews", fake_preview)
-    result = runner.invoke(
-        app, ["template", "preview", str(tmp_path), "cinematic", "vlog"]
-    )
+    result = runner.invoke(app, ["template", "preview", str(tmp_path), "cinematic", "vlog"])
     assert result.exit_code == 0, result.output
     assert "12.50s" in result.output
     assert "index.html" in result.output

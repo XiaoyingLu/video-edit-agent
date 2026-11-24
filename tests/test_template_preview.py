@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from video_edit_agent.editing.planning_schemas import StoryTreatment
 from video_edit_agent.rendering.template_preview import (
     TemplatePreviewError,
     _opening_overlays,
@@ -9,7 +10,6 @@ from video_edit_agent.rendering.template_preview import (
     render_template_previews,
 )
 from video_edit_agent.templates import load_template
-from video_edit_agent.editing.planning_schemas import StoryTreatment
 
 
 def test_opening_overlays_use_template_slots_and_separate_logline():
@@ -46,9 +46,7 @@ def test_probe_dimensions_reads_ffprobe_output(monkeypatch, tmp_path):
     monkeypatch.setattr(
         preview,
         "run_ffmpeg",
-        lambda *args, **kwargs: SimpleNamespace(
-            stdout='{"streams":[{"width":1280,"height":720}]}'
-        ),
+        lambda *args, **kwargs: SimpleNamespace(stdout='{"streams":[{"width":1280,"height":720}]}'),
     )
 
     assert _probe_dimensions("ffprobe", tmp_path / "sample.jpg") == (1280, 720)
