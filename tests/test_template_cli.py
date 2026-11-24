@@ -31,11 +31,11 @@ def test_template_validate_uses_project_override(tmp_path: Path):
     directory = tmp_path / ".video-agent" / "templates"
     directory.mkdir(parents=True)
     (directory / "cinematic.yaml").write_text(
-        "id: cinematic\\nversion: 1\\nmusic:\\n  volume: 0.14\\n", encoding="utf-8"
+        "id: cinematic\nversion: 1\nmusic:\n  volume: 0.14\n", encoding="utf-8"
     )
     result = runner.invoke(app, ["template", "validate", "cinematic", "--project", str(tmp_path)])
     assert result.exit_code == 0, result.output
-    assert str(directory / "cinematic.yaml") in result.output
+    assert str(directory / "cinematic.yaml") in result.output.replace("\n", "")
 
 
 def test_template_show_reports_unknown_id():

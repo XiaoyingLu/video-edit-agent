@@ -19,7 +19,11 @@ def list_templates(
     project: Annotated[
         Path | None,
         typer.Option(
-            "--project", exists=True, file_okay=False, dir_okay=True, readable=True,
+            "--project",
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
             help="Project folder whose templates take precedence over home and built-ins.",
         ),
     ] = None,
@@ -36,8 +40,10 @@ def list_templates(
         try:
             spec, source = load_template(template_id, project)
             source_label = (
-                "project" if project and source.is_relative_to(project.resolve())
-                else "home" if source.is_relative_to(Path.home().resolve())
+                "project"
+                if project and source.is_relative_to(project.resolve())
+                else "home"
+                if source.is_relative_to(Path.home().resolve())
                 else "built-in"
             )
             table.add_row(spec.id, str(spec.version), source_label, "valid")
@@ -55,7 +61,11 @@ def show_template(
     project: Annotated[
         Path | None,
         typer.Option(
-            "--project", exists=True, file_okay=False, dir_okay=True, readable=True,
+            "--project",
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
             help="Project folder used for template overrides.",
         ),
     ] = None,
@@ -76,7 +86,11 @@ def validate_template(
     project: Annotated[
         Path | None,
         typer.Option(
-            "--project", exists=True, file_okay=False, dir_okay=True, readable=True,
+            "--project",
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
             help="Project folder used for template overrides.",
         ),
     ] = None,
@@ -87,9 +101,7 @@ def validate_template(
     except (FileNotFoundError, OSError, ValueError) as exc:
         console.print(f"[red]Template validation failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
-    console.print(
-        f"[bold green]Valid template:[/bold green] {spec.id} v{spec.version} ({source})"
-    )
+    console.print(f"[bold green]Valid template:[/bold green] {spec.id} v{spec.version} ({source})")
     if spec.extends:
         console.print(f"Inheritance: extends [cyan]{spec.extends}[/cyan]")
     console.print(
