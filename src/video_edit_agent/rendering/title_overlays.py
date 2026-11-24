@@ -155,6 +155,10 @@ def resolve_asset_overlays(
     root = folder.expanduser().resolve()
     resolved: list[tuple[TitleOverlay, Path]] = []
     allowed = (root / "templates" / "overlays").resolve()
+    try:
+        allowed.relative_to(root)
+    except ValueError as exc:
+        raise ValueError("asset overlay template folder must be inside the project folder") from exc
     for overlay in overlays:
         if overlay.overlay_kind != "asset" or overlay.decision != "approved":
             continue

@@ -354,3 +354,21 @@ def test_renderer_builds_webm_and_png_asset_inputs_and_overlay_filters(tmp_path:
     assert "between(t,1.000000,3.000000)" in graph
     assert "between(t,0.000000,2.000000)" in graph
     assert "overlay=x='(main_w-overlay_w)*0.100000'" in graph
+
+
+def test_resolve_asset_overlay_rejects_symlinked_template_directory(tmp_path: Path):
+    outside = tmp_path / "external-assets"
+    outside.mkdir()
+    (outside / "logo.webm").write_bytes(b"webm")
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "templates").mkdir()
+    (project / "templates" / "overlays").symlink_to(outside, target_is_directory=True)
+    overlay = _overlay(
+        overlay_kind="asset",
+        text=None,
+        asset_path="templates/overlays/logo.webm",
+        asset_format="webm",
+    )
+    with pytest.raises(ValueError, match="template folder must be inside"):
+        resolve_asset_overlays(project, [overlay])
