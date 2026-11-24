@@ -1,0 +1,30 @@
+id: social
+version: 1
+extends: cinematic
+typography:
+  font: Lato
+  color: "#FFFFFF"
+  accent: "#F2B544"
+title_styles:
+  opening:
+    placement: center
+    size: 1.2
+    box: 0.5
+    animation: slide_up
+  closing:
+    placement: center
+    size: 1.0
+    box: 0.45
+    animation: fade
+music:
+  mode: blend
+  volume: 0.2
+  fade_in: 0.25
+  fade_out: 0.8
+  ducking: true
+render:
+  fit_mode: crop
+  beat_punch_in: true
+tags:
+  mood: [energetic, punchy, upbeat]
+  best_for: [social, short-form, montage]

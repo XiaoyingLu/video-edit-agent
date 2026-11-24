@@ -1,0 +1,30 @@
+id: travel-montage
+version: 1
+extends: cinematic
+typography:
+  font: Lato
+  color: "#FFFFFF"
+  accent: "#F2B544"
+title_styles:
+  opening:
+    placement: center
+    size: 1.15
+    box: 0.38
+    animation: fade
+  closing:
+    placement: center
+    size: 1.05
+    box: 0.38
+    animation: slide_up
+music:
+  mode: blend
+  volume: 0.25
+  fade_in: 1.5
+  fade_out: 2.5
+  ducking: false
+render:
+  fit_mode: crop
+  beat_punch_in: true
+tags:
+  mood: [warm, adventurous, uplifting]
+  best_for: [travel, montage, holiday]
