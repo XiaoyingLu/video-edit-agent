@@ -230,9 +230,16 @@ def _build_shot_render_command(
         if overlay.asset_format == "webm":
             command.extend(["-stream_loop", "-1", "-i", str(asset_path)])
         else:
-            command.extend([
-                "-framerate", str(overlay.asset_fps), "-stream_loop", "-1", "-i", str(asset_path)
-            ])
+            command.extend(
+                [
+                    "-framerate",
+                    str(overlay.asset_fps),
+                    "-stream_loop",
+                    "-1",
+                    "-i",
+                    str(asset_path),
+                ]
+            )
     music_input_index = append_music_input(command, music_path)
 
     filters: list[str] = []
@@ -327,7 +334,9 @@ def _build_shot_render_command(
         current_video = output_video
         current_audio = output_audio
 
-    current_video = _append_title_overlay_filters(filters, title_overlays, width, height, current_video)
+    current_video = _append_title_overlay_filters(
+        filters, title_overlays, width, height, current_video
+    )
     if asset_overlays:
         current_video = _append_asset_overlay_filters(
             filters, asset_overlays, width, height, current_video, len(clips)

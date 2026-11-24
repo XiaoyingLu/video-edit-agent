@@ -155,7 +155,8 @@ def _append_asset_overlay_filters(
             f"x='(main_w-overlay_w)*{overlay.asset_x:.6f}':"
             f"y='(main_h-overlay_h)*{overlay.asset_y:.6f}':"
             f"eof_action=pass:shortest=0:"
-            f"enable='between(t,{_seconds(overlay.start_seconds)},{_seconds(overlay.end_seconds)})'"
+            f"enable='between(t,{_seconds(overlay.start_seconds)},"
+            f"{_seconds(overlay.end_seconds)})'"
             f"[{next_label}]"
         )
         video_label = next_label
@@ -175,6 +176,7 @@ def _append_title_overlay_filters(
         if overlay.decision != "approved" or overlay.overlay_kind == "asset":
             continue
         escaped_text = _escape_drawtext(overlay.text or "")
+        font_option = _font_option(overlay.text or "")
         next_label = f"vtitle{index}"
         if overlay.overlay_kind == "lower_third":
             # Percentage-based geometry keeps the card inside safe margins for
@@ -185,7 +187,8 @@ def _append_title_overlay_filters(
             filters.append(
                 f"[{video_label}]drawbox=x=w*0.06:y='{card_y}':w={card_width}:"
                 f"h={card_height}:color=black@0.62:t=fill:"
-                f"enable='between(t,{_seconds(overlay.start_seconds)},{_seconds(overlay.end_seconds)})'"
+                f"enable='between(t,{_seconds(overlay.start_seconds)},"
+                f"{_seconds(overlay.end_seconds)})'"
                 f"[{next_label}bg]"
             )
             primary_size = max(26, min(64, int(width * 0.034)))
@@ -194,9 +197,10 @@ def _append_title_overlay_filters(
             primary_label = f"vtitle{index}primary"
             filters.append(
                 f"[{next_label}bg]drawtext=text='{escaped_text}':expansion=none:"
-                f"{_font_option(overlay.text or "")}:fontsize={primary_size}:fontcolor=white:"
+                f"{font_option}:fontsize={primary_size}:fontcolor=white:"
                 f"x=w*0.09:y='{primary_y}':alpha='{alpha}':"
-                f"enable='between(t,{_seconds(overlay.start_seconds)},{_seconds(overlay.end_seconds)})'"
+                f"enable='between(t,{_seconds(overlay.start_seconds)},"
+                f"{_seconds(overlay.end_seconds)})'"
                 f"[{primary_label}]"
             )
             if overlay.secondary_text:
@@ -208,7 +212,8 @@ def _append_title_overlay_filters(
                     f"[{primary_label}]drawtext=text='{_escape_drawtext(overlay.secondary_text)}':"
                     f"expansion=none:{_font_option(overlay.secondary_text)}:fontsize={secondary_size}:"
                     f"fontcolor=white@0.88:x=w*0.09:y='{secondary_y}':alpha='{secondary_alpha}':"
-                    f"enable='between(t,{_seconds(overlay.start_seconds)},{_seconds(overlay.end_seconds)})'"
+                    f"enable='between(t,{_seconds(overlay.start_seconds)},"
+                    f"{_seconds(overlay.end_seconds)})'"
                     f"[{secondary_label}]"
                 )
                 video_label = secondary_label
@@ -231,9 +236,10 @@ def _append_title_overlay_filters(
         alpha, y_position = _animation_expressions(overlay, base_y)
         filters.append(
             f"[{video_label}]drawtext=text='{escaped_text}':expansion=none:"
-            f"{_font_option(overlay.text)}:fontsize={font_size}:fontcolor=white:"
+            f"{font_option}:fontsize={font_size}:fontcolor=white:"
             f"x=(w-text_w)/2:y='{y_position}':alpha='{alpha}':{box_options}:"
-            f"enable='between(t,{_seconds(overlay.start_seconds)},{_seconds(overlay.end_seconds)})'"
+            f"enable='between(t,{_seconds(overlay.start_seconds)},"
+            f"{_seconds(overlay.end_seconds)})'"
             f"[{next_label}]"
         )
         video_label = next_label
