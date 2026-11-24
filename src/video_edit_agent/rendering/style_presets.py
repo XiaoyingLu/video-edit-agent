@@ -1,11 +1,13 @@
-"""Named render profiles for common personal-video editing styles."""
+"""Legacy style-preset API backed by the built-in reusable templates."""
 
 from dataclasses import dataclass
+
+from ..templates import load_builtin_template
 
 
 @dataclass(frozen=True)
 class RenderStylePreset:
-    """A conservative set of render defaults; explicit CLI options take precedence."""
+    """Compatibility view of a reusable template's render and music settings."""
 
     name: str
     description: str
@@ -18,54 +20,37 @@ class RenderStylePreset:
     beat_punch_in: bool = False
 
 
+# Descriptions remain CLI-facing copy; all executable settings live in YAML.
+_DESCRIPTIONS = {
+    "cinematic": "Measured pacing, gentle soundtrack, and preserved source ambience.",
+    "vlog": "Natural framing with clear original audio and restrained background music.",
+    "travel-montage": "Full-frame crop with a more prominent, smoothly faded music bed.",
+    "social": "Tighter framing and short audio fades for concise social edits.",
+}
+
+
+def _preset_from_template(name: str) -> RenderStylePreset:
+    spec, _ = load_builtin_template(name)
+    return RenderStylePreset(
+        name=name,
+        description=_DESCRIPTIONS[name],
+        fit_mode=spec.render.fit_mode,
+        music_mode=spec.music.mode,
+        music_volume=spec.music.volume,
+        music_fade_in=spec.music.fade_in,
+        music_fade_out=spec.music.fade_out,
+        music_ducking=spec.music.ducking,
+        beat_punch_in=spec.render.beat_punch_in,
+    )
+
+
 STYLE_PRESETS: dict[str, RenderStylePreset] = {
-    "cinematic": RenderStylePreset(
-        name="cinematic",
-        description="Measured pacing, gentle soundtrack, and preserved source ambience.",
-        fit_mode="crop",
-        music_mode="blend",
-        music_volume=0.16,
-        music_fade_in=1.8,
-        music_fade_out=2.5,
-        music_ducking=True,
-    ),
-    "vlog": RenderStylePreset(
-        name="vlog",
-        description="Natural framing with clear original audio and restrained background music.",
-        fit_mode="pad",
-        music_mode="blend",
-        music_volume=0.18,
-        music_fade_in=0.5,
-        music_fade_out=1.0,
-        music_ducking=True,
-    ),
-    "travel-montage": RenderStylePreset(
-        name="travel-montage",
-        description="Full-frame crop with a more prominent, smoothly faded music bed.",
-        fit_mode="crop",
-        music_mode="blend",
-        music_volume=0.25,
-        music_fade_in=1.5,
-        music_fade_out=2.5,
-        music_ducking=False,
-        beat_punch_in=True,
-    ),
-    "social": RenderStylePreset(
-        name="social",
-        description="Tighter framing and short audio fades for concise social edits.",
-        fit_mode="crop",
-        music_mode="blend",
-        music_volume=0.20,
-        music_fade_in=0.25,
-        music_fade_out=0.8,
-        music_ducking=True,
-        beat_punch_in=True,
-    ),
+    name: _preset_from_template(name) for name in _DESCRIPTIONS
 }
 
 
 def resolve_style_preset(name: str | None) -> RenderStylePreset | None:
-    """Return a named preset, preserving legacy defaults when no preset is selected."""
+    """Return a template-backed preset, preserving the legacy CLI/API alias."""
     if name is None:
         return None
     try:
