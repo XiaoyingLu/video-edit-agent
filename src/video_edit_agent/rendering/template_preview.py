@@ -44,7 +44,9 @@ def _probe_dimensions(ffprobe: str, path: Path) -> tuple[int, int]:
         width = int(streams[0]["width"])
         height = int(streams[0]["height"])
     except (IndexError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
-        raise TemplatePreviewError(f"could not determine preview frame dimensions: {path}") from exc
+        raise TemplatePreviewError(
+            f"could not determine preview frame dimensions: {path}"
+        ) from exc
     if width < 2 or height < 2:
         raise TemplatePreviewError(f"preview frame has invalid dimensions: {path}")
     return width, height
@@ -204,9 +206,7 @@ def render_template_previews(
             templates, overlays_by_template, output_files, strict=True
         ):
             filters: list[str] = []
-            output_label = _append_title_overlay_filters(
-                filters, overlays, width, height, "0:v"
-            )
+            output_label = _append_title_overlay_filters(filters, overlays, width, height, "0:v")
             run_ffmpeg(
                 [
                     ffmpeg,
