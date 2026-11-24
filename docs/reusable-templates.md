@@ -10,12 +10,29 @@ are never accepted.
 
 Templates are resolved in this order:
 
-1. `.video-agent/templates/<id>.yaml` in the current project
+1. `.video-agent/templates/<id>.yaml` in the selected project
 2. `~/.video-agent/templates/<id>.yaml` in the user's home directory
 3. The templates shipped in `video_edit_agent/template_library`
 
 A project template can therefore override a home or built-in template with
 the same ID. IDs use lowercase letters, digits, and hyphens.
+
+## CLI discovery and validation
+
+List available templates and inspect their resolved source:
+
+```bash
+video-agent template list
+video-agent template list --project ./my-project
+video-agent template show travel-montage
+video-agent template show cinematic --project ./my-project
+video-agent template validate travel-montage
+```
+
+`show` prints the fully resolved data, including inherited settings.
+`validate` checks the selected template, its inheritance chain, schema, and
+asset paths without writing to the project. Both commands honor the same
+project-over-home-over-built-in precedence as rendering workflows.
 
 ## Schema
 
