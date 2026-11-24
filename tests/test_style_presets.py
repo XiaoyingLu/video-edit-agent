@@ -1,6 +1,7 @@
 import pytest
 
 from video_edit_agent.rendering.style_presets import STYLE_PRESETS, resolve_style_preset
+from video_edit_agent.templates import load_builtin_template
 
 
 def test_all_style_presets_have_valid_render_settings():
@@ -17,6 +18,19 @@ def test_all_style_presets_have_valid_render_settings():
 @pytest.mark.parametrize("name", ["cinematic", "vlog", "travel-montage", "social"])
 def test_resolve_style_preset_returns_named_preset(name):
     assert resolve_style_preset(name) is STYLE_PRESETS[name]
+
+
+@pytest.mark.parametrize("name", ["cinematic", "vlog", "travel-montage", "social"])
+def test_legacy_preset_values_are_loaded_from_builtin_template(name):
+    template, _ = load_builtin_template(name)
+    preset = STYLE_PRESETS[name]
+    assert preset.fit_mode == template.render.fit_mode
+    assert preset.music_mode == template.music.mode
+    assert preset.music_volume == template.music.volume
+    assert preset.music_fade_in == template.music.fade_in
+    assert preset.music_fade_out == template.music.fade_out
+    assert preset.music_ducking == template.music.ducking
+    assert preset.beat_punch_in == template.render.beat_punch_in
 
 
 def test_resolve_style_preset_preserves_legacy_defaults_when_omitted():
