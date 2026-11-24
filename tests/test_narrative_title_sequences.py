@@ -190,9 +190,34 @@ sequences:
         encoding="utf-8",
     )
     monkeypatch.setattr(title_overlays, "validate_artifact", lambda *_: None)
-    document, _ = title_overlays.suggest_narrative_title_sequences(
-        tmp_path, template_id="custom"
-    )
+    document, _ = title_overlays.suggest_narrative_title_sequences(tmp_path, template_id="custom")
     assert document.template_id == "custom"
     assert document.template_version == 2
     assert document.overlays[0].style == "minimal"
+
+
+def test_cinematic_override_keeps_unique_ids_for_repeated_slots(tmp_path: Path, monkeypatch):
+    _write_inputs(tmp_path)
+    template_dir = tmp_path / ".video-agent" / "templates"
+    template_dir.mkdir(parents=True)
+    (template_dir / "cinematic.yaml").write_text(
+        """id: cinematic
+version: 2
+title_styles:
+  minimal:
+    placement: bottom
+    size: 0.72
+    box: 0.0
+    animation: fade
+sequences:
+  opening:
+    - slot: "{title}"
+      style: minimal
+    - slot: "{title}"
+      style: minimal
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(title_overlays, "validate_artifact", lambda *_: None)
+    document, _ = title_overlays.suggest_narrative_title_sequences(tmp_path)
+    assert [item.overlay_id for item in document.overlays] == ["opening-title", "opening-2"]

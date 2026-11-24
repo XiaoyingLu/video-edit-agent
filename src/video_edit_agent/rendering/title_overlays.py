@@ -336,6 +336,12 @@ def suggest_narrative_title_sequences(
     }
     limits = {"{title}": 40, "{logline}": 48, "{closing_line}": 40, "{date}": 40, "{location}": 40}
     overlays: list[TitleOverlay] = []
+    legacy_ids = {
+        ("opening", "{title}"): "opening-title",
+        ("opening", "{logline}"): "opening-logline",
+        ("closing", "{closing_line}"): "closing-card",
+    }
+    used_ids: set[str] = set()
     for sequence_name, start_seconds, end_seconds, role in (
         ("opening", 0.0, opening_end, "opening"),
         ("closing", closing_start, duration, "closing"),
@@ -347,9 +353,16 @@ def suggest_narrative_title_sequences(
             limit = limits[item.slot]
             if len(text_value) > limit:
                 text_value = text_value[: limit - 3].rstrip() + "..."
+            overlay_id = f"{sequence_name}-{index}"
+            legacy_id = (
+                legacy_ids.get((sequence_name, item.slot)) if template.id == "cinematic" else None
+            )
+            if legacy_id and legacy_id not in used_ids:
+                overlay_id = legacy_id
+            used_ids.add(overlay_id)
             overlays.append(
                 TitleOverlay(
-                    overlay_id=f"{sequence_name}-{index}",
+                    overlay_id=overlay_id,
                     text=text_value,
                     start_seconds=start_seconds,
                     end_seconds=end_seconds,
