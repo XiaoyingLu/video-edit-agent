@@ -108,6 +108,9 @@ def test_suggest_narrative_title_sequences_uses_story_and_approved_timeline(
     ]
     assert document.overlays[0].text == "A Weekend in the Rockies"
     assert document.source_plan == str(plan_path.relative_to(tmp_path))
+    assert document.template_id == "cinematic"
+    assert document.template_version == 1
+    assert document.schema_version == "1.1"
     assert document.overlays[2].text == "Finding stillness in the mountains"
     assert len(document.overlays[0].text) <= 40
     assert len(document.overlays[1].text) <= 48
@@ -117,9 +120,11 @@ def test_suggest_narrative_title_sequences_uses_story_and_approved_timeline(
     assert all(item.decision == "pending" for item in document.overlays)
     assert document.overlays[0].start_seconds == 0
     assert document.overlays[2].end_seconds == pytest.approx(19)
-    assert registered[0][1] == [timeline_path, plan_path]
+    assert registered[0][1][:2] == [timeline_path, plan_path]
+    assert Path(registered[0][1][2]).name == "cinematic.yaml"
     title_overlays.save_title_overlays(tmp_path, document, destination)
-    assert registered[1][1] == [timeline_path, plan_path]
+    assert registered[1][1][:2] == [timeline_path, plan_path]
+    assert Path(registered[1][1][2]).name == "cinematic.yaml"
     saved = json.loads(destination.read_text(encoding="utf-8"))
     assert saved["overlays"][0]["decision"] == "pending"
 
@@ -146,3 +151,73 @@ def test_narrative_title_suggestions_do_not_overwrite_existing_review(tmp_path: 
     with pytest.raises(FileExistsError, match="already exists"):
         title_overlays.suggest_narrative_title_sequences(tmp_path)
     assert destination.read_text(encoding="utf-8") == "keep this review"
+
+
+def test_template_changes_sequence_content_and_styles(tmp_path: Path, monkeypatch):
+    _write_inputs(tmp_path)
+    monkeypatch.setattr(title_overlays, "validate_artifact", lambda *_: None)
+    document, _ = title_overlays.suggest_narrative_title_sequences(
+        tmp_path, template_id="travel-montage"
+    )
+    assert document.template_id == "travel-montage"
+    assert [item.overlay_id for item in document.overlays] == [
+        "opening-1",
+        "opening-2",
+        "closing-1",
+    ]
+    assert document.overlays[0].style == "bold"
+    assert document.overlays[1].style == "minimal"
+    assert document.overlays[2].animation == "slide_up"
+    assert all(item.decision == "pending" for item in document.overlays)
+
+
+def test_template_title_sequences_can_be_overridden_per_project(tmp_path: Path, monkeypatch):
+    _write_inputs(tmp_path)
+    template_dir = tmp_path / ".video-agent" / "templates"
+    template_dir.mkdir(parents=True)
+    (template_dir / "custom.yaml").write_text(
+        """id: custom
+version: 2
+extends: cinematic
+sequences:
+  opening:
+    - slot: "{title}"
+      style: minimal
+  closing:
+    - slot: "{closing_line}"
+      style: closing
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(title_overlays, "validate_artifact", lambda *_: None)
+    document, _ = title_overlays.suggest_narrative_title_sequences(tmp_path, template_id="custom")
+    assert document.template_id == "custom"
+    assert document.template_version == 2
+    assert document.overlays[0].style == "minimal"
+
+
+def test_cinematic_override_keeps_unique_ids_for_repeated_slots(tmp_path: Path, monkeypatch):
+    _write_inputs(tmp_path)
+    template_dir = tmp_path / ".video-agent" / "templates"
+    template_dir.mkdir(parents=True)
+    (template_dir / "cinematic.yaml").write_text(
+        """id: cinematic
+version: 2
+title_styles:
+  minimal:
+    placement: bottom
+    size: 0.72
+    box: 0.0
+    animation: fade
+sequences:
+  opening:
+    - slot: "{title}"
+      style: minimal
+    - slot: "{title}"
+      style: minimal
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(title_overlays, "validate_artifact", lambda *_: None)
+    document, _ = title_overlays.suggest_narrative_title_sequences(tmp_path)
+    assert [item.overlay_id for item in document.overlays] == ["opening-title", "opening-2"]

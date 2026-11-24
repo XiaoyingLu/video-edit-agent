@@ -10,6 +10,7 @@ from ..artifact_tracking import register_artifact, validate_artifact
 from ..atomic_io import write_json_atomic
 from ..editing.planning_schemas import VideoProjectPlan
 from ..editing.timeline_schemas import ProjectDraftTimeline
+from ..templates import load_template
 
 
 class TitleOverlay(BaseModel):
@@ -86,10 +87,13 @@ class TitleOverlayDocument(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     project_path: str
     source_timeline: str
     source_plan: str | None = None
+    template_id: str | None = None
+    template_version: int | None = Field(default=None, ge=1)
+    template_source: str | None = None
     overlays: list[TitleOverlay] = Field(default_factory=list)
     review_required: Literal[True] = True
 
@@ -235,7 +239,20 @@ def save_title_overlays(
         if not plan.is_absolute():
             plan = root / plan
         upstream.append(plan.resolve())
+    if document.template_source is not None:
+        upstream.append(Path(document.template_source).expanduser().resolve())
     register_artifact(root, destination, dependencies=upstream)
+
+
+def _template_overlay_style(template, style_name: str) -> dict:
+    """Translate a validated template style into the current safe overlay options."""
+    style = template.title_styles[style_name]
+    renderer_style = "minimal" if style.box == 0 else ("bold" if style.size >= 1.1 else "cinematic")
+    return {
+        "placement": style.placement,
+        "style": renderer_style,
+        "animation": style.animation if style.animation in {"none", "fade", "slide_up"} else "fade",
+    }
 
 
 def suggest_narrative_title_sequences(
@@ -244,8 +261,9 @@ def suggest_narrative_title_sequences(
     timeline_path: Path | None = None,
     plan_path: Path | None = None,
     output_path: Path | None = None,
+    template_id: str = "cinematic",
 ) -> tuple[TitleOverlayDocument, Path]:
-    """Create review-only opening and closing titles from the creative story treatment."""
+    """Create template-driven opening and closing titles for human review only."""
     root = folder.expanduser().resolve()
     timeline_file = (
         (timeline_path or root / ".video-agent" / "optimized-timeline.json").expanduser().resolve()
@@ -274,6 +292,7 @@ def suggest_narrative_title_sequences(
             f"Title overlay file already exists: {destination}; review or choose another output."
         )
 
+    template, template_path = load_template(template_id, root)
     timeline = ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
     plan = VideoProjectPlan.model_validate_json(plan_file.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root or Path(plan.project_path).resolve() != root:
@@ -308,54 +327,62 @@ def suggest_narrative_title_sequences(
         )
 
     treatment = plan.story_treatment
-    opening_title = treatment.working_title.strip()
-    if len(opening_title) > 40:
-        opening_title = opening_title[:37].rstrip() + "..."
-    opening_subtitle = treatment.logline.strip()
-    if len(opening_subtitle) > 48:
-        opening_subtitle = opening_subtitle[:45].rstrip() + "..."
-    closing_text = treatment.narrative_arc[-1].strip()
-    if len(closing_text) > 40:
-        closing_text = closing_text[:37].rstrip() + "..."
-    if not closing_text:
-        closing_text = "The journey continues"
+    slot_values = {
+        "{title}": treatment.working_title.strip(),
+        "{logline}": treatment.logline.strip(),
+        "{closing_line}": (treatment.narrative_arc[-1].strip() or "The journey continues"),
+        "{date}": "",
+        "{location}": "",
+    }
+    limits = {"{title}": 40, "{logline}": 48, "{closing_line}": 40, "{date}": 40, "{location}": 40}
+    overlays: list[TitleOverlay] = []
+    legacy_ids = {
+        ("opening", "{title}"): "opening-title",
+        ("opening", "{logline}"): "opening-logline",
+        ("closing", "{closing_line}"): "closing-card",
+    }
+    used_ids: set[str] = set()
+    for sequence_name, start_seconds, end_seconds, role in (
+        ("opening", 0.0, opening_end, "opening"),
+        ("closing", closing_start, duration, "closing"),
+    ):
+        for index, item in enumerate(template.sequences.get(sequence_name, []), start=1):
+            text_value = slot_values[item.slot]
+            if not text_value:
+                continue
+            limit = limits[item.slot]
+            if len(text_value) > limit:
+                text_value = text_value[: limit - 3].rstrip() + "..."
+            overlay_id = f"{sequence_name}-{index}"
+            legacy_id = (
+                legacy_ids.get((sequence_name, item.slot)) if template.id == "cinematic" else None
+            )
+            if legacy_id and legacy_id not in used_ids:
+                overlay_id = legacy_id
+            used_ids.add(overlay_id)
+            overlays.append(
+                TitleOverlay(
+                    overlay_id=overlay_id,
+                    text=text_value,
+                    start_seconds=start_seconds,
+                    end_seconds=end_seconds,
+                    sequence_role=role,
+                    **_template_overlay_style(template, item.style),
+                )
+            )
+
+    if not overlays:
+        raise ValueError(f"template {template_id!r} has no usable opening or closing title slots")
 
     document = TitleOverlayDocument(
+        schema_version="1.1",
         project_path=str(root),
         source_timeline=str(timeline_file.relative_to(root)),
         source_plan=str(plan_file.relative_to(root)),
-        overlays=[
-            TitleOverlay(
-                overlay_id="opening-title",
-                text=opening_title,
-                start_seconds=0,
-                end_seconds=opening_end,
-                placement="center",
-                style="cinematic",
-                animation="fade",
-                sequence_role="opening",
-            ),
-            TitleOverlay(
-                overlay_id="opening-logline",
-                text=opening_subtitle,
-                start_seconds=0,
-                end_seconds=opening_end,
-                placement="bottom",
-                style="minimal",
-                animation="fade",
-                sequence_role="opening",
-            ),
-            TitleOverlay(
-                overlay_id="closing-card",
-                text=closing_text,
-                start_seconds=closing_start,
-                end_seconds=duration,
-                placement="center",
-                style="cinematic",
-                animation="slide_up",
-                sequence_role="closing",
-            ),
-        ],
+        template_id=template.id,
+        template_version=template.version,
+        template_source=str(template_path),
+        overlays=overlays,
     )
     save_title_overlays(root, document, destination)
     return document, destination

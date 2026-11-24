@@ -204,14 +204,18 @@ def suggest_title_sequences(
         Path | None,
         typer.Option("--output", help="Output title overlay JSON path."),
     ] = None,
+    template: Annotated[
+        str, typer.Option("--template", help="Reusable template ID (default: cinematic).")
+    ] = "cinematic",
 ) -> None:
-    """Suggest story-driven opening and closing titles for human review."""
+    """Suggest template-driven opening and closing titles for human review."""
     try:
         document, destination = suggest_narrative_title_sequences(
             folder,
             timeline_path=timeline,
             plan_path=plan,
             output_path=output,
+            template_id=template,
         )
     except (FileNotFoundError, FileExistsError, ValueError) as exc:
         console.print(f"[red]Title sequence suggestion failed:[/red] {exc}")
@@ -234,6 +238,7 @@ def suggest_title_sequences(
             item.decision,
         )
     console.print(table)
+    console.print(f"Template: [cyan]{document.template_id}[/cyan] v{document.template_version}")
     console.print(f"Review suggestions in [green]{destination}[/green]")
     console.print("Nothing is approved automatically; use review-title-overlays before rendering.")
 
