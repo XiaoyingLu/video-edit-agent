@@ -237,3 +237,15 @@ def load_builtin_template(template_id: str) -> tuple[TemplateSpec, Path]:
     """Load a shipped template without consulting project or user overrides."""
     library = Path(__file__).with_name("template_library").expanduser().resolve()
     return _resolve_template(template_id, [library], ())
+
+
+def available_template_ids(project_root: Path | None = None) -> list[str]:
+    """Return template IDs visible from project, home, and built-in directories."""
+    template_ids: set[str] = set()
+    for directory in _template_directories(project_root, None, None):
+        if not directory.is_dir():
+            continue
+        for path in (*directory.glob("*.yaml"), *directory.glob("*.yml")):
+            if _TEMPLATE_ID.fullmatch(path.stem) and path.is_file():
+                template_ids.add(path.stem)
+    return sorted(template_ids)
