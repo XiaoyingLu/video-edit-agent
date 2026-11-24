@@ -59,7 +59,13 @@ def _opening_overlays(template, treatment) -> list[TitleOverlay]:
         "{date}": "",
         "{location}": "",
     }
-    limits = {"{title}": 40, "{logline}": 48, "{closing_line}": 40, "{date}": 40, "{location}": 40}
+    limits = {
+        "{title}": 40,
+        "{logline}": 48,
+        "{closing_line}": 40,
+        "{date}": 40,
+        "{location}": 40,
+    }
     overlays: list[TitleOverlay] = []
     for index, item in enumerate(template.sequences.get("opening", []), start=1):
         text = values[item.slot]
@@ -68,6 +74,9 @@ def _opening_overlays(template, treatment) -> list[TitleOverlay]:
         limit = limits[item.slot]
         if len(text) > limit:
             text = text[: limit - 3].rstrip() + "..."
+        style = _template_overlay_style(template, item.style)
+        if item.slot == "{logline}":
+            style["placement"] = "bottom" if style["placement"] != "bottom" else "center"
         overlays.append(
             TitleOverlay(
                 overlay_id=f"preview-opening-{index}",
@@ -78,7 +87,7 @@ def _opening_overlays(template, treatment) -> list[TitleOverlay]:
                 exit_animation="none",
                 sequence_role="opening",
                 decision="approved",
-                **_template_overlay_style(template, item.style),
+                **style,
             )
         )
     if not overlays:
@@ -110,12 +119,17 @@ def render_template_previews(
 
     timeline_file = root / ".video-agent" / "optimized-timeline.json"
     plan_file = root / ".video-agent" / "video-project-plan.json"
-    for artifact, label in ((timeline_file, "optimized timeline"), (plan_file, "video project plan")):
+    for artifact, label in (
+        (timeline_file, "optimized timeline"),
+        (plan_file, "video project plan"),
+    ):
         if not artifact.is_file():
             raise FileNotFoundError(f"Missing {label}: {artifact}")
         validate_artifact(root, artifact)
 
-    timeline = ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
+    timeline = ProjectDraftTimeline.model_validate_json(
+        timeline_file.read_text(encoding="utf-8")
+    )
     plan = VideoProjectPlan.model_validate_json(plan_file.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root or Path(plan.project_path).resolve() != root:
         raise ValueError("preview inputs belong to a different project folder")
@@ -137,7 +151,9 @@ def render_template_previews(
         raise ValueError("timeline source escapes the project folder") from exc
     if not source.is_file():
         raise FileNotFoundError(f"timeline source video does not exist: {source}")
-    timestamp = clip.source_start_seconds + (clip.source_end_seconds - clip.source_start_seconds) / 2
+    timestamp = clip.source_start_seconds + (
+        clip.source_end_seconds - clip.source_start_seconds
+    ) / 2
 
     ffmpeg = shutil.which("ffmpeg")
     ffprobe = shutil.which("ffprobe")
@@ -188,7 +204,9 @@ def render_template_previews(
             templates, overlays_by_template, output_files, strict=True
         ):
             filters: list[str] = []
-            output_label = _append_title_overlay_filters(filters, overlays, width, height, "0:v")
+            output_label = _append_title_overlay_filters(
+                filters, overlays, width, height, "0:v"
+            )
             run_ffmpeg(
                 [
                     ffmpeg,
@@ -224,7 +242,10 @@ def render_template_previews(
             "<article><h2>"
             + html.escape(template_id)
             + f" <small>v{template.version}</small></h2>"
-            + f'<img src="{html.escape(template_id)}.jpg" alt="{html.escape(template_id)} opening card">'
+            + (
+                f'<img src="{html.escape(template_id)}.jpg" '
+                f'alt="{html.escape(template_id)} opening card">'
+            )
             + f"<p>Source: {html.escape(str(source_path))}</p></article>"
         )
     index_file.write_text(
