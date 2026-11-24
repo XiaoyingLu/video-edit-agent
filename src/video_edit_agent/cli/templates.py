@@ -116,7 +116,11 @@ def apply_template(
     folder: Annotated[
         Path,
         typer.Argument(
-            ..., exists=True, file_okay=False, dir_okay=True, readable=True,
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
             help="Project folder with an approved timeline and story treatment.",
         ),
     ],
@@ -163,4 +167,7 @@ def apply_template(
         f"Applied [cyan]{document.template_id}[/cyan] v{document.template_version}; "
         f"proposal saved to [green]{destination}[/green]."
     )
-    console.print("All generated overlays remain pending review; nothing is approved automatically.")
+    console.print(
+        "All generated overlays remain pending review; "
+        "nothing is approved automatically."
+    )
