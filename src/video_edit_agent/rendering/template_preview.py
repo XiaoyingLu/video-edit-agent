@@ -68,8 +68,16 @@ def _opening_overlays(template, treatment) -> list[TitleOverlay]:
         "{date}": 40,
         "{location}": 40,
     }
+    opening_items = template.sequences.get("opening", [])
+    primary_item = next(
+        (item for item in opening_items if item.slot == "{title}"),
+        opening_items[0] if opening_items else None,
+    )
+    primary_placement = (
+        template.title_styles[primary_item.style].placement if primary_item is not None else "center"
+    )
     overlays: list[TitleOverlay] = []
-    for index, item in enumerate(template.sequences.get("opening", []), start=1):
+    for index, item in enumerate(opening_items, start=1):
         text = values[item.slot]
         if not text:
             continue
@@ -78,7 +86,7 @@ def _opening_overlays(template, treatment) -> list[TitleOverlay]:
             text = text[: limit - 3].rstrip() + "..."
         style = _template_overlay_style(template, item.style)
         if item.slot == "{logline}":
-            style["placement"] = "bottom" if style["placement"] != "bottom" else "center"
+            style["placement"] = "bottom" if primary_placement != "bottom" else "center"
         overlays.append(
             TitleOverlay(
                 overlay_id=f"preview-opening-{index}",
