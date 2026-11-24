@@ -1,7 +1,7 @@
 """Commands for discovering and validating reusable editing templates."""
 
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 import typer
 from rich.table import Table
@@ -247,7 +247,7 @@ def save_template(
         ),
     ] = None,
     music_mode: Annotated[
-        str | None,
+        Literal["original", "music_only", "blend"] | None,
         typer.Option("--music-mode", help="Override inferred profile: original, music_only, or blend."),
     ] = None,
     music_volume: Annotated[

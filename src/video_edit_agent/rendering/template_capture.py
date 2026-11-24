@@ -10,6 +10,7 @@ from typing import Literal
 
 import yaml
 
+from ..artifact_tracking import validate_artifact
 from ..editing.timeline_schemas import ProjectDraftTimeline
 from ..templates import MusicSpec, TemplateSpec, TitleStyleSpec
 from .title_overlays import TitleOverlayDocument
@@ -102,7 +103,10 @@ def save_template_from_project(
     timeline_path = root / ".video-agent" / "optimized-timeline.json"
     if not timeline_path.is_file():
         raise FileNotFoundError(f"Missing optimized timeline: {timeline_path}")
-    timeline = ProjectDraftTimeline.model_validate_json(timeline_path.read_text(encoding="utf-8"))
+    validate_artifact(root, timeline_path)
+    timeline = ProjectDraftTimeline.model_validate_json(
+        timeline_path.read_text(encoding="utf-8")
+    )
     if Path(timeline.project_path).resolve() != root:
         raise ValueError("optimized timeline belongs to a different project folder")
     if not timeline.timeline_approved:
@@ -124,6 +128,7 @@ def save_template_from_project(
     overlay_path = root / ".video-agent" / "title-overlays.json"
     overlay_document = None
     if overlay_path.is_file():
+        validate_artifact(root, overlay_path)
         overlay_document = TitleOverlayDocument.model_validate_json(
             overlay_path.read_text(encoding="utf-8")
         )
