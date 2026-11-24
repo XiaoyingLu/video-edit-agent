@@ -210,7 +210,8 @@ def _append_title_overlay_filters(
                 )
                 filters.append(
                     f"[{primary_label}]drawtext=text='{_escape_drawtext(overlay.secondary_text)}':"
-                    f"expansion=none:{_font_option(overlay.secondary_text)}:fontsize={secondary_size}:"
+                    f"expansion=none:{_font_option(overlay.secondary_text)}:"
+                    f"fontsize={secondary_size}:"
                     f"fontcolor=white@0.88:x=w*0.09:y='{secondary_y}':alpha='{secondary_alpha}':"
                     f"enable='between(t,{_seconds(overlay.start_seconds)},"
                     f"{_seconds(overlay.end_seconds)})'"

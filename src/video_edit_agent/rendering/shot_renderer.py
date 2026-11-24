@@ -760,7 +760,12 @@ def render_approved_shot_timeline(
     dependencies = [timeline_file]
     if title_file is not None:
         dependencies.append(title_file)
-    dependencies.extend(asset_path for _overlay, asset_path in approved_assets)
+    for asset_overlay, asset_path in approved_assets:
+        if asset_overlay.asset_format == "webm":
+            dependencies.append(asset_path)
+        else:
+            frame_pattern = re.sub(r"%0\d+d", "*", asset_path.name)
+            dependencies.extend(asset_path.parent.glob(frame_pattern))
     if selected_music is not None:
         dependencies.append(selected_music)
     music_analysis_file = root / ".video-agent" / "music-analysis.json"

@@ -63,7 +63,9 @@ class TitleOverlay(BaseModel):
             ):
                 raise ValueError("title text must be non-empty and contain no control characters")
             if self.asset_path is not None or self.asset_format is not None:
-                raise ValueError("asset_path and asset_format are only supported for asset overlays")
+                raise ValueError(
+                    "asset_path and asset_format are only supported for asset overlays"
+                )
         if self.secondary_text is not None and (
             not self.secondary_text.strip()
             or any(ord(character) < 32 for character in self.secondary_text)
