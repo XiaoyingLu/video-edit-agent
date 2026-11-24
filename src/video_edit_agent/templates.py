@@ -232,8 +232,8 @@ def load_template(
     directories = _template_directories(project_root, home_dir, library_dir)
     return _resolve_template(template_id, directories, ())
 
+
 def load_builtin_template(template_id: str) -> tuple[TemplateSpec, Path]:
     """Load a shipped template without consulting project or user overrides."""
     library = Path(__file__).with_name("template_library").expanduser().resolve()
     return _resolve_template(template_id, [library], ())
-
