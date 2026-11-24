@@ -34,7 +34,7 @@ video-agent template validate travel-montage
 asset paths without writing to the project. Both commands honor the same
 project-over-home-over-built-in precedence as rendering workflows.
 
-## Schema
+Apply a template directly through the template command:\n\n```bash\nvideo-agent template apply ./my-project travel-montage\n```\n\nOptional `--timeline`, `--plan`, and `--output` arguments select the input\nand output files. The command refuses to overwrite an existing proposal.\n\n## Schema
 
 Each file declares `id` and `version`. Optional `extends` inherits the
 parent's values; mappings are deep-merged and lists are replaced. Inheritance

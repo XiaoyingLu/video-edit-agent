@@ -6,6 +6,7 @@ from typing import Annotated
 import typer
 from rich.table import Table
 
+from ..rendering.title_overlays import suggest_narrative_title_sequences
 from ..templates import available_template_ids, load_template
 from .common import console
 
@@ -108,3 +109,58 @@ def validate_template(
         f"{len(spec.title_styles)} title style(s), {len(spec.sequences)} sequence(s), "
         f"{len(spec.assets)} asset(s)."
     )
+
+
+@template_app.command("apply")
+def apply_template(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ..., exists=True, file_okay=False, dir_okay=True, readable=True,
+            help="Project folder with an approved timeline and story treatment.",
+        ),
+    ],
+    template_id: Annotated[str, typer.Argument(help="Template ID to apply.")],
+    timeline: Annotated[
+        Path | None, typer.Option("--timeline", help="Approved optimized timeline JSON.")
+    ] = None,
+    plan: Annotated[
+        Path | None, typer.Option("--plan", help="Creative video project plan JSON.")
+    ] = None,
+    output: Annotated[
+        Path | None, typer.Option("--output", help="Output title overlay JSON path.")
+    ] = None,
+) -> None:
+    """Apply a template by generating a review-only title overlay proposal."""
+    try:
+        document, destination = suggest_narrative_title_sequences(
+            folder,
+            timeline_path=timeline,
+            plan_path=plan,
+            output_path=output,
+            template_id=template_id,
+        )
+    except (FileNotFoundError, FileExistsError, ValueError) as exc:
+        console.print(f"[red]Template application failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    table = Table(title="Template Application Proposal")
+    table.add_column("ID", style="cyan")
+    table.add_column("Role")
+    table.add_column("Text")
+    table.add_column("Time", justify="right")
+    table.add_column("Decision")
+    for item in document.overlays:
+        table.add_row(
+            item.overlay_id,
+            item.sequence_role,
+            item.text or "",
+            f"{item.start_seconds:.2f}–{item.end_seconds:.2f}s",
+            item.decision,
+        )
+    console.print(table)
+    console.print(
+        f"Applied [cyan]{document.template_id}[/cyan] v{document.template_version}; "
+        f"proposal saved to [green]{destination}[/green]."
+    )
+    console.print("All generated overlays remain pending review; nothing is approved automatically.")
