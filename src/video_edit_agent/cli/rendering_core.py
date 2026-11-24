@@ -283,7 +283,7 @@ def review_titles(
     for item in reviewed.overlays:
         table.add_row(
             item.overlay_id,
-            item.text,
+            item.text or item.asset_path or "(asset)",
             f"{item.start_seconds:.2f}–{item.end_seconds:.2f}s",
             item.sequence_role,
             item.placement,

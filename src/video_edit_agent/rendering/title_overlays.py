@@ -1,5 +1,6 @@
 """Declarative, reviewable title overlays for approved draft timelines."""
 
+import re
 from pathlib import Path
 from typing import Literal
 
@@ -17,8 +18,14 @@ class TitleOverlay(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     overlay_id: str = Field(min_length=1, max_length=80)
-    text: str = Field(min_length=1, max_length=120)
-    overlay_kind: Literal["title", "lower_third"] = "title"
+    text: str | None = Field(default=None, min_length=1, max_length=120)
+    overlay_kind: Literal["title", "lower_third", "asset"] = "title"
+    asset_path: str | None = Field(default=None, max_length=240)
+    asset_format: Literal["webm", "png_sequence"] | None = None
+    asset_x: float = Field(default=0.5, ge=0, le=1)
+    asset_y: float = Field(default=0.5, ge=0, le=1)
+    asset_scale: float = Field(default=0.2, gt=0, le=1)
+    asset_fps: int = Field(default=30, ge=1, le=120)
     secondary_text: str | None = Field(default=None, max_length=100)
     start_seconds: float = Field(ge=0)
     end_seconds: float = Field(gt=0)
@@ -32,19 +39,39 @@ class TitleOverlay(BaseModel):
 
     @model_validator(mode="after")
     def validate_interval(self) -> "TitleOverlay":
-        if not self.text.strip() or any(ord(character) < 32 for character in self.text):
-            raise ValueError("title text must be non-empty and contain no control characters")
+        if self.overlay_kind == "asset":
+            if self.text is not None or self.secondary_text is not None:
+                raise ValueError("asset overlays cannot contain title text")
+            if not self.asset_path or not self.asset_format:
+                raise ValueError("asset overlays require asset_path and asset_format")
+            if Path(self.asset_path).is_absolute() or "\\" in self.asset_path:
+                raise ValueError("asset_path must be a project-relative POSIX path")
+            if not self.asset_path.startswith("templates/overlays/"):
+                raise ValueError("asset_path must be inside templates/overlays/")
+            if self.asset_format == "webm" and not self.asset_path.lower().endswith(".webm"):
+                raise ValueError("webm assets must use a .webm file")
+            if self.asset_format == "png_sequence" and not (
+                self.asset_path.lower().endswith(".png") and re.search(r"%0\d+d", self.asset_path)
+            ):
+                raise ValueError("PNG sequences must use a numbered .png pattern such as frame-%04d.png")
+        else:
+            if self.text is None or not self.text.strip() or any(
+                ord(character) < 32 for character in self.text
+            ):
+                raise ValueError("title text must be non-empty and contain no control characters")
+            if self.asset_path is not None or self.asset_format is not None:
+                raise ValueError("asset_path and asset_format are only supported for asset overlays")
         if self.secondary_text is not None and (
             not self.secondary_text.strip()
             or any(ord(character) < 32 for character in self.secondary_text)
         ):
             raise ValueError("secondary text must be non-empty and contain no control characters")
-        if self.overlay_kind == "title" and self.secondary_text is not None:
+        if self.overlay_kind != "lower_third" and self.secondary_text is not None:
             raise ValueError("secondary text is only supported for lower-third overlays")
         if self.end_seconds <= self.start_seconds:
             raise ValueError("title end_seconds must be greater than start_seconds")
         if self.end_seconds - self.start_seconds < 0.5:
-            raise ValueError("title overlays must remain visible for at least 0.5 seconds")
+            raise ValueError("overlays must remain visible for at least 0.5 seconds")
         return self
 
 
@@ -114,6 +141,40 @@ def load_title_overlays(
         validate_artifact(root, plan)
         VideoProjectPlan.model_validate_json(plan.read_text(encoding="utf-8"))
     return document, destination
+
+
+def resolve_asset_overlays(
+    folder: Path, overlays: list[TitleOverlay]
+) -> list[tuple[TitleOverlay, Path]]:
+    """Resolve approved asset files, enforcing the project template-folder boundary."""
+    root = folder.expanduser().resolve()
+    resolved: list[tuple[TitleOverlay, Path]] = []
+    allowed = (root / "templates" / "overlays").resolve()
+    for overlay in overlays:
+        if overlay.overlay_kind != "asset" or overlay.decision != "approved":
+            continue
+        if overlay.asset_path is None or overlay.asset_format is None:
+            raise ValueError(f"asset overlay {overlay.overlay_id} is missing its asset reference")
+        asset = (root / overlay.asset_path).resolve()
+        try:
+            asset.relative_to(allowed)
+        except ValueError as exc:
+            raise ValueError("asset overlay path must remain inside templates/overlays") from exc
+        if overlay.asset_format == "webm":
+            if not asset.is_file():
+                raise FileNotFoundError(f"asset overlay file does not exist: {asset}")
+        else:
+            pattern = re.sub(r"%0\d+d", "*", asset.name)
+            frames = list(asset.parent.glob(pattern))
+            if not frames:
+                raise FileNotFoundError(f"PNG sequence has no matching frames: {asset}")
+            for frame in frames:
+                try:
+                    frame.resolve().relative_to(allowed)
+                except ValueError as exc:
+                    raise ValueError("PNG sequence frame escapes templates/overlays") from exc
+        resolved.append((overlay, asset))
+    return resolved
 
 
 def review_title_overlays(
