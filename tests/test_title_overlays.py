@@ -522,3 +522,120 @@ def test_lower_third_ffmpeg_smoke_renders_and_moves_card_on_lavfi_source(tmp_pat
     rgb = np.frombuffer(color_frame.stdout, dtype=np.uint8).reshape(180, 320, 3)
     accent_pixels = (rgb[:, :, 0] > 180) & (rgb[:, :, 1] > 100) & (rgb[:, :, 2] < 130)
     assert int(accent_pixels.sum()) >= 10
+
+
+def test_asset_overlay_ffmpeg_smoke_composites_png_sequence_only_during_approved_window(
+    tmp_path: Path,
+):
+    """Exercise real FFmpeg alpha compositing and verify the asset's timed appearance."""
+    import shutil
+    import subprocess
+
+    import numpy as np
+
+    ffmpeg = shutil.which("ffmpeg")
+    if ffmpeg is None:
+        pytest.skip("FFmpeg is required for the asset-overlay rendering smoke test")
+
+    source = tmp_path / "source.mp4"
+    asset_dir = tmp_path / "templates" / "overlays"
+    asset_dir.mkdir(parents=True)
+    asset_pattern = asset_dir / "marker-%04d.png"
+    rendered = tmp_path / "asset-overlay-smoke.mp4"
+
+    def run(command: list[str]) -> None:
+        result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=30)
+        assert result.returncode == 0, result.stderr
+
+    run(
+        [
+            ffmpeg,
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=gray:s=320x180:r=25:d=2",
+            "-an",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-y",
+            str(source),
+        ]
+    )
+    run(
+        [
+            ffmpeg,
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=black@0.0:s=40x40:d=1",
+            "-vf",
+            "format=rgba,drawbox=x=0:y=0:w=40:h=40:color=red@1:t=fill",
+            "-frames:v",
+            "1",
+            "-y",
+            str(asset_dir / "marker-0001.png"),
+        ]
+    )
+
+    overlay = _overlay(
+        overlay_id="marker",
+        overlay_kind="asset",
+        text=None,
+        asset_path="templates/overlays/marker-%04d.png",
+        asset_format="png_sequence",
+        start_seconds=0.5,
+        end_seconds=1.5,
+        asset_fps=1,
+        asset_x=0.5,
+        asset_y=0.5,
+        asset_scale=0.25,
+    )
+    command = _build_shot_render_command(
+        ffmpeg,
+        [(source, 0, 2, False, "cut", 0)],
+        rendered,
+        320,
+        180,
+        asset_overlays=[(overlay, asset_pattern)],
+    )
+    run(command)
+    assert rendered.is_file() and rendered.stat().st_size > 0
+
+    def red_pixel_count(timestamp: float) -> int:
+        frame = subprocess.run(
+            [
+                ffmpeg,
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-ss",
+                str(timestamp),
+                "-i",
+                str(rendered),
+                "-frames:v",
+                "1",
+                "-f",
+                "rawvideo",
+                "-pix_fmt",
+                "rgb24",
+                "pipe:1",
+            ],
+            capture_output=True,
+            check=False,
+            timeout=30,
+        )
+        assert frame.returncode == 0, frame.stderr.decode(errors="replace")
+        pixels = np.frombuffer(frame.stdout, dtype=np.uint8).reshape(180, 320, 3)
+        return int(((pixels[:, :, 0] > 150) & (pixels[:, :, 1] < 100) & (pixels[:, :, 2] < 100)).sum())
+
+    assert red_pixel_count(0.25) == 0
+    assert red_pixel_count(1.0) > 100
+    assert red_pixel_count(1.75) == 0
