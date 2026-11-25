@@ -123,7 +123,9 @@ def analyze_project_color(
     if not 1 <= sample_count <= 12:
         raise ValueError("sample_count must be between 1 and 12")
     root = folder.expanduser().resolve()
-    source_analysis = (analysis_path or root / ".video-agent" / "analysis.json").expanduser().resolve()
+    source_analysis = (
+        analysis_path or root / ".video-agent" / "analysis.json"
+    ).expanduser().resolve()
     try:
         source_analysis.relative_to(root)
     except ValueError as exc:

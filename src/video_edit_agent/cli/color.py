@@ -25,7 +25,11 @@ def analyze_color(
     ] = None,
     output: Annotated[
         Path | None,
-        typer.Option("--output", "-o", help="Report path (default: .video-agent/color-analysis.json)."),
+        typer.Option(
+            "--output",
+            "-o",
+            help="Report path (default: .video-agent/color-analysis.json).",
+        ),
     ] = None,
 ) -> None:
     """Measure shot-to-shot luma/chroma variation and suggest bounded corrections."""

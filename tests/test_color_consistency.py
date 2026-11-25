@@ -1,7 +1,5 @@
 import subprocess
 
-from video_edit_agent.models import ProjectAnalysis
-
 import pytest
 
 from video_edit_agent import color_consistency as color
@@ -11,6 +9,7 @@ from video_edit_agent.color_consistency import (
     _bounded_offset,
     _sample_signalstats,
 )
+from video_edit_agent.models import ProjectAnalysis
 
 
 def test_bounded_offsets_are_clamped_and_rounded():
@@ -59,7 +58,6 @@ def test_signalstats_parser_rejects_missing_metrics(monkeypatch, tmp_path):
 def test_sample_count_must_be_bounded(tmp_path):
     with pytest.raises(ValueError, match="between 1 and 12"):
         color.analyze_project_color(tmp_path, sample_count=13)
-
 
 
 def test_project_analysis_uses_one_project_wide_baseline(tmp_path, monkeypatch):
