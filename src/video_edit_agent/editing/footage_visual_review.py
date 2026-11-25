@@ -101,33 +101,47 @@ def generate_footage_visual_review(
                         ),
                     ) if frames else None
                     asset = _project_asset(root, frame.frame_path) if frame else None
-                    media = (
-                        f'<img loading="lazy" src="{html.escape(os.path.relpath(root / asset, destination.parent), quote=True)}" '
-                        f'alt="Candidate {number} frame">'
-                        if asset else '<div class="placeholder">No preview frame</div>'
+                    if asset:
+                        image_src = html.escape(
+                            os.path.relpath(root / asset, destination.parent), quote=True
+                        )
+                        media = (
+                            f'<img loading="lazy" src="{image_src}" '
+                            f'alt="Candidate {number} frame">'
+                        )
+                    else:
+                        media = '<div class="placeholder">No preview frame</div>'
+                    reasons = "".join(
+                        f"<li>{html.escape(reason)}</li>" for reason in candidate.reasons
                     )
-                    reasons = "".join(f"<li>{html.escape(reason)}</li>" for reason in candidate.reasons)
                     options.append(
-                        f'<label class="candidate"><input type="radio" name="{html.escape(shot.shot_id, quote=True)}" '
+                        f'<label class="candidate"><input type="radio" '
+                        f'name="{html.escape(shot.shot_id, quote=True)}" '
                         f'value="{number}" {"checked" if number == 1 else ""}>'
                         f'<div class="preview">{media}</div><div class="candidate-body">'
                         f'<strong>Option {number} · {candidate.score:.1f}/100</strong>'
-                        f'<p>{html.escape(candidate.video_path)} · {candidate.source_start_seconds:.2f}–'
-                        f'{candidate.source_end_seconds:.2f}s</p><p>{html.escape(candidate.scene_summary)}</p>'
+                        f'<p>{html.escape(candidate.video_path)} · '
+                        f'{candidate.source_start_seconds:.2f}–'
+                        f'{candidate.source_end_seconds:.2f}s</p>'
+                        f'<p>{html.escape(candidate.scene_summary)}</p>'
                         f'<ul>{reasons}</ul></div></label>'
                     )
             else:
                 options.append('<p class="empty">No candidate footage was found for this shot.</p>')
             cards.append(
-                f'<article class="shot"><div class="shot-heading"><span>{html.escape(shot.shot_id)}</span>'
-                f'<h3>{html.escape(shot.purpose)}</h3><p>{html.escape(shot.visual_description)}</p></div>'
+                f'<article class="shot"><div class="shot-heading">'
+                f'<span>{html.escape(shot.shot_id)}</span>'
+                f'<h3>{html.escape(shot.purpose)}</h3>'
+                f'<p>{html.escape(shot.visual_description)}</p></div>'
                 f'<div class="options">{"".join(options)}</div>'
-                f'<label class="skip"><input type="radio" name="{html.escape(shot.shot_id, quote=True)}" value="0">'
+                f'<label class="skip"><input type="radio" '
+                f'name="{html.escape(shot.shot_id, quote=True)}" value="0">'
                 f'Leave this shot unassigned</label></article>'
             )
         sections.append(
             f'<section><h2>{scene.sequence_index:02d}. {html.escape(scene.title)}</h2>'
-            f'<p>{html.escape(scene.purpose)}</p><div class="shots">{"".join(cards)}</div></section>'
+            f'<p>{html.escape(scene.purpose)}</p>'
+            f'<div class="shots">{"".join(cards)}</div></section>'
         )
 
     title = plan.story_treatment.working_title if plan.story_treatment else "Storyboard"
@@ -196,7 +210,9 @@ def load_footage_review_selections(
     except OSError as exc:
         raise ValueError(f"Could not verify footage suggestions: {exc}") from exc
     if payload.get("suggestions_sha256") != expected_hash:
-        raise ValueError("Selection file was created from different footage suggestions; regenerate it")
+        raise ValueError(
+            "Selection file was created from different footage suggestions; regenerate it"
+        )
     selections = payload.get("selections")
     if not isinstance(selections, dict) or set(selections) != expected_shot_ids:
         raise ValueError("Selection file must contain exactly one choice for every storyboard shot")
