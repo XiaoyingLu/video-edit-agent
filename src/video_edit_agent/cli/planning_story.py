@@ -250,7 +250,10 @@ def create_video(
         bool,
         typer.Option(
             "--review",
-            help="Ask once before rendering the automatically assembled draft.",
+            help=(
+                "For --highlights mode, ask once before rendering; storyboard mode "
+                "always asks after showing its visual preview."
+            ),
         ),
     ] = False,
     storyboard: Annotated[
