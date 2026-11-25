@@ -4,6 +4,7 @@
 from .common import *  # noqa: F403
 from ..rendering.style_presets import STYLE_PRESETS, resolve_style_preset
 from ..rendering.social_crop_anchors import create_crop_anchor_template
+from ..templates import load_template
 
 
 @render_app.command("video")
@@ -49,20 +50,29 @@ def render(
         typer.Option("--subtitle-file", help="Custom SRT file to burn into the output."),
     ] = None,
     subtitle_font_size: Annotated[
-        int,
-        typer.Option("--subtitle-font-size", min=12, max=72, help="Burned-in subtitle font size."),
-    ] = 28,
+        int | None,
+        typer.Option(
+            "--subtitle-font-size",
+            min=12,
+            max=72,
+            help="Override template subtitle font size.",
+        ),
+    ] = None,
     subtitle_position: Annotated[
-        str,
-        typer.Option("--subtitle-position", help="Subtitle position: bottom, center, or top."),
-    ] = "bottom",
+        str | None,
+        typer.Option("--subtitle-position", help="Override template subtitle position."),
+    ] = None,
     subtitle_style: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--subtitle-style",
-            help="Subtitle appearance: classic, cinematic, boxed, or minimal.",
+            help="Override template subtitle style: classic, cinematic, boxed, or minimal.",
         ),
-    ] = "classic",
+    ] = None,
+    template: Annotated[
+        str | None,
+        typer.Option("--template", help="Reusable template supplying default subtitle styling."),
+    ] = None,
     music: Annotated[
         Path | None, typer.Option("--music", help="Project-local selected soundtrack file.")
     ] = None,
@@ -95,6 +105,28 @@ def render(
 ) -> None:
     """Render the human-approved timeline to a verified H.264/AAC MP4."""
     try:
+        subtitle_spec = load_template(template, folder)[0].subtitles if template else None
+        resolved_subtitle_font_size = (
+            subtitle_font_size
+            if subtitle_font_size is not None
+            else subtitle_spec.font_size
+            if subtitle_spec
+            else 28
+        )
+        resolved_subtitle_position = (
+            subtitle_position
+            if subtitle_position is not None
+            else subtitle_spec.position
+            if subtitle_spec
+            else "bottom"
+        )
+        resolved_subtitle_style = (
+            subtitle_style
+            if subtitle_style is not None
+            else subtitle_spec.style
+            if subtitle_spec
+            else "classic"
+        )
         report = render_project(
             folder,
             timeline_path=timeline,
@@ -106,9 +138,9 @@ def render(
                 if burn_subtitles or subtitle_file
                 else None
             ),
-            subtitle_font_size=subtitle_font_size,
-            subtitle_position=subtitle_position,
-            subtitle_style=subtitle_style,
+            subtitle_font_size=resolved_subtitle_font_size,
+            subtitle_position=resolved_subtitle_position,
+            subtitle_style=resolved_subtitle_style,
             music_path=music,
             music_mode=music_mode,
             music_volume=music_volume,

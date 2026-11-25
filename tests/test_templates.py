@@ -104,3 +104,35 @@ assets:
     )
     with pytest.raises(FileNotFoundError, match="template asset does not exist"):
         load_template("assets", home_dir=tmp_path / "home", library_dir=library)
+
+
+def test_template_subtitle_defaults_and_custom_settings():
+    defaults = TemplateSpec.model_validate({"id": "plain", "version": 1})
+    assert defaults.subtitles.style == "classic"
+    assert defaults.subtitles.position == "bottom"
+    assert defaults.subtitles.font_size == 28
+
+    custom = TemplateSpec.model_validate(
+        {
+            "id": "captions",
+            "version": 1,
+            "subtitles": {"style": "boxed", "position": "center", "font_size": 36},
+        }
+    )
+    assert custom.subtitles.style == "boxed"
+    assert custom.subtitles.position == "center"
+    assert custom.subtitles.font_size == 36
+
+
+@pytest.mark.parametrize(
+    "subtitles",
+    [
+        {"style": "neon"},
+        {"position": "left"},
+        {"font_size": 90},
+        {"force_style": "FontName=Bad"},
+    ],
+)
+def test_template_subtitle_schema_rejects_unsupported_values(subtitles):
+    with pytest.raises(ValidationError):
+        TemplateSpec.model_validate({"id": "unsafe", "version": 1, "subtitles": subtitles})

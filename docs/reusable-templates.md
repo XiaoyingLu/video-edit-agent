@@ -74,6 +74,7 @@ Supported sections are:
 - `transitions`: built-in transition choices for default, scene changes, and beats
 - `music`: mode, volume, fade durations, and ducking
 - `render`: crop/pad fit and opt-in beat punch-in
+- `subtitles`: built-in subtitle style (`classic`, `cinematic`, `boxed`, or `minimal`), position, and font size
 - `tags`: descriptive mood and use-case labels
 - `assets`: optional paths relative to the template file's directory
 
@@ -149,3 +150,13 @@ matched tags and source. No match is also a valid outcome. Recommendations
 never apply a template or alter project files. Use `--project` to include
 project-local templates and preserve the usual project-over-home-over-built-in
 lookup precedence.
+
+## Template-driven subtitle styling
+
+Use a reusable template to supply default subtitle styling when burning captions into a render:
+
+```bash
+video-agent render-video ./my-project --burn-subtitles --template cinematic
+```
+
+The template's `subtitles` section supports only built-in styles, top/center/bottom positioning, and a font size from 12 to 72. Individual CLI options such as `--subtitle-style`, `--subtitle-position`, and `--subtitle-font-size` override the template values. Without `--template`, existing render defaults remain unchanged. Templates never contain raw ASS or FFmpeg expressions.

@@ -43,6 +43,10 @@ music:
   target_lufs: -16.0
   true_peak_db: -1.5
   loudness_range: 11.0
+subtitles:
+  style: cinematic
+  position: bottom
+  font_size: 28
 render:
   fit_mode: crop
   beat_punch_in: false
