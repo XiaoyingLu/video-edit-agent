@@ -16,6 +16,11 @@ title_styles:
     size: 1.05
     box: 0.38
     animation: slide_up
+  context:
+    placement: top
+    size: 0.72
+    box: 0.0
+    animation: fade
 music:
   mode: blend
   volume: 0.25
@@ -28,3 +33,13 @@ render:
 tags:
   mood: [warm, adventurous, uplifting]
   best_for: [travel, montage, holiday]
+sequences:
+  opening:
+    - slot: "{title}"
+      style: opening
+    - slot: "{logline}"
+      style: minimal
+    - slot: "{location}"
+      style: context
+    - slot: "{date}"
+      style: minimal
