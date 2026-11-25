@@ -13,10 +13,8 @@ cp .env.example .env
 docker compose up -d ollama
 docker compose exec ollama ollama pull qwen2.5vl:3b
 docker compose exec ollama ollama pull qwen2.5:1.5b
-docker compose run --rm video-agent analyze ./my-video
-docker compose run --rm video-agent understand ./my-video
-docker compose run --rm video-agent create-plan ./my-video --prompt "A concise, cinematic personal video"
-docker compose run --rm video-agent suggest-footage ./my-video
+docker compose run --rm -it video-agent create-video ./my-video \
+  --prompt "Create a concise, cinematic personal video"
 ```
 
 For the full workflow, configuration, hosted soundtrack providers, and review steps, see [the feature guide](docs/feature-guide.md).
@@ -34,8 +32,8 @@ set -a && source .env && set +a
 ollama pull qwen2.5vl:3b
 ollama pull qwen2.5:1.5b
 video-agent --help
-video-agent analyze ./my-video
-video-agent understand ./my-video
+video-agent create-video ./my-video \
+  --prompt "Create a concise, cinematic personal video"
 ```
 
 For Apple Silicon MLX vision, install `.[mlx,dev]` in a native macOS environment and choose `--provider mlx` or `--provider qwen3-vl`. See [Qwen3-VL setup](docs/qwen3-vl.md).
