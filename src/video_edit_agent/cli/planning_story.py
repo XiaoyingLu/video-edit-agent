@@ -158,6 +158,7 @@ def _create_storyboard_video_draft(
         selections, rejected = load_footage_review_selections(
             Path(selection_path),
             expected_shot_ids={shot.shot_id for shot in shots},
+            suggestions_path=suggestions_path,
         )
     else:
         selections = {shot.shot_id: 1 for shot in shots}
@@ -848,7 +849,10 @@ def review_footage(
             )
             shot_ids = {shot.shot_id for scene in current_plan.scenes for shot in scene.shots}
             selections, rejected = load_footage_review_selections(
-                selections_file, expected_shot_ids=shot_ids
+                selections_file,
+                expected_shot_ids=shot_ids,
+                suggestions_path=suggestions
+                or folder.resolve() / ".video-agent" / "footage-suggestions.json",
             )
         else:
             for item in select or []:
