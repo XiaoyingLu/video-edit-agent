@@ -379,7 +379,6 @@ def test_resolve_asset_overlay_rejects_symlinked_template_directory(tmp_path: Pa
         resolve_asset_overlays(project, [overlay])
 
 
-
 def test_slide_left_template_animation_is_preserved_and_rendered(tmp_path: Path):
     from video_edit_agent.rendering.overlay_filters import _horizontal_animation_expression
     from video_edit_agent.templates import TitleStyleSpec
