@@ -149,9 +149,7 @@ def _create_storyboard_video_draft(
         plan_path=plan_path,
         suggestions_path=suggestions_path,
     )
-    storyboard_path, _, image_count = generate_storyboard_review(
-        folder, plan_path=plan_path
-    )
+    storyboard_path, _, image_count = generate_storyboard_review(folder, plan_path=plan_path)
     console.print(
         f"Storyboard preview: [green]{storyboard_path}[/green] "
         f"({image_count} representative frame(s))."
@@ -160,9 +158,7 @@ def _create_storyboard_video_draft(
         "[yellow]Open storyboard.html to inspect the proposed footage assignments. "
         "The matching scores are recommendations, not guarantees.[/yellow]"
     )
-    decision = console.input(
-        "Continue to build and render this storyboard? [y/N]: "
-    )
+    decision = console.input("Continue to build and render this storyboard? [y/N]: ")
     if decision.strip().lower() not in {"y", "yes"}:
         console.print(
             "[yellow]Rendering cancelled. The storyboard and footage assignments "
