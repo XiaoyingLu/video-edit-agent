@@ -32,7 +32,7 @@ class TitleOverlay(BaseModel):
     end_seconds: float = Field(gt=0)
     placement: Literal["top", "center", "bottom"] = "bottom"
     style: Literal["cinematic", "minimal", "bold"] = "cinematic"
-    animation: Literal["none", "fade", "slide_up"] = "fade"
+    animation: Literal["none", "fade", "slide_up", "slide_left"] = "fade"
     easing: Literal["linear", "ease_in", "ease_out", "ease_in_out"] = "linear"
     exit_animation: Literal["auto", "none", "fade", "slide_down", "slide_up"] = "auto"
     sequence_role: Literal["standard", "opening", "closing"] = "standard"
@@ -251,7 +251,7 @@ def _template_overlay_style(template, style_name: str) -> dict:
     return {
         "placement": style.placement,
         "style": renderer_style,
-        "animation": style.animation if style.animation in {"none", "fade", "slide_up"} else "fade",
+        "animation": style.animation,
     }
 
 

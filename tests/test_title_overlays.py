@@ -139,7 +139,12 @@ def test_renderer_builds_safe_lower_third_for_all_aspect_ratios(
         title_overlays=[overlay],
     )
     graph = command[command.index("-filter_complex") + 1]
-    assert "drawbox=x=w*0.06" in graph
+    assert "color=c=black:s=" in graph
+    assert "colorchannelmixer=aa=0.62" in graph
+    expected_card_width = "iw*0.88" if height > width else "iw*0.62"
+    assert f"crop=w={expected_card_width}:h=ih*0.16" in graph
+    assert "overlay=x='main_w*0.06':y=" in graph
+    assert "drawbox=" not in graph
     assert ("w*0.88" if height > width else "w*0.62") in graph
     assert "Lake Louise" in graph
     assert "Canadian Rockies" in graph
@@ -181,7 +186,7 @@ def test_lower_third_slide_up_moves_card_and_both_text_lines(tmp_path: Path):
         title_overlays=[overlay],
     )
     graph = command[command.index("-filter_complex") + 1]
-    assert "drawbox=x=w*0.06:y='if(lt(t,0.450000)" in graph
+    assert "overlay=x='main_w*0.06':y='if(lt(t,0.450000)" in graph
     assert "y='if(lt(t,0.450000),(h*0.785)+80*(0.450000-t)/0.45" in graph
     assert "y='if(lt(t,0.450000),(h*0.835)+80*(0.450000-t)/0.45" in graph
 
@@ -372,3 +377,26 @@ def test_resolve_asset_overlay_rejects_symlinked_template_directory(tmp_path: Pa
     )
     with pytest.raises(ValueError, match="template folder must be inside"):
         resolve_asset_overlays(project, [overlay])
+
+
+def test_slide_left_template_animation_is_preserved_and_rendered(tmp_path: Path):
+    from video_edit_agent.rendering.overlay_filters import _horizontal_animation_expression
+    from video_edit_agent.templates import TitleStyleSpec
+
+    style = TitleStyleSpec(animation="slide_left")
+    assert style.animation == "slide_left"
+    overlay = _overlay(animation=style.animation, text="A title")
+    expression = _horizontal_animation_expression(overlay, "(w-text_w)/2")
+    assert expression.startswith("if(lt(t,0.450000),")
+    assert "80*(0.450000-t)/0.45" in expression
+
+    command = _build_shot_render_command(
+        "ffmpeg",
+        [(tmp_path / "clip.mp4", 0, 4, False, "cut", 0)],
+        tmp_path / "output.mp4",
+        1920,
+        1080,
+        title_overlays=[overlay],
+    )
+    graph = command[command.index("-filter_complex") + 1]
+    assert "x='if(lt(t,0.450000)" in graph
