@@ -51,7 +51,12 @@ def render(
     ] = None,
     subtitle_font_size: Annotated[
         int | None,
-        typer.Option("--subtitle-font-size", min=12, max=72, help="Override template subtitle font size."),
+        typer.Option(
+            "--subtitle-font-size",
+            min=12,
+            max=72,
+            help="Override template subtitle font size.",
+        ),
     ] = None,
     subtitle_position: Annotated[
         str | None,

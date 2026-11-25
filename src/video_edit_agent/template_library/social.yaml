@@ -16,6 +16,10 @@ title_styles:
     size: 1.0
     box: 0.45
     animation: fade
+subtitles:
+  style: boxed
+  position: bottom
+  font_size: 34
 music:
   mode: blend
   volume: 0.2
