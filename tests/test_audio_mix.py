@@ -53,6 +53,27 @@ def test_blend_graph_includes_fades_and_sidechain_ducking() -> None:
     assert "alimiter=limit=0.95[audiomix]" in graph
 
 
+def test_loudness_normalization_is_appended_after_blend() -> None:
+    filters: list[str] = []
+
+    output = append_music_mix(
+        filters,
+        base_label="baseaudio",
+        music_input_index=1,
+        duration_seconds=5,
+        mode="blend",
+        loudness_normalization=True,
+        target_lufs=-14,
+        true_peak_db=-1.0,
+        loudness_range=9,
+    )
+
+    assert output == "normalized_audio"
+    assert filters[-1] == (
+        "[audiomix]loudnorm=I=-14.0:TP=-1.0:LRA=9.0:linear=false[normalized_audio]"
+    )
+
+
 def test_music_only_graph_does_not_mix_original_audio() -> None:
     filters: list[str] = []
 
@@ -62,11 +83,19 @@ def test_music_only_graph_does_not_mix_original_audio() -> None:
         music_input_index=1,
         duration_seconds=5,
         mode="music_only",
+        loudness_normalization=True,
     )
 
     assert output == "audiomix"
-    assert filters[-1] == "[musicbed]anull[audiomix]"
+    assert filters[-1] == "[musicbed]loudnorm=I=-16.0:TP=-1.5:LRA=11.0:linear=false[audiomix]"
     assert not any("amix=" in item for item in filters)
+
+
+def test_loudness_targets_are_validated() -> None:
+    with pytest.raises(AudioMixError, match="target_lufs"):
+        append_music_mix(
+            [], base_label="baseaudio", music_input_index=1, duration_seconds=5, target_lufs=-30
+        )
 
 
 def test_original_mode_preserves_original_audio() -> None:

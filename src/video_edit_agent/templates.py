@@ -85,6 +85,10 @@ class MusicSpec(BaseModel):
     fade_in: float = Field(default=1.5, ge=0, le=30)
     fade_out: float = Field(default=2.5, ge=0, le=30)
     ducking: bool = True
+    loudness_normalization: bool = False
+    target_lufs: float = Field(default=-16.0, ge=-24.0, le=-12.0)
+    true_peak_db: float = Field(default=-1.5, ge=-9.0, le=-1.0)
+    loudness_range: float = Field(default=11.0, ge=5.0, le=20.0)
 
 
 class RenderSpec(BaseModel):

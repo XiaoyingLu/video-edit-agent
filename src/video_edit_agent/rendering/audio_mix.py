@@ -94,6 +94,10 @@ def append_music_mix(
     fade_in_seconds: float = 1.0,
     fade_out_seconds: float = 1.5,
     ducking: bool = False,
+    loudness_normalization: bool = False,
+    target_lufs: float = -16.0,
+    true_peak_db: float = -1.5,
+    loudness_range: float = 11.0,
 ) -> str:
     """Append a duration-bounded music mix and return its output label."""
     if mode not in {"original", "music_only", "blend"}:
@@ -102,6 +106,12 @@ def append_music_mix(
         raise AudioMixError("music volume must be greater than 0 and at most 2")
     if fade_in_seconds < 0 or fade_out_seconds < 0:
         raise AudioMixError("music fade durations must be non-negative")
+    if not -24 <= target_lufs <= -12:
+        raise AudioMixError("target_lufs must be between -24 and -12 LUFS")
+    if not -9 <= true_peak_db <= -1:
+        raise AudioMixError("true_peak_db must be between -9 and -1 dBTP")
+    if not 5 <= loudness_range <= 20:
+        raise AudioMixError("loudness_range must be between 5 and 20 LU")
     if mode == "original":
         return base_label
     if music_input_index is None:
@@ -125,8 +135,15 @@ def append_music_mix(
         chain += f",afade=t=out:st={max(0.0, duration_seconds - fade_out):.6f}:d={fade_out:.6f}"
     filters.append(chain + "[musicbed]")
 
+    loudnorm = (
+        f"loudnorm=I={target_lufs:.1f}:TP={true_peak_db:.1f}:"
+        f"LRA={loudness_range:.1f}:linear=false"
+    )
     if mode == "music_only":
-        filters.append("[musicbed]anull[audiomix]")
+        if loudness_normalization:
+            filters.append(f"[musicbed]{loudnorm}[audiomix]")
+        else:
+            filters.append("[musicbed]anull[audiomix]")
         return "audiomix"
     if ducking:
         filters.append(
@@ -140,4 +157,7 @@ def append_music_mix(
         f"[{base_label}][{music_label}]amix=inputs=2:duration=first:"
         "dropout_transition=2:normalize=0,alimiter=limit=0.95[audiomix]"
     )
+    if loudness_normalization:
+        filters.append(f"[audiomix]{loudnorm}[normalized_audio]")
+        return "normalized_audio"
     return "audiomix"
