@@ -284,7 +284,6 @@ def test_template_preview_wraps_ffmpeg_render_errors(monkeypatch, tmp_path):
         render_template_previews(tmp_path, ["cinematic", "vlog"])
 
 
-
 def test_template_preview_renders_real_ffmpeg_frames_with_visible_overlays(tmp_path):
     import shutil
     import subprocess
