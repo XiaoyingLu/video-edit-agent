@@ -191,7 +191,10 @@ def load_footage_review_selections(
         raise ValueError(f"Could not read footage review selections: {exc}") from exc
     if not isinstance(payload, dict) or payload.get("schema_version") != "1.0":
         raise ValueError("Unsupported footage review selection schema version")
-    expected_hash = hashlib.sha256(suggestions_path.expanduser().read_bytes()).hexdigest()
+    try:
+        expected_hash = hashlib.sha256(suggestions_path.expanduser().read_bytes()).hexdigest()
+    except OSError as exc:
+        raise ValueError(f"Could not verify footage suggestions: {exc}") from exc
     if payload.get("suggestions_sha256") != expected_hash:
         raise ValueError("Selection file was created from different footage suggestions; regenerate it")
     selections = payload.get("selections")
