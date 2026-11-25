@@ -187,7 +187,7 @@ def load_footage_review_selections(\n    path: Path, *, expected_shot_ids: set[s
         raise ValueError(f"Could not read footage review selections: {exc}") from exc
     if not isinstance(payload, dict) or payload.get("schema_version") != "1.0":
         raise ValueError("Unsupported footage review selection schema version")
-    selections = payload.get("selections")
+    expected_hash = hashlib.sha256(suggestions_path.expanduser().read_bytes()).hexdigest()\n    if payload.get("suggestions_sha256") != expected_hash:\n        raise ValueError("Selection file was created from different footage suggestions; regenerate it")\n    selections = payload.get("selections")
     if not isinstance(selections, dict) or set(selections) != expected_shot_ids:
         raise ValueError("Selection file must contain exactly one choice for every storyboard shot")
     selected = {}
