@@ -263,7 +263,7 @@ def create_video(
         ),
     ] = True,
 ) -> None:
-    """Create and render a first draft; use advanced commands for shot-by-shot review."""
+    """Create and render an automatically assembled first draft; use advanced commands for shot-by-shot review."""
     try:
         if storyboard:
             plan, timeline_path = _create_storyboard_video_draft(
