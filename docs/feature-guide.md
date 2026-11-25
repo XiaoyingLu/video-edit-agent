@@ -312,14 +312,9 @@ docker compose run --rm -it video-agent create-video ./travel-test \
   --prompt "Create a 60-second cinematic travel video" --highlights --review
 ```
 
-The default workflow uses an AI-generated narrative storyboard and semantic footage matching. It analyzes the footage, creates a storyboard, assigns the top-ranked source match to each shot, and generates a local visual review page:
+The default workflow uses an AI-generated narrative storyboard and semantic footage matching. After analysis, it creates an interactive local review page at `.video-agent/footage-review.html`. Open that page in a browser, compare the candidate frames and descriptions for each shot, select the best match (or leave a shot unassigned), and download the selections JSON into the project folder. Enter that JSON path in the terminal when prompted; pressing Enter keeps the top-ranked matches.
 
-```bash
-docker compose run --rm -it video-agent create-video ./travel-test \
-  --prompt "Create a 60-second cinematic travel video"
-```
-
-Open `.video-agent/storyboard.html` and inspect the proposed shots and representative footage frames. Return to the terminal and confirm only when the assignments look reasonable. Confirmation approves the storyboard, builds the timeline, and renders the first draft. If you decline, the unapproved storyboard and footage assignments remain available for review; nothing is rendered. Matching scores are recommendations, not guarantees. If any shot has no candidate, the workflow stops and identifies the missing shots. Use `--highlights` to opt into the legacy highlight-ranked workflow. The advanced `propose-story`, `suggest-footage`, and `review-footage` commands remain available for choosing story angles and curating individual matches.
+The workflow then generates `.video-agent/storyboard.html` so you can inspect the selected assignments before the final confirmation. Only after confirmation does it approve the storyboard, build the timeline, and render the first draft. If you decline, the unapproved storyboard and footage assignments remain available; nothing is rendered. The exported selections are tied to the exact suggestions artifact, so stale exports are rejected. If any shot is left unassigned, the storyboard cannot proceed to rendering until that shot is mapped. Use `--highlights` to opt into the legacy highlight-ranked workflow. The advanced `propose-story`, `suggest-footage`, and `review-footage` commands remain available for choosing story angles and curating individual matches.
 
 Tune local resource usage with `--model qwen2.5vl:3b`, `--whisper-model tiny`, or `--samples-per-scene 1`. The workflow writes inspectable artifacts under `.video-agent/`. Quick mode is intended to produce a first draft, not a final editorial decision: use the advanced `draft-edit`, `review-timeline`, and `render-draft` commands when you want to curate or reject individual shots before rendering. Source videos remain unchanged.
 
