@@ -31,6 +31,7 @@ class TitleOverlay(BaseModel):
     asset_fps: int = Field(default=30, ge=1, le=120)
     secondary_text: str | None = Field(default=None, max_length=100)
     accent_bar: bool = False
+    accent_color: str = Field(default="#F2B544", pattern=r"^#[0-9A-Fa-f]{6}$")
     start_seconds: float = Field(ge=0)
     end_seconds: float = Field(gt=0)
     placement: Literal["top", "center", "bottom"] = "bottom"
@@ -256,6 +257,7 @@ def _template_overlay_style(template, style_name: str) -> dict:
         "style": renderer_style,
         "animation": style.animation,
         "accent_bar": style.accent_bar,
+        "accent_color": template.typography.accent,
     }
 
 

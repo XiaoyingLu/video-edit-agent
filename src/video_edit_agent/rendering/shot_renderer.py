@@ -768,8 +768,32 @@ def render_approved_shot_timeline(
             crop_anchors_path if crop_anchors_path.is_absolute() else root / crop_anchors_path
         )
 
+    # Font configuration affects drawtext output even when no separate font file is tracked.
+    from ..config import DEFAULT_TITLE_FONT, get_setting
+    from .overlay_filters import _BUNDLED_FONT
+
+    configured_font = (get_setting("TITLE_FONT", DEFAULT_TITLE_FONT) or DEFAULT_TITLE_FONT).strip()
+    if approved_titles:
+        if configured_font.casefold() in {"lato", "bundled"} and _BUNDLED_FONT.is_file():
+            dependencies.append(_BUNDLED_FONT)
+        else:
+            configured_font_path = Path(configured_font).expanduser()
+            if configured_font_path.is_file():
+                dependencies.append(configured_font_path.resolve())
+
+    ffmpeg_version_result = run_ffmpeg(
+        [ffmpeg, "-version"],
+        timeout=30,
+        label="FFmpeg version for render cache",
+        error_type=RenderError,
+    )
+    ffmpeg_version = (
+        ffmpeg_version_result.stdout or ffmpeg_version_result.stderr or ""
+    ).splitlines()
     render_config = {
-        "cache_schema": 1,
+        "cache_schema": 2,
+        "title_font": configured_font,
+        "ffmpeg_version": ffmpeg_version[0] if ffmpeg_version else "unknown",
         "width": width,
         "height": height,
         "expected_duration": expected_duration,
@@ -798,7 +822,11 @@ def render_approved_shot_timeline(
         store_render_cache,
     )
 
-    cache_key = build_render_cache_key(dependencies, render_config)
+    cache_key = build_render_cache_key(
+        dependencies,
+        render_config,
+        fingerprint_index_path=(root / ".video-agent" / "render-cache" / "file-fingerprints.json"),
+    )
     cache_file = root / ".video-agent" / "render-cache" / f"{cache_key}.mp4"
     render_result = None
     if not dry_run and restore_cached_render(cache_file, destination):

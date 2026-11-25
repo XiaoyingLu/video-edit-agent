@@ -640,3 +640,34 @@ def test_asset_overlay_ffmpeg_smoke_composites_png_sequence_only_during_approved
     assert red_pixel_count(0.25) == 0
     assert red_pixel_count(1.0) > 100
     assert red_pixel_count(1.75) == 0
+
+
+def test_lower_third_uses_configured_template_accent_color(tmp_path: Path):
+    from video_edit_agent.rendering.title_overlays import _template_overlay_style
+    from video_edit_agent.templates import load_builtin_template
+
+    template, _ = load_builtin_template("cinematic")
+    template.typography.accent = "#12A4E8"
+    style = _template_overlay_style(template, "opening")
+    overlay = _overlay(
+        overlay_kind="lower_third",
+        accent_bar=True,
+        accent_color=style["accent_color"],
+        **{key: value for key, value in style.items() if key not in {"accent_color", "accent_bar"}},
+    )
+    command = _build_shot_render_command(
+        "ffmpeg",
+        [(tmp_path / "clip.mp4", 0, 4, False, "cut", 0)],
+        tmp_path / "output.mp4",
+        1920,
+        1080,
+        title_overlays=[overlay],
+    )
+    graph = command[command.index("-filter_complex") + 1]
+    assert "color=c=0x12A4E8:" in graph
+    assert "color=c=0xF2B544:" not in graph
+
+
+def test_title_overlay_rejects_invalid_accent_color():
+    with pytest.raises(ValidationError, match="accent_color"):
+        _overlay(overlay_kind="lower_third", accent_color="not-a-color")

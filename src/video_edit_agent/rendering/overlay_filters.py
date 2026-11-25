@@ -218,7 +218,8 @@ def _append_title_overlay_filters(
                 accent_label = f"vtitle{index}accent"
                 accent_source = f"vtitle{index}accentsrc"
                 filters.append(
-                    f"color=c=0xF2B544:s={width}x{height}:r=25:d={_seconds(card_duration)},"
+                    f"color=c=0x{overlay.accent_color.lstrip('#').upper()}:"
+                    f"s={width}x{height}:r=25:d={_seconds(card_duration)},"
                     f"format=rgba,crop=w=iw*0.22:h='max(3,ih*0.012)':x=0:y=0,"
                     f"setpts=PTS-STARTPTS+{_seconds(overlay.start_seconds)}/TB"
                     f"[{accent_source}]"
