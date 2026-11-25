@@ -139,7 +139,8 @@ def test_renderer_builds_safe_lower_third_for_all_aspect_ratios(
         title_overlays=[overlay],
     )
     graph = command[command.index("-filter_complex") + 1]
-    assert "color=c=black@0.62:s=" in graph
+    assert "color=c=black:s=" in graph
+    assert "colorchannelmixer=aa=0.62" in graph
     expected_card_width = "iw*0.88" if height > width else "iw*0.62"
     assert f"crop=w={expected_card_width}:h=ih*0.16" in graph
     assert "overlay=x='main_w*0.06':y=" in graph
