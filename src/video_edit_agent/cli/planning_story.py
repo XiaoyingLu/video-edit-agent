@@ -3,6 +3,7 @@
 # ruff: noqa: F403,F405,I001
 from . import common
 from ..atomic_io import write_json_atomic
+from ..editing.planning_schemas import VideoProjectPlan
 from ..editing.footage_visual_review import (
     generate_footage_visual_review,
     load_footage_review_selections,
