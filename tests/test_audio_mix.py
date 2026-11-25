@@ -219,6 +219,7 @@ def test_music_mix_filter_graph_renders_a_duration_bounded_audio_file(tmp_path: 
         volume=0.2,
         fade_in_seconds=0.1,
         fade_out_seconds=0.2,
+        loudness_normalization=True,
     )
     command.extend(
         [
