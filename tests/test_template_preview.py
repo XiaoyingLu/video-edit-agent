@@ -80,7 +80,6 @@ def test_template_preview_output_must_stay_inside_project(tmp_path):
         render_template_previews(tmp_path, ["cinematic", "vlog"], outside)
 
 
-
 def _write_preview_project(
     root,
     *,
