@@ -3,6 +3,10 @@
 # ruff: noqa: F403,F405,I001
 from . import common
 from ..atomic_io import write_json_atomic
+from ..editing.footage_visual_review import (
+    generate_footage_visual_review,
+    load_footage_review_selections,
+)
 from .common import *  # noqa: F403
 
 
@@ -132,20 +136,35 @@ def _create_storyboard_video_draft(
             f"{len(missing)} storyboard shot(s): {', '.join(missing[:8])}. "
             "No footage was assigned; inspect footage-suggestions.json."
         )
-    selections = {shot.shot_id: 1 for shot in shots}
-    scores = [suggestions_by_id[shot.shot_id].candidates[0].score for shot in shots]
+    review_page, _, candidate_count = generate_footage_visual_review(
+        folder, plan_path=plan_path, suggestions_path=suggestions_path,
+        understanding_path=understanding_path,
+    )
     console.print(
         f"Storyboard: {project_plan.story_treatment.working_title} — "
-        f"{len(project_plan.scenes)} scene(s), {len(shots)} shot(s)."
+        f"{len(project_plan.scenes)} scene(s), {len(shots)} shot(s), "
+        f"{candidate_count} footage candidate(s)."
     )
+    console.print(f"Visual footage review: [green]{review_page}[/green]")
     console.print(
-        f"{suggestions.matching_method.title()} matching produced a top-ranked candidate "
-        "for every shot "
-        f"(score range {min(scores):.1f}–{max(scores):.1f})."
+        "[yellow]Open the review page, choose a footage option for each shot, "
+        "and download the selections JSON into the project folder.[/yellow]"
     )
+    selection_path = console.input(
+        "Selections JSON path (Enter to use the top-ranked matches): "
+    ).strip()
+    if selection_path:
+        selections, rejected = load_footage_review_selections(
+            Path(selection_path),
+            expected_shot_ids={shot.shot_id for shot in shots},
+        )
+    else:
+        selections = {shot.shot_id: 1 for shot in shots}
+        rejected = set()
     project_plan, plan_path = review_storyboard_footage(
         folder,
         selections=selections,
+        rejected_shot_ids=rejected,
         plan_path=plan_path,
         suggestions_path=suggestions_path,
     )
@@ -803,6 +822,10 @@ def review_footage(
             "--select", help="Approve a candidate as SHOT_ID=CANDIDATE_NUMBER; repeatable."
         ),
     ] = None,
+    selections_file: Annotated[
+        Path | None,
+        typer.Option("--selections-file", help="JSON exported from the visual footage review."),
+    ] = None,
     reject: Annotated[
         list[str] | None,
         typer.Option("--reject", help="Leave a shot unassigned; repeatable."),
@@ -815,17 +838,30 @@ def review_footage(
     """Review ranked footage candidates and explicitly approve shot assignments."""
     selections = {}
     try:
-        for item in select or []:
-            shot_id, separator, number = item.partition("=")
-            if not separator or not shot_id.strip():
-                raise ValueError("each --select value must use SHOT_ID=CANDIDATE_NUMBER")
-            if shot_id.strip() in selections:
-                raise ValueError(f"shot '{shot_id.strip()}' was selected more than once")
-            selections[shot_id.strip()] = int(number)
+        if selections_file is not None:
+            if select or reject:
+                raise ValueError("--selections-file cannot be combined with --select or --reject")
+            current_plan = VideoProjectPlan.model_validate_json(
+                (plan or folder.resolve() / ".video-agent" / "video-project-plan.json")
+                .expanduser().read_text(encoding="utf-8")
+            )
+            shot_ids = {shot.shot_id for scene in current_plan.scenes for shot in scene.shots}
+            selections, rejected = load_footage_review_selections(
+                selections_file, expected_shot_ids=shot_ids
+            )
+        else:
+            for item in select or []:
+                shot_id, separator, number = item.partition("=")
+                if not separator or not shot_id.strip():
+                    raise ValueError("each --select value must use SHOT_ID=CANDIDATE_NUMBER")
+                if shot_id.strip() in selections:
+                    raise ValueError(f"shot '{shot_id.strip()}' was selected more than once")
+                selections[shot_id.strip()] = int(number)
+            rejected = set(reject or [])
         plan_result, destination = review_storyboard_footage(
             folder,
             selections=selections,
-            rejected_shot_ids=set(reject or []),
+            rejected_shot_ids=rejected,
             plan_path=plan,
             suggestions_path=suggestions,
         )
