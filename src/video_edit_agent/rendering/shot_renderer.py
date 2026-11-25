@@ -753,7 +753,7 @@ def render_approved_shot_timeline(
         if asset_overlay.asset_format == "webm":
             dependencies.append(asset_path)
         else:
-            frame_pattern = re.sub(r"%0\\d+d", "*", asset_path.name)
+            frame_pattern = re.sub(r"%0\d+d", "*", asset_path.name)
             dependencies.extend(asset_path.parent.glob(frame_pattern))
     if selected_music is not None:
         dependencies.append(selected_music)
@@ -861,7 +861,11 @@ def render_approved_shot_timeline(
             clip_inputs=clip_inputs,
         )
         if render_result is not None:
-            store_render_cache(destination, cache_file)
+            try:
+                store_render_cache(destination, cache_file)
+            except OSError:
+                # A cache write failure must not discard an otherwise valid render.
+                pass
 
     if render_result is None:
         return None
