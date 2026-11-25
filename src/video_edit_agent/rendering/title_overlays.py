@@ -251,7 +251,7 @@ def _template_overlay_style(template, style_name: str) -> dict:
     return {
         "placement": style.placement,
         "style": renderer_style,
-        "animation": style.animation if style.animation in {"none", "fade", "slide_up"} else "fade",
+        "animation": style.animation,
     }
 
 
