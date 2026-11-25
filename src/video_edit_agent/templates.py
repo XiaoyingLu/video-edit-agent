@@ -100,6 +100,16 @@ class RenderSpec(BaseModel):
     beat_punch_in: bool = False
 
 
+class SubtitleSpec(BaseModel):
+    """Safe subtitle appearance settings mapped to built-in ASS styles."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    style: Literal["classic", "cinematic", "boxed", "minimal"] = "classic"
+    position: Literal["top", "center", "bottom"] = "bottom"
+    font_size: int = Field(default=28, ge=12, le=72)
+
+
 class TemplateSpec(BaseModel):
     """A validated, versioned visual template; never contains raw FFmpeg syntax."""
 
@@ -114,6 +124,7 @@ class TemplateSpec(BaseModel):
     transitions: TransitionSpec = Field(default_factory=TransitionSpec)
     music: MusicSpec = Field(default_factory=MusicSpec)
     render: RenderSpec = Field(default_factory=RenderSpec)
+    subtitles: SubtitleSpec = Field(default_factory=SubtitleSpec)
     tags: dict[str, list[str]] = Field(default_factory=dict)
     assets: list[str] = Field(default_factory=list)
 
