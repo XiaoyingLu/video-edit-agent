@@ -116,13 +116,22 @@ def test_generate_footage_visual_review_writes_candidate_choices(tmp_path: Path)
 
 def test_load_footage_review_selections_requires_every_shot(tmp_path: Path) -> None:
     path = tmp_path / "selections.json"
+    suggestions_path = tmp_path / "footage-suggestions.json"
+    suggestions_path.write_text("current suggestions", encoding="utf-8")
+    digest = hashlib.sha256(suggestions_path.read_bytes()).hexdigest()
     path.write_text(
-        json.dumps({"schema_version": "1.0", "selections": {"shot-001": 2, "shot-002": 0}}),
+        json.dumps({
+            "schema_version": "1.0",
+            "suggestions_sha256": digest,
+            "selections": {"shot-001": 2, "shot-002": 0},
+        }),
         encoding="utf-8",
     )
 
     selected, rejected = load_footage_review_selections(
-        path, expected_shot_ids={"shot-001", "shot-002"}
+        path,
+        expected_shot_ids={"shot-001", "shot-002"},
+        suggestions_path=suggestions_path,
     )
 
     assert selected == {"shot-001": 2}
@@ -143,4 +152,6 @@ def test_load_footage_review_selections_rejects_invalid_exports(tmp_path: Path, 
     path.write_text(json.dumps(payload), encoding="utf-8")
 
     with pytest.raises(ValueError):
-        load_footage_review_selections(path, expected_shot_ids={"shot-001"})
+        load_footage_review_selections(
+            path, expected_shot_ids={"shot-001"}, suggestions_path=tmp_path / "suggestions.json"
+        )
