@@ -138,7 +138,8 @@ def analyze_project_color(
     if ffmpeg is None:
         raise ColorAnalysisError("ffmpeg was not found; install FFmpeg and ensure it is on PATH.")
 
-    videos: list[VideoColorAnalysis] = []
+    sampled_videos: list[tuple[str, list[ColorSample]]] = []
+    all_samples: list[ColorSample] = []
     for video in analysis.videos:
         if video.duration_seconds <= 0 or not video.has_video:
             continue
@@ -157,9 +158,16 @@ def analyze_project_color(
             video.duration_seconds * (index + 1) / (count + 1) for index in range(count)
         ]
         samples = [_sample_signalstats(ffmpeg, source, timestamp) for timestamp in timestamps]
-        baseline_y = statistics.median(item.luma for item in samples)
-        baseline_u = statistics.median(item.chroma_u for item in samples)
-        baseline_v = statistics.median(item.chroma_v for item in samples)
+        sampled_videos.append((video.path, samples))
+        all_samples.extend(samples)
+
+    if not all_samples:
+        raise ColorAnalysisError("No video frames were available for color analysis.")
+    baseline_y = statistics.median(item.luma for item in all_samples)
+    baseline_u = statistics.median(item.chroma_u for item in all_samples)
+    baseline_v = statistics.median(item.chroma_v for item in all_samples)
+    videos: list[VideoColorAnalysis] = []
+    for video_path, samples in sampled_videos:
         suggestions = []
         for sample in samples:
             offsets = (
@@ -168,29 +176,23 @@ def analyze_project_color(
                 _bounded_offset(baseline_v, sample.chroma_v, 12),
             )
             if any(abs(value) >= 2 for value in offsets):
-                suggestions.append(
-                    ColorCorrectionSuggestion(
-                        luma_offset=offsets[0],
-                        chroma_u_offset=offsets[1],
-                        chroma_v_offset=offsets[2],
-                        rationale=(
-                            "Suggested offsets move this sample toward the median measured "
-                            "luma and chroma of the same source video."
-                        ),
-                    )
+                rationale = (
+                    "Suggested offsets move this sample toward the project-wide median "
+                    "luma and chroma measured across all source videos."
                 )
             else:
-                suggestions.append(
-                    ColorCorrectionSuggestion(
-                        luma_offset=0,
-                        chroma_u_offset=0,
-                        chroma_v_offset=0,
-                        rationale="This sample is close to the measured project baseline.",
-                    )
+                rationale = "This sample is close to the project-wide measured baseline."
+            suggestions.append(
+                ColorCorrectionSuggestion(
+                    luma_offset=offsets[0],
+                    chroma_u_offset=offsets[1],
+                    chroma_v_offset=offsets[2],
+                    rationale=rationale,
                 )
+            )
         videos.append(
             VideoColorAnalysis(
-                video_path=video.path,
+                video_path=video_path,
                 baseline_luma=baseline_y,
                 baseline_chroma_u=baseline_u,
                 baseline_chroma_v=baseline_v,
