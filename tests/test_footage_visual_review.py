@@ -1,13 +1,100 @@
+import hashlib
 import json
 from pathlib import Path
 
 import pytest
 
+from video_edit_agent.artifact_tracking import register_artifact
+from video_edit_agent.editing.footage_mapping import suggest_storyboard_footage
 from video_edit_agent.editing.footage_visual_review import (
     generate_footage_visual_review,
     load_footage_review_selections,
 )
-from test_footage_review import _artifacts
+from video_edit_agent.editing.intent_schemas import EditingPlan
+from video_edit_agent.editing.planning_schemas import VideoProjectPlan
+from video_edit_agent.understanding.schemas import FrameObservation, VideoScene, VideoUnderstanding
+
+
+def _artifacts(root: Path) -> tuple[Path, Path]:
+    artifact_dir = root / ".video-agent"
+    artifact_dir.mkdir()
+    video = root / "clip.mp4"
+    video.write_bytes(b"placeholder")
+    key = hashlib.sha256(b"clip.mp4").hexdigest()[:12]
+    plan = VideoProjectPlan(
+        project_path=str(root.resolve()),
+        brief={
+            "source_prompt": "Create a short travel film",
+            "target_duration_seconds": 5,
+            "style": "cinematic",
+            "aspect_ratio": "16:9",
+            "resolution": "1080p",
+            "pacing": "moderate",
+        },
+        editing_preferences=EditingPlan(source_prompt="Create a short travel film"),
+        story_treatment={
+            "working_title": "Mountain Light",
+            "logline": "A quiet mountain journey.",
+            "narrative_arc": ["Arrival", "Wonder"],
+            "emotional_journey": "Calm becomes awe.",
+        },
+        scenes=[
+            {
+                "scene_id": "scene-01",
+                "sequence_index": 1,
+                "title": "Mountains",
+                "purpose": "Reveal the landscape.",
+                "narrative_function": "hook",
+                "target_duration_seconds": 5,
+                "shots": [
+                    {
+                        "shot_id": "shot-001",
+                        "scene_id": "scene-01",
+                        "sequence_index": 1,
+                        "purpose": "Reveal mountain scenery",
+                        "visual_description": "A wide view of a mountain lake",
+                        "target_duration_seconds": 5,
+                    }
+                ],
+            }
+        ],
+        planning_stage="storyboard_ready",
+    )
+    understanding = VideoUnderstanding(
+        project_path=str(root.resolve()),
+        video_count=1,
+        scene_count=1,
+        model="test",
+        scenes=[
+            VideoScene(
+                scene_id=f"{key}-scene-0001",
+                start_seconds=0,
+                end_seconds=8,
+                summary="A mountain lake surrounded by peaks.",
+                observations=[
+                    FrameObservation(
+                        timestamp_seconds=3,
+                        frame_path=".video-agent/frames/frame.jpg",
+                        description="A wide mountain lake surrounded by peaks.",
+                        shot_scale="wide",
+                        visual_role="establishing",
+                        primary_subject="mountain lake",
+                    )
+                ],
+            )
+        ],
+    )
+    plan_path = artifact_dir / "video-project-plan.json"
+    understanding_path = artifact_dir / "understanding.json"
+    plan_path.write_text(plan.model_dump_json(), encoding="utf-8")
+    understanding_path.write_text(understanding.model_dump_json(), encoding="utf-8")
+    register_artifact(root, plan_path)
+    register_artifact(root, understanding_path)
+    suggestions = suggest_storyboard_footage(root)
+    suggestions_path = artifact_dir / "footage-suggestions.json"
+    suggestions_path.write_text(suggestions.model_dump_json(), encoding="utf-8")
+    register_artifact(root, suggestions_path)
+    return plan_path, suggestions_path
 
 
 def test_generate_footage_visual_review_writes_candidate_choices(tmp_path: Path) -> None:
