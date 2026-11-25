@@ -282,3 +282,98 @@ def test_template_preview_wraps_ffmpeg_render_errors(monkeypatch, tmp_path):
 
     with pytest.raises(TemplatePreviewError, match="simulated filter render failure"):
         render_template_previews(tmp_path, ["cinematic", "vlog"])
+
+
+def test_template_preview_renders_real_ffmpeg_frames_with_visible_overlays(tmp_path):
+    import shutil
+    import subprocess
+
+    ffmpeg = shutil.which("ffmpeg")
+    ffprobe = shutil.which("ffprobe")
+    if ffmpeg is None or ffprobe is None:
+        pytest.skip("FFmpeg and FFprobe are required for this integration smoke test")
+
+    _write_preview_project(tmp_path)
+    source = tmp_path / "footage.mp4"
+    subprocess.run(
+        [
+            ffmpeg,
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=320x180:rate=12:duration=2",
+            "-an",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-y",
+            str(source),
+        ],
+        check=True,
+        capture_output=True,
+        timeout=30,
+    )
+
+    index, images, timestamp = render_template_previews(tmp_path, ["cinematic", "vlog"])
+    baseline = tmp_path / "baseline.jpg"
+    subprocess.run(
+        [
+            ffmpeg,
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-ss",
+            f"{timestamp:.3f}",
+            "-i",
+            str(source),
+            "-frames:v",
+            "1",
+            "-vf",
+            "scale=1280:-2:force_original_aspect_ratio=decrease",
+            "-q:v",
+            "2",
+            "-y",
+            str(baseline),
+        ],
+        check=True,
+        capture_output=True,
+        timeout=30,
+    )
+
+    def decoded_pixels(path: Path) -> bytes:
+        result = subprocess.run(
+            [
+                ffmpeg,
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-i",
+                str(path),
+                "-frames:v",
+                "1",
+                "-f",
+                "rawvideo",
+                "-pix_fmt",
+                "rgb24",
+                "pipe:1",
+            ],
+            check=True,
+            capture_output=True,
+            timeout=30,
+        )
+        return result.stdout
+
+    assert index.is_file()
+    assert timestamp == 1
+    assert baseline.is_file()
+    baseline_pixels = decoded_pixels(baseline)
+    assert len(baseline_pixels) == 1280 * 720 * 3
+    for image_path in images:
+        assert image_path.is_file()
+        assert image_path.stat().st_size > 0
+        assert _probe_dimensions(ffprobe, image_path) == (1280, 720)
+        assert decoded_pixels(image_path) != baseline_pixels
