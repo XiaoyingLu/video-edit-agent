@@ -113,8 +113,6 @@ def validate_template(
         f"{len(spec.assets)} asset(s)."
     )
 
-
-
 @template_app.command("recommend")
 def recommend_template_command(
     mood: Annotated[
@@ -164,6 +162,7 @@ def recommend_template_command(
         )
     console.print(table)
     console.print("Recommendations are suggestions only; no template was applied.")
+
 
 @template_app.command("apply")
 def apply_template(

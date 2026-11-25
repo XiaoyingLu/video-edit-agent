@@ -121,6 +121,7 @@ def test_template_preview_delegates_and_reports_comparison(tmp_path: Path, monke
     assert "index.html" in result.output
     assert "visual comparisons only" in result.output
 
+
 def test_template_recommend_lists_explainable_top_matches():
     result = runner.invoke(
         app, ["template", "recommend", "--mood", "warm", "--best-for", "travel"]
