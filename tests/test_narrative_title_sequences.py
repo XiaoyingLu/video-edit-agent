@@ -9,11 +9,11 @@ from video_edit_agent.editing.planning_schemas import (
     StoryTreatment,
     VideoProjectPlan,
 )
-from video_edit_agent.models import MediaInfo, ProjectAnalysis
 from video_edit_agent.editing.timeline_schemas import (
     DraftTimelineClip,
     ProjectDraftTimeline,
 )
+from video_edit_agent.models import MediaInfo, ProjectAnalysis
 from video_edit_agent.rendering import title_overlays
 
 
