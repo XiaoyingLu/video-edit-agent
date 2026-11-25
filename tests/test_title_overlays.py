@@ -634,7 +634,8 @@ def test_asset_overlay_ffmpeg_smoke_composites_png_sequence_only_during_approved
         )
         assert frame.returncode == 0, frame.stderr.decode(errors="replace")
         pixels = np.frombuffer(frame.stdout, dtype=np.uint8).reshape(180, 320, 3)
-        return int(((pixels[:, :, 0] > 150) & (pixels[:, :, 1] < 100) & (pixels[:, :, 2] < 100)).sum())
+        red_pixels = (pixels[:, :, 0] > 150) & (pixels[:, :, 1] < 100) & (pixels[:, :, 2] < 100)
+        return int(red_pixels.sum())
 
     assert red_pixel_count(0.25) == 0
     assert red_pixel_count(1.0) > 100
