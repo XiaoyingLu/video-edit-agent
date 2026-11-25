@@ -120,3 +120,23 @@ def test_template_preview_delegates_and_reports_comparison(tmp_path: Path, monke
     assert "12.50s" in result.output
     assert "index.html" in result.output
     assert "visual comparisons only" in result.output
+
+
+def test_template_recommend_lists_explainable_top_matches():
+    result = runner.invoke(app, ["template", "recommend", "--mood", "warm", "--best-for", "travel"])
+    assert result.exit_code == 0, result.output
+    assert "travel-montage" in result.output
+    assert "best_for:travel" in result.output
+    assert "suggestions only" in result.output
+
+
+def test_template_recommend_requires_at_least_one_tag():
+    result = runner.invoke(app, ["template", "recommend"])
+    assert result.exit_code == 1
+    assert "provide at least one" in result.output
+
+
+def test_template_recommend_reports_no_matches():
+    result = runner.invoke(app, ["template", "recommend", "--mood", "underwater-cyberpunk"])
+    assert result.exit_code == 0
+    assert "No templates matched" in result.output
