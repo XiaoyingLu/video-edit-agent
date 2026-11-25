@@ -213,30 +213,31 @@ def _append_title_overlay_filters(
                 f"{_seconds(overlay.end_seconds)})'"
                 f"[{next_label}bg]"
             )
+            card_output = f"{next_label}bg"
             if overlay.accent_bar:
                 accent_label = f"vtitle{index}accent"
                 accent_source = f"vtitle{index}accentsrc"
                 filters.append(
                     f"color=c=0xF2B544:s={width}x{height}:r=25:d={_seconds(card_duration)},"
-                    f"format=rgba,crop=w=iw*0.22:h=max(3,ih*0.012):x=0:y=0,"
+                    f"format=rgba,crop=w=iw*0.22:h='max(3,ih*0.012)':x=0:y=0,"
                     f"setpts=PTS-STARTPTS+{_seconds(overlay.start_seconds)}/TB"
                     f"[{accent_source}]"
                 )
                 filters.append(
-                    f"[{next_label}bg][{accent_source}]overlay="
+                    f"[{card_output}][{accent_source}]overlay="
                     f"x='main_w*0.06':y='({card_y})+main_h*0.16-4':"
                     f"eof_action=pass:shortest=0:"
                     f"enable='between(t,{_seconds(overlay.start_seconds)},"
                     f"{_seconds(overlay.end_seconds)})'"
                     f"[{accent_label}]"
                 )
-                next_label = accent_label
+                card_output = accent_label
             primary_size = max(26, min(64, int(width * 0.034)))
             secondary_size = max(20, min(42, int(width * 0.022)))
             alpha, primary_y = _animation_expressions(overlay, "h*0.785", lower_third=True)
             primary_label = f"vtitle{index}primary"
             filters.append(
-                f"[{next_label}bg]drawtext=text='{escaped_text}':expansion=none:"
+                f"[{card_output}]drawtext=text='{escaped_text}':expansion=none:"
                 f"{font_option}:fontsize={primary_size}:fontcolor=white:"
                 f"x=w*0.09:y='{primary_y}':alpha='{alpha}':"
                 f"enable='between(t,{_seconds(overlay.start_seconds)},"
