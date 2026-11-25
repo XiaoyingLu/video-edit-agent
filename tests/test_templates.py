@@ -19,6 +19,9 @@ def test_builtin_templates_load_and_resolve_inheritance(tmp_path: Path):
         assert spec.title_styles["opening"].placement in {"top", "center", "bottom"}
     travel, _ = load_template("travel-montage", project_root=tmp_path, home_dir=tmp_path / "home")
     assert travel.music.volume == 0.25
+    cinematic, _ = load_template("cinematic", project_root=tmp_path, home_dir=tmp_path / "home")
+    assert cinematic.music.loudness_normalization is True
+    assert cinematic.music.target_lufs == -16.0
     assert travel.title_styles["minimal"].size == 0.72
 
 

@@ -39,6 +39,10 @@ music:
   fade_in: 1.8
   fade_out: 2.5
   ducking: true
+  loudness_normalization: true
+  target_lufs: -16.0
+  true_peak_db: -1.5
+  loudness_range: 11.0
 render:
   fit_mode: crop
   beat_punch_in: false

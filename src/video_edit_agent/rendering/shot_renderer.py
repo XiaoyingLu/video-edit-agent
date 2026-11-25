@@ -219,6 +219,10 @@ def _build_shot_render_command(
     music_fade_in: float = 1.0,
     music_fade_out: float = 1.5,
     music_ducking: bool = False,
+    music_loudness_normalization: bool = False,
+    music_target_lufs: float = -16.0,
+    music_true_peak_db: float = -1.5,
+    music_loudness_range: float = 11.0,
 ) -> list[str]:
     """Build a filter graph that preserves shot order and applies approved transitions."""
     if fit_mode not in {"crop", "pad"}:
@@ -354,6 +358,10 @@ def _build_shot_render_command(
         fade_in_seconds=music_fade_in,
         fade_out_seconds=music_fade_out,
         ducking=music_ducking,
+        loudness_normalization=music_loudness_normalization,
+        target_lufs=music_target_lufs,
+        true_peak_db=music_true_peak_db,
+        loudness_range=music_loudness_range,
     )
     command.extend(
         [
@@ -484,6 +492,10 @@ def _render_and_validate_shot_output(
     music_fade_in: float,
     music_fade_out: float,
     music_ducking: bool,
+    music_loudness_normalization: bool,
+    music_target_lufs: float,
+    music_true_peak_db: float,
+    music_loudness_range: float,
     ffmpeg: str,
     ffprobe: str,
     destination: Path,
@@ -546,6 +558,10 @@ def _render_and_validate_shot_output(
             music_fade_in=music_fade_in,
             music_fade_out=music_fade_out,
             music_ducking=music_ducking,
+            music_loudness_normalization=music_loudness_normalization,
+            music_target_lufs=music_target_lufs,
+            music_true_peak_db=music_true_peak_db,
+            music_loudness_range=music_loudness_range,
         )
         if dry_run:
             _validate_filter_graph(command, timeout=min(timeout_seconds, 120))
@@ -610,6 +626,10 @@ def render_approved_shot_timeline(
     music_fade_in: float = 1.0,
     music_fade_out: float = 1.5,
     music_ducking: bool = False,
+    music_loudness_normalization: bool = False,
+    music_target_lufs: float = -16.0,
+    music_true_peak_db: float = -1.5,
+    music_loudness_range: float = 11.0,
     output_aspect_ratio: str | None = None,
     output_resolution: str | None = None,
     reframe_mode: str = "center",
@@ -739,6 +759,10 @@ def render_approved_shot_timeline(
         music_fade_in=music_fade_in,
         music_fade_out=music_fade_out,
         music_ducking=music_ducking,
+        music_loudness_normalization=music_loudness_normalization,
+        music_target_lufs=music_target_lufs,
+        music_true_peak_db=music_true_peak_db,
+        music_loudness_range=music_loudness_range,
         ffmpeg=ffmpeg,
         ffprobe=ffprobe,
         destination=destination,

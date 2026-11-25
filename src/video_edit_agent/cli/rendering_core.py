@@ -545,6 +545,10 @@ def render_draft(
                 if music_ducking is not None
                 else (preset.music_ducking if preset else False)
             ),
+            music_loudness_normalization=preset.music_loudness_normalization if preset else False,
+            music_target_lufs=preset.music_target_lufs if preset else -16.0,
+            music_true_peak_db=preset.music_true_peak_db if preset else -1.5,
+            music_loudness_range=preset.music_loudness_range if preset else 11.0,
             beat_punch_in=preset.beat_punch_in if preset else False,
         )
     except (FileNotFoundError, FileExistsError, ValueError, RenderError) as exc:
@@ -711,6 +715,12 @@ def render_social_exports(
                 music_fade_in=preset.music_fade_in if preset else 1.0,
                 music_fade_out=preset.music_fade_out if preset else 1.5,
                 music_ducking=preset.music_ducking if preset else False,
+                music_loudness_normalization=(
+                    preset.music_loudness_normalization if preset else False
+                ),
+                music_target_lufs=preset.music_target_lufs if preset else -16.0,
+                music_true_peak_db=preset.music_true_peak_db if preset else -1.5,
+                music_loudness_range=preset.music_loudness_range if preset else 11.0,
                 beat_punch_in=preset.beat_punch_in if preset else False,
             )
             outputs.append((label, aspect_ratio, report))

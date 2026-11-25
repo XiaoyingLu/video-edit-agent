@@ -12,6 +12,9 @@ def test_all_style_presets_have_valid_render_settings():
         assert 0.01 <= preset.music_volume <= 2.0
         assert preset.music_fade_in >= 0
         assert preset.music_fade_out >= 0
+        assert -24 <= preset.music_target_lufs <= -12
+        assert -9 <= preset.music_true_peak_db <= -1
+        assert 5 <= preset.music_loudness_range <= 20
         assert isinstance(preset.beat_punch_in, bool)
 
 
@@ -30,6 +33,10 @@ def test_legacy_preset_values_are_loaded_from_builtin_template(name):
     assert preset.music_fade_in == template.music.fade_in
     assert preset.music_fade_out == template.music.fade_out
     assert preset.music_ducking == template.music.ducking
+    assert preset.music_loudness_normalization == template.music.loudness_normalization
+    assert preset.music_target_lufs == template.music.target_lufs
+    assert preset.music_true_peak_db == template.music.true_peak_db
+    assert preset.music_loudness_range == template.music.loudness_range
     assert preset.beat_punch_in == template.render.beat_punch_in
 
 

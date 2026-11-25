@@ -17,6 +17,10 @@ class RenderStylePreset:
     music_fade_in: float
     music_fade_out: float
     music_ducking: bool
+    music_loudness_normalization: bool = False
+    music_target_lufs: float = -16.0
+    music_true_peak_db: float = -1.5
+    music_loudness_range: float = 11.0
     beat_punch_in: bool = False
 
 
@@ -40,6 +44,10 @@ def _preset_from_template(name: str) -> RenderStylePreset:
         music_fade_in=spec.music.fade_in,
         music_fade_out=spec.music.fade_out,
         music_ducking=spec.music.ducking,
+        music_loudness_normalization=spec.music.loudness_normalization,
+        music_target_lufs=spec.music.target_lufs,
+        music_true_peak_db=spec.music.true_peak_db,
+        music_loudness_range=spec.music.loudness_range,
         beat_punch_in=spec.render.beat_punch_in,
     )
 
