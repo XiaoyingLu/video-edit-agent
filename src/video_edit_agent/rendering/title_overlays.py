@@ -10,8 +10,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from ..artifact_tracking import register_artifact, validate_artifact
 from ..atomic_io import write_json_atomic
 from ..editing.planning_schemas import VideoProjectPlan
-from ..models import ProjectAnalysis
 from ..editing.timeline_schemas import ProjectDraftTimeline
+from ..models import ProjectAnalysis
 from ..templates import load_template
 
 

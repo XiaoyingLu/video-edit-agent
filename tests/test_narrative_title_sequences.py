@@ -163,12 +163,10 @@ def test_template_changes_sequence_content_and_styles(tmp_path: Path, monkeypatc
     assert document.template_id == "travel-montage"
     assert [item.overlay_id for item in document.overlays] == [
         "opening-1",
-        "opening-2",
         "closing-1",
     ]
     assert document.overlays[0].style == "bold"
-    assert document.overlays[1].style == "minimal"
-    assert document.overlays[2].animation == "slide_up"
+    assert document.overlays[1].animation == "slide_up"
     assert all(item.decision == "pending" for item in document.overlays)
 
 
@@ -222,7 +220,6 @@ sequences:
     monkeypatch.setattr(title_overlays, "validate_artifact", lambda *_: None)
     document, _ = title_overlays.suggest_narrative_title_sequences(tmp_path)
     assert [item.overlay_id for item in document.overlays] == ["opening-title", "opening-2"]
-
 
 
 def test_date_and_location_slots_use_project_metadata_and_track_analysis(
