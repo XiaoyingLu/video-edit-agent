@@ -312,14 +312,14 @@ docker compose run --rm -it video-agent create-video ./travel-test \
   --prompt "Create a 60-second cinematic travel video" --review
 ```
 
-Add `--storyboard` to use the AI-generated narrative storyboard and footage matcher instead of highlight ranking:
+The default workflow uses an AI-generated narrative storyboard and semantic footage matching. It analyzes the footage, creates a storyboard, assigns the top-ranked source match to each shot, and generates a local visual review page:
 
 ```bash
 docker compose run --rm -it video-agent create-video ./travel-test \
-  --prompt "Create a 60-second cinematic travel video" --storyboard
+  --prompt "Create a 60-second cinematic travel video"
 ```
 
-Storyboard mode generates a creative plan, ranks source scenes for every storyboard shot, and saves `.video-agent/footage-suggestions.json`. It then asks for one explicit confirmation to approve the top-ranked footage match for every shot before building and rendering the timeline. Review the suggestions and their scores carefully; a high rank is not a guarantee of a good editorial match. If any shot has no candidate, the workflow stops without assigning footage or rendering. The advanced `propose-story`, `suggest-footage`, and `review-footage` commands remain available for choosing story angles and curating individual matches.
+Open `.video-agent/storyboard.html` and inspect the proposed shots and representative footage frames. Return to the terminal and confirm only when the assignments look reasonable. Confirmation approves the storyboard, builds the timeline, and renders the first draft. If you decline, the unapproved storyboard and footage assignments remain available for review; nothing is rendered. Matching scores are recommendations, not guarantees. If any shot has no candidate, the workflow stops and identifies the missing shots. Use `--highlights` to opt into the legacy highlight-ranked workflow. The advanced `propose-story`, `suggest-footage`, and `review-footage` commands remain available for choosing story angles and curating individual matches.
 
 Tune local resource usage with `--model qwen2.5vl:3b`, `--whisper-model tiny`, or `--samples-per-scene 1`. The workflow writes inspectable artifacts under `.video-agent/`. Quick mode is intended to produce a first draft, not a final editorial decision: use the advanced `draft-edit`, `review-timeline`, and `render-draft` commands when you want to curate or reject individual shots before rendering. Source videos remain unchanged.
 
