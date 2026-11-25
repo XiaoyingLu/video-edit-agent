@@ -1022,3 +1022,146 @@ def test_render_cache_round_trip_and_empty_cache_miss(tmp_path):
     store_render_cache(rendered, cache_file)
     assert restore_cached_render(cache_file, destination)
     assert destination.read_bytes() == rendered.read_bytes()
+
+
+def test_beat_punch_in_changes_real_ffmpeg_output_at_music_beat(tmp_path):
+    ffmpeg = shutil.which("ffmpeg")
+    if ffmpeg is None or shutil.which("ffprobe") is None:
+        pytest.skip("FFmpeg and ffprobe are required for the beat-zoom integration test")
+
+    source = tmp_path / "source.mp4"
+    soundtrack = tmp_path / "music.wav"
+    subprocess.run(
+        [
+            ffmpeg,
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=320x240:rate=30:duration=2",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            str(source),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        [
+            ffmpeg,
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=220:sample_rate=44100:duration=2",
+            "-c:a",
+            "pcm_s16le",
+            str(soundtrack),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    artifact = tmp_path / ".video-agent"
+    artifact.mkdir()
+    timeline = ProjectDraftTimeline(
+        project_path=str(tmp_path.resolve()),
+        style="cinematic",
+        pacing="moderate",
+        target_duration_seconds=2,
+        proposed_duration_seconds=2,
+        approved_duration_seconds=2,
+        proposed_clip_count=1,
+        clips=[
+            DraftTimelineClip(
+                clip_id="beat-zoom",
+                sequence_index=1,
+                video_path="source.mp4",
+                source_start_seconds=0,
+                source_end_seconds=2,
+                duration_seconds=2,
+                combined_score=90,
+                pacing_fit="within",
+                pacing_note="Within pacing range.",
+                decision="approved",
+            )
+        ],
+        timeline_approved=True,
+    )
+    (artifact / "optimized-timeline.json").write_text(timeline.model_dump_json(), encoding="utf-8")
+
+    from video_edit_agent.artifact_tracking import register_artifact
+    from video_edit_agent.music.schemas import MusicAnalysis
+
+    analysis_path = artifact / "music-analysis.json"
+    analysis = MusicAnalysis(
+        project_path=str(tmp_path.resolve()),
+        music_path=str(soundtrack.resolve()),
+        duration_seconds=2,
+        sample_rate=44100,
+        bpm=120,
+        beat_confidence=0.9,
+        beat_interval_seconds=0.5,
+        beat_times_seconds=[1.0],
+    )
+    analysis_path.write_text(analysis.model_dump_json(), encoding="utf-8")
+    register_artifact(tmp_path, analysis_path, dependencies=[soundtrack])
+
+    baseline = artifact / "baseline.mp4"
+    punched_in = artifact / "beat-punch-in.mp4"
+    render_approved_shot_timeline(
+        tmp_path,
+        output_path=baseline,
+        music_mode="original",
+    )
+    report = render_approved_shot_timeline(
+        tmp_path,
+        output_path=punched_in,
+        music_path=soundtrack,
+        music_mode="music_only",
+        beat_punch_in=True,
+    )
+
+    def extract_frame(video_path: Path) -> bytes:
+        result = subprocess.run(
+            [
+                ffmpeg,
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-ss",
+                "1.04",
+                "-i",
+                str(video_path),
+                "-frames:v",
+                "1",
+                "-f",
+                "rawvideo",
+                "-pix_fmt",
+                "rgb24",
+                "pipe:1",
+            ],
+            check=True,
+            capture_output=True,
+        )
+        return result.stdout
+
+    baseline_frame = extract_frame(baseline)
+    punched_frame = extract_frame(punched_in)
+
+    assert report is not None
+    assert report.video_codec == "h264"
+    assert report.audio_codec == "aac"
+    assert len(baseline_frame) == 320 * 240 * 3
+    assert len(punched_frame) == len(baseline_frame)
+    assert sum(a != b for a, b in zip(baseline_frame, punched_frame, strict=True)) > 1000
