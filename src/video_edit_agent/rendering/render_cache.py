@@ -58,7 +58,9 @@ def build_render_cache_key(
         stat = path.stat()
         metadata = {"size": stat.st_size, "mtime_ns": stat.st_mtime_ns}
         cached = index.get(str(path))
-        if isinstance(cached, dict) and all(cached.get(key) == value for key, value in metadata.items()):
+        if isinstance(cached, dict) and all(
+            cached.get(key) == value for key, value in metadata.items()
+        ):
             file_hash = cached.get("sha256")
         else:
             file_hash = _file_digest(path)

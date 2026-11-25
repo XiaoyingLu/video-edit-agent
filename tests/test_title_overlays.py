@@ -652,8 +652,13 @@ def test_lower_third_uses_configured_template_accent_color(tmp_path: Path):
     style = _template_overlay_style(template, "opening")
     overlay = _overlay(
         overlay_kind="lower_third",
+        accent_bar=True,
         accent_color=style["accent_color"],
-        **{key: value for key, value in style.items() if key != "accent_color"},
+        **{
+            key: value
+            for key, value in style.items()
+            if key not in {"accent_color", "accent_bar"}
+        },
     )
     command = _build_shot_render_command(
         "ffmpeg",

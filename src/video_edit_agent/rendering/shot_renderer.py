@@ -772,7 +772,9 @@ def render_approved_shot_timeline(
     from ..config import DEFAULT_TITLE_FONT, get_setting
     from .overlay_filters import _BUNDLED_FONT
 
-    configured_font = (get_setting("TITLE_FONT", DEFAULT_TITLE_FONT) or DEFAULT_TITLE_FONT).strip()
+    configured_font = (
+        get_setting("TITLE_FONT", DEFAULT_TITLE_FONT) or DEFAULT_TITLE_FONT
+    ).strip()
     if approved_titles:
         if configured_font.casefold() in {"lato", "bundled"} and _BUNDLED_FONT.is_file():
             dependencies.append(_BUNDLED_FONT)
@@ -782,10 +784,14 @@ def render_approved_shot_timeline(
                 dependencies.append(configured_font_path.resolve())
 
     ffmpeg_version_result = run_ffmpeg(
-        [ffmpeg, "-version"], timeout=30, label="FFmpeg version for render cache",
+        [ffmpeg, "-version"],
+        timeout=30,
+        label="FFmpeg version for render cache",
         error_type=RenderError,
     )
-    ffmpeg_version = (ffmpeg_version_result.stdout or ffmpeg_version_result.stderr or "").splitlines()
+    ffmpeg_version = (
+        ffmpeg_version_result.stdout or ffmpeg_version_result.stderr or ""
+    ).splitlines()
     render_config = {
         "cache_schema": 2,
         "title_font": configured_font,
@@ -821,7 +827,9 @@ def render_approved_shot_timeline(
     cache_key = build_render_cache_key(
         dependencies,
         render_config,
-        fingerprint_index_path=root / ".video-agent" / "render-cache" / "file-fingerprints.json",
+        fingerprint_index_path=(
+            root / ".video-agent" / "render-cache" / "file-fingerprints.json"
+        ),
     )
     cache_file = root / ".video-agent" / "render-cache" / f"{cache_key}.mp4"
     render_result = None
