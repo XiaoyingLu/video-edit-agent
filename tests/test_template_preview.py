@@ -151,9 +151,7 @@ def _write_preview_project(
         clips=[clip],
         timeline_approved=timeline_approved,
     )
-    (metadata / "optimized-timeline.json").write_text(
-        timeline.model_dump_json(), encoding="utf-8"
-    )
+    (metadata / "optimized-timeline.json").write_text(timeline.model_dump_json(), encoding="utf-8")
     return metadata
 
 
@@ -167,7 +165,7 @@ def test_template_preview_renders_comparison_and_writes_safe_index(monkeypatch, 
 
     def fake_run_ffmpeg(command, **kwargs):
         calls.append(command)
-        if command[0] == "ffprobe":
+        if Path(command[0]).name == "ffprobe":
             return SimpleNamespace(stdout='{"streams":[{"width":320,"height":180}]}')
         output = Path(command[-1])
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -177,9 +175,7 @@ def test_template_preview_renders_comparison_and_writes_safe_index(monkeypatch, 
     monkeypatch.setattr(preview.shutil, "which", lambda executable: f"/usr/bin/{executable}")
     monkeypatch.setattr(preview, "run_ffmpeg", fake_run_ffmpeg)
 
-    index, images, timestamp = render_template_previews(
-        tmp_path, ["cinematic", "vlog"]
-    )
+    index, images, timestamp = render_template_previews(tmp_path, ["cinematic", "vlog"])
 
     assert index.is_file()
     assert [path.name for path in images] == ["cinematic.jpg", "vlog.jpg"]
@@ -252,9 +248,7 @@ def test_template_preview_rejects_existing_outputs_before_rendering(monkeypatch,
         render_template_previews(tmp_path, ["cinematic", "vlog"])
 
 
-def test_template_preview_fails_when_frame_extraction_produces_no_file(
-    monkeypatch, tmp_path
-):
+def test_template_preview_fails_when_frame_extraction_produces_no_file(monkeypatch, tmp_path):
     import video_edit_agent.rendering.template_preview as preview
 
     _write_preview_project(tmp_path)
@@ -274,7 +268,7 @@ def test_template_preview_wraps_ffmpeg_render_errors(monkeypatch, tmp_path):
     def fake_run_ffmpeg(command, **kwargs):
         nonlocal calls
         calls += 1
-        if command[0] == "ffprobe":
+        if Path(command[0]).name == "ffprobe":
             from types import SimpleNamespace
 
             return SimpleNamespace(stdout='{"streams":[{"width":320,"height":180}]}')
