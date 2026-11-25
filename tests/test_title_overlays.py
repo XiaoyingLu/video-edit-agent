@@ -121,14 +121,16 @@ def test_lower_third_schema_supports_bounded_secondary_context():
 
 
 @pytest.mark.parametrize("width,height", [(1920, 1080), (1080, 1920), (1080, 1080)])
+@pytest.mark.parametrize("accent_bar", [False, True])
 def test_renderer_builds_safe_lower_third_for_all_aspect_ratios(
-    tmp_path: Path, width: int, height: int
+    tmp_path: Path, width: int, height: int, accent_bar: bool
 ):
     overlay = _overlay(
         overlay_kind="lower_third",
         text="Lake Louise: Alberta",
         secondary_text="Canadian Rockies",
         animation="fade",
+        accent_bar=accent_bar,
     )
     command = _build_shot_render_command(
         "ffmpeg",
@@ -150,6 +152,12 @@ def test_renderer_builds_safe_lower_third_for_all_aspect_ratios(
     assert "Canadian Rockies" in graph
     assert "expansion=none" in graph
     assert "vtitle0secondary" in graph
+    if accent_bar:
+        assert "crop=w=iw*0.22:h='max(3,ih*0.012)':x=0:y=0" in graph
+        assert "[vtitle0bg][vtitle0accentsrc]overlay=" in graph
+        assert "[vtitle0accent]drawtext=" in graph
+    else:
+        assert "[vtitle0bg]drawtext=" in graph
 
 
 def test_legacy_linear_fade_and_slide_up_filter_expressions_are_unchanged():
@@ -421,6 +429,7 @@ def test_lower_third_ffmpeg_smoke_renders_and_moves_card_on_lavfi_source(tmp_pat
         text="Smoke test",
         secondary_text="Static lavfi background",
         animation="slide_up",
+        accent_bar=True,
         start_seconds=0,
         end_seconds=2,
     )
@@ -487,3 +496,29 @@ def test_lower_third_ffmpeg_smoke_renders_and_moves_card_on_lavfi_source(tmp_pat
     assert early_rows.size >= 5
     assert settled_rows.size >= 20
     assert float(np.median(early_rows)) > float(np.median(settled_rows)) + 20
+
+    color_frame = subprocess.run(
+        [
+            ffmpeg,
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-ss",
+            "0.8",
+            "-i",
+            str(rendered),
+            "-frames:v",
+            "1",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "rgb24",
+            "pipe:1",
+        ],
+        capture_output=True,
+        check=False,
+    )
+    assert color_frame.returncode == 0, color_frame.stderr.decode(errors="replace")
+    rgb = np.frombuffer(color_frame.stdout, dtype=np.uint8).reshape(180, 320, 3)
+    accent_pixels = (rgb[:, :, 0] > 180) & (rgb[:, :, 1] > 100) & (rgb[:, :, 2] < 130)
+    assert int(accent_pixels.sum()) >= 10
