@@ -109,17 +109,23 @@ def render(
         resolved_subtitle_font_size = (
             subtitle_font_size
             if subtitle_font_size is not None
-            else subtitle_spec.font_size if subtitle_spec else 28
+            else subtitle_spec.font_size
+            if subtitle_spec
+            else 28
         )
         resolved_subtitle_position = (
             subtitle_position
             if subtitle_position is not None
-            else subtitle_spec.position if subtitle_spec else "bottom"
+            else subtitle_spec.position
+            if subtitle_spec
+            else "bottom"
         )
         resolved_subtitle_style = (
             subtitle_style
             if subtitle_style is not None
-            else subtitle_spec.style if subtitle_spec else "classic"
+            else subtitle_spec.style
+            if subtitle_spec
+            else "classic"
         )
         report = render_project(
             folder,
