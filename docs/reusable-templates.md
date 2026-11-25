@@ -130,3 +130,22 @@ settings, use `--music-mode`, `--music-volume`, `--music-fade-in`,
 `--music-fade-out`, and `--music-ducking/--no-music-ducking` to record
 custom mix values explicitly. The command prints notes when title styling
 must fall back to safe defaults.
+
+## Tag-based recommendations
+
+Ask for up to three explainable matches using the tags declared by templates:
+
+```bash
+video-agent template recommend --mood warm --best-for travel
+video-agent template recommend --mood energetic --best-for short-form --limit 2
+```
+
+Repeat `--mood` or `--best-for` to combine multiple tags. Matching is exact
+after case, whitespace, underscore, and hyphen normalization; it does not use
+embeddings or make semantic guesses. Each matching `best_for` tag contributes
+two points and each matching `mood` tag contributes one point. Results are
+ranked by score, with template ID as a deterministic tie-breaker, and show the
+matched tags and source. No match is also a valid outcome. Recommendations
+never apply a template or alter project files. Use `--project` to include
+project-local templates and preserve the usual project-over-home-over-built-in
+lookup precedence.

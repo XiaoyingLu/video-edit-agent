@@ -9,6 +9,7 @@ from rich.table import Table
 from ..rendering.template_capture import save_template_from_project
 from ..rendering.template_preview import TemplatePreviewError, render_template_previews
 from ..rendering.title_overlays import suggest_narrative_title_sequences
+from ..template_recommendations import recommend_templates
 from ..templates import available_template_ids, load_template
 from .common import console
 
@@ -112,6 +113,57 @@ def validate_template(
         f"{len(spec.assets)} asset(s)."
     )
 
+
+
+@template_app.command("recommend")
+def recommend_template_command(
+    mood: Annotated[
+        list[str] | None, typer.Option("--mood", help="Mood tag to match; may be repeated.")
+    ] = None,
+    best_for: Annotated[
+        list[str] | None,
+        typer.Option("--best-for", help="Use-case tag to match; may be repeated."),
+    ] = None,
+    project: Annotated[
+        Path | None,
+        typer.Option(
+            "--project",
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder whose templates take precedence over home and built-ins.",
+        ),
+    ] = None,
+    limit: Annotated[int, typer.Option("--limit", min=1, max=3)] = 3,
+) -> None:
+    """Recommend up to three templates from explicit mood and use-case tags."""
+    try:
+        results = recommend_templates(
+            moods=mood or (), best_for=best_for or (), project_root=project, limit=limit
+        )
+    except (FileNotFoundError, OSError, ValueError) as exc:
+        console.print(f"[red]Template recommendation failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    if not results:
+        console.print("No templates matched those tags. Try broader or different tags.")
+        return
+
+    table = Table(title="Template Recommendations")
+    table.add_column("Template", style="bold cyan")
+    table.add_column("Score", justify="right")
+    table.add_column("Matched tags")
+    table.add_column("Source")
+    for item in results:
+        table.add_row(
+            item.template.id,
+            str(item.score),
+            ", ".join(item.matches),
+            str(item.source),
+        )
+    console.print(table)
+    console.print("Recommendations are suggestions only; no template was applied.")
 
 @template_app.command("apply")
 def apply_template(
