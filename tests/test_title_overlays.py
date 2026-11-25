@@ -512,9 +512,5 @@ def test_lower_third_ffmpeg_smoke_renders_and_moves_card_on_lavfi_source(tmp_pat
     )
     assert color_frame.returncode == 0, color_frame.stderr.decode(errors="replace")
     rgb = np.frombuffer(color_frame.stdout, dtype=np.uint8).reshape(180, 320, 3)
-    accent_pixels = (
-        (rgb[:, :, 0] > 180)
-        & (rgb[:, :, 1] > 100)
-        & (rgb[:, :, 2] < 130)
-    )
+    accent_pixels = (rgb[:, :, 0] > 180) & (rgb[:, :, 1] > 100) & (rgb[:, :, 2] < 130)
     assert int(accent_pixels.sum()) >= 10
