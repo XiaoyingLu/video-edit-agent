@@ -1,11 +1,12 @@
 """Commands for discovering and validating reusable editing templates."""
 
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 import typer
 from rich.table import Table
 
+from ..rendering.template_capture import save_template_from_project
 from ..rendering.template_preview import TemplatePreviewError, render_template_previews
 from ..rendering.title_overlays import suggest_narrative_title_sequences
 from ..templates import available_template_ids, load_template
@@ -212,3 +213,82 @@ def preview_templates(
     console.print(f"Sampled approved footage at {timestamp:.2f}s.")
     console.print(f"Comparison page: [green]{index_file}[/green]")
     console.print("Previews are visual comparisons only; no template or title was applied.")
+
+
+@template_app.command("save")
+def save_template(
+    folder: Annotated[
+        Path,
+        typer.Argument(
+            ...,
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Project folder with an approved optimized timeline.",
+        ),
+    ],
+    template_id: Annotated[
+        str, typer.Argument(help="New template ID, using lowercase letters, digits, and hyphens.")
+    ],
+    from_project: Annotated[
+        bool,
+        typer.Option(
+            "--from-project",
+            help="Capture approved title styling and transitions from this project.",
+        ),
+    ] = False,
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            help="YAML destination (default: ~/.video-agent/templates/<id>.yaml).",
+        ),
+    ] = None,
+    music_mode: Annotated[
+        Literal["original", "music_only", "blend"] | None,
+        typer.Option(
+            "--music-mode", help="Override inferred profile: original, music_only, or blend."
+        ),
+    ] = None,
+    music_volume: Annotated[float | None, typer.Option("--music-volume", min=0.01, max=2.0)] = None,
+    music_fade_in: Annotated[float | None, typer.Option("--music-fade-in", min=0, max=30)] = None,
+    music_fade_out: Annotated[float | None, typer.Option("--music-fade-out", min=0, max=30)] = None,
+    music_ducking: Annotated[
+        bool | None,
+        typer.Option("--music-ducking/--no-music-ducking", help="Override inferred music ducking."),
+    ] = None,
+) -> None:
+    """Save a reusable template from reviewed project settings."""
+    if not from_project:
+        console.print("[red]Specify --from-project to capture a project.[/red]")
+        raise typer.Exit(code=1)
+    try:
+        template, destination, notes = save_template_from_project(
+            folder,
+            template_id,
+            output_path=output,
+            music_mode=music_mode,
+            music_volume=music_volume,
+            music_fade_in=music_fade_in,
+            music_fade_out=music_fade_out,
+            music_ducking=music_ducking,
+        )
+    except (FileNotFoundError, FileExistsError, OSError, ValueError) as exc:
+        console.print(f"[red]Template save failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    console.print(f"[bold green]Template saved:[/bold green] {template.id} v{template.version}")
+    console.print(f"YAML: [green]{destination}[/green]")
+    console.print(
+        f"Captured {len(template.title_styles)} title style(s), "
+        f"{len(template.sequences)} sequence(s), and transition '{template.transitions.default}'."
+    )
+    console.print(
+        f"Music: {template.music.mode}, volume {template.music.volume:.2f}, "
+        f"fades {template.music.fade_in:.1f}s/{template.music.fade_out:.1f}s, "
+        f"ducking {'on' if template.music.ducking else 'off'}."
+    )
+    for note in notes:
+        console.print(f"[yellow]Note:[/yellow] {note}")
+    console.print("No footage, title text, or editorial decisions were copied.")

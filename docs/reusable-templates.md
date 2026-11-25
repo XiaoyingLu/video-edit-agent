@@ -106,3 +106,27 @@ Generated overlays always start with `decision: pending`. Applying a
 template never approves titles or bypasses `review-title-overlays`.
 Existing schema 1.0 title-overlay documents remain readable; newly generated
 template-driven documents use schema 1.1.
+
+## Save a reusable template from a project
+
+Capture a project's approved title styling and transition choices, plus the
+render profile associated with its creative style:
+
+```bash
+video-agent template save ./my-project my-travel-look --from-project
+```
+
+The default destination is `~/.video-agent/templates/my-travel-look.yaml`,
+so the result can be reused across projects. Use `--output` to save it in a
+project-local template directory or another location. Existing files are
+never overwritten.
+
+Only approved opening/closing text-overlay styling is captured. Actual title
+text, footage paths, assets, clip selections, timings, and approval decisions
+are not copied. Transition defaults are inferred from the approved timeline.
+The project's creative style selects the starting render/music profile;
+because past `render-draft` CLI overrides are not persisted as project
+settings, use `--music-mode`, `--music-volume`, `--music-fade-in`,
+`--music-fade-out`, and `--music-ducking/--no-music-ducking` to record
+custom mix values explicitly. The command prints notes when title styling
+must fall back to safe defaults.
