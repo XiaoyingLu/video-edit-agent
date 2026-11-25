@@ -143,26 +143,32 @@ def _create_storyboard_video_draft(
         "for every shot "
         f"(score range {min(scores):.1f}–{max(scores):.1f})."
     )
-    console.print(
-        "[yellow]Review the saved footage-suggestions.json. The next confirmation "
-        "explicitly approves the top-ranked match for every storyboard shot; "
-        "matching scores are recommendations, not guarantees.[/yellow]"
-    )
-    decision = console.input(
-        "Approve all top-ranked footage matches and render this storyboard? [y/N]: "
-    )
-    if decision.strip().lower() not in {"y", "yes"}:
-        console.print(
-            "[yellow]Rendering cancelled. Storyboard and footage suggestions "
-            "were preserved.[/yellow]"
-        )
-        raise typer.Exit(code=2)
     project_plan, plan_path = review_storyboard_footage(
         folder,
         selections=selections,
         plan_path=plan_path,
         suggestions_path=suggestions_path,
     )
+    storyboard_path, _, image_count = generate_storyboard_review(
+        folder, plan_path=plan_path
+    )
+    console.print(
+        f"Storyboard preview: [green]{storyboard_path}[/green] "
+        f"({image_count} representative frame(s))."
+    )
+    console.print(
+        "[yellow]Open storyboard.html to inspect the proposed footage assignments. "
+        "The matching scores are recommendations, not guarantees.[/yellow]"
+    )
+    decision = console.input(
+        "Continue to build and render this storyboard? [y/N]: "
+    )
+    if decision.strip().lower() not in {"y", "yes"}:
+        console.print(
+            "[yellow]Rendering cancelled. The storyboard and footage assignments "
+            "were preserved for review; nothing was approved or rendered.[/yellow]"
+        )
+        raise typer.Exit(code=2)
     project_plan, plan_path = approve_storyboard(folder, plan_path=plan_path)
     timeline = build_storyboard_timeline(folder, plan_path=plan_path)
     timeline_path = folder.resolve() / ".video-agent" / "optimized-timeline.json"
@@ -250,13 +256,13 @@ def create_video(
     storyboard: Annotated[
         bool,
         typer.Option(
-            "--storyboard",
+            "--storyboard/--highlights",
             help=(
-                "Use AI storyboard planning and semantic footage matching instead of "
-                "highlight ranking."
+                "Use AI storyboard planning (default), or opt into the legacy "
+                "highlight-ranked workflow with --highlights."
             ),
         ),
-    ] = False,
+    ] = True,
 ) -> None:
     """Create and render a first draft; use advanced commands for shot-by-shot review."""
     try:
