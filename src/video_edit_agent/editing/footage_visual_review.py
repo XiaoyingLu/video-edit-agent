@@ -131,7 +131,7 @@ def generate_footage_visual_review(
         )
 
     title = plan.story_treatment.working_title if plan.story_treatment else "Storyboard"
-    document = f"""<!doctype html>
+    suggestions_sha256 = hashlib.sha256(loaded[1].read_bytes()).hexdigest()\n    document = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(title)} — Footage Review</title>
 <style>
@@ -164,7 +164,7 @@ document.getElementById("export").addEventListener("click", () => {{
    const checked = card.querySelector('input[type="radio"]:checked');
    selections[card.querySelector(".shot-heading span").textContent] = checked ? Number(checked.value) : 0;
  }});
- const payload = {{schema_version:"1.0", selections}};
+ const payload = {{schema_version:"1.0", suggestions_sha256:"__SUGGESTIONS_SHA256__", selections}};
  const blob = new Blob([JSON.stringify(payload, null, 2)], {{type:"application/json"}});
  const url = URL.createObjectURL(blob);
  const link = document.createElement("a");
@@ -179,7 +179,7 @@ document.getElementById("export").addEventListener("click", () => {{
     return destination, shot_count, candidate_count
 
 
-def load_footage_review_selections(path: Path, *, expected_shot_ids: set[str]) -> tuple[dict[str, int], set[str]]:
+def load_footage_review_selections(\n    path: Path, *, expected_shot_ids: set[str], suggestions_path: Path\n) -> tuple[dict[str, int], set[str]]:
     """Load the browser export and reject stale or incomplete shot decisions."""
     try:
         payload = json.loads(path.expanduser().read_text(encoding="utf-8"))
