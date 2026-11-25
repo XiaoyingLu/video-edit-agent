@@ -305,11 +305,11 @@ For a quick first draft, use one natural-language command. It analyzes the foota
 docker compose run --rm video-agent create-video ./travel-test --prompt "Create a 60-second cinematic travel video"
 ```
 
-Add `--review` if you want one confirmation before rendering:
+The storyboard-first workflow always shows a visual preview and asks for confirmation before rendering. If you explicitly choose the legacy highlight-ranked workflow, add `--highlights --review` to request the same confirmation there:
 
 ```bash
 docker compose run --rm -it video-agent create-video ./travel-test \
-  --prompt "Create a 60-second cinematic travel video" --review
+  --prompt "Create a 60-second cinematic travel video" --highlights --review
 ```
 
 The default workflow uses an AI-generated narrative storyboard and semantic footage matching. It analyzes the footage, creates a storyboard, assigns the top-ranked source match to each shot, and generates a local visual review page:
