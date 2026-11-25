@@ -136,8 +136,7 @@ def append_music_mix(
     filters.append(chain + "[musicbed]")
 
     loudnorm = (
-        f"loudnorm=I={target_lufs:.1f}:TP={true_peak_db:.1f}:"
-        f"LRA={loudness_range:.1f}:linear=false"
+        f"loudnorm=I={target_lufs:.1f}:TP={true_peak_db:.1f}:LRA={loudness_range:.1f}:linear=false"
     )
     if mode == "music_only":
         if loudness_normalization:
