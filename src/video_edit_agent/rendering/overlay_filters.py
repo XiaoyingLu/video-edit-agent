@@ -194,9 +194,6 @@ def _append_title_overlay_filters(
         if overlay.overlay_kind == "lower_third":
             # Percentage-based geometry keeps the card inside safe margins for
             # landscape, portrait, and square output profiles.
-            card_width = "w*0.88" if height > width else "w*0.62"
-            card_height = "h*0.16"
-            _, card_y = _animation_expressions(overlay, "h*0.76", lower_third=True)
             card_label = f"vtitle{index}card"
             card_width = "iw*0.88" if height > width else "iw*0.62"
             card_height = "ih*0.16"
