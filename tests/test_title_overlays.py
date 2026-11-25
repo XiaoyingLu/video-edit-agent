@@ -478,9 +478,9 @@ def test_lower_third_ffmpeg_smoke_renders_and_moves_card_on_lavfi_source(tmp_pat
         )
         assert frame.returncode == 0, frame.stderr.decode(errors="replace")
         pixels = np.frombuffer(frame.stdout, dtype=np.uint8).reshape(180, 320)
-        # The card is a dark translucent rectangle; exclude its white title glyphs.
-        dark_pixels_per_row = (pixels[:, 19:218] < 100).sum(axis=1)
-        return np.flatnonzero(dark_pixels_per_row > 130)
+        # Sample inside the card but to the left of the white title glyphs.
+        dark_pixels_per_row = (pixels[:, 20:27] < 100).sum(axis=1)
+        return np.flatnonzero(dark_pixels_per_row > 5)
 
     early_rows = dark_card_rows(0.25)
     settled_rows = dark_card_rows(0.8)
