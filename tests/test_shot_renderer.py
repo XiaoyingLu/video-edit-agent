@@ -894,7 +894,7 @@ def test_shot_renderer_builds_centered_beat_zoom_filter(tmp_path):
 
 
 def test_beat_zoom_paths_follow_music_beats_and_transition_overlaps(tmp_path):
-        from video_edit_agent.music.schemas import MusicAnalysis
+    from video_edit_agent.music.schemas import MusicAnalysis
 
     artifact = tmp_path / ".video-agent"
     artifact.mkdir()
