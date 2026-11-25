@@ -132,6 +132,19 @@ def _animation_expressions(
     return alpha, y_position
 
 
+def _horizontal_animation_expression(overlay: TitleOverlay, base_x: str) -> str:
+    """Build the supported right-to-left title entrance expression."""
+    if overlay.animation != "slide_left":
+        return base_x
+    slide_end = overlay.start_seconds + 0.45
+    progress = _ease_progress(overlay.start_seconds, 0.45, overlay.easing)
+    if overlay.easing == "linear":
+        movement = f"80*({_seconds(slide_end)}-t)/0.45"
+    else:
+        movement = f"80*(1-({progress}))"
+    return f"if(lt(t,{_seconds(slide_end)}),({base_x})+{movement},({base_x}))"
+
+
 def _append_asset_overlay_filters(
     filters: list[str],
     asset_overlays: list[tuple[TitleOverlay, Path]],
@@ -184,9 +197,20 @@ def _append_title_overlay_filters(
             card_width = "w*0.88" if height > width else "w*0.62"
             card_height = "h*0.16"
             _, card_y = _animation_expressions(overlay, "h*0.76", lower_third=True)
+            card_label = f"vtitle{index}card"
+            card_width = "iw*0.88" if height > width else "iw*0.62"
+            card_height = "ih*0.16"
+            _, card_y = _animation_expressions(overlay, "main_h*0.76", lower_third=True)
+            card_duration = overlay.end_seconds - overlay.start_seconds
             filters.append(
-                f"[{video_label}]drawbox=x=w*0.06:y='{card_y}':w={card_width}:"
-                f"h={card_height}:color=black@0.62:t=fill:"
+                f"color=c=black@0.62:s={width}x{height}:r=25:d={_seconds(card_duration)},"
+                f"format=rgba,crop=w={card_width}:h={card_height}:x=0:y=0,"
+                f"setpts=PTS-STARTPTS+{_seconds(overlay.start_seconds)}/TB"
+                f"[{card_label}src]"
+            )
+            filters.append(
+                f"[{video_label}][{card_label}src]overlay="
+                f"x='main_w*0.06':y='{card_y}':eof_action=pass:shortest=0:"
                 f"enable='between(t,{_seconds(overlay.start_seconds)},"
                 f"{_seconds(overlay.end_seconds)})'"
                 f"[{next_label}bg]"
@@ -235,10 +259,11 @@ def _append_title_overlay_filters(
             overlay.placement
         ]
         alpha, y_position = _animation_expressions(overlay, base_y)
+        x_position = _horizontal_animation_expression(overlay, "(w-text_w)/2")
         filters.append(
             f"[{video_label}]drawtext=text='{escaped_text}':expansion=none:"
             f"{font_option}:fontsize={font_size}:fontcolor=white:"
-            f"x=(w-text_w)/2:y='{y_position}':alpha='{alpha}':{box_options}:"
+            f"x='{x_position}':y='{y_position}':alpha='{alpha}':{box_options}:"
             f"enable='between(t,{_seconds(overlay.start_seconds)},"
             f"{_seconds(overlay.end_seconds)})'"
             f"[{next_label}]"
