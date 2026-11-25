@@ -421,6 +421,7 @@ def test_lower_third_ffmpeg_smoke_renders_and_moves_card_on_lavfi_source(tmp_pat
         text="Smoke test",
         secondary_text="Static lavfi background",
         animation="slide_up",
+        accent_bar=True,
         start_seconds=0,
         end_seconds=2,
     )
@@ -487,3 +488,33 @@ def test_lower_third_ffmpeg_smoke_renders_and_moves_card_on_lavfi_source(tmp_pat
     assert early_rows.size >= 5
     assert settled_rows.size >= 20
     assert float(np.median(early_rows)) > float(np.median(settled_rows)) + 20
+
+    color_frame = subprocess.run(
+        [
+            ffmpeg,
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-ss",
+            "0.8",
+            "-i",
+            str(rendered),
+            "-frames:v",
+            "1",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "rgb24",
+            "pipe:1",
+        ],
+        capture_output=True,
+        check=False,
+    )
+    assert color_frame.returncode == 0, color_frame.stderr.decode(errors="replace")
+    rgb = np.frombuffer(color_frame.stdout, dtype=np.uint8).reshape(180, 320, 3)
+    accent_pixels = (
+        (rgb[:, :, 0] > 180)
+        & (rgb[:, :, 1] > 100)
+        & (rgb[:, :, 2] < 130)
+    )
+    assert int(accent_pixels.sum()) >= 10

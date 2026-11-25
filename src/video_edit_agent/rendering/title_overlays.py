@@ -28,6 +28,7 @@ class TitleOverlay(BaseModel):
     asset_scale: float = Field(default=0.2, gt=0, le=1)
     asset_fps: int = Field(default=30, ge=1, le=120)
     secondary_text: str | None = Field(default=None, max_length=100)
+    accent_bar: bool = False
     start_seconds: float = Field(ge=0)
     end_seconds: float = Field(gt=0)
     placement: Literal["top", "center", "bottom"] = "bottom"
@@ -252,6 +253,7 @@ def _template_overlay_style(template, style_name: str) -> dict:
         "placement": style.placement,
         "style": renderer_style,
         "animation": style.animation,
+        "accent_bar": style.accent_bar,
     }
 
 
