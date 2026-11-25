@@ -642,7 +642,6 @@ def test_asset_overlay_ffmpeg_smoke_composites_png_sequence_only_during_approved
     assert red_pixel_count(1.75) == 0
 
 
-
 def test_lower_third_uses_configured_template_accent_color(tmp_path: Path):
     from video_edit_agent.rendering.title_overlays import _template_overlay_style
     from video_edit_agent.templates import load_builtin_template

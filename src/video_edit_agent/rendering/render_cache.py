@@ -25,8 +25,12 @@ def _write_fingerprint_index(path: Path, index: dict) -> None:
     temporary = None
     try:
         with tempfile.NamedTemporaryFile(
-            mode="w", encoding="utf-8", prefix=".fingerprints-", suffix=".json",
-            dir=path.parent, delete=False
+            mode="w",
+            encoding="utf-8",
+            prefix=".fingerprints-",
+            suffix=".json",
+            dir=path.parent,
+            delete=False,
         ) as stream:
             temporary = Path(stream.name)
             json.dump(index, stream, sort_keys=True, separators=(",", ":"))
@@ -47,7 +51,7 @@ def _file_digest(path: Path) -> str:
 def build_render_cache_key(
     dependencies: list[Path], config: dict, *, fingerprint_index_path: Path | None = None
 ) -> str:
-    """Hash render settings and dependency content, reusing hashes while file metadata is stable."""
+    """Hash render settings and dependencies, reusing hashes while metadata is stable."""
     digest = hashlib.sha256()
     digest.update(json.dumps(config, sort_keys=True, separators=(",", ":")).encode())
     index = _load_fingerprint_index(fingerprint_index_path)
@@ -58,8 +62,10 @@ def build_render_cache_key(
         stat = path.stat()
         metadata = {"size": stat.st_size, "mtime_ns": stat.st_mtime_ns}
         cached = index.get(str(path))
-        if isinstance(cached, dict) and all(
-            cached.get(key) == value for key, value in metadata.items()
+        if (
+            isinstance(cached, dict)
+            and isinstance(cached.get("sha256"), str)
+            and all(cached.get(key) == value for key, value in metadata.items())
         ):
             file_hash = cached.get("sha256")
         else:
@@ -82,8 +88,10 @@ def restore_cached_render(cache_file: Path, destination: Path) -> bool:
     temporary = None
     try:
         with tempfile.NamedTemporaryFile(
-            prefix=".video-agent-cache-", suffix=destination.suffix,
-            dir=destination.parent, delete=False
+            prefix=".video-agent-cache-",
+            suffix=destination.suffix,
+            dir=destination.parent,
+            delete=False,
         ) as stream:
             temporary = Path(stream.name)
         shutil.copy2(cache_file, temporary)
@@ -102,8 +110,10 @@ def store_render_cache(rendered_file: Path, cache_file: Path) -> None:
     temporary = None
     try:
         with tempfile.NamedTemporaryFile(
-            prefix=".video-agent-cache-", suffix=".mp4",
-            dir=cache_file.parent, delete=False
+            prefix=".video-agent-cache-",
+            suffix=".mp4",
+            dir=cache_file.parent,
+            delete=False,
         ) as stream:
             temporary = Path(stream.name)
         shutil.copy2(rendered_file, temporary)
