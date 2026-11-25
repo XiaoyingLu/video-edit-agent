@@ -746,49 +746,14 @@ def render_approved_shot_timeline(
             raise RenderError(
                 f"asset overlay {asset_overlay.overlay_id} exceeds rendered timeline duration"
             )
-    render_result = _render_and_validate_shot_output(
-        root=root,
-        timeline_file=timeline_file,
-        timeline=timeline,
-        approved=approved,
-        approved_titles=approved_titles,
-        asset_overlays=approved_assets,
-        selected_music=selected_music,
-        music_mode=music_mode,
-        music_volume=music_volume,
-        music_fade_in=music_fade_in,
-        music_fade_out=music_fade_out,
-        music_ducking=music_ducking,
-        music_loudness_normalization=music_loudness_normalization,
-        music_target_lufs=music_target_lufs,
-        music_true_peak_db=music_true_peak_db,
-        music_loudness_range=music_loudness_range,
-        ffmpeg=ffmpeg,
-        ffprobe=ffprobe,
-        destination=destination,
-        width=width,
-        height=height,
-        expected_duration=expected_duration,
-        timeout_seconds=timeout_seconds,
-        dry_run=dry_run,
-        fit_mode=fit_mode,
-        reframe_mode=reframe_mode,
-        crop_anchors_path=crop_anchors_path,
-        beat_punch_in=beat_punch_in,
-        clip_inputs=clip_inputs,
-    )
-    if render_result is None:
-        return None
-    output_probe, output_video, output_audio, actual_duration = render_result
-
-    dependencies = [timeline_file]
+    dependencies = [timeline_file, *source_paths]
     if title_file is not None:
         dependencies.append(title_file)
     for asset_overlay, asset_path in approved_assets:
         if asset_overlay.asset_format == "webm":
             dependencies.append(asset_path)
         else:
-            frame_pattern = re.sub(r"%0\d+d", "*", asset_path.name)
+            frame_pattern = re.sub(r"%0\\d+d", "*", asset_path.name)
             dependencies.extend(asset_path.parent.glob(frame_pattern))
     if selected_music is not None:
         dependencies.append(selected_music)
@@ -798,7 +763,116 @@ def render_approved_shot_timeline(
     plan_file = root / ".video-agent" / "video-project-plan.json"
     if plan_file.is_file():
         dependencies.append(plan_file)
-    register_artifact(root, destination, dependencies=dependencies, verify_content=False)
+    if crop_anchors_path is not None:
+        dependencies.append(
+            crop_anchors_path if crop_anchors_path.is_absolute() else root / crop_anchors_path
+        )
+
+    render_config = {
+        "cache_schema": 1,
+        "width": width,
+        "height": height,
+        "expected_duration": expected_duration,
+        "fit_mode": fit_mode,
+        "reframe_mode": reframe_mode,
+        "crop_anchors_path": str(crop_anchors_path) if crop_anchors_path else None,
+        "beat_punch_in": beat_punch_in,
+        "music_mode": music_mode,
+        "music_volume": music_volume,
+        "music_fade_in": music_fade_in,
+        "music_fade_out": music_fade_out,
+        "music_ducking": music_ducking,
+        "music_loudness_normalization": music_loudness_normalization,
+        "music_target_lufs": music_target_lufs,
+        "music_true_peak_db": music_true_peak_db,
+        "music_loudness_range": music_loudness_range,
+        "ffmpeg": ffmpeg,
+        "approved_clip_inputs": [
+            (str(path), start, end, has_audio, transition, transition_duration)
+            for path, start, end, has_audio, transition, transition_duration in clip_inputs
+        ],
+    }
+    from .render_cache import (
+        build_render_cache_key,
+        restore_cached_render,
+        store_render_cache,
+    )
+
+    cache_key = build_render_cache_key(dependencies, render_config)
+    cache_file = root / ".video-agent" / "render-cache" / f"{cache_key}.mp4"
+    render_result = None
+    if not dry_run and restore_cached_render(cache_file, destination):
+        try:
+            cached_probe = _run_probe(ffprobe, destination)
+            cached_streams = cached_probe.get("streams", [])
+            cached_video = next(
+                (item for item in cached_streams if item.get("codec_type") == "video"), None
+            )
+            cached_audio = next(
+                (item for item in cached_streams if item.get("codec_type") == "audio"), None
+            )
+            cached_duration = float(cached_probe.get("format", {}).get("duration") or 0)
+            if (
+                cached_video is not None
+                and cached_audio is not None
+                and cached_video.get("codec_name") == "h264"
+                and cached_audio.get("codec_name") == "aac"
+                and (int(cached_video.get("width") or 0), int(cached_video.get("height") or 0))
+                == (width, height)
+                and cached_duration > 0
+                and abs(cached_duration - expected_duration) <= max(0.75, len(clip_inputs) / 30.0 * 2)
+            ):
+                render_result = (cached_probe, cached_video, cached_audio, cached_duration)
+            else:
+                destination.unlink(missing_ok=True)
+        except (RenderError, OSError, ValueError, TypeError):
+            destination.unlink(missing_ok=True)
+
+    if render_result is None:
+        render_result = _render_and_validate_shot_output(
+            root=root,
+            timeline_file=timeline_file,
+            timeline=timeline,
+            approved=approved,
+            approved_titles=approved_titles,
+            asset_overlays=approved_assets,
+            selected_music=selected_music,
+            music_mode=music_mode,
+            music_volume=music_volume,
+            music_fade_in=music_fade_in,
+            music_fade_out=music_fade_out,
+            music_ducking=music_ducking,
+            music_loudness_normalization=music_loudness_normalization,
+            music_target_lufs=music_target_lufs,
+            music_true_peak_db=music_true_peak_db,
+            music_loudness_range=music_loudness_range,
+            ffmpeg=ffmpeg,
+            ffprobe=ffprobe,
+            destination=destination,
+            width=width,
+            height=height,
+            expected_duration=expected_duration,
+            timeout_seconds=timeout_seconds,
+            dry_run=dry_run,
+            fit_mode=fit_mode,
+            reframe_mode=reframe_mode,
+            crop_anchors_path=crop_anchors_path,
+            beat_punch_in=beat_punch_in,
+            clip_inputs=clip_inputs,
+        )
+        if render_result is not None:
+            store_render_cache(destination, cache_file)
+
+    if render_result is None:
+        return None
+    output_probe, output_video, output_audio, actual_duration = render_result
+    register_artifact(
+        root,
+        destination,
+        dependencies=dependencies,
+        config=render_config,
+        verify_content=False,
+    )
 
     return RenderReport(
         output_path=str(destination),

@@ -994,3 +994,31 @@ def test_face_reframing_returns_smoothed_per_clip_paths(tmp_path, monkeypatch):
     assert len(paths[0]) >= 4
     assert paths[0][0][0] == 0.0
     assert paths[0][0][1:] == pytest.approx((0.6, 0.4))
+
+
+def test_render_cache_key_is_stable_and_invalidates_on_dependency_or_config_change(tmp_path):
+    from video_edit_agent.rendering.render_cache import build_render_cache_key
+
+    source = tmp_path / "source.mp4"
+    source.write_bytes(b"source-one")
+    first = build_render_cache_key([source], {"width": 1080, "fit": "crop"})
+    assert build_render_cache_key([source], {"fit": "crop", "width": 1080}) == first
+    assert build_render_cache_key([source], {"width": 720, "fit": "crop"}) != first
+    source.write_bytes(b"source-two")
+    assert build_render_cache_key([source], {"width": 1080, "fit": "crop"}) != first
+
+
+def test_render_cache_round_trip_and_empty_cache_miss(tmp_path):
+    from video_edit_agent.rendering.render_cache import (
+        restore_cached_render,
+        store_render_cache,
+    )
+
+    cache_file = tmp_path / ".video-agent" / "render-cache" / "key.mp4"
+    destination = tmp_path / "rendered.mp4"
+    assert not restore_cached_render(cache_file, destination)
+    rendered = tmp_path / "fresh.mp4"
+    rendered.write_bytes(b"validated-render")
+    store_render_cache(rendered, cache_file)
+    assert restore_cached_render(cache_file, destination)
+    assert destination.read_bytes() == rendered.read_bytes()
