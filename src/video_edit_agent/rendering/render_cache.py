@@ -73,7 +73,7 @@ def build_render_cache_key(
             index[str(path)] = {**metadata, "sha256": file_hash}
             updated = True
         digest.update(str(path).encode())
-        digest.update(b"\\0")
+        digest.update(b"\0")
         digest.update(str(file_hash).encode())
     if updated and fingerprint_index_path is not None:
         _write_fingerprint_index(fingerprint_index_path, index)
