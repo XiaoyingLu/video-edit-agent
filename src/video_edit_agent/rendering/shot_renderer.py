@@ -820,9 +820,8 @@ def render_approved_shot_timeline(
                 and (int(cached_video.get("width") or 0), int(cached_video.get("height") or 0))
                 == (width, height)
                 and cached_duration > 0
-                and abs(cached_duration - expected_duration) <= max(
-                    0.75, len(clip_inputs) / 30.0 * 2
-                )
+                and abs(cached_duration - expected_duration)
+                <= max(0.75, len(clip_inputs) / 30.0 * 2)
             ):
                 render_result = (cached_probe, cached_video, cached_audio, cached_duration)
             else:

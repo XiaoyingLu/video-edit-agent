@@ -33,8 +33,10 @@ def restore_cached_render(cache_file: Path, destination: Path) -> bool:
     temporary = None
     try:
         with tempfile.NamedTemporaryFile(
-            prefix=".video-agent-cache-", suffix=destination.suffix,
-            dir=destination.parent, delete=False,
+            prefix=".video-agent-cache-",
+            suffix=destination.suffix,
+            dir=destination.parent,
+            delete=False,
         ) as stream:
             temporary = Path(stream.name)
         shutil.copy2(cache_file, temporary)
@@ -53,8 +55,10 @@ def store_render_cache(rendered_file: Path, cache_file: Path) -> None:
     temporary = None
     try:
         with tempfile.NamedTemporaryFile(
-            prefix=".video-agent-cache-", suffix=".mp4",
-            dir=cache_file.parent, delete=False,
+            prefix=".video-agent-cache-",
+            suffix=".mp4",
+            dir=cache_file.parent,
+            delete=False,
         ) as stream:
             temporary = Path(stream.name)
         shutil.copy2(rendered_file, temporary)
