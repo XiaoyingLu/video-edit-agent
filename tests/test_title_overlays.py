@@ -402,7 +402,6 @@ def test_slide_left_template_animation_is_preserved_and_rendered(tmp_path: Path)
     assert "x='if(lt(t,0.450000)" in graph
 
 
-
 def test_lower_third_ffmpeg_smoke_renders_and_moves_card_on_lavfi_source(tmp_path: Path):
     """Exercise real FFmpeg filter parsing and verify the card moves between frames."""
     import shutil
