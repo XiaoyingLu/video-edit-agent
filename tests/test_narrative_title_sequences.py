@@ -9,6 +9,7 @@ from video_edit_agent.editing.planning_schemas import (
     StoryTreatment,
     VideoProjectPlan,
 )
+from video_edit_agent.models import MediaInfo, ProjectAnalysis
 from video_edit_agent.editing.timeline_schemas import (
     DraftTimelineClip,
     ProjectDraftTimeline,
@@ -221,3 +222,62 @@ sequences:
     monkeypatch.setattr(title_overlays, "validate_artifact", lambda *_: None)
     document, _ = title_overlays.suggest_narrative_title_sequences(tmp_path)
     assert [item.overlay_id for item in document.overlays] == ["opening-title", "opening-2"]
+
+
+
+def test_date_and_location_slots_use_project_metadata_and_track_analysis(
+    tmp_path: Path, monkeypatch
+):
+    _write_inputs(tmp_path)
+    plan_path = tmp_path / ".video-agent" / "video-project-plan.json"
+    plan_data = json.loads(plan_path.read_text(encoding="utf-8"))
+    plan_data["location"] = "Lisbon"
+    plan_path.write_text(json.dumps(plan_data), encoding="utf-8")
+
+    analysis = ProjectAnalysis(
+        project_path=str(tmp_path),
+        video_count=2,
+        total_duration_seconds=20,
+        videos=[
+            MediaInfo(
+                path="later.mp4",
+                duration_seconds=10,
+                capture_timestamp="2026-05-18T10:00:00Z",
+                has_video=True,
+                has_audio=True,
+            ),
+            MediaInfo(
+                path="earlier.mp4",
+                duration_seconds=10,
+                capture_timestamp="2026-05-02T10:00:00Z",
+                has_video=True,
+                has_audio=True,
+            ),
+        ],
+    )
+    analysis_path = tmp_path / ".video-agent" / "analysis.json"
+    analysis_path.write_text(analysis.model_dump_json(), encoding="utf-8")
+
+    registered = []
+    monkeypatch.setattr(title_overlays, "validate_artifact", lambda *_: None)
+    monkeypatch.setattr(
+        title_overlays,
+        "register_artifact",
+        lambda root, artifact, dependencies: registered.append((artifact, dependencies)),
+    )
+    document, _ = title_overlays.suggest_narrative_title_sequences(
+        tmp_path, template_id="travel-montage"
+    )
+    texts = [item.text for item in document.overlays]
+    assert "May 2026" in texts
+    assert "Lisbon" in texts
+    assert analysis_path in registered[0][1]
+
+
+def test_date_and_location_slots_remain_empty_without_metadata(tmp_path: Path, monkeypatch):
+    _write_inputs(tmp_path)
+    monkeypatch.setattr(title_overlays, "validate_artifact", lambda *_: None)
+    document, _ = title_overlays.suggest_narrative_title_sequences(
+        tmp_path, template_id="travel-montage"
+    )
+    assert all(item.text not in {"May 2026", "Lisbon"} for item in document.overlays)

@@ -177,6 +177,7 @@ class VideoProjectPlan(BaseModel):
 
     schema_version: Literal["1.0"] = "1.0"
     project_path: str
+    location: str | None = Field(default=None, min_length=1, max_length=100)
     source_editing_plan: str = ".video-agent/editing-plan.json"
     source_music_analysis: str | None = None
     brief: CreativeBrief
