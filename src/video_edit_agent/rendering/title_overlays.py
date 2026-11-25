@@ -1,6 +1,7 @@
 """Declarative, reviewable title overlays for approved draft timelines."""
 
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
@@ -10,6 +11,7 @@ from ..artifact_tracking import register_artifact, validate_artifact
 from ..atomic_io import write_json_atomic
 from ..editing.planning_schemas import VideoProjectPlan
 from ..editing.timeline_schemas import ProjectDraftTimeline
+from ..models import ProjectAnalysis
 from ..templates import load_template
 
 
@@ -297,6 +299,11 @@ def suggest_narrative_title_sequences(
     template, template_path = load_template(template_id, root)
     timeline = ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
     plan = VideoProjectPlan.model_validate_json(plan_file.read_text(encoding="utf-8"))
+    analysis_file = root / ".video-agent" / "analysis.json"
+    analysis: ProjectAnalysis | None = None
+    if analysis_file.is_file():
+        validate_artifact(root, analysis_file)
+        analysis = ProjectAnalysis.model_validate_json(analysis_file.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root or Path(plan.project_path).resolve() != root:
         raise ValueError("title sequence inputs belong to a different project folder")
     if not timeline.timeline_approved:
@@ -329,12 +336,30 @@ def suggest_narrative_title_sequences(
         )
 
     treatment = plan.story_treatment
+    capture_dates: list[datetime] = []
+    if analysis is not None:
+        for media in analysis.videos:
+            value = media.capture_timestamp
+            if not value:
+                continue
+            normalized = value.strip()
+            if normalized.endswith("Z"):
+                normalized = normalized[:-1] + "+00:00"
+            try:
+                capture_dates.append(datetime.fromisoformat(normalized))
+            except ValueError:
+                continue
+    project_date = (
+        min(capture_dates, key=lambda value: value.timestamp()).astimezone().strftime("%b %Y")
+        if capture_dates
+        else ""
+    )
     slot_values = {
         "{title}": treatment.working_title.strip(),
         "{logline}": treatment.logline.strip(),
         "{closing_line}": (treatment.narrative_arc[-1].strip() or "The journey continues"),
-        "{date}": "",
-        "{location}": "",
+        "{date}": project_date,
+        "{location}": (plan.location or "").strip(),
     }
     limits = {"{title}": 40, "{logline}": 48, "{closing_line}": 40, "{date}": 40, "{location}": 40}
     overlays: list[TitleOverlay] = []
@@ -386,5 +411,6 @@ def suggest_narrative_title_sequences(
         template_source=str(template_path),
         overlays=overlays,
     )
-    save_title_overlays(root, document, destination)
+    dependencies = [analysis_file] if analysis is not None else []
+    save_title_overlays(root, document, destination, dependencies=dependencies)
     return document, destination
