@@ -200,8 +200,9 @@ def _append_title_overlay_filters(
             _, card_y = _animation_expressions(overlay, "main_h*0.76", lower_third=True)
             card_duration = overlay.end_seconds - overlay.start_seconds
             filters.append(
-                f"color=c=black@0.62:s={width}x{height}:r=25:d={_seconds(card_duration)},"
-                f"format=rgba,crop=w={card_width}:h={card_height}:x=0:y=0,"
+                f"color=c=black:s={width}x{height}:r=25:d={_seconds(card_duration)},"
+                f"format=rgba,colorchannelmixer=aa=0.62,"
+                f"crop=w={card_width}:h={card_height}:x=0:y=0,"
                 f"setpts=PTS-STARTPTS+{_seconds(overlay.start_seconds)}/TB"
                 f"[{card_label}src]"
             )
