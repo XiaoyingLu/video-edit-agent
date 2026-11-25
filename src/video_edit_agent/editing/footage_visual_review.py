@@ -131,7 +131,8 @@ def generate_footage_visual_review(
         )
 
     title = plan.story_treatment.working_title if plan.story_treatment else "Storyboard"
-    suggestions_sha256 = hashlib.sha256(loaded[1].read_bytes()).hexdigest()\n    document = f"""<!doctype html>
+    suggestions_sha256 = hashlib.sha256(loaded[1].read_bytes()).hexdigest()
+    document = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(title)} — Footage Review</title>
 <style>
@@ -174,12 +175,15 @@ document.getElementById("export").addEventListener("click", () => {{
    "Selections downloaded. Place the JSON file in your project folder and continue in the terminal.";
 }});
 </script></body></html>"""
+    document = document.replace("__SUGGESTIONS_SHA256__", suggestions_sha256)
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(document, encoding="utf-8")
     return destination, shot_count, candidate_count
 
 
-def load_footage_review_selections(\n    path: Path, *, expected_shot_ids: set[str], suggestions_path: Path\n) -> tuple[dict[str, int], set[str]]:
+def load_footage_review_selections(
+    path: Path, *, expected_shot_ids: set[str], suggestions_path: Path
+) -> tuple[dict[str, int], set[str]]:
     """Load the browser export and reject stale or incomplete shot decisions."""
     try:
         payload = json.loads(path.expanduser().read_text(encoding="utf-8"))
@@ -187,7 +191,10 @@ def load_footage_review_selections(\n    path: Path, *, expected_shot_ids: set[s
         raise ValueError(f"Could not read footage review selections: {exc}") from exc
     if not isinstance(payload, dict) or payload.get("schema_version") != "1.0":
         raise ValueError("Unsupported footage review selection schema version")
-    expected_hash = hashlib.sha256(suggestions_path.expanduser().read_bytes()).hexdigest()\n    if payload.get("suggestions_sha256") != expected_hash:\n        raise ValueError("Selection file was created from different footage suggestions; regenerate it")\n    selections = payload.get("selections")
+    expected_hash = hashlib.sha256(suggestions_path.expanduser().read_bytes()).hexdigest()
+    if payload.get("suggestions_sha256") != expected_hash:
+        raise ValueError("Selection file was created from different footage suggestions; regenerate it")
+    selections = payload.get("selections")
     if not isinstance(selections, dict) or set(selections) != expected_shot_ids:
         raise ValueError("Selection file must contain exactly one choice for every storyboard shot")
     selected = {}
