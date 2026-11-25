@@ -37,8 +37,6 @@ sequences:
   opening:
     - slot: "{title}"
       style: opening
-    - slot: "{logline}"
-      style: minimal
     - slot: "{location}"
       style: context
     - slot: "{date}"
