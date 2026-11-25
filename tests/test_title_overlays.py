@@ -575,9 +575,10 @@ def test_asset_overlay_ffmpeg_smoke_composites_png_sequence_only_during_approved
             "-f",
             "lavfi",
             "-i",
-            "color=c=black@0.0:s=40x40:d=1",
+            "color=c=black:s=40x40:d=1",
             "-vf",
-            "format=rgba,drawbox=x=0:y=0:w=40:h=40:color=red@1:t=fill",
+            "format=rgba,colorchannelmixer=aa=0,"
+            "drawbox=x=0:y=0:w=40:h=40:color=red@1:t=fill",
             "-frames:v",
             "1",
             "-y",
