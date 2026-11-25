@@ -278,3 +278,44 @@ def test_date_and_location_slots_remain_empty_without_metadata(tmp_path: Path, m
         tmp_path, template_id="travel-montage"
     )
     assert all(item.text not in {"May 2026", "Lisbon"} for item in document.overlays)
+
+
+def test_template_apply_cli_generates_review_only_artifact_with_dependencies(tmp_path: Path):
+    from typer.testing import CliRunner
+
+    from video_edit_agent.artifact_tracking import register_artifact
+    from video_edit_agent.cli import app
+
+    timeline_path, plan_path = _write_inputs(tmp_path)
+    register_artifact(tmp_path, timeline_path, dependencies=[])
+    register_artifact(tmp_path, plan_path, dependencies=[])
+
+    result = CliRunner().invoke(app, ["template", "apply", str(tmp_path), "travel-montage"])
+
+    assert result.exit_code == 0, result.output
+    assert "travel-montage" in result.output
+    assert "nothing is approved automatically" in result.output
+
+    destination = tmp_path / ".video-agent" / "title-overlays.json"
+    document = json.loads(destination.read_text(encoding="utf-8"))
+    assert document["template_id"] == "travel-montage"
+    assert document["template_version"] == 1
+    assert [item["text"] for item in document["overlays"]] == [
+        "A Weekend in the Rockies",
+        "Finding stillness in the mountains",
+    ]
+    assert all(item["decision"] == "pending" for item in document["overlays"])
+
+    manifest = json.loads(
+        (tmp_path / ".video-agent" / "artifact-manifest.json").read_text(encoding="utf-8")
+    )
+    dependencies = manifest["artifacts"][".video-agent/title-overlays.json"]["dependencies"]
+    assert ".video-agent/optimized-timeline.json" in dependencies
+    assert ".video-agent/video-project-plan.json" in dependencies
+    assert any(Path(item).name == "travel-montage.yaml" for item in dependencies)
+
+    existing_content = destination.read_text(encoding="utf-8")
+    second_result = CliRunner().invoke(app, ["template", "apply", str(tmp_path), "travel-montage"])
+    assert second_result.exit_code == 1
+    assert "already exists" in second_result.output
+    assert destination.read_text(encoding="utf-8") == existing_content
