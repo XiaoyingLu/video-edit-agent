@@ -37,9 +37,7 @@ def test_signalstats_parser_extracts_luma_and_chroma(monkeypatch, tmp_path):
 
     sample = _sample_signalstats("ffmpeg", tmp_path / "clip.mp4", 1.5)
 
-    assert sample == ColorSample(
-        timestamp_seconds=1.5, luma=112.5, chroma_u=128, chroma_v=130.25
-    )
+    assert sample == ColorSample(timestamp_seconds=1.5, luma=112.5, chroma_u=128, chroma_v=130.25)
 
 
 def test_signalstats_parser_rejects_missing_metrics(monkeypatch, tmp_path):

@@ -47,9 +47,10 @@ def analyze_color(
     table.add_column("Non-neutral", justify="right")
     for video in report.videos:
         non_neutral = sum(
-            any(abs(value) >= 2 for value in (
-                item.luma_offset, item.chroma_u_offset, item.chroma_v_offset
-            ))
+            any(
+                abs(value) >= 2
+                for value in (item.luma_offset, item.chroma_u_offset, item.chroma_v_offset)
+            )
             for item in video.suggestions
         )
         table.add_row(

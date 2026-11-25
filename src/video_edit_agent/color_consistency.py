@@ -124,8 +124,8 @@ def analyze_project_color(
         raise ValueError("sample_count must be between 1 and 12")
     root = folder.expanduser().resolve()
     source_analysis = (
-        analysis_path or root / ".video-agent" / "analysis.json"
-    ).expanduser().resolve()
+        (analysis_path or root / ".video-agent" / "analysis.json").expanduser().resolve()
+    )
     try:
         source_analysis.relative_to(root)
     except ValueError as exc:
@@ -156,9 +156,7 @@ def analyze_project_color(
         if not source.is_file():
             raise FileNotFoundError(f"Source video does not exist: {source}")
         count = min(sample_count, max(1, int(video.duration_seconds)))
-        timestamps = [
-            video.duration_seconds * (index + 1) / (count + 1) for index in range(count)
-        ]
+        timestamps = [video.duration_seconds * (index + 1) / (count + 1) for index in range(count)]
         samples = [_sample_signalstats(ffmpeg, source, timestamp) for timestamp in timestamps]
         sampled_videos.append((video.path, samples))
         all_samples.extend(samples)
@@ -220,8 +218,8 @@ def save_project_color_analysis(
 
     root = folder.expanduser().resolve()
     destination = (
-        output_path or root / ".video-agent" / "color-analysis.json"
-    ).expanduser().resolve()
+        (output_path or root / ".video-agent" / "color-analysis.json").expanduser().resolve()
+    )
     try:
         destination.relative_to(root)
     except ValueError as exc:
