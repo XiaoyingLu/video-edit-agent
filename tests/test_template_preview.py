@@ -1,3 +1,4 @@
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -157,7 +158,6 @@ def _write_preview_project(
 
 
 def test_template_preview_renders_comparison_and_writes_safe_index(monkeypatch, tmp_path):
-    from pathlib import Path
     from types import SimpleNamespace
 
     import video_edit_agent.rendering.template_preview as preview
