@@ -1,6 +1,6 @@
 """Video editing command-line interface."""
 
-from . import maintenance, music, planning, rendering, review, templates, understanding  # noqa: F401
+from . import color, maintenance, music, planning, rendering, review, templates, understanding  # noqa: F401
 from .common import app, music_app, render_app, story_app
 
 app.add_typer(story_app, name="story")
