@@ -1127,7 +1127,7 @@ def test_beat_punch_in_changes_real_ffmpeg_output_at_music_beat(tmp_path):
         tmp_path,
         output_path=punched_in,
         music_path=soundtrack,
-        music_mode="music_only",
+        music_mode="blend",
         beat_punch_in=True,
     )
 
