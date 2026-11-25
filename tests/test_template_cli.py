@@ -123,9 +123,7 @@ def test_template_preview_delegates_and_reports_comparison(tmp_path: Path, monke
 
 
 def test_template_recommend_lists_explainable_top_matches():
-    result = runner.invoke(
-        app, ["template", "recommend", "--mood", "warm", "--best-for", "travel"]
-    )
+    result = runner.invoke(app, ["template", "recommend", "--mood", "warm", "--best-for", "travel"])
     assert result.exit_code == 0, result.output
     assert "travel-montage" in result.output
     assert "best_for:travel" in result.output

@@ -2,7 +2,17 @@ from pathlib import Path
 
 import pytest
 
+import video_edit_agent.templates as templates
 from video_edit_agent.template_recommendations import recommend_templates
+
+
+@pytest.fixture(autouse=True)
+def isolate_template_directories(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        templates,
+        "_template_directories",
+        lambda project_root, home_dir, library_dir: [tmp_path / ".video-agent" / "templates"],
+    )
 
 
 def _write_template(project: Path, template_id: str, tags: str) -> None:

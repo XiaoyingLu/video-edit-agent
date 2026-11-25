@@ -113,6 +113,7 @@ def validate_template(
         f"{len(spec.assets)} asset(s)."
     )
 
+
 @template_app.command("recommend")
 def recommend_template_command(
     mood: Annotated[
