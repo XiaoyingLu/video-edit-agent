@@ -42,13 +42,9 @@ def test_render_cache_rehashes_when_file_metadata_changes(tmp_path: Path, monkey
         return original(path)
 
     monkeypatch.setattr(render_cache, "_file_digest", counted)
-    first = render_cache.build_render_cache_key(
-        [source], {}, fingerprint_index_path=index
-    )
+    first = render_cache.build_render_cache_key([source], {}, fingerprint_index_path=index)
     source.write_bytes(b"second content")
-    second = render_cache.build_render_cache_key(
-        [source], {}, fingerprint_index_path=index
-    )
+    second = render_cache.build_render_cache_key([source], {}, fingerprint_index_path=index)
 
     assert first != second
     assert calls == 2
