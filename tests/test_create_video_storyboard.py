@@ -24,4 +24,6 @@ def test_create_video_help_exposes_storyboard_mode(tmp_path, monkeypatch, color)
     assert ("\x1b[" in result.output) is color
     help_text = click.unstyle(result.output)
     assert "--storyboard" in help_text
-    assert "semantic footage matching" in " ".join(help_text.replace("│", " ").split())
+    assert "--highlights" in help_text
+    assert "default" in " ".join(help_text.replace("│", " ").split()).lower()
+    assert "storyboard" in help_text.lower()
