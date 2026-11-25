@@ -400,3 +400,90 @@ def test_slide_left_template_animation_is_preserved_and_rendered(tmp_path: Path)
     )
     graph = command[command.index("-filter_complex") + 1]
     assert "x='if(lt(t,0.450000)" in graph
+
+
+def test_lower_third_ffmpeg_smoke_renders_and_moves_card_on_lavfi_source(tmp_path: Path):
+    """Exercise real FFmpeg filter parsing and verify the card moves between frames."""
+    import shutil
+    import subprocess
+
+    import numpy as np
+    import pytest
+
+    from video_edit_agent.rendering.overlay_filters import _append_title_overlay_filters
+
+    ffmpeg = shutil.which("ffmpeg")
+    if ffmpeg is None:
+        pytest.skip("FFmpeg is required for the lower-third rendering smoke test")
+
+    overlay = _overlay(
+        overlay_kind="lower_third",
+        text="Smoke test",
+        secondary_text="Static lavfi background",
+        animation="slide_up",
+        start_seconds=0,
+        end_seconds=2,
+    )
+    filters: list[str] = []
+    output_label = _append_title_overlay_filters(filters, [overlay], 320, 180, "0:v")
+    rendered = tmp_path / "lower-third-smoke.mkv"
+    render = subprocess.run(
+        [
+            ffmpeg,
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=gray:s=320x180:r=25:d=2",
+            "-filter_complex",
+            ";".join(filters),
+            "-map",
+            f"[{output_label}]",
+            "-t",
+            "2",
+            "-c:v",
+            "ffv1",
+            str(rendered),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert render.returncode == 0, render.stderr
+    assert rendered.is_file() and rendered.stat().st_size > 0
+
+    def dark_card_rows(timestamp: float) -> np.ndarray:
+        frame = subprocess.run(
+            [
+                ffmpeg,
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-ss",
+                str(timestamp),
+                "-i",
+                str(rendered),
+                "-frames:v",
+                "1",
+                "-f",
+                "rawvideo",
+                "-pix_fmt",
+                "gray",
+                "pipe:1",
+            ],
+            capture_output=True,
+            check=False,
+        )
+        assert frame.returncode == 0, frame.stderr.decode(errors="replace")
+        pixels = np.frombuffer(frame.stdout, dtype=np.uint8).reshape(180, 320)
+        # Sample inside the card but to the left of the white title glyphs.
+        dark_pixels_per_row = (pixels[:, 20:27] < 100).sum(axis=1)
+        return np.flatnonzero(dark_pixels_per_row > 5)
+
+    early_rows = dark_card_rows(0.25)
+    settled_rows = dark_card_rows(0.8)
+    assert early_rows.size >= 5
+    assert settled_rows.size >= 20
+    assert float(np.median(early_rows)) > float(np.median(settled_rows)) + 20
