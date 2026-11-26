@@ -5,6 +5,7 @@ from . import common
 import webbrowser
 from ..atomic_io import write_json_atomic
 from ..editing.planning_schemas import VideoProjectPlan
+from ..editing.revision_preview import render_timeline_revision_preview
 from ..editing.footage_visual_review import (
     generate_footage_visual_review,
     load_footage_review_selections,
@@ -84,6 +85,34 @@ def find_highlights(
         "Review every candidate; quiet scenic footage is not penalized for low motion. "
         "No edits were applied and source media was not modified.[/yellow]"
     )
+
+
+def _review_storyboard_playback_preview(folder: Path, timeline_path: Path) -> None:
+    """Render and play a 720p review copy before starting the final render."""
+    root = folder.expanduser().resolve()
+    title_overlays = root / ".video-agent" / "title-overlays.json"
+    report, manifest = render_timeline_revision_preview(
+        root,
+        timeline_path=timeline_path,
+        title_overlay_path=title_overlays if title_overlays.is_file() else None,
+    )
+    if report is None or manifest is None:
+        raise ValueError("The playback preview did not produce a video.")
+    console.print("[bold green]Playback preview rendered.[/bold green]")
+    console.print(f"Preview video: [green]{report.output_path}[/green]")
+    console.print(
+        f"Preview format: {report.width}x{report.height}; "
+        f"{report.actual_duration_seconds:.1f}s."
+    )
+    console.print("Opening the preview so you can watch the complete edit.")
+    webbrowser.open(report.output_path.resolve().as_uri())
+    decision = console.input("Does the preview look good? Render the final video? [y/N]: ")
+    if decision.strip().lower() not in {"y", "yes"}:
+        console.print(
+            "[yellow]Final rendering cancelled. Your approved timeline and playback "
+            "preview were preserved; no final video was rendered.[/yellow]"
+        )
+        raise typer.Exit(code=2)
 
 
 def _create_storyboard_video_draft(
@@ -323,6 +352,7 @@ def create_video(
             plan, timeline_path = _create_storyboard_video_draft(
                 folder, prompt, model, samples_per_scene
             )
+            _review_storyboard_playback_preview(folder, timeline_path)
         else:
             plan, timeline_path = _create_highlight_video_draft(
                 folder, prompt, model, whisper_model, samples_per_scene, review
