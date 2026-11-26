@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import pytest
 
 from video_edit_agent.editing import workflow
+from video_edit_agent.runtime_capabilities import RuntimeCapabilityError
 
 
 def test_create_video_draft_parses_prompt_before_running_expensive_stages(
@@ -145,7 +146,7 @@ def test_create_video_draft_checks_capabilities_before_parsing_prompt(
     class MissingCapabilities:
         def require(self, *_names):
             calls.append("capability_check")
-            raise workflow.RuntimeCapabilityError("transcription is unavailable")
+            raise RuntimeCapabilityError("transcription is unavailable")
 
     monkeypatch.setattr(
         workflow, "probe_runtime_capabilities", lambda _root: MissingCapabilities()
@@ -156,7 +157,7 @@ def test_create_video_draft_checks_capabilities_before_parsing_prompt(
         lambda *_args, **_kwargs: calls.append("parse") or None,
     )
 
-    with pytest.raises(workflow.RuntimeCapabilityError, match="transcription is unavailable"):
+    with pytest.raises(RuntimeCapabilityError, match="transcription is unavailable"):
         workflow.create_video_draft(tmp_path, "Create a travel video")
 
     assert calls == ["capability_check"]
