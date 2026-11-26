@@ -125,6 +125,22 @@ def test_html_embeds_frames_and_exports_version_bound_decisions(tmp_path, monkey
     assert "review-timeline --decisions-file" not in rendered
 
 
+def test_live_review_html_submits_visual_edits_to_local_session(tmp_path, monkeypatch):
+    _timeline(tmp_path)
+    _patch(monkeypatch)
+    report = build_timeline_visual_review(tmp_path)
+
+    rendered = render_timeline_visual_review_html(
+        report,
+        submission_url="http://127.0.0.1:43210/__video-agent/timeline/test-token",
+    )
+
+    assert "Submit visual edits" in rendered
+    assert 'const submissionUrl = "http://127.0.0.1:43210/__video-agent/timeline/test-token";' in rendered
+    assert 'fetch(submissionUrl, {method:"POST"' in rendered
+    assert "timeline-visual-edits.json" not in rendered
+
+
 def test_save_review_writes_html_and_metadata_without_overwrite(tmp_path, monkeypatch):
     _timeline(tmp_path)
     _patch(monkeypatch)
