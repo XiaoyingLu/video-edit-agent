@@ -241,6 +241,11 @@ def _render_timeline_review_card(
     rejected_checked = "checked" if clip.decision == "rejected" else ""
     pending_checked = "checked" if clip.decision == "pending" else ""
     has_crop_anchor = "true" if clip.clip_id in report.crop_anchors else "false"
+    transition_types = ("cut", "crossfade", "dissolve", "fadeblack", "wipeleft", "slideleft", "circleopen")
+    transition_options = "".join(
+        f'<option value="{name}" {"selected" if clip.transition_in == name else ""}>{name.replace("_", " ").title()}</option>'
+        for name in transition_types
+    )
     return (
         f'<article class="clip" data-clip-id="{html.escape(clip.clip_id, quote=True)}" '
         f'data-has-crop-anchor="{has_crop_anchor}" '
@@ -270,6 +275,10 @@ def _render_timeline_review_card(
         f'<label>Out (s) <input class="trim-end" type="number" '
         f'min="{clip.source_start_seconds + 1:.3f}" max="{clip.source_end_seconds:.3f}" '
         f'step="0.1" value="{clip.source_end_seconds:.3f}"></label></div>'
+        f'<div class="trim transition-editor"><label>Transition into this shot '
+        f'<select class="transition-type">{transition_options}</select></label>'
+        f'<label>Transition duration (s) <input class="transition-duration" type="number" '
+        f'min="0" max="2" step="0.1" value="{clip.transition_duration_seconds:.2f}"></label></div>'
         f"{detail_html}<fieldset><legend>Decision</legend>"
         f'<label><input type="radio" name="decision-{clip.sequence_index}" value="approved" '
         f"{approved_checked}> Approve</label>"
