@@ -99,13 +99,15 @@ def build_edit_document(
     title_clips: list[EditTrackClip] = []
     cursor = 0.0
     for clip in timeline.clips:
-        end = cursor + clip.duration_seconds
+        overlap = clip.transition_duration_seconds if clip.transition_in != "cut" else 0
+        start = max(0.0, cursor - overlap)
+        end = start + clip.duration_seconds
         common = {
             "clip_id": clip.clip_id,
             "source_path": clip.video_path,
             "source_start_seconds": clip.source_start_seconds,
             "source_end_seconds": clip.source_end_seconds,
-            "timeline_start_seconds": round(cursor, 3),
+            "timeline_start_seconds": round(start, 3),
             "timeline_end_seconds": round(end, 3),
             "transition_in": clip.transition_in,
             "transition_duration_seconds": clip.transition_duration_seconds,
@@ -120,13 +122,13 @@ def build_edit_document(
                 EditTrackClip(
                     clip_id=f"{clip.clip_id}:caption",
                     kind="title",
-                    timeline_start_seconds=round(cursor, 3),
+                    timeline_start_seconds=round(start, 3),
                     timeline_end_seconds=round(end, 3),
                     text=clip.caption,
                     decision=clip.decision,
                 )
             )
-        cursor = end - (clip.transition_duration_seconds if clip.transition_in != "cut" else 0)
+        cursor = end
     tracks = [
         EditTrack(track_id="video-main", kind="video", name="Main video", clips=video_clips),
         EditTrack(track_id="audio-source", kind="audio", name="Source audio", clips=audio_clips),
