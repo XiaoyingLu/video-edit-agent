@@ -148,6 +148,6 @@ async def upload_media(
         saved.append({"name": destination.name, "size_bytes": size, "path": str(destination)})
 
     project["media"].extend(saved)
-    project["updated_at"] = datetime.now(timezone.utc).isoformat()
+    project["updated_at"] = datetime.now(UTC).isoformat()
     _write_project(path, project)
     return project
