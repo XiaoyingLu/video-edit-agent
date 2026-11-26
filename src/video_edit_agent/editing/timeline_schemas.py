@@ -117,6 +117,7 @@ class ProjectDraftTimeline(BaseModel):
     source_editing_plan: str = ".video-agent/editing-plan.json"
     source_music_analysis: str | None = None
     source_transcription: str | None = None
+    source_silence_analysis: str | None = None
     style: Literal["cinematic", "vlog", "documentary", "highlight_reel", "social_media"]
     aspect_ratio: Literal["16:9", "9:16", "1:1"] = "16:9"
     pacing: Literal["slow", "moderate", "fast"]
