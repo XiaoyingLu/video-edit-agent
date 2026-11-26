@@ -20,7 +20,7 @@ The API starts Ollama automatically through Compose. Before the first analysis, 
 docker compose exec ollama ollama pull qwen2.5vl:3b
 ```
 
-Create a project and upload your footage. Analysis starts automatically as soon as the upload completes; the storyboard shows progress and refreshes with detected scenes when processing finishes. If analysis fails, you can retry from the Storyboard screen. The first run can take several minutes depending on video length and hardware. Compatible frame observations are checkpointed so interrupted runs can resume.
+Create a project and upload your footage. Use **All projects** in the left sidebar to reopen an existing project; completed storyboards and saved edit decisions are restored from that project folder. Analysis starts automatically as soon as the upload completes; the storyboard shows progress and refreshes with detected scenes when processing finishes. If analysis fails, you can retry from the Storyboard screen. The first run can take several minutes depending on video length and hardware. Compatible frame observations are checkpointed so interrupted runs can resume. In the Edit screen, save your trim, split, and inclusion decisions before leaving the project; these decisions are restored when you reopen it. Rendering/export is not connected yet.
 
 To stop the services, press Ctrl+C or run `docker compose down`.
 
