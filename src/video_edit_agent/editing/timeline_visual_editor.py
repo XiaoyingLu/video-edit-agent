@@ -205,17 +205,27 @@ def apply_timeline_visual_edits(
     destination = directory / f"visual-edit-{number:03}.json"
     write_json_atomic(destination, revised)
     register_artifact(root, destination, dependencies=[source_file])
-    save_user_overrides(
-        root,
-        {
-            clip.clip_id: {
-                "source_start_seconds": clip.source_start_seconds,
-                "source_end_seconds": clip.source_end_seconds,
-                "sequence_index": clip.sequence_index,
-                "transition_in": clip.transition_in,
-                "transition_duration_seconds": clip.transition_duration_seconds,
-            }
-            for clip in revised.clips
-        },
-    )
+    override_updates = {}
+    for clip in revised.clips:
+        original_clip = original[clip.clip_id]
+        values = {}
+        if (
+            clip.source_start_seconds != original_clip.source_start_seconds
+            or clip.source_end_seconds != original_clip.source_end_seconds
+        ):
+            values["source_start_seconds"] = clip.source_start_seconds
+            values["source_end_seconds"] = clip.source_end_seconds
+        if order_changed:
+            values["sequence_index"] = clip.sequence_index
+        if (
+            order_changed
+            or clip.transition_in != original_clip.transition_in
+            or clip.transition_duration_seconds != original_clip.transition_duration_seconds
+        ):
+            values["transition_in"] = clip.transition_in
+            values["transition_duration_seconds"] = clip.transition_duration_seconds
+        if values:
+            override_updates[clip.clip_id] = values
+    if override_updates:
+        save_user_overrides(root, override_updates)
     return destination
