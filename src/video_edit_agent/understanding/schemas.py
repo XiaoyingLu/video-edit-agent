@@ -99,6 +99,7 @@ class VideoScene(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     scene_id: str
+    source_video_path: str = ""
     start_seconds: float = Field(ge=0)
     end_seconds: float = Field(gt=0)
     summary: str
