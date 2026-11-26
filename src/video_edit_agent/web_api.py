@@ -8,10 +8,10 @@ from __future__ import annotations
 import json
 import os
 import re
-import shutil
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Annotated
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -85,7 +85,7 @@ def create_project(request: ProjectCreate) -> dict:
     project_id = uuid.uuid4().hex
     path = PROJECTS_DIR / project_id
     (path / "source").mkdir(parents=True)
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     project = {
         "id": project_id,
         "name": request.name.strip(),
@@ -103,7 +103,7 @@ def create_project(request: ProjectCreate) -> dict:
 @app.post("/api/projects/{project_id}/media", status_code=201)
 async def upload_media(
     project_id: str,
-    files: list[UploadFile] = File(...),
+    files: Annotated[list[UploadFile], File()],
 ) -> dict:
     path = _project_path(project_id)
     project = _read_project(path)
