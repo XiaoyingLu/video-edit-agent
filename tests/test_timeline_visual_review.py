@@ -117,6 +117,11 @@ def test_html_embeds_frames_and_exports_version_bound_decisions(tmp_path, monkey
     assert "Play sequence" in rendered
     assert "currentBounds(card).end" in rendered
     assert "transitions are represented as cuts" in rendered
+    assert "transition-type" in rendered
+    assert "transition-duration" in rendered
+    assert "transition_in: card.querySelector" in rendered
+    assert 'transitionDuration.value = "0.5"' in rendered
+    assert 'transitionType.value === "cut"' in rendered
     assert "timeline_sha256:report.timeline_sha256" in rendered
     assert "crop-preview" in rendered
     assert "crop-anchor" in rendered
