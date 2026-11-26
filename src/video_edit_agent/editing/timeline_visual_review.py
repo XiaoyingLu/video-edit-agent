@@ -17,6 +17,7 @@ from ..atomic_io import write_json_atomic
 from ..rendering.critique import DraftCritiqueError, _run
 from ..rendering.social_crop_anchors import load_crop_anchors
 from .timeline_schemas import ProjectDraftTimeline
+from .user_overrides import apply_user_overrides
 
 
 class TimelineVisualReviewError(ValueError):
@@ -156,6 +157,7 @@ def build_timeline_visual_review(
     timeline = ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root:
         raise TimelineVisualReviewError("Timeline belongs to a different project folder")
+    timeline = apply_user_overrides(timeline)
     anchor_file = root / ".video-agent" / "social-crop-anchors.json"
     crop_anchor_warning = None
     crop_anchors = {}
