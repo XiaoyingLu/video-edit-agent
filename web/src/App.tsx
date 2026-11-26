@@ -43,6 +43,7 @@ export default function App() {
   const [duration, setDuration] = useState("60–90 seconds");
   const [format, setFormat] = useState("16:9 · YouTube");
   const [notice, setNotice] = useState("");
+  const [noticeIsError, setNoticeIsError] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [creatingProject, setCreatingProject] = useState(false);
@@ -102,7 +103,12 @@ export default function App() {
   }, [current.id, current.start, currentVideoUrl]);
   const update = (id: number, patch: Partial<Shot>) => setShots(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s));
   const move = (id: number, delta: number) => setShots(prev => { const list = [...prev]; const i = list.findIndex(s => s.id === id); const j = i + delta; if (j < 0 || j >= list.length) return list; [list[i], list[j]] = [list[j], list[i]]; return list; });
-  const announce = (message: string) => setNotice(message);
+  const announce = (message: string) => {
+    const isError = /could not|failed|error|missing|invalid|unavailable|not found/i.test(message);
+    setNotice(message);
+    setNoticeIsError(isError);
+    if (!isError) window.setTimeout(() => setNotice(current => current === message ? "" : current), 5000);
+  };
   const createProject = async () => {
     setCreatingProject(true);
     try {
@@ -141,6 +147,7 @@ export default function App() {
         }
       }
       setProjectId(project.id);
+      setSaveStatus("idle");
       setHasMedia(uploadedMediaCount > 0);
       setAnalysisStatus(initialAnalysisStatus);
       setAnalysisProgress(initialAnalysisProgress);
@@ -160,6 +167,7 @@ export default function App() {
       if (!response.ok) throw new Error("Could not open this project");
       const project = await response.json();
       setProjectId(project.id);
+      setSaveStatus("idle");
       setProjectName(project.name);
       setBrief(project.brief ?? "");
       setDuration(project.target_duration ?? "60–90 seconds");
@@ -352,8 +360,8 @@ export default function App() {
   };
   useEffect(() => {
     if (!projectId || !shots.some(shot => shot.sceneId && shot.sourceVideoPath)) return;
+    setSaveStatus("saving");
     const timer = window.setTimeout(async () => {
-      setSaveStatus("saving");
       try {
         const response = await fetch("/api/projects/" + projectId + "/edit-decisions", {
           method: "PUT",
@@ -509,6 +517,6 @@ export default function App() {
         </div>}
       </section>
     </div>}
-    {notice && <div className="toast" role="status" aria-live="polite"><AlertCircle size={16}/>{notice}<button onClick={()=>setNotice("")} aria-label="Dismiss notification"><X size={14}/></button></div>}
+    {notice && <div className={"toast " + (noticeIsError ? "toast-error" : "toast-info")} role={noticeIsError ? "alert" : "status"} aria-live={noticeIsError ? "assertive" : "polite"}>{noticeIsError ? <AlertCircle size={16}/> : <Check size={16}/ >}{notice}<button onClick={()=>setNotice("")} aria-label="Dismiss notification"><X size={14}/></button></div>}
   </div>;
 }
