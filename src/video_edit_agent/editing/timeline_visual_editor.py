@@ -2,6 +2,7 @@
 
 import hashlib
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -22,6 +23,8 @@ class TimelineVisualEditClip(BaseModel):
     clip_id: str = Field(min_length=1)
     source_start_seconds: float = Field(ge=0)
     source_end_seconds: float = Field(gt=0)
+    transition_in: Literal["cut", "crossfade", "dissolve", "fadeblack", "wipeleft", "slideleft", "circleopen"] | None = None
+    transition_duration_seconds: float | None = Field(default=None, ge=0, le=2)
 
 
 class TimelineVisualEditExport(BaseModel):
@@ -96,6 +99,16 @@ def apply_timeline_visual_edits(
         raise TimelineVisualEditError("Minimum clip duration must be positive")
 
     revised_clips = []
+    for edit in edits.clips:
+        if (edit.transition_in is None) != (edit.transition_duration_seconds is None):
+            raise TimelineVisualEditError(
+                "Transition type and duration must be supplied together"
+            )
+        if edit.transition_in == "cut" and edit.transition_duration_seconds != 0:
+            raise TimelineVisualEditError("Cut transitions must have a zero duration")
+        if edit.transition_in not in {None, "cut"} and edit.transition_duration_seconds <= 0:
+            raise TimelineVisualEditError("Non-cut transitions must have a positive duration")
+
     for index, edit in enumerate(edits.clips, start=1):
         original_clip = original[edit.clip_id]
         if (
@@ -132,7 +145,14 @@ def apply_timeline_visual_edits(
     # Reordering changes adjacency, so old transition choices are no longer trustworthy.
     order_changed = requested_ids != [clip.clip_id for clip in source.clips]
     for index, clip in enumerate(revised_clips):
-        if index == 0 or order_changed:
+        edit = edits.clips[index]
+        if index == 0:
+            clip.transition_in = "cut"
+            clip.transition_duration_seconds = 0
+        elif edit.transition_in is not None:
+            clip.transition_in = edit.transition_in
+            clip.transition_duration_seconds = edit.transition_duration_seconds or 0
+        elif order_changed:
             clip.transition_in = "cut"
             clip.transition_duration_seconds = 0
         elif clip.transition_in != "cut":
