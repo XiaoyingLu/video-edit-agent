@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from ..context_signals import ContextSignal, PacingConstraint, SceneContext
+
 
 class DraftTimelineClip(BaseModel):
     """One ordered source interval with explicit review and transition metadata."""
@@ -115,12 +117,14 @@ class ProjectDraftTimeline(BaseModel):
     source_editing_plan: str = ".video-agent/editing-plan.json"
     source_music_analysis: str | None = None
     style: Literal["cinematic", "vlog", "documentary", "highlight_reel", "social_media"]
+    aspect_ratio: Literal["16:9", "9:16", "1:1"] = "16:9"
     pacing: Literal["slow", "moderate", "fast"]
     target_duration_seconds: float = Field(gt=0)
     proposed_duration_seconds: float = Field(ge=0)
     approved_duration_seconds: float = Field(default=0, ge=0)
     proposed_clip_count: int = Field(ge=0)
     clips: list[DraftTimelineClip] = Field(default_factory=list)
+    context_signal: ContextSignal | None = None
     approval_required: Literal[True] = True
     timeline_approved: bool = False
     rendering_performed: Literal[False] = False
@@ -154,6 +158,37 @@ class ProjectDraftTimeline(BaseModel):
             self.clips[0].transition_in != "cut" or self.clips[0].transition_duration_seconds != 0
         ):
             raise ValueError("the first clip must begin with a cut")
+        if self.context_signal is None:
+            pacing_ranges = {
+                "slow": (4.0, 8.0),
+                "moderate": (2.5, 5.0),
+                "fast": (1.0, 3.5),
+            }
+            lower, upper = pacing_ranges[self.pacing]
+            self.context_signal = ContextSignal(
+                scenes=[
+                    SceneContext(
+                        scene_id=clip.clip_id,
+                        video_path=clip.video_path,
+                        start_seconds=clip.source_start_seconds,
+                        end_seconds=clip.source_end_seconds,
+                        summary=(clip.scene_summary or "")[:240],
+                        visual_role=clip.visual_role,
+                        mood=clip.mood,
+                    )
+                    for clip in self.clips
+                ],
+                target_aspect_ratio=self.aspect_ratio,
+                pacing=self.pacing,
+                pacing_constraints=[
+                    PacingConstraint(
+                        role="default",
+                        min_seconds=lower,
+                        max_seconds=upper,
+                        target_seconds=round((lower + upper) / 2, 2),
+                    )
+                ],
+            )
         if self.timeline_approved:
             if any(clip.decision == "pending" for clip in self.clips):
                 raise ValueError("timeline cannot be approved while clips are pending")
