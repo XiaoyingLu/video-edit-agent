@@ -108,3 +108,28 @@ def test_unknown_clip_id_is_not_silently_discarded(tmp_path):
 def test_invalid_override_fields_are_rejected(tmp_path):
     with pytest.raises(UserOverrideError, match="Unsupported override"):
         save_user_overrides(tmp_path, {"coast": {"arbitrary": "value"}})
+
+
+def test_override_values_are_validated_against_clip_schema(tmp_path):
+    save_user_overrides(tmp_path, {"coast": {"gain_db": 30.0}})
+    with pytest.raises(UserOverrideError, match="Invalid saved override"):
+        apply_user_overrides(_timeline(tmp_path))
+
+
+def test_reapplying_already_materialized_overrides_preserves_approval(tmp_path):
+    timeline = _timeline(tmp_path)
+    timeline.clips[0].source_start_seconds = 2.5
+    timeline.clips[0].duration_seconds = 3.5
+    timeline.proposed_duration_seconds = 7.5
+    timeline.clips[0].decision = "approved"
+    timeline.clips[1].decision = "rejected"
+    save_user_overrides(
+        tmp_path,
+        {"coast": {"source_start_seconds": 2.5, "source_end_seconds": 6.0}},
+    )
+
+    effective = apply_user_overrides(timeline)
+
+    assert effective.timeline_approved is timeline.timeline_approved
+    assert effective.approved_duration_seconds == timeline.approved_duration_seconds
+    assert effective.clips[0].decision == "approved"
