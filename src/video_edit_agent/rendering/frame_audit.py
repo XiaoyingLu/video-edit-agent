@@ -138,9 +138,7 @@ def _text_edge_warnings(
                 or left + box_width >= width - margin_x
                 or top + box_height >= height - margin_y
             ):
-                warnings.append(
-                    f"Possible text clipping near the frame edge at {timestamp:.2f}s."
-                )
+                warnings.append(f"Possible text clipping near the frame edge at {timestamp:.2f}s.")
                 break
     return warnings
 
