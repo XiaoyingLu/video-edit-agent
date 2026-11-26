@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pytest
 
 from video_edit_agent.rendering.atomic_staging import RunWorkspace
