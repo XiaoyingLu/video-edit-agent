@@ -38,8 +38,7 @@ button { padding:.65rem 1rem; cursor:pointer; } .duration { font-variant-numeric
 __TARGET_DURATION__s target</p>
 __CROP_WARNING_HTML__
 <p>Preview the proposed sequence below. Playback follows the current card order and trim
-points; transitions are represented as cuts. Drag shots to reorder them or adjust source in/out
-points. Changes remain proposals until imported with the CLI.</p>
+points; transitions are represented as cuts. Drag shots to reorder them, adjust source in/out points, and choose the transition into each shot. The first shot always starts with a cut. Changes remain proposals until submitted.</p>
 <section class="player">
   <video id="sequence-preview" controls playsinline preload="metadata"></video>
   <div class="player-controls">
@@ -203,7 +202,9 @@ document.getElementById("export").addEventListener("click", async () => {
   const clips = Array.from(main.querySelectorAll(".clip")).map(card => ({
     clip_id: card.dataset.clipId,
     source_start_seconds: Number(card.querySelector(".trim-start").value),
-    source_end_seconds: Number(card.querySelector(".trim-end").value)
+    source_end_seconds: Number(card.querySelector(".trim-end").value),
+    transition_in: card.querySelector(".transition-type").value,
+    transition_duration_seconds: Number(card.querySelector(".transition-duration").value)
   }));
   const payload = {schema_version:"1.0", timeline_path:report.timeline_path,
     timeline_sha256:report.timeline_sha256, clips};
