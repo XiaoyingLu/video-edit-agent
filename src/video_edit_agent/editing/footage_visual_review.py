@@ -56,12 +56,11 @@ def generate_footage_visual_review(
     suggestions = ProjectFootageSuggestions.model_validate_json(
         loaded[1].read_text(encoding="utf-8")
     )
-    understanding = VideoUnderstanding.model_validate_json(
-        loaded[2].read_text(encoding="utf-8")
-    )
-    if any(Path(item).resolve() != root for item in (
-        plan.project_path, suggestions.project_path, understanding.project_path
-    )):
+    understanding = VideoUnderstanding.model_validate_json(loaded[2].read_text(encoding="utf-8"))
+    if any(
+        Path(item).resolve() != root
+        for item in (plan.project_path, suggestions.project_path, understanding.project_path)
+    ): 
         raise ValueError("review artifacts belong to a different project folder")
     if suggestions.source_plan != loaded[0].relative_to(root).as_posix():
         raise ValueError("footage suggestions were generated from a different storyboard")
@@ -89,25 +88,31 @@ def generate_footage_visual_review(
                 for number, candidate in enumerate(match.candidates, start=1):
                     candidate_count += 1
                     frames = [
-                        item for item in observations.get(candidate.source_scene_id, [])
-                        if candidate.source_start_seconds <= item.timestamp_seconds
+                        item
+                        for item in observations.get(candidate.source_scene_id, [])
+                        if candidate.source_start_seconds
+                        <= item.timestamp_seconds
                         <= candidate.source_end_seconds
                     ]
-                    frame = min(
-                        frames,
-                        key=lambda item: abs(
-                            item.timestamp_seconds
-                            - (candidate.source_start_seconds + candidate.source_end_seconds) / 2
-                        ),
-                    ) if frames else None
+                    frame = (
+                        min(
+                            frames,
+                            key=lambda item: abs(
+                                item.timestamp_seconds
+                                - (candidate.source_start_seconds + candidate.source_end_seconds)
+                                / 2
+                            ),
+                        )
+                        if frames
+                        else None
+                    )
                     asset = _project_asset(root, frame.frame_path) if frame else None
                     if asset:
                         image_src = html.escape(
                             os.path.relpath(root / asset, destination.parent), quote=True
                         )
                         media = (
-                            f'<img loading="lazy" src="{image_src}" '
-                            f'alt="Candidate {number} frame">'
+                            f'<img loading="lazy" src="{image_src}" alt="Candidate {number} frame">'
                         )
                     else:
                         media = '<div class="placeholder">No preview frame</div>'
@@ -119,28 +124,28 @@ def generate_footage_visual_review(
                         f'name="{html.escape(shot.shot_id, quote=True)}" '
                         f'value="{number}" {"checked" if number == 1 else ""}>'
                         f'<div class="preview">{media}</div><div class="candidate-body">'
-                        f'<strong>Option {number} · {candidate.score:.1f}/100</strong>'
-                        f'<p>{html.escape(candidate.video_path)} · '
-                        f'{candidate.source_start_seconds:.2f}–'
-                        f'{candidate.source_end_seconds:.2f}s</p>'
-                        f'<p>{html.escape(candidate.scene_summary)}</p>'
-                        f'<ul>{reasons}</ul></div></label>'
+                        f"<strong>Option {number} · {candidate.score:.1f}/100</strong>"
+                        f"<p>{html.escape(candidate.video_path)} · "
+                        f"{candidate.source_start_seconds:.2f}–"
+                        f"{candidate.source_end_seconds:.2f}s</p>"
+                        f"<p>{html.escape(candidate.scene_summary)}</p>"
+                        f"<ul>{reasons}</ul></div></label>"
                     )
             else:
                 options.append('<p class="empty">No candidate footage was found for this shot.</p>')
             cards.append(
                 f'<article class="shot"><div class="shot-heading">'
-                f'<span>{html.escape(shot.shot_id)}</span>'
-                f'<h3>{html.escape(shot.purpose)}</h3>'
-                f'<p>{html.escape(shot.visual_description)}</p></div>'
+                f"<span>{html.escape(shot.shot_id)}</span>"
+                f"<h3>{html.escape(shot.purpose)}</h3>"
+                f"<p>{html.escape(shot.visual_description)}</p></div>"
                 f'<div class="options">{"".join(options)}</div>'
                 f'<label class="skip"><input type="radio" '
                 f'name="{html.escape(shot.shot_id, quote=True)}" value="0">'
-                f'Leave this shot unassigned</label></article>'
+                f"Leave this shot unassigned</label></article>"
             )
         sections.append(
-            f'<section><h2>{scene.sequence_index:02d}. {html.escape(scene.title)}</h2>'
-            f'<p>{html.escape(scene.purpose)}</p>'
+            f"<section><h2>{scene.sequence_index:02d}. {html.escape(scene.title)}</h2>"
+            f"<p>{html.escape(scene.purpose)}</p>"
             f'<div class="shots">{"".join(cards)}</div></section>'
         )
 
