@@ -1,5 +1,6 @@
 """Cross-stage context signal serialization and output attachment tests."""
 
+from video_edit_agent.editing.intent_schemas import EditingPlan
 from video_edit_agent.transcription.schemas import (
     ProjectTranscription,
     VideoTranscript,
@@ -70,3 +71,14 @@ def test_transcription_output_attaches_speech_and_silence_boundaries() -> None:
     assert signal.speech_boundaries[0].text == "Hello there"
     assert signal.silence_boundaries[0].start_seconds == 3
     assert signal.silence_boundaries[0].end_seconds == 5
+
+
+
+def test_editing_plan_attaches_target_format_and_pacing() -> None:
+    plan = EditingPlan(source_prompt="Make a concise travel film", aspect_ratio="9:16", pacing="fast")
+
+    signal = plan.context_signal
+    assert signal is not None
+    assert signal.target_aspect_ratio == "9:16"
+    assert signal.pacing == "fast"
+    assert signal.pacing_constraints[0].max_seconds == 3.5
