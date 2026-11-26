@@ -23,7 +23,8 @@ const formatTime = (seconds: number) => `${Math.floor(seconds / 60).toString().p
 const analysisPhase = (event: string) => {
   if (event === "queued" || event === "starting") return { title: "Getting analysis ready", detail: "Preparing your footage and vision model.", stage: 0 };
   if (event.startsWith("scene_detection")) return { title: "Finding scene boundaries", detail: "Scanning the video for meaningful cuts and changes. This step can take a while on long footage.", stage: 0 };
-  if (event === "frame_workload_ready" || event === "scene_started" || event === "frame_extraction_completed") return { title: "Extracting key frames", detail: "Selecting representative moments from each detected scene.", stage: 1 };
+  if (event === "frame_workload_ready" || event === "scene_started") return { title: "Extracting key frames", detail: "Selecting representative moments from each detected scene.", stage: 1 };
+  if (event === "frame_extraction_completed") return { title: "Key frames extracted", detail: "Representative frames are ready for the vision model to describe.", stage: 2 };
   if (event.startsWith("frame_")) return { title: "Understanding what happens", detail: "The vision model is describing each representative frame.", stage: 2 };
   if (event.startsWith("temporal_analysis")) return { title: "Understanding scene movement", detail: "Comparing frames to understand motion and continuity.", stage: 3 };
   if (event === "scene_completed") return { title: "Scene analysis completed", detail: "This scene is finished. Moving on to the next one.", stage: 3 };
