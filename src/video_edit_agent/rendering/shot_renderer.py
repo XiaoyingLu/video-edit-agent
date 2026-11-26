@@ -525,7 +525,8 @@ def _render_and_validate_shot_output(
     crop_anchors_path: Path | None,
     beat_punch_in: bool,
     clip_inputs: list[tuple[Path, float, float, bool, str, float]],
-) -> tuple[dict, dict, dict, float] | None:
+    has_titles: bool,
+) -> tuple[dict, dict, dict, float, dict] | None:
     """Build, execute, and verify FFmpeg output without registering project artifacts."""
     temporary_path = destination
     if not dry_run:
@@ -617,13 +618,26 @@ def _render_and_validate_shot_output(
                 f"rendered duration mismatch: expected about {expected_duration:.2f}s, "
                 f"got {actual_duration:.2f}s"
             )
+        try:
+            audit = audit_rendered_frames(
+                ffmpeg,
+                temporary_path,
+                actual_duration,
+                _output_cut_boundaries(clip_inputs),
+                width=width,
+                height=height,
+                has_titles=has_titles,
+                timeout=min(timeout_seconds, 60),
+            )
+        except FrameAuditError as exc:
+            raise RenderError(f"render frame audit failed: {exc}") from exc
         temporary_path.replace(destination)
     except Exception:
         if not dry_run:
             temporary_path.unlink(missing_ok=True)
         raise
 
-    return output_probe, output_video, output_audio, actual_duration
+    return output_probe, output_video, output_audio, actual_duration, audit
 
 
 def render_approved_shot_timeline(
@@ -868,10 +882,26 @@ def render_approved_shot_timeline(
                 and abs(cached_duration - expected_duration)
                 <= max(0.75, len(clip_inputs) / 30.0 * 2)
             ):
-                render_result = (cached_probe, cached_video, cached_audio, cached_duration)
+                cached_audit = audit_rendered_frames(
+                    ffmpeg,
+                    destination,
+                    cached_duration,
+                    _output_cut_boundaries(clip_inputs),
+                    width=width,
+                    height=height,
+                    has_titles=bool(approved_titles),
+                    timeout=min(timeout_seconds, 60),
+                )
+                render_result = (
+                    cached_probe,
+                    cached_video,
+                    cached_audio,
+                    cached_duration,
+                    cached_audit,
+                )
             else:
                 destination.unlink(missing_ok=True)
-        except (RenderError, OSError, ValueError, TypeError):
+        except (RenderError, FrameAuditError, OSError, ValueError, TypeError):
             destination.unlink(missing_ok=True)
 
     if render_result is None:
@@ -905,6 +935,7 @@ def render_approved_shot_timeline(
             crop_anchors_path=crop_anchors_path,
             beat_punch_in=beat_punch_in,
             clip_inputs=clip_inputs,
+            has_titles=bool(approved_titles),
         )
         if render_result is not None:
             try:
@@ -915,21 +946,7 @@ def render_approved_shot_timeline(
 
     if render_result is None:
         return None
-    output_probe, output_video, output_audio, actual_duration = render_result
-    try:
-        audit = audit_rendered_frames(
-            ffmpeg,
-            destination,
-            actual_duration,
-            _output_cut_boundaries(clip_inputs),
-            width=width,
-            height=height,
-            has_titles=bool(approved_titles),
-            timeout=min(timeout_seconds, 60),
-        )
-    except FrameAuditError as exc:
-        destination.unlink(missing_ok=True)
-        raise RenderError(f"render frame audit failed: {exc}") from exc
+    output_probe, output_video, output_audio, actual_duration, audit = render_result
     register_artifact(
         root,
         destination,
