@@ -150,6 +150,81 @@ def test_edit_decision_put_allows_frontend_cors_preflight() -> None:
     assert "PUT" in response.headers["access-control-allow-methods"]
 
 
+
+def test_export_project_renders_included_clips_and_returns_mp4(tmp_path, monkeypatch) -> None:
+    from fastapi.testclient import TestClient
+
+    project = _create_project(tmp_path, monkeypatch)
+    project_path = tmp_path / project["id"]
+    source = project_path / "source" / "clip.mp4"
+    source.write_bytes(b"video")
+    artifact = project_path / ".video-agent" / "understanding.json"
+    artifact.parent.mkdir(parents=True, exist_ok=True)
+    artifact.write_text(
+        '{"scenes":[{"scene_id":"scene-1","source_video_path":"source/clip.mp4",'
+        '"start_seconds":0.0,"end_seconds":10.0,"summary":"Mountain lake"}]}',
+        encoding="utf-8",
+    )
+
+    def fake_render(folder, *, timeline_path, output_path, output_aspect_ratio, output_resolution):
+        from video_edit_agent.editing.timeline_schemas import ProjectDraftTimeline
+
+        timeline = ProjectDraftTimeline.model_validate_json(timeline_path.read_text())
+        assert timeline.timeline_approved is True
+        assert [clip.clip_id for clip in timeline.clips] == ["clip-1"]
+        assert timeline.aspect_ratio == "9:16"
+        assert output_aspect_ratio == "9:16"
+        assert output_resolution == "720p"
+        output_path.write_bytes(b"rendered-mp4")
+
+    monkeypatch.setattr(web_api, "render_approved_shot_timeline", fake_render)
+    response = TestClient(web_api.app).post(
+        f"/api/projects/{project['id']}/export",
+        json={
+            "aspect_ratio": "9:16",
+            "resolution": "720p",
+            "clips": [
+                {
+                    "clip_id": "clip-1",
+                    "scene_id": "scene-1",
+                    "source_video_path": "source/clip.mp4",
+                    "start_seconds": 2.0,
+                    "end_seconds": 8.0,
+                    "included": True,
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("video/mp4")
+    assert response.content == b"rendered-mp4"
+
+
+def test_export_project_requires_at_least_one_included_clip(tmp_path, monkeypatch) -> None:
+    from fastapi.testclient import TestClient
+
+    project = _create_project(tmp_path, monkeypatch)
+    response = TestClient(web_api.app).post(
+        f"/api/projects/{project['id']}/export",
+        json={
+            "clips": [
+                {
+                    "clip_id": "clip-1",
+                    "scene_id": "scene-1",
+                    "source_video_path": "source/clip.mp4",
+                    "start_seconds": 1.0,
+                    "end_seconds": 2.0,
+                    "included": False,
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 400
+    assert "at least one scene" in response.json()["detail"]
+
+
 def test_get_project_media_serves_uploaded_video(tmp_path: Path, monkeypatch) -> None:
     from fastapi.testclient import TestClient
 
