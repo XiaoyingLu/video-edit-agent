@@ -5,9 +5,9 @@ from pathlib import Path
 from ..artifact_tracking import register_artifact
 from ..atomic_io import write_json_atomic
 from ..config import get_setting
-from ..runtime_capabilities import probe_runtime_capabilities
 from ..highlights import find_highlights_folder
 from ..highlights.schemas import ProjectHighlights
+from ..runtime_capabilities import probe_runtime_capabilities
 from ..transcription import transcribe_folder
 from ..understanding import understand_folder
 from .draft_pipeline import build_draft_selection
