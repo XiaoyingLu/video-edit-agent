@@ -1,6 +1,8 @@
 """Validated timestamped speech transcription artifacts."""
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from ..context_signals import ContextSignal, TimedBoundary
 
 
 class TranscriptSegment(BaseModel):
@@ -55,3 +57,33 @@ class ProjectTranscription(BaseModel):
     segment_count: int = Field(ge=0)
     model: str
     videos: list[VideoTranscript] = Field(default_factory=list)
+    context_signal: ContextSignal | None = None
+
+    @model_validator(mode="after")
+    def attach_context_signal(self) -> "ProjectTranscription":
+        if self.context_signal is None:
+            speech = []
+            silence = []
+            for video in self.videos:
+                speech.extend(
+                    TimedBoundary(
+                        video_path=video.path,
+                        start_seconds=segment.start_seconds,
+                        end_seconds=segment.end_seconds,
+                        text=segment.text[:120],
+                    )
+                    for segment in video.segments
+                )
+                silence.extend(
+                    TimedBoundary(
+                        video_path=video.path,
+                        start_seconds=pause.start_seconds,
+                        end_seconds=pause.end_seconds,
+                    )
+                    for pause in video.pauses
+                )
+            self.context_signal = ContextSignal(
+                speech_boundaries=speech[:500],
+                silence_boundaries=silence[:500],
+            )
+        return self
