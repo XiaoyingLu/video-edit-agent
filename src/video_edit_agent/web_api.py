@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from .atomic_io import write_json_atomic
 from .config import get_setting
+from .runtime_capabilities import probe_runtime_capabilities
 from .understanding.pipeline import understand_folder
 
 PROJECTS_DIR = Path(os.environ.get("VIDEO_PROJECTS_DIR", "/workspace/projects")).resolve()
@@ -89,6 +90,14 @@ def _write_project(path: Path, project: dict) -> None:
 @app.get("/api/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/api/projects/{project_id}/capabilities")
+def get_runtime_capabilities(project_id: str) -> dict:
+    """Expose the project-specific, secret-free tool and skill allowlists."""
+    path = _project_path(project_id)
+    _read_project(path)
+    return probe_runtime_capabilities(path).prompt_context()
 
 
 @app.get("/api/projects")
@@ -205,6 +214,8 @@ def _run_project_analysis(project_id: str) -> None:
         _write_project(path, project)
 
     try:
+        capabilities = probe_runtime_capabilities(path)
+        capabilities.require("inspect_media", "scene_understanding", "visual_analysis")
         provider = get_setting("VISION_PROVIDER") or "ollama"
         result = understand_folder(path, provider=provider, progress_callback=report)
         artifact = path / ".video-agent" / "understanding.json"

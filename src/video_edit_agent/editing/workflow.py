@@ -7,6 +7,7 @@ from ..atomic_io import write_json_atomic
 from ..config import get_setting
 from ..highlights import find_highlights_folder
 from ..highlights.schemas import ProjectHighlights
+from ..runtime_capabilities import probe_runtime_capabilities
 from ..transcription import transcribe_folder
 from ..understanding import understand_folder
 from .draft_pipeline import build_draft_selection
@@ -45,6 +46,9 @@ def create_video_draft(
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise FileNotFoundError(f"Project folder does not exist: {root}")
+    capabilities = probe_runtime_capabilities(root)
+    capabilities.require("inspect_media", "scene_understanding", "visual_analysis", "transcription")
+
     artifact_dir = root / ".video-agent"
     artifact_dir.mkdir(parents=True, exist_ok=True)
 

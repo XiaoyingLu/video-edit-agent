@@ -55,6 +55,11 @@ def test_background_analysis_persists_result_and_status(tmp_path: Path, monkeypa
         )
 
     monkeypatch.setattr(web_api, "get_setting", lambda name: "ollama")
+    monkeypatch.setattr(
+        web_api,
+        "probe_runtime_capabilities",
+        lambda _path: SimpleNamespace(require=lambda *_names: None),
+    )
     monkeypatch.setattr(web_api, "understand_folder", fake_understand_folder)
 
     web_api._run_project_analysis(project["id"])
@@ -156,3 +161,32 @@ def test_get_project_media_rejects_paths_outside_source(tmp_path: Path, monkeypa
     response = TestClient(web_api.app).get(f"/api/projects/{project['id']}/media/private.mp4")
 
     assert response.status_code == 404
+
+
+def test_background_analysis_fails_closed_when_runtime_capabilities_are_missing(
+    tmp_path: Path, monkeypatch
+) -> None:
+    project = _create_project(tmp_path, monkeypatch)
+    called = False
+
+    def unavailable(_path):
+        class Report:
+            def require(self, *_names):
+                raise RuntimeError("Required runtime capability unavailable: inspect_media")
+
+        return Report()
+
+    def unexpected_understand(*_args, **_kwargs):
+        nonlocal called
+        called = True
+        raise AssertionError("analysis must not start without required capabilities")
+
+    monkeypatch.setattr(web_api, "probe_runtime_capabilities", unavailable)
+    monkeypatch.setattr(web_api, "understand_folder", unexpected_understand)
+
+    web_api._run_project_analysis(project["id"])
+
+    saved = web_api.get_project(project["id"])
+    assert saved["analysis_status"] == "failed"
+    assert "inspect_media" in saved["analysis_error"]
+    assert called is False

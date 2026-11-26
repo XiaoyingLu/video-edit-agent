@@ -1081,3 +1081,17 @@ Reframing does not change shot timing, order, transitions, source intervals, or 
 decisions. Every format is rendered from the same approved timeline; source videos and
 the timeline are not modified.
 
+## Runtime capability gating
+
+Pipeline startup probes the current project and execution environment before planning. The
+capability snapshot checks supported source media, FFmpeg/ffprobe availability, required
+filters and encoders, installed fonts, optional transcription/vision dependencies, and
+configured external provider keys. It publishes only the available tool and skill names;
+missing prerequisites are recorded with a reason and required stages fail closed before
+the planner is invoked.
+
+The web editor exposes the same secret-free, project-scoped snapshot at
+`GET /api/projects/{project_id}/capabilities`. Provider key values are never returned.
+Optional integrations such as Soundstripe search and Stable Audio generation are omitted
+unless their respective API keys are configured. Rendering, subtitles, and title overlays
+are independently gated by the FFmpeg components and fonts they actually require.
