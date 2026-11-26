@@ -23,8 +23,10 @@ The default `create-video` command now keeps footage selection and timeline edit
 3. Build the proposed sequence and open the visual timeline editor automatically.
 4. Reorder shots and adjust their source in/out points, then submit the edits directly to the running CLI.
 5. Confirm the edited timeline before rendering.
+6. The agent renders a separate 720p playback preview (when a project output profile is available), including the approved transitions and any title overlays prepared for that exact revision. It opens the MP4 in your default player.
+7. Watch the complete preview and explicitly confirm before the full-resolution final render.
 
-The visual edits are saved as a separate, unapproved timeline revision. If you decline the final confirmation or the review times out, the revision remains available and no video is rendered. The original source videos and the pre-edit timeline are not overwritten.
+The visual edits are saved as a separate, unapproved timeline revision. If you decline timeline approval or the playback-preview confirmation, the revision and any preview already rendered remain available and no final video is rendered. The original source videos and the pre-edit timeline are not overwritten.
 
 ## Hierarchical video planning
 
