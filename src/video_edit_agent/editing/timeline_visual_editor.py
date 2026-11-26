@@ -23,7 +23,10 @@ class TimelineVisualEditClip(BaseModel):
     clip_id: str = Field(min_length=1)
     source_start_seconds: float = Field(ge=0)
     source_end_seconds: float = Field(gt=0)
-    transition_in: Literal["cut", "crossfade", "dissolve", "fadeblack", "wipeleft", "slideleft", "circleopen"] | None = None
+    transition_in: (
+        Literal["cut", "crossfade", "dissolve", "fadeblack", "wipeleft", "slideleft", "circleopen"]
+        | None
+    ) = None
     transition_duration_seconds: float | None = Field(default=None, ge=0, le=2)
 
 
