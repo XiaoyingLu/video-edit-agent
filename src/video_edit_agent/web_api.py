@@ -95,7 +95,9 @@ def health() -> dict:
 @app.get("/api/projects/{project_id}/capabilities")
 def get_runtime_capabilities(project_id: str) -> dict:
     """Expose the project-specific, secret-free tool and skill allowlists."""
-    return probe_runtime_capabilities(_project_path(project_id)).prompt_context()
+    path = _project_path(project_id)
+    _read_project(path)
+    return probe_runtime_capabilities(path).prompt_context()
 
 
 @app.get("/api/projects")
