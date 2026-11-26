@@ -15,6 +15,11 @@ def test_create_video_draft_parses_prompt_before_running_expensive_stages(
     def unexpected(*args, **kwargs):
         raise AssertionError("analysis must not start when intent parsing fails")
 
+    monkeypatch.setattr(
+        workflow,
+        "probe_runtime_capabilities",
+        lambda _root: SimpleNamespace(require=lambda *_names: None),
+    )
     monkeypatch.setattr(workflow, "parse_editing_intent", reject_prompt)
     monkeypatch.setattr(workflow, "understand_folder", unexpected)
     monkeypatch.setattr(workflow, "transcribe_folder", unexpected)
@@ -44,6 +49,11 @@ def test_create_video_draft_writes_review_artifacts_and_stops_before_render(
     calls = []
     selected_models = {}
     monkeypatch.setenv("OLLAMA_MODEL", "qwen2.5vl:3b")
+    monkeypatch.setattr(
+        workflow,
+        "probe_runtime_capabilities",
+        lambda _root: SimpleNamespace(require=lambda *_names: None),
+    )
 
     def fake_parse(prompt, model=None):
         selected_models["intent"] = model
@@ -102,6 +112,11 @@ def test_create_video_draft_stops_when_no_highlights_are_found(tmp_path: Path, m
         candidate_count=0,
         model_dump=lambda **kwargs: {"candidates": []},
     )
+    monkeypatch.setattr(
+        workflow,
+        "probe_runtime_capabilities",
+        lambda _root: SimpleNamespace(require=lambda *_names: None),
+    )
     monkeypatch.setattr(workflow, "parse_editing_intent", lambda *args, **kwargs: plan)
     monkeypatch.setattr(
         workflow,
@@ -119,3 +134,29 @@ def test_create_video_draft_stops_when_no_highlights_are_found(tmp_path: Path, m
 
     with pytest.raises(ValueError, match="No highlight candidates"):
         workflow.create_video_draft(tmp_path, "Create a travel video")
+
+
+
+def test_create_video_draft_checks_capabilities_before_parsing_prompt(
+    tmp_path: Path, monkeypatch
+) -> None:
+    calls = []
+
+    class MissingCapabilities:
+        def require(self, *_names):
+            calls.append("capability_check")
+            raise workflow.RuntimeCapabilityError("transcription is unavailable")
+
+    monkeypatch.setattr(
+        workflow, "probe_runtime_capabilities", lambda _root: MissingCapabilities()
+    )
+    monkeypatch.setattr(
+        workflow,
+        "parse_editing_intent",
+        lambda *_args, **_kwargs: calls.append("parse") or None,
+    )
+
+    with pytest.raises(workflow.RuntimeCapabilityError, match="transcription is unavailable"):
+        workflow.create_video_draft(tmp_path, "Create a travel video")
+
+    assert calls == ["capability_check"]
