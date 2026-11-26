@@ -192,3 +192,68 @@ def test_visual_edits_preserve_transitions_when_order_is_unchanged(tmp_path, mon
     assert revised.clips[1].transition_in == "crossfade"
     assert revised.clips[1].transition_duration_seconds == 0.5
     assert revised.proposed_duration_seconds == 7.5
+
+
+def test_visual_edits_apply_selected_transition_without_reordering(tmp_path, monkeypatch):
+    source = _timeline(tmp_path)
+    _patch_tracking(monkeypatch)
+    edits = _export(
+        source,
+        [
+            TimelineVisualEditClip(
+                clip_id="coast",
+                source_start_seconds=2,
+                source_end_seconds=6,
+                transition_in="cut",
+                transition_duration_seconds=0,
+            ),
+            TimelineVisualEditClip(
+                clip_id="mountain",
+                source_start_seconds=10,
+                source_end_seconds=14,
+                transition_in="dissolve",
+                transition_duration_seconds=0.8,
+            ),
+        ],
+    )
+
+    destination = apply_timeline_visual_edits(tmp_path, edits)
+
+    revised = ProjectDraftTimeline.model_validate_json(destination.read_text())
+    assert revised.clips[0].transition_in == "cut"
+    assert revised.clips[1].transition_in == "dissolve"
+    assert revised.clips[1].transition_duration_seconds == 0.8
+    assert revised.proposed_duration_seconds == 7.2
+
+
+def test_visual_edits_force_first_clip_to_cut_and_limit_transition_duration(
+    tmp_path, monkeypatch
+):
+    source = _timeline(tmp_path)
+    _patch_tracking(monkeypatch)
+    edits = _export(
+        source,
+        [
+            TimelineVisualEditClip(
+                clip_id="coast",
+                source_start_seconds=2,
+                source_end_seconds=6,
+                transition_in="fadeblack",
+                transition_duration_seconds=0.5,
+            ),
+            TimelineVisualEditClip(
+                clip_id="mountain",
+                source_start_seconds=10,
+                source_end_seconds=14,
+                transition_in="crossfade",
+                transition_duration_seconds=2,
+            ),
+        ],
+    )
+
+    destination = apply_timeline_visual_edits(tmp_path, edits)
+
+    revised = ProjectDraftTimeline.model_validate_json(destination.read_text())
+    assert revised.clips[0].transition_in == "cut"
+    assert revised.clips[0].transition_duration_seconds == 0
+    assert revised.clips[1].transition_duration_seconds == 1
