@@ -5,32 +5,54 @@ from video_edit_agent.editing.edit_document import (
     StructuredEditDocument,
     build_edit_document,
 )
-from video_edit_agent.editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
+from video_edit_agent.editing.timeline_schemas import (
+    DraftTimelineClip,
+    ProjectDraftTimeline,
+)
 
 
 def _timeline():
     clips = [
         DraftTimelineClip(
-            clip_id="clip-1", sequence_index=1, video_path="a.mp4",
-            source_start_seconds=2, source_end_seconds=7, duration_seconds=5,
-            combined_score=90, pacing_note="Good pacing", caption="Opening",
+            clip_id="clip-1",
+            sequence_index=1,
+            video_path="a.mp4",
+            source_start_seconds=2,
+            source_end_seconds=7,
+            duration_seconds=5,
+            combined_score=90,
+            pacing_note="Good pacing",
+            caption="Opening",
         ),
         DraftTimelineClip(
-            clip_id="clip-2", sequence_index=2, video_path="b.mp4",
-            source_start_seconds=10, source_end_seconds=16, duration_seconds=6,
-            combined_score=85, pacing_note="Good pacing",
-            transition_in="crossfade", transition_duration_seconds=1,
+            clip_id="clip-2",
+            sequence_index=2,
+            video_path="b.mp4",
+            source_start_seconds=10,
+            source_end_seconds=16,
+            duration_seconds=6,
+            combined_score=85,
+            pacing_note="Good pacing",
+            transition_in="crossfade",
+            transition_duration_seconds=1,
         ),
     ]
     return ProjectDraftTimeline(
-        project_path="/tmp/project", style="cinematic", pacing="moderate",
-        target_duration_seconds=20, proposed_duration_seconds=10,
-        proposed_clip_count=2, clips=clips,
+        project_path="/tmp/project",
+        style="cinematic",
+        pacing="moderate",
+        target_duration_seconds=20,
+        proposed_duration_seconds=10,
+        proposed_clip_count=2,
+        clips=clips,
     )
 
 
 def test_build_edit_document_creates_typed_tracks_and_output_time_mapping():
-    document = build_edit_document(_timeline(), source_timeline=".video-agent/optimized-timeline.json")
+    document = build_edit_document(
+        _timeline(),
+        source_timeline=".video-agent/optimized-timeline.json",
+    )
     video = next(track for track in document.tracks if track.kind == "video")
     audio = next(track for track in document.tracks if track.kind == "audio")
     titles = next(track for track in document.tracks if track.kind == "title")
