@@ -33,6 +33,11 @@ services:
     environment:
       VIDEO_PROJECTS_DIR: /workspace/projects
       OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5vl:3b}
+      VISION_PROVIDER: ${VISION_PROVIDER:-ollama}
+    depends_on:
+      ollama:
+        condition: service_healthy
 
   web:
     image: node:22-alpine

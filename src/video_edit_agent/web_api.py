@@ -14,9 +14,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
+
+from .atomic_io import write_json_atomic
+from .config import get_setting
+from .understanding.pipeline import understand_folder
 
 PROJECTS_DIR = Path(os.environ.get("VIDEO_PROJECTS_DIR", "/workspace/projects")).resolve()
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024 * 1024
@@ -94,6 +99,8 @@ def create_project(request: ProjectCreate) -> dict:
         "target_duration": request.target_duration,
         "format": request.format,
         "media": [],
+        "analysis_status": "not_started",
+        "analysis_progress": {},
         "created_at": now,
         "updated_at": now,
     }
@@ -149,6 +156,91 @@ async def upload_media(
         saved.append({"name": destination.name, "size_bytes": size, "path": str(destination)})
 
     project["media"].extend(saved)
+    project["analysis_status"] = "not_started"
+    project["analysis_progress"] = {}
+    (path / ".video-agent" / "understanding.json").unlink(missing_ok=True)
+    (path / ".video-agent" / "understanding-checkpoint.json").unlink(missing_ok=True)
     project["updated_at"] = datetime.now(UTC).isoformat()
     _write_project(path, project)
     return project
+
+
+@app.get("/api/projects/{project_id}")
+def get_project(project_id: str) -> dict:
+    return _read_project(_project_path(project_id))
+
+
+def _run_project_analysis(project_id: str) -> None:
+    """Run the existing resumable understanding pipeline as a background task."""
+    path = _project_path(project_id)
+    project = _read_project(path)
+    project["analysis_status"] = "running"
+    project["analysis_error"] = None
+    project["analysis_progress"] = {"event": "starting"}
+    project["updated_at"] = datetime.now(UTC).isoformat()
+    _write_project(path, project)
+
+    def report(event: str, details: dict) -> None:
+        project["analysis_progress"] = {"event": event, **details}
+        project["updated_at"] = datetime.now(UTC).isoformat()
+        _write_project(path, project)
+
+    try:
+        provider = get_setting("VISION_PROVIDER") or "ollama"
+        result = understand_folder(path, provider=provider, progress_callback=report)
+        artifact = path / ".video-agent" / "understanding.json"
+        write_json_atomic(artifact, result.model_dump(mode="json"))
+        (path / ".video-agent" / "understanding-checkpoint.json").unlink(missing_ok=True)
+        project["analysis_status"] = "completed"
+        project["analysis_progress"] = {
+            "event": "completed",
+            "video_count": result.video_count,
+            "scene_count": result.scene_count,
+        }
+        project["analysis_error"] = None
+    except Exception as exc:
+        project["analysis_status"] = "failed"
+        project["analysis_error"] = str(exc)
+        project["analysis_progress"] = {"event": "failed"}
+    project["updated_at"] = datetime.now(UTC).isoformat()
+    _write_project(path, project)
+
+
+@app.post("/api/projects/{project_id}/analyze", status_code=202)
+def start_project_analysis(project_id: str, background_tasks: BackgroundTasks) -> dict:
+    path = _project_path(project_id)
+    project = _read_project(path)
+    if project.get("analysis_status") in {"queued", "running"}:
+        return project
+    if not project.get("media"):
+        raise HTTPException(status_code=400, detail="Upload at least one video before analysis")
+    project["analysis_status"] = "queued"
+    project["analysis_error"] = None
+    project["analysis_progress"] = {"event": "queued"}
+    project["updated_at"] = datetime.now(UTC).isoformat()
+    _write_project(path, project)
+    background_tasks.add_task(_run_project_analysis, project_id)
+    return project
+
+
+@app.get("/api/projects/{project_id}/analysis")
+def get_project_analysis(project_id: str) -> dict:
+    path = _project_path(project_id)
+    artifact = path / ".video-agent" / "understanding.json"
+    if not artifact.is_file():
+        raise HTTPException(status_code=404, detail="Analysis is not available yet")
+    return json.loads(artifact.read_text(encoding="utf-8"))
+
+
+@app.get("/api/projects/{project_id}/frames/{frame_path:path}")
+def get_project_frame(project_id: str, frame_path: str) -> FileResponse:
+    path = _project_path(project_id)
+    frames_root = (path / ".video-agent" / "frames").resolve()
+    frame = (path / frame_path).resolve()
+    if (
+        not frame.is_relative_to(frames_root)
+        or frame.suffix.lower() not in {".jpg", ".jpeg"}
+        or not frame.is_file()
+    ):
+        raise HTTPException(status_code=404, detail="Frame not found")
+    return FileResponse(frame, media_type="image/jpeg")
