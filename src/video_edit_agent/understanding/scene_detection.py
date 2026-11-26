@@ -1,11 +1,55 @@
 """Content-based scene boundary detection using PySceneDetect."""
 
+import logging
 import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from ..media import MediaToolError
+
+_LOGGER = logging.getLogger(__name__)
+
+
+def _open_video(video_path: Path):
+    """Prefer PyAV/FFmpeg decoding, falling back to OpenCV when it cannot open a clip."""
+    from scenedetect import open_video
+
+    try:
+        video = open_video(str(video_path), backend="pyav", threading_mode="auto")
+    except TypeError:
+        # Older PySceneDetect versions do not accept backend selection arguments.
+        _LOGGER.warning(
+            "PySceneDetect does not support explicit backend selection; falling back to OpenCV."
+        )
+        return open_video(str(video_path))
+    except Exception as pyav_error:
+        _LOGGER.warning(
+            "PyAV could not open %s; falling back to OpenCV: %s",
+            video_path,
+            pyav_error,
+        )
+        try:
+            return open_video(str(video_path), backend="opencv")
+        except Exception as opencv_error:
+            raise RuntimeError(
+                f"PyAV failed to open the video ({pyav_error}); "
+                f"OpenCV fallback also failed ({opencv_error})."
+            ) from opencv_error
+
+    actual_backend = getattr(video, "BACKEND_NAME", "pyav")
+    if actual_backend != "pyav":
+        close = getattr(video, "close", None)
+        if close is not None:
+            close()
+        _LOGGER.warning(
+            "PySceneDetect selected %s instead of PyAV for %s; reopening with OpenCV.",
+            actual_backend,
+            video_path,
+        )
+        return open_video(str(video_path), backend="opencv")
+
+    return video
 
 
 def detect_scenes(
@@ -18,11 +62,14 @@ def detect_scenes(
 ) -> list[tuple[float, float]]:
     """Return scene intervals in seconds, falling back to the whole clip.
 
+    PyAV is the preferred decoder because it is substantially faster for the project's
+    footage. OpenCV is used if PyAV cannot open a particular video.
+
     When requested, report frame-level progress approximately once per second.
     The progress wrapper delegates all detection work to ContentDetector unchanged.
     """
     try:
-        from scenedetect import ContentDetector, SceneManager, open_video
+        from scenedetect import ContentDetector, SceneManager
     except ImportError as exc:
         raise MediaToolError(
             "PySceneDetect is required. Install project dependencies with "
@@ -32,8 +79,9 @@ def detect_scenes(
     if duration_seconds <= 0:
         return []
 
+    video = None
     try:
-        video = open_video(str(video_path))
+        video = _open_video(video_path)
         manager = SceneManager()
         detector_options = {
             "threshold": threshold,
@@ -88,6 +136,11 @@ def detect_scenes(
         detected = manager.get_scene_list(start_in_scene=True)
     except Exception as exc:
         raise MediaToolError(f"Scene detection failed for {video_path}: {exc}") from exc
+    finally:
+        if video is not None:
+            close = getattr(video, "close", None)
+            if close is not None:
+                close()
 
     intervals = [
         (max(0.0, start.get_seconds()), min(duration_seconds, end.get_seconds()))
