@@ -134,6 +134,22 @@ def test_save_edit_decisions_rejects_interval_outside_detected_scene(
     assert exc_info.value.status_code == 400
 
 
+def test_edit_decision_put_allows_frontend_cors_preflight() -> None:
+    from fastapi.testclient import TestClient
+
+    response = TestClient(web_api.app).options(
+        "/api/projects/example/edit-decisions",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "PUT",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "PUT" in response.headers["access-control-allow-methods"]
+
+
 def test_get_project_media_serves_uploaded_video(tmp_path: Path, monkeypatch) -> None:
     from fastapi.testclient import TestClient
 

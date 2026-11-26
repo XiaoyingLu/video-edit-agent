@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Aperture, ArrowDown, ArrowLeft, ArrowRight, AudioLines, Check, ChevronDown,
+  AlertCircle, Aperture, ArrowDown, ArrowLeft, ArrowRight, AudioLines, Check, ChevronDown,
   Clapperboard, Clock3, Download, Film, FolderOpen, Gauge, Grid2X2, HelpCircle,
   Layers3, LayoutDashboard, ListMusic, Maximize2, MoreHorizontal, Pause, Play,
   Plus, Scissors, Settings2, Sparkles, Star, Trash2, WandSparkles, X,
@@ -43,6 +43,8 @@ export default function App() {
   const [duration, setDuration] = useState("60–90 seconds");
   const [format, setFormat] = useState("16:9 · YouTube");
   const [notice, setNotice] = useState("");
+  const [noticeIsError, setNoticeIsError] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [creatingProject, setCreatingProject] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -101,7 +103,12 @@ export default function App() {
   }, [current.id, current.start, currentVideoUrl]);
   const update = (id: number, patch: Partial<Shot>) => setShots(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s));
   const move = (id: number, delta: number) => setShots(prev => { const list = [...prev]; const i = list.findIndex(s => s.id === id); const j = i + delta; if (j < 0 || j >= list.length) return list; [list[i], list[j]] = [list[j], list[i]]; return list; });
-  const announce = (message: string) => { setNotice(message); window.setTimeout(() => setNotice(""), 5000); };
+  const announce = (message: string) => {
+    const isError = /could not|failed|error|missing|invalid|unavailable|not found/i.test(message);
+    setNotice(message);
+    setNoticeIsError(isError);
+    if (!isError) window.setTimeout(() => setNotice(current => current === message ? "" : current), 5000);
+  };
   const createProject = async () => {
     setCreatingProject(true);
     try {
@@ -140,6 +147,7 @@ export default function App() {
         }
       }
       setProjectId(project.id);
+      setSaveStatus("idle");
       setHasMedia(uploadedMediaCount > 0);
       setAnalysisStatus(initialAnalysisStatus);
       setAnalysisProgress(initialAnalysisProgress);
@@ -159,6 +167,7 @@ export default function App() {
       if (!response.ok) throw new Error("Could not open this project");
       const project = await response.json();
       setProjectId(project.id);
+      setSaveStatus("idle");
       setProjectName(project.name);
       setBrief(project.brief ?? "");
       setDuration(project.target_duration ?? "60–90 seconds");
@@ -340,13 +349,47 @@ export default function App() {
         const error = await response.json();
         throw new Error(error.detail ?? "Could not save edit decisions");
       }
+      setSaveStatus("saved");
       announce("Your scene edits have been saved to the project.");
     } catch (error) {
+      setSaveStatus("error");
       announce(error instanceof Error ? error.message : "Could not save edits.");
     } finally {
       setSavingEdits(false);
     }
   };
+  useEffect(() => {
+    if (!projectId || !shots.some(shot => shot.sceneId && shot.sourceVideoPath)) return;
+    setSaveStatus("saving");
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await fetch("/api/projects/" + projectId + "/edit-decisions", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            clips: shots.filter(shot => shot.sceneId && shot.sourceVideoPath).map(shot => ({
+              clip_id: String(shot.id),
+              scene_id: shot.sceneId,
+              source_video_path: shot.sourceVideoPath,
+              start_seconds: shot.start,
+              end_seconds: shot.end,
+              included: shot.selected,
+            })),
+          }),
+        });
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail ?? "Could not autosave edit decisions");
+        }
+        setSaveStatus("saved");
+      } catch (error) {
+        setSaveStatus("error");
+        announce(error instanceof Error ? error.message : "Autosave failed. Your latest changes may not be saved.");
+      }
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [projectId, shots]);
+
   const removeCurrentShot = () => {
     update(current.id, { selected: false });
     const next = shots.find(shot => shot.id !== current.id && shot.selected);
@@ -383,7 +426,7 @@ export default function App() {
       <button className="side-link" onClick={showProjects}><Film size={17}/> <span>All projects</span></button>
       <button className="side-link" onClick={() => announce("Media library is coming soon.")}><Layers3 size={17}/> <span>Media library</span></button>
       <div className="side-label side-label-spaced">YOUR PROJECT</div>
-      <div className="project-mini"><div className="project-mini-image" style={{backgroundImage:`url(${image("photo-1470770841072-f978cf4d019e")})`}}/><div><b>{projectName}</b><small>Edited just now</small></div><MoreHorizontal size={16}/></div>
+      <div className="project-mini"><div className="project-mini-image" style={shots[0]?.image ? {backgroundImage:`url(${shotImage(shots[0].image)})`} : undefined}/><div><b>{projectName}</b><small>{saveStatus === "saving" ? "Saving…" : saveStatus === "error" ? "Save failed" : saveStatus === "saved" ? "Saved" : "No edits yet"}</small></div><MoreHorizontal size={16}/></div>
       <div className="side-progress"><span/><span/><span/><span/></div>
       <div className="side-label side-label-spaced">HELP & SETTINGS</div>
       <button className="side-link" onClick={() => announce("Help centre coming soon.")}><HelpCircle size={17}/> <span>Help centre</span></button>
@@ -392,9 +435,9 @@ export default function App() {
     </aside>
 
     <main className="main-area">
-      <header className="topbar"><div className="breadcrumbs"><span>Projects</span><span className="crumb-slash">/</span><b>{projectName}</b><span className="saved"><Check size={12}/> Saved</span></div><div className="top-actions"><button className="icon-button" aria-label="Help"><HelpCircle size={17}/></button><div className="avatar small-avatar">XL</div></div></header>
+      <header className="topbar"><div className="breadcrumbs"><span>Projects</span><span className="crumb-slash">/</span><b>{projectName}</b><span className="saved">{saveStatus === "saving" ? "Saving…" : saveStatus === "error" ? "Save failed" : saveStatus === "saved" ? <><Check size={12}/> Saved</> : "Not saved yet"}</span></div><div className="top-actions"><button className="icon-button" aria-label="Help"><HelpCircle size={17}/></button><div className="avatar small-avatar">XL</div></div></header>
       <div className="page-wrap">
-        <div className="page-heading"><div><div className="eyebrow"><Sparkles size={13}/> YOUR STORY, BEAUTIFULLY EDITED</div><h1>{stage === "Create" ? "Start with an idea." : stage === "Storyboard" ? "Shape your story." : stage === "Edit" ? "Make it yours." : "Ready for the world."}</h1><p>{stage === "Create" ? "Tell us what you want to remember. We'll help bring it to life." : stage === "Storyboard" ? "Your footage, thoughtfully arranged into a story. Make it yours." : stage === "Edit" ? "Fine-tune the moments, pacing and transitions." : "One last look before your film is ready to share."}</p></div><button className="quiet-button" onClick={() => announce("Project saved locally in this prototype.")}><Check size={15}/> All changes saved</button></div>
+        <div className="page-heading"><div><div className="eyebrow"><Sparkles size={13}/> YOUR STORY, BEAUTIFULLY EDITED</div><h1>{stage === "Create" ? "Start with an idea." : stage === "Storyboard" ? "Shape your story." : stage === "Edit" ? "Make it yours." : "Ready for the world."}</h1><p>{stage === "Create" ? "Tell us what you want to remember. We'll help bring it to life." : stage === "Storyboard" ? "Your footage, thoughtfully arranged into a story. Make it yours." : stage === "Edit" ? "Fine-tune the moments, pacing and transitions." : "One last look before your film is ready to share."}</p></div><span className={"quiet-button save-indicator " + saveStatus}>{saveStatus === "saving" ? "Saving changes…" : saveStatus === "error" ? "Changes not saved" : saveStatus === "saved" ? "All changes saved" : "No edits yet"}</span></div>
         <nav className="stepper">{stages.map((s, i) => <button key={s.name} disabled={s.name === "Edit" && analysisStatus !== "completed"} className={`step ${stage === s.name ? "current" : ""} ${stages.findIndex(x=>x.name===stage)>i ? "complete" : ""}`} onClick={() => setStage(s.name)}><span className="step-icon">{stages.findIndex(x=>x.name===stage)>i ? <Check size={15}/> : <s.icon size={15}/>}</span><span className="step-copy"><b>{s.name}</b><small>{s.label === "Project" ? "Add your footage" : s.label === "Storyboard" ? "Review the story" : s.label === "Edit" ? "Polish your film" : "Preview & export"}</small></span></button>)}</nav>
 
         {stage === "Create" && <section className="create-layout">
@@ -474,6 +517,6 @@ export default function App() {
         </div>}
       </section>
     </div>}
-    {notice && <div className="toast"><Check size={16}/>{notice}<button onClick={()=>setNotice("")}><X size={14}/></button></div>}
+    {notice && <div className={"toast " + (noticeIsError ? "toast-error" : "toast-info")} role={noticeIsError ? "alert" : "status"} aria-live={noticeIsError ? "assertive" : "polite"}>{noticeIsError ? <AlertCircle size={16}/> : <Check size={16}/>}{notice}<button onClick={()=>setNotice("")} aria-label="Dismiss notification"><X size={14}/></button></div>}
   </div>;
 }
