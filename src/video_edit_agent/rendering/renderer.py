@@ -34,6 +34,8 @@ class RenderReport(BaseModel):
     video_codec: str
     audio_codec: str
     rendering_performed: bool = True
+    audit_sample_count: int = Field(default=0, ge=0)
+    audit_warnings: list[str] = Field(default_factory=list)
 
 
 def _run_probe(executable: str, path: Path, timeout: float = 60) -> dict[str, Any]:
