@@ -517,6 +517,6 @@ export default function App() {
         </div>}
       </section>
     </div>}
-    {notice && <div className={"toast " + (noticeIsError ? "toast-error" : "toast-info")} role={noticeIsError ? "alert" : "status"} aria-live={noticeIsError ? "assertive" : "polite"}>{noticeIsError ? <AlertCircle size={16}/> : <Check size={16}/ >}{notice}<button onClick={()=>setNotice("")} aria-label="Dismiss notification"><X size={14}/></button></div>}
+    {notice && <div className={"toast " + (noticeIsError ? "toast-error" : "toast-info")} role={noticeIsError ? "alert" : "status"} aria-live={noticeIsError ? "assertive" : "polite"}>{noticeIsError ? <AlertCircle size={16}/> : <Check size={16}/>}{notice}<button onClick={()=>setNotice("")} aria-label="Dismiss notification"><X size={14}/></button></div>}
   </div>;
 }
