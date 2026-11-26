@@ -10,7 +10,12 @@ from video_edit_agent import web_api
 def _create_project(tmp_path: Path, monkeypatch) -> dict:
     monkeypatch.setattr(web_api, "PROJECTS_DIR", tmp_path)
     project = web_api.create_project(web_api.ProjectCreate(name="Test project"))
-    project["media"] = [{"name": "clip.mp4", "path": str(tmp_path / project["id"] / "source/clip.mp4")}]
+    project["media"] = [
+        {
+            "name": "clip.mp4",
+            "path": str(tmp_path / project["id"] / "source/clip.mp4"),
+        }
+    ]
     web_api._write_project(tmp_path / project["id"], project)
     return project
 
