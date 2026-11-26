@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from ..context_signals import ContextSignal, PacingConstraint
+
 
 class TransitionPreferences(BaseModel):
     """Supported transition choices; interpreted by later planning stages."""
@@ -61,9 +63,29 @@ class EditingPlan(BaseModel):
     assumptions: list[str] = Field(default_factory=list, max_length=10)
     approval_required: bool = True
     rendering_performed: Literal[False] = False
+    context_signal: ContextSignal | None = None
 
     @model_validator(mode="after")
     def validate_preferences(self) -> "EditingPlan":
+        if self.context_signal is None:
+            pacing_ranges = {
+                "slow": (4.0, 8.0),
+                "moderate": (2.5, 5.0),
+                "fast": (1.0, 3.5),
+            }
+            lower, upper = pacing_ranges[self.pacing]
+            self.context_signal = ContextSignal(
+                target_aspect_ratio=self.aspect_ratio,
+                pacing=self.pacing,
+                pacing_constraints=[
+                    PacingConstraint(
+                        role="default",
+                        min_seconds=lower,
+                        max_seconds=upper,
+                        target_seconds=round((lower + upper) / 2, 2),
+                    )
+                ],
+            )
         if len(self.priorities) != len(set(self.priorities)):
             raise ValueError("priorities must not contain duplicates")
         if self.transitions.default == "cut" and self.transitions.duration_seconds != 0:
