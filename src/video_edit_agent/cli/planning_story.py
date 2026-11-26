@@ -138,7 +138,9 @@ def _create_storyboard_video_draft(
             "No footage was assigned; inspect footage-suggestions.json."
         )
     review_page, _, candidate_count = generate_footage_visual_review(
-        folder, plan_path=plan_path, suggestions_path=suggestions_path,
+        folder,
+        plan_path=plan_path,
+        suggestions_path=suggestions_path,
         understanding_path=understanding_path,
     )
     console.print(
@@ -845,7 +847,8 @@ def review_footage(
                 raise ValueError("--selections-file cannot be combined with --select or --reject")
             current_plan = VideoProjectPlan.model_validate_json(
                 (plan or folder.resolve() / ".video-agent" / "video-project-plan.json")
-                .expanduser().read_text(encoding="utf-8")
+                .expanduser()
+                .read_text(encoding="utf-8")
             )
             shot_ids = {shot.shot_id for scene in current_plan.scenes for shot in scene.shots}
             selections, rejected = load_footage_review_selections(
