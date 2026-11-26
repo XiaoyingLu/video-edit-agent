@@ -178,15 +178,18 @@ overflow:hidden;cursor:pointer}}
 <p>VISUAL FOOTAGE REVIEW · {shot_count} SHOTS · {candidate_count} CANDIDATES</p>
 <h1>{html.escape(title)}</h1>
 <p>Choose the footage that best fits each storyboard shot. The first-ranked match is preselected,
-but you can change it or leave a shot unassigned. Nothing is approved or rendered by this page.</p></div>
-<div class="actions"><button id="export">Download selections</button><span id="status" role="status">Review each shot, then download your choices.</span></div>
+but you can change it or leave a shot unassigned.
+Nothing is approved or rendered by this page.</p></div>
+<div class="actions"><button id="export">Download selections</button>
+<span id="status" role="status">Review each shot, then download your choices.</span></div>
 {"".join(sections)}</main>
 <script>
 document.getElementById("export").addEventListener("click", () => {{
  const selections = {{}};
  document.querySelectorAll(".shot").forEach(card => {{
    const checked = card.querySelector('input[type="radio"]:checked');
-   selections[card.querySelector(".shot-heading span").textContent] = checked ? Number(checked.value) : 0;
+   const shotId = card.querySelector(".shot-heading span").textContent;
+   selections[shotId] = checked ? Number(checked.value) : 0;
  }});
  const payload = {{schema_version:"1.0", suggestions_sha256:"__SUGGESTIONS_SHA256__", selections}};
  const blob = new Blob([JSON.stringify(payload, null, 2)], {{type:"application/json"}});
@@ -195,7 +198,8 @@ document.getElementById("export").addEventListener("click", () => {{
  link.href = url; link.download = "footage-review-selections.json"; link.click();
  URL.revokeObjectURL(url);
  document.getElementById("status").textContent =
-   "Selections downloaded. Place the JSON file in your project folder and continue in the terminal.";
+   "Selections downloaded. Place the JSON file in your project folder " +
+   "and continue in the terminal.";
 }});
 </script></body></html>"""
     document = document.replace("__SUGGESTIONS_SHA256__", suggestions_sha256)
