@@ -106,7 +106,7 @@ def apply_timeline_visual_edits(
             )
         if edit.transition_in == "cut" and edit.transition_duration_seconds != 0:
             raise TimelineVisualEditError("Cut transitions must have a zero duration")
-        if edit.transition_in not in {None, "cut"} and edit.transition_duration_seconds <= 0:
+        if edit.transition_in not in {None, "cut"} and (edit.transition_duration_seconds or 0) <= 0:
             raise TimelineVisualEditError("Non-cut transitions must have a positive duration")
 
     for index, edit in enumerate(edits.clips, start=1):
@@ -151,7 +151,16 @@ def apply_timeline_visual_edits(
             clip.transition_duration_seconds = 0
         elif edit.transition_in is not None:
             clip.transition_in = edit.transition_in
-            clip.transition_duration_seconds = edit.transition_duration_seconds or 0
+            overlap_limit = min(
+                clip.duration_seconds * 0.25,
+                revised_clips[index - 1].duration_seconds * 0.25,
+            )
+            clip.transition_duration_seconds = round(
+                min(edit.transition_duration_seconds or 0, overlap_limit), 3
+            )
+            if clip.transition_duration_seconds <= 0:
+                clip.transition_in = "cut"
+                clip.transition_duration_seconds = 0
         elif order_changed:
             clip.transition_in = "cut"
             clip.transition_duration_seconds = 0
