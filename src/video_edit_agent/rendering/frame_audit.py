@@ -13,6 +13,39 @@ class FrameAuditError(RuntimeError):
     """Raised when a rendered file fails deterministic frame decoding."""
 
 
+def validate_title_font(configured_font: str, bundled_font: Path) -> Path | None:
+    """Resolve and verify the concrete font file used by approved title overlays."""
+    configured = configured_font.strip()
+    candidate = Path(configured).expanduser()
+    looks_like_path = candidate.suffix.lower() in {".ttf", ".otf", ".ttc"} or "/" in configured
+    if looks_like_path:
+        resolved = candidate.resolve()
+        if not resolved.is_file():
+            raise FrameAuditError(f"configured title font file does not exist: {resolved}")
+        return resolved
+    if configured.casefold() in {"lato", "bundled"} and bundled_font.is_file():
+        return bundled_font.resolve()
+    matcher = shutil.which("fc-match")
+    if matcher:
+        try:
+            result = subprocess.run(
+                [matcher, "-f", "%{file}", configured or "DejaVu Sans"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise FrameAuditError(f"could not resolve configured title font: {exc}") from exc
+        font_file = Path((result.stdout or "").strip()).expanduser()
+        if result.returncode == 0 and font_file.is_file():
+            return font_file.resolve()
+    fallback = Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
+    if fallback.is_file():
+        return fallback
+    raise FrameAuditError(f"configured title font could not be resolved: {configured}")
+
+
 def _sample_times(duration: float, boundaries: list[float], frame_rate: float = 30.0) -> list[float]:
     epsilon = 1.0 / frame_rate
     times = {min(max(0.25, duration / 2), duration - 0.01), max(0.0, duration - 0.25)}
