@@ -2,7 +2,6 @@
 
 import re
 import shutil
-import tempfile
 from pathlib import Path
 
 from ..artifact_tracking import register_artifact, validate_artifact
