@@ -178,7 +178,7 @@ class ProjectDraftTimeline(BaseModel):
                         visual_role=clip.visual_role,
                         mood=clip.mood,
                     )
-                    for clip in self.clips
+                    for clip in self.clips[:300]
                 ],
                 target_aspect_ratio=self.aspect_ratio,
                 pacing=self.pacing,
