@@ -301,3 +301,18 @@ def get_project_frame(project_id: str, frame_path: str) -> FileResponse:
     ):
         raise HTTPException(status_code=404, detail="Frame not found")
     return FileResponse(frame, media_type="image/jpeg")
+
+
+@app.get("/api/projects/{project_id}/media/{media_path:path}")
+def get_project_media(project_id: str, media_path: str) -> FileResponse:
+    """Serve an uploaded source video so the browser can play and seek it."""
+    path = _project_path(project_id)
+    source_root = (path / "source").resolve()
+    media = (path / media_path).resolve()
+    if (
+        not media.is_relative_to(source_root)
+        or media.suffix.lower() not in VIDEO_EXTENSIONS
+        or not media.is_file()
+    ):
+        raise HTTPException(status_code=404, detail="Source video not found")
+    return FileResponse(media)
