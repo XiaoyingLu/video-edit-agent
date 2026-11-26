@@ -11,8 +11,8 @@ def test_sample_times_include_both_sides_of_boundaries():
 
     assert 3.0 in samples
     assert 6.0 in samples
-    assert 3.0 - 1 / 30 in samples
-    assert 3.0 + 1 / 30 in samples
+    assert any(abs(value - (3.0 - 1 / 30)) < 1e-5 for value in samples)
+    assert any(abs(value - (3.0 + 1 / 30)) < 1e-5 for value in samples)
 
 
 def test_audit_decodes_frames_in_two_orders_and_reports_clipping_skip(monkeypatch, tmp_path):
