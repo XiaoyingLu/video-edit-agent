@@ -110,15 +110,21 @@ async def upload_media(
     if not files:
         raise HTTPException(status_code=400, detail="Choose at least one video file")
 
-    saved = []
+    prepared = []
     for upload in files:
         original_name = Path(upload.filename or "").name
         extension = Path(original_name).suffix.lower()
         if not original_name or extension not in VIDEO_EXTENSIONS:
+            for pending in files:
+                await pending.close()
             raise HTTPException(
                 status_code=400,
                 detail=f"Unsupported video file: {original_name or 'unnamed file'}",
             )
+        prepared.append((upload, original_name, extension))
+
+    saved = []
+    for upload, original_name, extension in prepared:
         destination = path / "source" / original_name
         if destination.exists():
             stem = Path(original_name).stem
