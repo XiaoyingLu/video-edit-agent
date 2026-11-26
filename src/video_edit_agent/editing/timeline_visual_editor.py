@@ -104,9 +104,7 @@ def apply_timeline_visual_edits(
     revised_clips = []
     for edit in edits.clips:
         if (edit.transition_in is None) != (edit.transition_duration_seconds is None):
-            raise TimelineVisualEditError(
-                "Transition type and duration must be supplied together"
-            )
+            raise TimelineVisualEditError("Transition type and duration must be supplied together")
         if edit.transition_in == "cut" and edit.transition_duration_seconds != 0:
             raise TimelineVisualEditError("Cut transitions must have a zero duration")
         if edit.transition_in not in {None, "cut"} and (edit.transition_duration_seconds or 0) <= 0:
