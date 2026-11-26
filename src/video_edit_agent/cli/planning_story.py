@@ -207,8 +207,7 @@ def _create_storyboard_video_draft(
         raise ValueError("The live timeline review did not produce a revision.")
     timeline, timeline_path = load_draft_timeline(folder, revision_path)
     console.print(
-        f"Visual edit saved: {len(timeline.clips)} shot(s) in "
-        f"[green]{timeline_path}[/green]."
+        f"Visual edit saved: {len(timeline.clips)} shot(s) in [green]{timeline_path}[/green]."
     )
     decision = console.input("Approve this edited timeline and render the video? [y/N]: ")
     if decision.strip().lower() not in {"y", "yes"}:
