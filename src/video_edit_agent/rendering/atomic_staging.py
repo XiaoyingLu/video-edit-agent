@@ -7,8 +7,8 @@ import json
 import os
 import shutil
 import tempfile
-from pathlib import Path
 from collections.abc import Callable
+from pathlib import Path
 
 
 def sha256_file(path: Path) -> str:
