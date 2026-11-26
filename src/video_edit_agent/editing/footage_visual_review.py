@@ -31,6 +31,7 @@ def generate_footage_visual_review(
     suggestions_path: Path | None = None,
     understanding_path: Path | None = None,
     output_path: Path | None = None,
+    submission_url: str | None = None,
 ) -> tuple[Path, int, int]:
     """Write an interactive HTML page that exports explicit candidate selections."""
     root = folder.expanduser().resolve()
@@ -189,7 +190,7 @@ Nothing is approved or rendered by this page.</p></div>
 <span id="status" role="status">Review each shot, then download your choices.</span></div>
 {"".join(sections)}</main>
 <script>
-document.getElementById("export").addEventListener("click", () => {{
+document.getElementById("export").addEventListener("click", async () => {{
  const selections = {{}};
  document.querySelectorAll(".shot").forEach(card => {{
    const checked = card.querySelector('input[type="radio"]:checked');
@@ -197,17 +198,31 @@ document.getElementById("export").addEventListener("click", () => {{
    selections[shotId] = checked ? Number(checked.value) : 0;
  }});
  const payload = {{schema_version:"1.0", suggestions_sha256:"__SUGGESTIONS_SHA256__", selections}};
- const blob = new Blob([JSON.stringify(payload, null, 2)], {{type:"application/json"}});
- const url = URL.createObjectURL(blob);
- const link = document.createElement("a");
- link.href = url; link.download = "footage-review-selections.json"; link.click();
- URL.revokeObjectURL(url);
- document.getElementById("status").textContent =
-   "Selections downloaded. Place the JSON file in your project folder " +
-   "and continue in the terminal.";
+ const status = document.getElementById("status");
+ if ("__SUBMISSION_URL__") {{
+   try {{
+     const response = await fetch("__SUBMISSION_URL__", {{
+       method: "POST", headers: {{"Content-Type": "text/plain"}},
+       body: JSON.stringify(payload)
+     }});
+     if (!response.ok) throw new Error("The local review session rejected the selections.");
+     status.textContent = "Selections received. You can return to the terminal."; 
+     document.getElementById("export").disabled = true;
+   }} catch (error) {{
+     status.textContent = error.message + " Please retry or use the CLI file import.";
+   }}
+ }} else {{
+   const blob = new Blob([JSON.stringify(payload, null, 2)], {{type:"application/json"}});
+   const url = URL.createObjectURL(blob);
+   const link = document.createElement("a");
+   link.href = url; link.download = "footage-review-selections.json"; link.click();
+   URL.revokeObjectURL(url);
+   status.textContent = "Selections downloaded. Place the JSON file in your project folder."; 
+ }}
 }});
 </script></body></html>"""
     document = document.replace("__SUGGESTIONS_SHA256__", suggestions_sha256)
+    document = document.replace("__SUBMISSION_URL__", submission_url or "")
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(document, encoding="utf-8")
     return destination, shot_count, candidate_count
