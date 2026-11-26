@@ -1095,3 +1095,19 @@ The web editor exposes the same secret-free, project-scoped snapshot at
 Optional integrations such as Soundstripe search and Stable Audio generation are omitted
 unless their respective API keys are configured. Rendering, subtitles, and title overlays
 are independently gated by the FFmpeg components and fonts they actually require.
+
+
+## Shuffled-frame and boundary render audit
+
+Before an approved shot render is registered as a project artifact, the renderer samples
+frames around edit boundaries and at representative timeline positions. It seeks to those
+timestamps in a seeded shuffled order, repeats the reads in a different order, and compares
+frame hashes to catch non-deterministic random-access decoding. Boundary samples are also
+checked for near-black frames that may indicate an accidental gap.
+
+When approved title overlays are present, the renderer verifies the configured font resolves
+to a real font file and runs optional Tesseract OCR on sampled frames. Text boxes touching
+the outer safe margin are reported as possible clipping warnings; if Tesseract is unavailable,
+the report explicitly says that the OCR check was skipped. Warnings are included in the
+render report and printed by `render-draft`. Missing media or explicitly configured font
+files fail the render before artifact registration.

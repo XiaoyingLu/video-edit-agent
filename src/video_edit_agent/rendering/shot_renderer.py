@@ -13,6 +13,7 @@ from ..media_runner import run_ffmpeg
 from ..music.schemas import MusicAnalysis
 from .audio_mix import append_music_input, append_music_mix, resolve_selected_music
 from .face_reframing import detect_face_crop_paths
+from .frame_audit import FrameAuditError, audit_rendered_frames, validate_title_font
 from .overlay_filters import _append_asset_overlay_filters, _append_title_overlay_filters
 from .renderer import (
     RenderError,
@@ -24,6 +25,20 @@ from .renderer import (
 )
 from .social_crop_anchors import load_crop_anchors
 from .title_overlays import TitleOverlay, resolve_asset_overlays
+
+
+def _output_cut_boundaries(
+    clip_inputs: list[tuple[Path, float, float, bool, str, float]],
+) -> list[float]:
+    """Return output-time locations around every hard cut or transition."""
+    if len(clip_inputs) < 2:
+        return []
+    elapsed = clip_inputs[0][2] - clip_inputs[0][1]
+    boundaries = []
+    for _path, start, end, _has_audio, transition, overlap in clip_inputs[1:]:
+        boundaries.append(elapsed if transition == "cut" else elapsed - overlap / 2)
+        elapsed += end - start - (overlap if transition != "cut" else 0.0)
+    return boundaries
 
 
 def _safe_source(root: Path, relative_path: str) -> Path:
@@ -510,7 +525,8 @@ def _render_and_validate_shot_output(
     crop_anchors_path: Path | None,
     beat_punch_in: bool,
     clip_inputs: list[tuple[Path, float, float, bool, str, float]],
-) -> tuple[dict, dict, dict, float] | None:
+    has_titles: bool,
+) -> tuple[dict, dict, dict, float, dict] | None:
     """Build, execute, and verify FFmpeg output without registering project artifacts."""
     temporary_path = destination
     if not dry_run:
@@ -602,13 +618,26 @@ def _render_and_validate_shot_output(
                 f"rendered duration mismatch: expected about {expected_duration:.2f}s, "
                 f"got {actual_duration:.2f}s"
             )
+        try:
+            audit = audit_rendered_frames(
+                ffmpeg,
+                temporary_path,
+                actual_duration,
+                _output_cut_boundaries(clip_inputs),
+                width=width,
+                height=height,
+                has_titles=has_titles,
+                timeout=min(timeout_seconds, 60),
+            )
+        except FrameAuditError as exc:
+            raise RenderError(f"render frame audit failed: {exc}") from exc
         temporary_path.replace(destination)
     except Exception:
         if not dry_run:
             temporary_path.unlink(missing_ok=True)
         raise
 
-    return output_probe, output_video, output_audio, actual_duration
+    return output_probe, output_video, output_audio, actual_duration, audit
 
 
 def render_approved_shot_timeline(
@@ -776,12 +805,17 @@ def render_approved_shot_timeline(
 
     configured_font = (get_setting("TITLE_FONT", DEFAULT_TITLE_FONT) or DEFAULT_TITLE_FONT).strip()
     if approved_titles:
-        if configured_font.casefold() in {"lato", "bundled"} and _BUNDLED_FONT.is_file():
-            dependencies.append(_BUNDLED_FONT)
-        else:
-            configured_font_path = Path(configured_font).expanduser()
-            if configured_font_path.is_file():
-                dependencies.append(configured_font_path.resolve())
+        try:
+            resolved_fonts = {validate_title_font(configured_font, _BUNDLED_FONT)}
+            if any(
+                not (item.text or "").isascii()
+                or (item.secondary_text is not None and not item.secondary_text.isascii())
+                for item in approved_titles
+            ) and configured_font.casefold() in {"lato", "bundled"}:
+                resolved_fonts.add(validate_title_font("DejaVu Sans", _BUNDLED_FONT))
+        except FrameAuditError as exc:
+            raise RenderError(str(exc)) from exc
+        dependencies.extend(font for font in resolved_fonts if font is not None)
 
     ffmpeg_version_result = run_ffmpeg(
         [ffmpeg, "-version"],
@@ -853,10 +887,26 @@ def render_approved_shot_timeline(
                 and abs(cached_duration - expected_duration)
                 <= max(0.75, len(clip_inputs) / 30.0 * 2)
             ):
-                render_result = (cached_probe, cached_video, cached_audio, cached_duration)
+                cached_audit = audit_rendered_frames(
+                    ffmpeg,
+                    destination,
+                    cached_duration,
+                    _output_cut_boundaries(clip_inputs),
+                    width=width,
+                    height=height,
+                    has_titles=bool(approved_titles),
+                    timeout=min(timeout_seconds, 60),
+                )
+                render_result = (
+                    cached_probe,
+                    cached_video,
+                    cached_audio,
+                    cached_duration,
+                    cached_audit,
+                )
             else:
                 destination.unlink(missing_ok=True)
-        except (RenderError, OSError, ValueError, TypeError):
+        except (RenderError, FrameAuditError, OSError, ValueError, TypeError):
             destination.unlink(missing_ok=True)
 
     if render_result is None:
@@ -890,6 +940,7 @@ def render_approved_shot_timeline(
             crop_anchors_path=crop_anchors_path,
             beat_punch_in=beat_punch_in,
             clip_inputs=clip_inputs,
+            has_titles=bool(approved_titles),
         )
         if render_result is not None:
             try:
@@ -900,7 +951,7 @@ def render_approved_shot_timeline(
 
     if render_result is None:
         return None
-    output_probe, output_video, output_audio, actual_duration = render_result
+    output_probe, output_video, output_audio, actual_duration, audit = render_result
     register_artifact(
         root,
         destination,
@@ -920,4 +971,6 @@ def render_approved_shot_timeline(
         height=int(output_video.get("height") or height),
         video_codec=str(output_video.get("codec_name") or "unknown"),
         audio_codec=str(output_audio.get("codec_name") or "unknown"),
+        audit_sample_count=audit["sample_count"],
+        audit_warnings=audit["warnings"],
     )

@@ -606,6 +606,12 @@ def render_draft(
         f"Format: {report.width}x{report.height}, "
         f"{report.video_codec.upper()} video + {report.audio_codec.upper()} audio"
     )
+    console.print(
+        f"Frame audit: {report.audit_sample_count} timestamps decoded in shuffled order "
+        "and checked for deterministic output."
+    )
+    for warning in report.audit_warnings:
+        console.print(f"[yellow]Audit warning:[/yellow] {warning}")
     console.print("[yellow]Original source videos were not modified.[/yellow]")
 
 
