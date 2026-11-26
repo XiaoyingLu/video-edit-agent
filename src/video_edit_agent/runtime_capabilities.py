@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import importlib.util
-import os
 import platform
 import re
 import shutil
@@ -184,18 +183,34 @@ def probe_runtime_capabilities(project_root: Path) -> CapabilityReport:
             "Requires supported video files and the optional faster-whisper dependency."
         )
 
-    if ffmpeg and ffprobe and {"libx264", "aac"} <= encoders and "scale" in filters:
+    required_render_filters = {
+        "scale", "pad", "setsar", "fps", "format", "trim", "setpts", "concat",
+        "aresample", "aformat", "anullsrc",
+    }
+    if (
+        ffmpeg
+        and ffprobe
+        and {"libx264", "aac"} <= encoders
+        and required_render_filters <= filters
+    ):
         tools.add("render_video")
     else:
         unavailable["render_video"] = (
             "Requires ffmpeg/ffprobe, the scale filter, and libx264/aac encoders."
         )
 
-    if ffmpeg and "subtitles" in filters and fonts:
+    if ffmpeg and "subtitles" in filters and "DejaVu Sans" in fonts:
         tools.add("render_subtitles")
     else:
         unavailable["render_subtitles"] = (
-            "Requires the FFmpeg subtitles filter and at least one supported font."
+            "Requires the FFmpeg subtitles filter and the configured DejaVu Sans font."
+        )
+
+    if ffmpeg and "drawtext" in filters and fonts:
+        tools.add("render_titles")
+    else:
+        unavailable["render_titles"] = (
+            "Requires the FFmpeg drawtext filter and a supported title font."
         )
 
     if "SOUNDSTRIPE_API_KEY" in keys:
