@@ -351,6 +351,7 @@ def review_timeline_visual(
         "[yellow]Open the HTML file in a browser, export decisions, then apply them with "
         "review-timeline --decisions-file. No decisions are applied by this command.[/yellow]"
     )
+    return html_file
 
 
 @story_app.command("apply-timeline-visual-edits")
