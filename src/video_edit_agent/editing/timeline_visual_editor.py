@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from ..artifact_tracking import register_artifact, validate_artifact
 from ..atomic_io import write_json_atomic
 from .timeline_schemas import ProjectDraftTimeline
+from .user_overrides import save_user_overrides
 
 
 class TimelineVisualEditError(ValueError):
@@ -204,4 +205,17 @@ def apply_timeline_visual_edits(
     destination = directory / f"visual-edit-{number:03}.json"
     write_json_atomic(destination, revised)
     register_artifact(root, destination, dependencies=[source_file])
+    save_user_overrides(
+        root,
+        {
+            clip.clip_id: {
+                "source_start_seconds": clip.source_start_seconds,
+                "source_end_seconds": clip.source_end_seconds,
+                "sequence_index": clip.sequence_index,
+                "transition_in": clip.transition_in,
+                "transition_duration_seconds": clip.transition_duration_seconds,
+            }
+            for clip in revised.clips
+        },
+    )
     return destination
