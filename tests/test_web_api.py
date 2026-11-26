@@ -163,7 +163,6 @@ def test_get_project_media_rejects_paths_outside_source(tmp_path: Path, monkeypa
     assert response.status_code == 404
 
 
-
 def test_background_analysis_fails_closed_when_runtime_capabilities_are_missing(
     tmp_path: Path, monkeypatch
 ) -> None:
