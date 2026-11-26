@@ -24,7 +24,7 @@ const selectScenesForBrief = (scenes: any[], briefText: string, durationLabel: s
   if (scenes.length === 0) return scenes;
   const stopWords = new Set(["the", "and", "for", "with", "from", "that", "this", "into", "your", "film", "video", "some", "few", "make", "want", "about", "then", "than", "over", "under", "while", "there", "their", "have", "keep", "more", "less"]);
   const terms = [...new Set((briefText.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter(word => word.length > 2 && !stopWords.has(word)))];
-  const durationNumbers = durationLabel.match(/\d+(?:\\.\d+)?/g)?.map(Number) ?? [];
+  const durationNumbers = durationLabel.match(/\d+(?:\.\d+)?/g)?.map(Number) ?? [];
   const durationUnit = /min/i.test(durationLabel) ? 60 : 1;
   const targetSeconds = durationNumbers.length > 1
     ? (durationNumbers[0] + durationNumbers[1]) / 2 * durationUnit
