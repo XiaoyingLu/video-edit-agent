@@ -9,6 +9,7 @@ from ..music.schemas import MusicAnalysis
 from .draft_schemas import ProjectDraftSelection
 from .intent_schemas import EditingPlan
 from .timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
+from .user_overrides import apply_user_overrides
 
 _PACING_RANGES = {
     "slow": (4.0, 8.0),
@@ -535,6 +536,33 @@ def build_draft_timeline(
             selected = _cinematic_order(selected)
 
     timeline_clips = _build_timeline_clips(selected, plan, music_analysis)
+
+    generated_timeline = ProjectDraftTimeline(
+        project_path=str(root),
+        source_selection=(
+            str(selection_file.relative_to(root))
+            if selection_file.is_relative_to(root)
+            else str(selection_file)
+        ),
+        source_editing_plan=(
+            str(plan_file.relative_to(root)) if plan_file.is_relative_to(root) else str(plan_file)
+        ),
+        style=plan.style,
+        pacing=plan.pacing,
+        target_duration_seconds=plan.target_duration_seconds,
+        proposed_duration_seconds=round(
+            sum(clip.duration_seconds for clip in timeline_clips)
+            - sum(clip.transition_duration_seconds for clip in timeline_clips[1:]),
+            3,
+        ),
+        proposed_clip_count=len(timeline_clips),
+        clips=timeline_clips,
+        source_music_analysis=(
+            str(music_file.relative_to(root)) if music_file is not None else None
+        ),
+    )
+    generated_timeline = apply_user_overrides(generated_timeline)
+    timeline_clips = generated_timeline.clips
 
     duration = sum(clip.duration_seconds for clip in timeline_clips) - sum(
         clip.transition_duration_seconds for clip in timeline_clips[1:]
