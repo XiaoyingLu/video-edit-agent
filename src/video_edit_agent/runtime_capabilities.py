@@ -184,8 +184,17 @@ def probe_runtime_capabilities(project_root: Path) -> CapabilityReport:
         )
 
     required_render_filters = {
-        "scale", "pad", "setsar", "fps", "format", "trim", "setpts", "concat",
-        "aresample", "aformat", "anullsrc",
+        "scale",
+        "pad",
+        "setsar",
+        "fps",
+        "format",
+        "trim",
+        "setpts",
+        "concat",
+        "aresample",
+        "aformat",
+        "anullsrc",
     }
     if (
         ffmpeg
