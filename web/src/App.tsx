@@ -33,29 +33,28 @@ const selectScenesForBrief = (scenes: any[], briefText: string, durationLabel: s
     const summary = String(scene.summary ?? "").toLowerCase();
     const details = [scene.story_function, scene.dominant_mood, scene.primary_subject, scene.temporal_summary, scene.setting]
       .filter(Boolean).join(" ").toLowerCase();
-    const searchable = summary + " " + details;
     const score = terms.reduce((total, term) => total + (summary.includes(term) ? 3 : details.includes(term) ? 1 : 0), 0);
     const confidence = (scene.observations ?? []).reduce((sum: number, item: any) => sum + Number(item.confidence ?? 0), 0)
       / Math.max(1, (scene.observations ?? []).length);
-    return { scene, index, score: score || confidence, searchable };
+    return { scene, index, score: score || confidence };
   });
   ranked.sort((a, b) => b.score - a.score || a.index - b.index);
-  const selected: typeof ranked = [];
+  const selected: Array<{ scene: any; index: number; used: number }> = [];
   let remaining = Math.max(1, targetSeconds);
   for (const item of ranked) {
     if (remaining <= 0.5) break;
     const available = Math.max(0, Number(item.scene.end_seconds) - Number(item.scene.start_seconds));
     if (!available) continue;
-    selected.push(item);
-    remaining -= Math.min(available, remaining);
+    const used = Math.min(available, remaining);
+    selected.push({ ...item, used });
+    remaining -= used;
   }
   return selected
     .sort((a, b) => a.index - b.index)
-    .map(({ scene }) => {
-      const available = Math.max(0, Number(scene.end_seconds) - Number(scene.start_seconds));
-      const used = Math.min(available, targetSeconds - (targetSeconds - remaining));
-      return { ...scene, end_seconds: Math.min(Number(scene.end_seconds), Number(scene.start_seconds) + Math.max(0.1, used)) };
-    });
+    .map(({ scene, used }) => ({
+      ...scene,
+      end_seconds: Math.min(Number(scene.end_seconds), Number(scene.start_seconds) + Math.max(0.1, used)),
+    }));
 };
 
 const analysisPhase = (event: string) => {
