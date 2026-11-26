@@ -177,7 +177,8 @@ export default function App() {
         const edits = editsResponse.ok ? await editsResponse.json() : { clips: [] };
         const clipsByScene = new Map<string, any[]>();
         for (const clip of edits.clips ?? []) {
-          const list = clipsByScene.get(clip.scene_id) ?? [];          list.push(clip);
+          const list = clipsByScene.get(clip.scene_id) ?? [];
+          list.push(clip);
           clipsByScene.set(clip.scene_id, list);
         }
         let nextId = 1;
@@ -356,7 +357,8 @@ export default function App() {
     const midpoint = (current.start + current.end) / 2;
     if (current.end - current.start < 1) {
       announce("This scene is too short to split.");
-      return;    }
+      return;
+    }
     const nextId = Math.max(0, ...shots.map(shot => shot.id)) + 1;
     const second = { ...current, id: nextId, start: midpoint, duration: current.end - midpoint, place: formatTime(midpoint) + " – " + formatTime(current.end) };
     update(current.id, { end: midpoint, duration: midpoint - current.start, place: formatTime(current.start) + " – " + formatTime(midpoint) });
