@@ -120,11 +120,13 @@ def test_load_footage_review_selections_requires_every_shot(tmp_path: Path) -> N
     suggestions_path.write_text("current suggestions", encoding="utf-8")
     digest = hashlib.sha256(suggestions_path.read_bytes()).hexdigest()
     path.write_text(
-        json.dumps({
-            "schema_version": "1.0",
-            "suggestions_sha256": digest,
-            "selections": {"shot-001": 2, "shot-002": 0},
-        }),
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "suggestions_sha256": digest,
+                "selections": {"shot-001": 2, "shot-002": 0},
+            }
+        ),
         encoding="utf-8",
     )
 
