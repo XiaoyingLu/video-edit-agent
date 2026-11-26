@@ -22,7 +22,7 @@ const formatTime = (seconds: number) => `${Math.floor(seconds / 60).toString().p
 
 export default function App() {
   const [stage, setStage] = useState<Stage>("Create");
-  const [shots, setShots] = useState(initialShots);
+  const [shots, setShots] = useState<Shot[]>([]);
   const [active, setActive] = useState(1);
   const [playing, setPlaying] = useState(false);
   const [brief, setBrief] = useState("A relaxed, cinematic travel film with a sense of discovery. Let the landscapes breathe, with a few energetic moments.");
