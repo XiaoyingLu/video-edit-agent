@@ -241,9 +241,18 @@ def _render_timeline_review_card(
     rejected_checked = "checked" if clip.decision == "rejected" else ""
     pending_checked = "checked" if clip.decision == "pending" else ""
     has_crop_anchor = "true" if clip.clip_id in report.crop_anchors else "false"
-    transition_types = ("cut", "crossfade", "dissolve", "fadeblack", "wipeleft", "slideleft", "circleopen")
+    transition_types = (
+        "cut",
+        "crossfade",
+        "dissolve",
+        "fadeblack",
+        "wipeleft",
+        "slideleft",
+        "circleopen",
+    )
     transition_options = "".join(
-        f'<option value="{name}" {"selected" if clip.transition_in == name else ""}>{name.replace("_", " ").title()}</option>'
+        f'<option value="{name}" '
+        f'{"selected" if clip.transition_in == name else ""}>{name.replace("_", " ").title()}</option>'
         for name in transition_types
     )
     return (
