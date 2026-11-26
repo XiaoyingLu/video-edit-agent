@@ -47,7 +47,7 @@ def test_audit_decodes_frames_in_two_orders_and_reports_clipping_skip(monkeypatc
     assert report["sample_count"] >= 4
     assert report["boundary_count"] == 1
     assert "Tesseract OCR is not installed" in report["warnings"][0]
-    frame_commands = [command for command in calls if "-frames:v" in command]
+    frame_commands = [command for command in calls if "-vcodec" in command]
     assert len(frame_commands) == report["sample_count"] * 2
 
 
