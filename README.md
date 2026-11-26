@@ -38,6 +38,26 @@ video-agent create-video ./my-video \
 
 For Apple Silicon MLX vision, install `.[mlx,dev]` in a native macOS environment and choose `--provider mlx` or `--provider qwen3-vl`. See [Qwen3-VL setup](docs/qwen3-vl.md).
 
+## Video decoding and scene detection
+
+Scene detection uses PySceneDetect's **PyAV backend** by default. PyAV uses FFmpeg's decoding libraries and enables automatic decoder threading. If PyAV cannot open a particular video, the application logs a warning and retries with the OpenCV backend.
+
+PyAV is installed as a regular project dependency, so the standard editable install and Docker image build include it. After pulling a change that adds or updates dependencies, rebuild the API image:
+
+```bash
+docker compose build web-api
+docker compose up -d web-api
+```
+
+A local benchmark on a 138.137-second MOV clip measured the following full scene-detection times with the same PySceneDetect content threshold and minimum scene duration:
+
+| Backend | Detection time |
+| --- | ---: |
+| OpenCV | 1,253.70 seconds |
+| PyAV (automatic threading) | 359.35 seconds |
+
+That is approximately **3.49× faster** with PyAV on this particular clip. Both backends returned the same interval, 0.000–138.137 seconds. The clip produced only one detected scene, so this result demonstrates a performance improvement for the tested file, not comprehensive scene-boundary accuracy across footage with multiple cuts. Performance varies with codec, resolution, frame rate, hardware, and source media.
+
 ## Command overview
 
 - **Ingest & understand:** `analyze`, `understand`, `transcribe`, `detect-silence`, `propose-edits`, `review-edits`, `build-timeline`, `subtitles`
