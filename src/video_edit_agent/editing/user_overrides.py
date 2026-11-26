@@ -105,9 +105,12 @@ def apply_user_overrides(timeline):
         )
 
     patched = []
+    changed = False
     for clip in timeline.clips:
         values = overrides.get(clip.clip_id, {})
         updates = dict(values)
+        if any(getattr(clip, key) != value for key, value in values.items()):
+            changed = True
         start = updates.get("source_start_seconds", clip.source_start_seconds)
         end = updates.get("source_end_seconds", clip.source_end_seconds)
         if start < clip.source_start_seconds - 0.001 or end > clip.source_end_seconds + 0.001:
@@ -138,6 +141,8 @@ def apply_user_overrides(timeline):
                 original_positions[clip.clip_id],
             )
         )
+        if [clip.clip_id for clip in patched] != [clip.clip_id for clip in timeline.clips]:
+            changed = True
 
     for index, clip in enumerate(patched, start=1):
         clip.sequence_index = index
@@ -168,8 +173,8 @@ def apply_user_overrides(timeline):
         update={
             "clips": patched,
             "proposed_duration_seconds": proposed_duration,
-            "approved_duration_seconds": 0,
-            "timeline_approved": False,
+            "approved_duration_seconds": 0 if changed else timeline.approved_duration_seconds,
+            "timeline_approved": False if changed else timeline.timeline_approved,
         },
         deep=True,
     )
