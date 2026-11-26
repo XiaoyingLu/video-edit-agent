@@ -8,7 +8,7 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Callable
+from collections.abc import Callable
 
 
 def sha256_file(path: Path) -> str:
@@ -64,7 +64,9 @@ class RunWorkspace:
         finalize: Callable[[], None] | None = None,
     ) -> str:
         """Verify, atomically replace the active file, and roll back if finalization fails."""
-        expected = self.checksums.get(staged.relative_to(self.path).as_posix()) if self.path else None
+        expected = None
+        if self.path is not None and staged.is_relative_to(self.path):
+            expected = self.checksums.get(staged.relative_to(self.path).as_posix())
         if expected is None or sha256_file(staged) != expected:
             raise ValueError(f"staged artifact checksum mismatch: {staged}")
         destination.parent.mkdir(parents=True, exist_ok=True)
