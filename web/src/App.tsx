@@ -58,6 +58,8 @@ export default function App() {
       }
       const project = await response.json();
       let uploadedMediaCount = 0;
+      let initialAnalysisStatus = "not_started";
+      let initialAnalysisProgress: Record<string, unknown> = {};
       if (selectedFiles.length > 0) {
         const form = new FormData();
         selectedFiles.forEach(file => form.append("files", file));
@@ -68,14 +70,24 @@ export default function App() {
         }
         const uploadedProject = await upload.json();
         uploadedMediaCount = uploadedProject.media?.length ?? selectedFiles.length;
+
+        // Start scene analysis as soon as the upload has completed.
+        const analysis = await fetch("/api/projects/" + project.id + "/analyze", { method: "POST" });
+        if (analysis.ok) {
+          const analysisProject = await analysis.json();
+          initialAnalysisStatus = analysisProject.analysis_status;
+          initialAnalysisProgress = analysisProject.analysis_progress ?? {};
+        } else {
+          initialAnalysisStatus = "failed";
+        }
       }
       setProjectId(project.id);
       setHasMedia(uploadedMediaCount > 0);
-      setAnalysisStatus("not_started");
-      setAnalysisProgress({});
+      setAnalysisStatus(initialAnalysisStatus);
+      setAnalysisProgress(initialAnalysisProgress);
       setShots([]);
       setProjectName(project.name);
-      announce("Project created" + (uploadedMediaCount ? " with " + uploadedMediaCount + " video file(s). You can now analyze your footage." : ". Add video files to begin."));
+      announce("Project created" + (uploadedMediaCount ? " with " + uploadedMediaCount + " video file(s). Analysis has started automatically." : ". Add video files to begin."));
       setStage("Storyboard");
     } catch (error) {
       announce(error instanceof Error ? error.message : "Could not connect to the local project service.");
@@ -197,7 +209,7 @@ export default function App() {
           <aside className="inspiration-card"><div className="inspiration-image" style={{backgroundImage:`url(${image("photo-1470770841072-f978cf4d019e")})`}}/><div className="inspiration-content"><span className="pill"><WandSparkles size={12}/> YOUR CREATIVE ASSISTANT</span><h3>Good stories start with a feeling.</h3><p>Describe the atmosphere, not every single shot. The AI will find the moments that fit.</p><div className="tip"><Star size={15}/><span><b>A little tip</b> Mention a mood, a place, or a moment you don't want to miss.</span></div></div></aside>
         </section>}
 
-        {stage === "Storyboard" && <><div className="story-toolbar"><div><div className="section-title">Your story <span className="count-pill">{selectedCount} of {shots.length} scenes</span></div><p className="section-subtitle">{shots.length ? "Review the real scenes detected in your footage." : "Upload your footage and let the editor find the scenes."}</p></div><div className="toolbar-actions"><button className="secondary-button" disabled={!hasMedia || startingAnalysis || analysisStatus === "queued" || analysisStatus === "running"} onClick={startAnalysis}><WandSparkles size={15}/>{startingAnalysis || analysisStatus === "queued" || analysisStatus === "running" ? "Analyzing..." : analysisStatus === "failed" ? "Retry analysis" : analysisStatus === "completed" ? "Analyze again" : "Analyze footage"}</button><button className="primary-button" disabled={!shots.length} onClick={()=>setStage("Edit")}>Continue to edit <ArrowRight size={16}/></button></div></div>
+        {stage === "Storyboard" && <><div className="story-toolbar"><div><div className="section-title">Your story <span className="count-pill">{selectedCount} of {shots.length} scenes</span></div><p className="section-subtitle">{shots.length ? "Review the real scenes detected in your footage." : "Upload your footage and let the editor find the scenes."}</p></div><div className="toolbar-actions">{(analysisStatus === "failed" || analysisStatus === "completed") && <button className="secondary-button" disabled={!hasMedia || startingAnalysis} onClick={startAnalysis}><WandSparkles size={15}/>{startingAnalysis ? "Starting..." : analysisStatus === "failed" ? "Retry analysis" : "Analyze again"}</button>}<button className="primary-button" disabled={!shots.length} onClick={()=>setStage("Edit")}>Continue to edit <ArrowRight size={16}/></button></div></div>
           {analysisStatus === "running" && shots.length > 0 ? <div className="analysis-progress"><span>{String(analysisProgress.event ?? "Analyzing footage").replace(/_/g, " ")}</span>{typeof analysisProgress.completed_frames === "number" && typeof analysisProgress.total_frames === "number" ? <b>{analysisProgress.completed_frames} / {analysisProgress.total_frames} frames</b> : null}</div> : null}
           {shots.length === 0 ? <section className="empty-story panel">
             <div className="upload-icon"><Film size={21}/></div>
