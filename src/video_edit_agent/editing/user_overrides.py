@@ -125,7 +125,12 @@ def apply_user_overrides(timeline):
             updates["source_end_seconds"] = round(end, 3)
             updates["duration_seconds"] = round(end - start, 3)
         updates.pop("sequence_index", None)
-        patched.append(clip.model_copy(update=updates, deep=True))
+        try:
+            patched.append(type(clip).model_validate({**clip.model_dump(), **updates}))
+        except ValueError as exc:
+            raise UserOverrideError(
+                f"Invalid saved override for clip '{clip.clip_id}': {exc}"
+            ) from exc
 
     # Preserve explicit user ordering where present; otherwise retain agent order.
     explicit_order = {
