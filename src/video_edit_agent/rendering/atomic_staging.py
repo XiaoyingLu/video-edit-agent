@@ -50,7 +50,7 @@ class RunWorkspace:
         manifest = self.path / "checksums.json"
         temporary = manifest.with_suffix(".tmp")
         temporary.write_text(
-            json.dumps(self.checksums, sort_keys=True, indent=2) + "\\n",
+            json.dumps(self.checksums, sort_keys=True, indent=2),
             encoding="utf-8",
         )
         os.replace(temporary, manifest)
