@@ -42,6 +42,49 @@ def test_scene_detection_falls_back_to_one_scene_when_detector_finds_none(
     assert detect_scenes(tmp_path / "clip.mp4", 8.0) == [(0.0, 8.0)]
 
 
+def test_scene_detection_reports_throttled_frame_progress(monkeypatch, tmp_path: Path) -> None:
+    class FakeDuration:
+        frame_num = 4
+
+    class FakeVideo:
+        frame_rate = 2
+        duration = FakeDuration()
+
+    class FakeDetector:
+        def __init__(self, **kwargs):
+            pass
+
+        def process_frame(self, frame_num, frame_img):
+            return []
+
+    class FakeManager:
+        def add_detector(self, detector):
+            self.detector = detector
+
+        def detect_scenes(self, video, show_progress=False):
+            for frame_num in range(4):
+                self.detector.process_frame(frame_num, None)
+
+        def get_scene_list(self, start_in_scene=True):
+            return []
+
+    import scenedetect
+
+    monkeypatch.setattr(scenedetect, "ContentDetector", FakeDetector)
+    monkeypatch.setattr(scenedetect, "open_video", lambda path: FakeVideo())
+    monkeypatch.setattr(scenedetect, "SceneManager", FakeManager)
+    updates = []
+
+    detect_scenes(
+        tmp_path / "clip.mp4",
+        2.0,
+        progress_callback=updates.append,
+    )
+
+    assert [update["frames_processed"] for update in updates] == [2, 4]
+    assert all(update["total_frames"] == 4 for update in updates)
+
+
 def test_frame_sampler_rejects_invalid_scene(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(
         "video_edit_agent.understanding.frame_sampler.shutil.which", lambda _: "ffmpeg"
