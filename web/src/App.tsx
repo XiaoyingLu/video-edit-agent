@@ -65,7 +65,15 @@ export default function App() {
   const progressPhase = analysisPhase(progressEvent);
   const completedFrames = typeof analysisProgress.completed_frames === "number" ? analysisProgress.completed_frames : 0;
   const totalFrames = typeof analysisProgress.total_frames === "number" ? analysisProgress.total_frames : 0;
-  const progressPercent = totalFrames > 0 ? Math.min(100, Math.round(completedFrames / totalFrames * 100)) : null;
+  const scanningFrames = typeof analysisProgress.frames_processed === "number" ? analysisProgress.frames_processed : 0;
+  const scanningTotalFrames = typeof analysisProgress.total_frames === "number" ? analysisProgress.total_frames : 0;
+  const isSceneScanning = progressEvent === "scene_detection_progress";
+  const progressPercent = isSceneScanning && scanningTotalFrames > 0
+    ? Math.min(100, Math.round(scanningFrames / scanningTotalFrames * 100))
+    : totalFrames > 0 ? Math.min(100, Math.round(completedFrames / totalFrames * 100)) : null;
+  const progressLabel = isSceneScanning
+    ? scanningFrames.toLocaleString() + " of " + scanningTotalFrames.toLocaleString() + " frames scanned"
+    : progressPercent === null ? "Preparing workload…" : completedFrames + " of " + totalFrames + " frames analyzed";
   const progressSteps = ["Detect scene boundaries", "Extract representative frames", "Describe frames with AI", "Understand movement and continuity", "Build your storyboard"];
   const total = useMemo(() => shots.filter(s => s.selected).reduce((n, s) => n + s.duration, 0), [shots]);
   useEffect(() => {
@@ -392,7 +400,7 @@ export default function App() {
             <div className="analysis-card-heading"><div className="analysis-spinner" /><div><span className="analysis-kicker">{analysisStatus === "queued" ? "QUEUED" : "ANALYSIS IN PROGRESS"}</span><h2>{progressPhase.title}</h2><p>{progressPhase.detail}</p></div></div>
             <div className="analysis-meter">
               {progressPercent === null ? <div className="analysis-meter-indeterminate"><i /></div> : <div className="analysis-meter-track"><i style={{ width: progressPercent + "%" }} /></div>}
-              <div className="analysis-meter-label"><span>{progressPercent === null ? "Preparing workload…" : completedFrames + " of " + totalFrames + " frames analyzed"}</span>{progressPercent !== null ? <b>{progressPercent}%</b> : <b>In progress</b>}</div>
+              <div className="analysis-meter-label"><span>{progressLabel}</span>{progressPercent !== null ? <b>{progressPercent}%</b> : <b>In progress</b>}</div>
             </div>
             <div className="analysis-steps">{progressSteps.map((label, index) => {
               const done = analysisStatus === "completed" || index < progressPhase.stage;
