@@ -13,6 +13,7 @@ from ..media_runner import run_ffmpeg
 from ..music.schemas import MusicAnalysis
 from .audio_mix import append_music_input, append_music_mix, resolve_selected_music
 from .face_reframing import detect_face_crop_paths
+from .frame_audit import FrameAuditError, audit_rendered_frames
 from .overlay_filters import _append_asset_overlay_filters, _append_title_overlay_filters
 from .renderer import (
     RenderError,
@@ -24,6 +25,20 @@ from .renderer import (
 )
 from .social_crop_anchors import load_crop_anchors
 from .title_overlays import TitleOverlay, resolve_asset_overlays
+
+
+def _output_cut_boundaries(
+    clip_inputs: list[tuple[Path, float, float, bool, str, float]],
+) -> list[float]:
+    """Return output-time locations around every hard cut or transition."""
+    if len(clip_inputs) < 2:
+        return []
+    elapsed = clip_inputs[0][2] - clip_inputs[0][1]
+    boundaries = []
+    for _path, start, end, _has_audio, transition, overlap in clip_inputs[1:]:
+        boundaries.append(elapsed if transition == "cut" else elapsed - overlap / 2)
+        elapsed += end - start - (overlap if transition != "cut" else 0.0)
+    return boundaries
 
 
 def _safe_source(root: Path, relative_path: str) -> Path:
@@ -901,6 +916,20 @@ def render_approved_shot_timeline(
     if render_result is None:
         return None
     output_probe, output_video, output_audio, actual_duration = render_result
+    try:
+        audit = audit_rendered_frames(
+            ffmpeg,
+            destination,
+            actual_duration,
+            _output_cut_boundaries(clip_inputs),
+            width=width,
+            height=height,
+            has_titles=bool(approved_titles),
+            timeout=min(timeout_seconds, 60),
+        )
+    except FrameAuditError as exc:
+        destination.unlink(missing_ok=True)
+        raise RenderError(f"render frame audit failed: {exc}") from exc
     register_artifact(
         root,
         destination,
@@ -920,4 +949,6 @@ def render_approved_shot_timeline(
         height=int(output_video.get("height") or height),
         video_codec=str(output_video.get("codec_name") or "unknown"),
         audio_codec=str(output_audio.get("codec_name") or "unknown"),
+        audit_sample_count=audit["sample_count"],
+        audit_warnings=audit["warnings"],
     )
