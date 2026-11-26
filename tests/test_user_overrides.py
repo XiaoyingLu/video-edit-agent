@@ -123,6 +123,8 @@ def test_reapplying_already_materialized_overrides_preserves_approval(tmp_path):
     timeline.proposed_duration_seconds = 7.5
     timeline.clips[0].decision = "approved"
     timeline.clips[1].decision = "rejected"
+    timeline.approved_duration_seconds = 3.5
+    timeline.timeline_approved = True
     save_user_overrides(
         tmp_path,
         {"coast": {"source_start_seconds": 2.5, "source_end_seconds": 6.0}},
