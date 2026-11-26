@@ -281,7 +281,7 @@ def review_timeline_visual(
             help="Open a local browser session and submit visual edits directly.",
         ),
     ] = False,
-) -> None:
+) -> Path | None:
     """Create a browser review page; --live applies submitted edits as an unapproved revision."""
     try:
         report = build_timeline_visual_review(folder, timeline_path=timeline)
@@ -332,7 +332,7 @@ def review_timeline_visual(
                 "[yellow]Edits were saved as a separate revision. Review and approve "
                 "that revision before rendering; the original timeline is unchanged.[/yellow]"
             )
-            return
+            return revision
         json_file, html_file = save_timeline_visual_review(folder, report, output_path=output)
     except (
         FileNotFoundError,
@@ -351,6 +351,7 @@ def review_timeline_visual(
         "[yellow]Open the HTML file in a browser, export decisions, then apply them with "
         "review-timeline --decisions-file. No decisions are applied by this command.[/yellow]"
     )
+    return html_file
 
 
 @story_app.command("apply-timeline-visual-edits")

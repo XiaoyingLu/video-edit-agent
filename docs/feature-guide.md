@@ -14,6 +14,18 @@ A local-first Python CLI for editing personal video footage. Media stays on your
 - Natural-language editing intent parsing into a validated, reviewable plan
 - Local soundtrack tempo, beat/downbeat, and energy-section analysis
 
+## Guided first-draft workflow
+
+The default `create-video` command now keeps footage selection and timeline editing in one guided session:
+
+1. Analyze the source folder and create a storyboard from the creative brief.
+2. Open the browser footage reviewer to choose the source footage for each storyboard shot.
+3. Build the proposed sequence and open the visual timeline editor automatically.
+4. Reorder shots and adjust their source in/out points, then submit the edits directly to the running CLI.
+5. Confirm the edited timeline before rendering.
+
+The visual edits are saved as a separate, unapproved timeline revision. If you decline the final confirmation or the review times out, the revision remains available and no video is rendered. The original source videos and the pre-edit timeline are not overwritten.
+
 ## Hierarchical video planning
 
 The `create-plan` command generates a creative brief, narrative treatment, and structured storyboard using a dedicated lightweight text model. By default it uses `qwen2.5:1.5b`, independently of the multimodal vision model configured by `OLLAMA_MODEL`:

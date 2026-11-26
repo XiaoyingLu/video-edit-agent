@@ -188,21 +188,39 @@ def _create_storyboard_video_draft(
         f"({image_count} representative frame(s))."
     )
     console.print(
-        "[yellow]Open storyboard.html to inspect the proposed footage assignments. "
-        "The matching scores are recommendations, not guarantees.[/yellow]"
+        "[yellow]Next, review the complete edit in the visual timeline editor. "
+        "You can reorder shots and adjust their in/out points before rendering.[/yellow]"
     )
-    decision = console.input("Continue to build and render this storyboard? [y/N]: ")
-    if decision.strip().lower() not in {"y", "yes"}:
-        console.print(
-            "[yellow]Rendering cancelled. The storyboard and footage assignments "
-            "were preserved for review; nothing was approved or rendered.[/yellow]"
-        )
-        raise typer.Exit(code=2)
     project_plan, plan_path = approve_storyboard(folder, plan_path=plan_path)
     timeline = build_storyboard_timeline(folder, plan_path=plan_path)
     timeline_path = folder.resolve() / ".video-agent" / "optimized-timeline.json"
-    save_storyboard_timeline(timeline, timeline_path)
-    timeline = apply_timeline_review(timeline, {clip.clip_id for clip in timeline.clips}, set())
+    save_draft_timeline(timeline, timeline_path)
+
+    from .planning_timeline import review_timeline_visual
+
+    revision_path = review_timeline_visual(
+        folder,
+        timeline=timeline_path,
+        live=True,
+    )
+    if revision_path is None:
+        raise ValueError("The live timeline review did not produce a revision.")
+    timeline, timeline_path = load_draft_timeline(folder, revision_path)
+    console.print(
+        f"Visual edit saved: {len(timeline.clips)} shot(s) in [green]{timeline_path}[/green]."
+    )
+    decision = console.input("Approve this edited timeline and render the video? [y/N]: ")
+    if decision.strip().lower() not in {"y", "yes"}:
+        console.print(
+            "[yellow]Rendering cancelled. Your visual timeline edits were preserved "
+            "as an unapproved revision; nothing was rendered.[/yellow]"
+        )
+        raise typer.Exit(code=2)
+    timeline = apply_timeline_review(
+        timeline,
+        {clip.clip_id for clip in timeline.clips},
+        set(),
+    )
     save_draft_timeline(timeline, timeline_path)
     plan = project_plan.brief
     console.print(
