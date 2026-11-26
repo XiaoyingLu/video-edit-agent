@@ -226,9 +226,7 @@ def test_visual_edits_apply_selected_transition_without_reordering(tmp_path, mon
     assert revised.proposed_duration_seconds == 7.2
 
 
-def test_visual_edits_force_first_clip_to_cut_and_limit_transition_duration(
-    tmp_path, monkeypatch
-):
+def test_visual_edits_force_first_clip_to_cut_and_limit_transition_duration(tmp_path, monkeypatch):
     source = _timeline(tmp_path)
     _patch_tracking(monkeypatch)
     edits = _export(
