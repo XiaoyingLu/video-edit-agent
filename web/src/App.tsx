@@ -38,6 +38,9 @@ export default function App() {
   const [analysisProgress, setAnalysisProgress] = useState<Record<string, unknown>>({});
   const [startingAnalysis, setStartingAnalysis] = useState(false);
   const [savingEdits, setSavingEdits] = useState(false);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [showProjectLibrary, setShowProjectLibrary] = useState(false);
+  const [loadingProjects, setLoadingProjects] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const current = shots.find(s => s.id === active) ?? shots[0] ?? initialShots[0];
   const selectedCount = shots.filter(s => s.selected).length;
@@ -96,6 +99,91 @@ export default function App() {
       setCreatingProject(false);
     }
   };
+  const openProject = async (id: string) => {
+    try {
+      const response = await fetch("/api/projects/" + id);
+      if (!response.ok) throw new Error("Could not open this project");
+      const project = await response.json();
+      setProjectId(project.id);
+      setProjectName(project.name);
+      setBrief(project.brief ?? "");
+      setDuration(project.target_duration ?? "60–90 seconds");
+      setFormat(project.format ?? "16:9 · YouTube");
+      setHasMedia((project.media ?? []).length > 0);
+      setAnalysisStatus(project.analysis_status ?? "not_started");
+      setAnalysisProgress(project.analysis_progress ?? {});
+      setShots([]);
+      if (project.analysis_status === "completed") {
+        const [analysisResponse, editsResponse] = await Promise.all([
+          fetch("/api/projects/" + id + "/analysis"),
+          fetch("/api/projects/" + id + "/edit-decisions"),
+        ]);
+        if (!analysisResponse.ok) throw new Error("Could not load the storyboard");
+        const analysis = await analysisResponse.json();
+        const edits = editsResponse.ok ? await editsResponse.json() : { clips: [] };
+        const clipsByScene = new Map<string, any[]>();
+        for (const clip of edits.clips ?? []) {
+          const list = clipsByScene.get(clip.scene_id) ?? [];
+          list.push(clip);
+          clipsByScene.set(clip.scene_id, list);
+        }
+        let nextId = 1;
+        const restored: Shot[] = (analysis.scenes ?? []).flatMap((scene: any, index: number) => {
+          const firstFrame = scene.observations?.[0]?.frame_path;
+          const frameUrl = firstFrame
+            ? "/api/projects/" + id + "/frames/" + firstFrame.split("/").map(encodeURIComponent).join("/")
+            : "";
+          const savedClips = clipsByScene.get(scene.scene_id);
+          const clipRecords = savedClips?.length ? savedClips : [{
+            start_seconds: scene.start_seconds,
+            end_seconds: scene.end_seconds,
+            included: true,
+          }];
+          return clipRecords.map((clip: any) => {
+            const start = clip.start_seconds ?? scene.start_seconds;
+            const end = clip.end_seconds ?? scene.end_seconds;
+            return {
+              id: Number.parseInt(clip.clip_id ?? "", 10) || nextId++,
+              title: scene.summary || "Scene " + (index + 1),
+              place: formatTime(start) + " – " + formatTime(end),
+              duration: Math.max(0.1, end - start),
+              start,
+              end,
+              image: frameUrl,
+              confidence: scene.observations?.[0]?.confidence,
+              sceneId: scene.scene_id,
+              sourceVideoPath: scene.source_video_path,
+              note: [scene.story_function, scene.dominant_mood].filter(Boolean).join(" · "),
+              transition: "Cut",
+              selected: clip.included !== false,
+            };
+          });
+        });
+        setShots(restored);
+        setActive(restored[0]?.id ?? 0);
+      }
+      setStage("Storyboard");
+      setShowProjectLibrary(false);
+      announce("Project reopened.");
+    } catch (error) {
+      announce(error instanceof Error ? error.message : "Could not open project.");
+    }
+  };
+  const showProjects = async () => {
+    setLoadingProjects(true);
+    setShowProjectLibrary(true);
+    try {
+      const response = await fetch("/api/projects");
+      if (!response.ok) throw new Error("Could not load projects");
+      setProjects(await response.json());
+    } catch (error) {
+      announce(error instanceof Error ? error.message : "Could not load projects.");
+      setShowProjectLibrary(false);
+    } finally {
+      setLoadingProjects(false);
+    }
+  };
+
   const startAnalysis = async () => {
     if (!projectId || !hasMedia) return;
     setStartingAnalysis(true);
@@ -234,7 +322,7 @@ export default function App() {
       <div className="workspace-switch"><div className="workspace-avatar">M</div><div><b>My workspace</b><small>Personal library</small></div><ChevronDown size={15}/></div>
       <div className="side-label">WORKSPACE</div>
       <button className="side-link active"><LayoutDashboard size={17}/> <span>Current project</span></button>
-      <button className="side-link" onClick={() => announce("Your project library is coming soon.")}><Film size={17}/> <span>All projects</span></button>
+      <button className="side-link" onClick={showProjects}><Film size={17}/> <span>All projects</span></button>
       <button className="side-link" onClick={() => announce("Media library is coming soon.")}><Layers3 size={17}/> <span>Media library</span></button>
       <div className="side-label side-label-spaced">YOUR PROJECT</div>
       <div className="project-mini"><div className="project-mini-image" style={{backgroundImage:`url(${image("photo-1470770841072-f978cf4d019e")})`}}/><div><b>{projectName}</b><small>Edited just now</small></div><MoreHorizontal size={16}/></div>
@@ -282,6 +370,16 @@ export default function App() {
         <footer className="page-footer"><span>Made for the moments that matter.</span><span>FRAME <span className="footer-dot">●</span> AI VIDEO EDITOR</span></footer>
       </div>
     </main>
+    {showProjectLibrary && <div style={{position:"fixed",inset:0,zIndex:20,background:"rgba(20,24,30,.48)",display:"grid",placeItems:"center",padding:24}} onClick={()=>setShowProjectLibrary(false)}>
+      <section className="panel" style={{width:"min(680px,100%)",maxHeight:"80vh",overflowY:"auto",padding:24}} onClick={event=>event.stopPropagation()}>
+        <div className="panel-heading"><div><h2>All projects</h2><p>Continue working on a project saved on this computer.</p></div><button className="icon-button" onClick={()=>setShowProjectLibrary(false)} aria-label="Close project library"><X size={17}/></button></div>
+        {loadingProjects ? <p>Loading projects…</p> : projects.length === 0 ? <p>No projects yet. Create a project and upload footage to get started.</p> : <div style={{display:"grid",gap:10}}>
+          {projects.map(project=><button key={project.id} className="full-secondary" style={{display:"flex",justifyContent:"space-between",alignItems:"center",textAlign:"left",padding:16}} onClick={()=>openProject(project.id)}>
+            <span><b>{project.name}</b><small style={{display:"block",opacity:.7,marginTop:4}}>{(project.media ?? []).length} video file(s) · {project.analysis_status ?? "not analyzed"}</small></span><ArrowRight size={16}/>
+          </button>)}
+        </div>}
+      </section>
+    </div>}
     {notice && <div className="toast"><Check size={16}/>{notice}<button onClick={()=>setNotice("")}><X size={14}/></button></div>}
   </div>;
 }
