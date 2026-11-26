@@ -2,10 +2,10 @@
 
 from video_edit_agent.editing.intent_schemas import EditingPlan
 from video_edit_agent.transcription.schemas import (
-    ProjectTranscription,
-    VideoTranscript,
-    TranscriptSegment,
     PauseInterval,
+    ProjectTranscription,
+    TranscriptSegment,
+    VideoTranscript,
 )
 from video_edit_agent.understanding.schemas import VideoScene, VideoUnderstanding
 
@@ -75,7 +75,11 @@ def test_transcription_output_attaches_speech_and_silence_boundaries() -> None:
 
 
 def test_editing_plan_attaches_target_format_and_pacing() -> None:
-    plan = EditingPlan(source_prompt="Make a concise travel film", aspect_ratio="9:16", pacing="fast")
+    plan = EditingPlan(
+        source_prompt="Make a concise travel film",
+        aspect_ratio="9:16",
+        pacing="fast",
+    )
 
     signal = plan.context_signal
     assert signal is not None
