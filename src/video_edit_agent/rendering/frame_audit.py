@@ -46,7 +46,9 @@ def validate_title_font(configured_font: str, bundled_font: Path) -> Path | None
     raise FrameAuditError(f"configured title font could not be resolved: {configured}")
 
 
-def _sample_times(duration: float, boundaries: list[float], frame_rate: float = 30.0) -> list[float]:
+def _sample_times(
+    duration: float, boundaries: list[float], frame_rate: float = 30.0
+) -> list[float]:
     epsilon = 1.0 / frame_rate
     times = {min(max(0.25, duration / 2), duration - 0.01), max(0.0, duration - 0.25)}
     for boundary in boundaries:
@@ -85,16 +87,21 @@ def _extract_frame(ffmpeg: str, video: Path, timestamp: float, timeout: float) -
             check=False,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
-        raise FrameAuditError(f"random-access frame decode failed at {timestamp:.3f}s: {exc}") from exc
+        raise FrameAuditError(
+            f"random-access frame decode failed at {timestamp:.3f}s: {exc}"
+        ) from exc
     if result.returncode != 0 or not result.stdout:
         detail = result.stderr.decode("utf-8", errors="replace")[-500:]
         raise FrameAuditError(
-            f"random-access frame decode failed at {timestamp:.3f}s: {detail or 'no frame returned'}"
+            f"random-access frame decode failed at {timestamp:.3f}s: "
+            f"{detail or 'no frame returned'}"
         )
     return result.stdout
 
 
-def _text_edge_warnings(tesseract: str, frames: dict[float, bytes], width: int, height: int) -> list[str]:
+def _text_edge_warnings(
+    tesseract: str, frames: dict[float, bytes], width: int, height: int
+) -> list[str]:
     warnings: list[str] = []
     margin_x = max(2, round(width * 0.01))
     margin_y = max(2, round(height * 0.01))
