@@ -17,6 +17,7 @@ from ..atomic_io import write_json_atomic
 from ..rendering.critique import DraftCritiqueError, _run
 from ..rendering.social_crop_anchors import load_crop_anchors
 from .timeline_schemas import ProjectDraftTimeline
+from .user_overrides import apply_user_overrides
 
 
 class TimelineVisualReviewError(ValueError):
@@ -47,6 +48,8 @@ class TimelineVisualReviewClip(BaseModel):
     music_pacing_note: str
     transition_in: str
     transition_duration_seconds: float
+    caption: str | None = None
+    gain_db: float | None = None
     decision: str
     frame_data_uri: str = Field(default="", exclude=True)
 
@@ -156,6 +159,7 @@ def build_timeline_visual_review(
     timeline = ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root:
         raise TimelineVisualReviewError("Timeline belongs to a different project folder")
+    timeline = apply_user_overrides(timeline)
     anchor_file = root / ".video-agent" / "social-crop-anchors.json"
     crop_anchor_warning = None
     crop_anchors = {}
@@ -196,6 +200,8 @@ def build_timeline_visual_review(
                     music_pacing_note=clip.music_pacing_note,
                     transition_in=clip.transition_in,
                     transition_duration_seconds=clip.transition_duration_seconds,
+                    caption=clip.caption,
+                    gain_db=clip.gain_db,
                     decision=clip.decision,
                     frame_data_uri=frame,
                 )
@@ -285,6 +291,11 @@ def _render_timeline_review_card(
         f'<label>Out (s) <input class="trim-end" type="number" '
         f'min="{clip.source_start_seconds + 1:.3f}" max="{clip.source_end_seconds:.3f}" '
         f'step="0.1" value="{clip.source_end_seconds:.3f}"></label></div>'
+        f'<div class="trim clip-overrides"><label>Shot caption <input class="clip-caption" '
+        f'type="text" maxlength="500" value="'
+        f'{html.escape(clip.caption or "", quote=True)}"></label>'
+        f'<label>Source gain (dB) <input class="clip-gain" type="number" min="-60" max="24" '
+        f'step="0.5" value="{"" if clip.gain_db is None else clip.gain_db}"></label></div>'
         f'<div class="trim transition-editor"><label>Transition into this shot '
         f'<select class="transition-type">{transition_options}</select></label>'
         f'<label>Transition duration (s) <input class="transition-duration" type="number" '

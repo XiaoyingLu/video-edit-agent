@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from ..artifact_tracking import register_artifact, validate_artifact
 from ..atomic_io import write_json_atomic
 from .timeline_schemas import ProjectDraftTimeline
+from .user_overrides import save_user_overrides
 
 
 class TimelineVisualEditError(ValueError):
@@ -28,6 +29,8 @@ class TimelineVisualEditClip(BaseModel):
         | None
     ) = None
     transition_duration_seconds: float | None = Field(default=None, ge=0, le=2)
+    caption: str | None = Field(default=None, max_length=500)
+    gain_db: float | None = Field(default=None, ge=-60, le=24)
 
 
 class TimelineVisualEditExport(BaseModel):
@@ -133,6 +136,10 @@ def apply_timeline_visual_edits(
         clip.source_start_seconds = round(edit.source_start_seconds, 3)
         clip.source_end_seconds = round(edit.source_end_seconds, 3)
         clip.duration_seconds = duration
+        if edit.caption is not None:
+            clip.caption = edit.caption
+        if edit.gain_db is not None:
+            clip.gain_db = edit.gain_db
         clip.decision = "pending"
         clip.review_required = True
         ratio = duration / clip.pacing_target_seconds
@@ -204,4 +211,31 @@ def apply_timeline_visual_edits(
     destination = directory / f"visual-edit-{number:03}.json"
     write_json_atomic(destination, revised)
     register_artifact(root, destination, dependencies=[source_file])
+    override_updates = {}
+    for clip in revised.clips:
+        original_clip = original[clip.clip_id]
+        values = {}
+        if (
+            clip.source_start_seconds != original_clip.source_start_seconds
+            or clip.source_end_seconds != original_clip.source_end_seconds
+        ):
+            values["source_start_seconds"] = clip.source_start_seconds
+            values["source_end_seconds"] = clip.source_end_seconds
+        if order_changed:
+            values["sequence_index"] = clip.sequence_index
+        if clip.caption != original_clip.caption:
+            values["caption"] = clip.caption
+        if clip.gain_db != original_clip.gain_db:
+            values["gain_db"] = clip.gain_db
+        if (
+            order_changed
+            or clip.transition_in != original_clip.transition_in
+            or clip.transition_duration_seconds != original_clip.transition_duration_seconds
+        ):
+            values["transition_in"] = clip.transition_in
+            values["transition_duration_seconds"] = clip.transition_duration_seconds
+        if values:
+            override_updates[clip.clip_id] = values
+    if override_updates:
+        save_user_overrides(root, override_updates)
     return destination

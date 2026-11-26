@@ -80,7 +80,11 @@ def test_apply_visual_edits_reorders_and_trims_into_separate_pending_revision(
         source,
         [
             TimelineVisualEditClip(
-                clip_id="mountain", source_start_seconds=10.5, source_end_seconds=13.5
+                clip_id="mountain",
+                source_start_seconds=10.5,
+                source_end_seconds=13.5,
+                caption="Above the clouds",
+                gain_db=-3.0,
             ),
             TimelineVisualEditClip(
                 clip_id="coast", source_start_seconds=2.5, source_end_seconds=5.5
@@ -96,6 +100,8 @@ def test_apply_visual_edits_reorders_and_trims_into_separate_pending_revision(
     assert [clip.sequence_index for clip in revised.clips] == [1, 2]
     assert revised.clips[0].source_start_seconds == 10.5
     assert revised.clips[0].duration_seconds == 3
+    assert revised.clips[0].caption == "Above the clouds"
+    assert revised.clips[0].gain_db == -3.0
     assert all(clip.decision == "pending" for clip in revised.clips)
     assert revised.timeline_approved is False
     assert revised.approved_duration_seconds == 0

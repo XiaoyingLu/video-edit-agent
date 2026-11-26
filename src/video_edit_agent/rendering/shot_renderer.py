@@ -8,6 +8,7 @@ from pathlib import Path
 from ..artifact_tracking import register_artifact, validate_artifact
 from ..editing.planning_schemas import VideoProjectPlan
 from ..editing.timeline_schemas import ProjectDraftTimeline
+from ..editing.user_overrides import apply_user_overrides
 from ..media_runner import run_ffmpeg
 from ..music.schemas import MusicAnalysis
 from .audio_mix import append_music_input, append_music_mix, resolve_selected_music
@@ -663,6 +664,7 @@ def render_approved_shot_timeline(
     timeline = ProjectDraftTimeline.model_validate_json(timeline_file.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root:
         raise RenderError("optimized timeline belongs to a different project folder")
+    timeline = apply_user_overrides(timeline)
     if timeline.rendering_performed:
         raise RenderError("optimized timeline must be a review artifact, not a render report")
     title_document = None

@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from ..artifact_tracking import validate_artifact
 from ..atomic_io import write_json_atomic
 from ..editing.timeline_schemas import ProjectDraftTimeline
+from ..editing.user_overrides import apply_user_overrides
 from .schemas import MusicAnalysis
 
 
@@ -103,6 +104,7 @@ def suggest_music_sync(
     music = MusicAnalysis.model_validate_json(music_file.read_text(encoding="utf-8"))
     if Path(timeline.project_path).resolve() != root:
         raise MusicSyncError("optimized timeline belongs to a different project folder")
+    timeline = apply_user_overrides(timeline)
     if Path(music.project_path).resolve() != root:
         raise MusicSyncError("music analysis belongs to a different project folder")
     soundtrack = Path(music.music_path).expanduser().resolve()
