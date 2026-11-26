@@ -12,14 +12,17 @@ import re
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, model_validator
 
+from .artifact_tracking import register_artifact
 from .atomic_io import write_json_atomic
+from .editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
+from .rendering.shot_renderer import RenderError, render_approved_shot_timeline
 from .config import get_setting
 from .runtime_capabilities import probe_runtime_capabilities
 from .understanding.pipeline import understand_folder
@@ -56,6 +59,12 @@ class EditDecision(BaseModel):
 
 class EditDecisions(BaseModel):
     clips: list[EditDecision] = Field(max_length=2000)
+
+
+class ExportRequest(BaseModel):
+    clips: list[EditDecision] = Field(max_length=2000)
+    aspect_ratio: Literal["16:9", "9:16", "1:1"] = "16:9"
+    resolution: Literal["720p", "1080p", "4k"] = "1080p"
 
 
 class ProjectCreate(BaseModel):
@@ -289,6 +298,87 @@ def save_edit_decisions(project_id: str, request: EditDecisions) -> dict:
     project["updated_at"] = datetime.now(UTC).isoformat()
     _write_project(path, project)
     return payload
+
+
+
+@app.post("/api/projects/{project_id}/export")
+def export_project(project_id: str, request: ExportRequest) -> FileResponse:
+    """Render the explicitly selected project clips into a downloadable MP4."""
+    path = _project_path(project_id)
+    if not request.clips or not any(clip.included for clip in request.clips):
+        raise HTTPException(status_code=400, detail="Include at least one scene before exporting")
+
+    # Reuse the same source-scene and interval validation as autosave.
+    save_edit_decisions(project_id, EditDecisions(clips=request.clips))
+    understanding_path = path / ".video-agent" / "understanding.json"
+    understanding = json.loads(understanding_path.read_text(encoding="utf-8"))
+    scenes = {scene["scene_id"]: scene for scene in understanding.get("scenes", [])}
+    clips = []
+    for decision in request.clips:
+        if not decision.included:
+            continue
+        scene = scenes[decision.scene_id]
+        duration = decision.end_seconds - decision.start_seconds
+        clips.append(
+            DraftTimelineClip(
+                clip_id=decision.clip_id,
+                sequence_index=len(clips) + 1,
+                video_path=decision.source_video_path,
+                source_start_seconds=decision.start_seconds,
+                source_end_seconds=decision.end_seconds,
+                duration_seconds=duration,
+                combined_score=100.0,
+                scene_summary=scene.get("summary", ""),
+                pacing_target_seconds=min(12.0, max(0.1, duration)),
+                pacing_fit="within",
+                pacing_note="Selected in the web editor.",
+                decision="approved",
+                review_required=False,
+            )
+        )
+
+    duration = sum(clip.duration_seconds for clip in clips)
+    timeline = ProjectDraftTimeline(
+        project_path=str(path),
+        source_selection=".video-agent/edit-decisions.json",
+        style="cinematic",
+        aspect_ratio=request.aspect_ratio,
+        pacing="moderate",
+        target_duration_seconds=max(duration, 0.1),
+        proposed_duration_seconds=duration,
+        approved_duration_seconds=duration,
+        proposed_clip_count=len(clips),
+        clips=clips,
+        timeline_approved=True,
+    )
+    timeline_path = path / ".video-agent" / "web-export-timeline.json"
+    write_json_atomic(timeline_path, timeline)
+    register_artifact(
+        path,
+        timeline_path,
+        dependencies=[understanding_path, path / ".video-agent" / "edit-decisions.json"],
+    )
+
+    export_dir = path / "exports"
+    export_dir.mkdir(parents=True, exist_ok=True)
+    output_path = export_dir / f"video-{uuid.uuid4().hex[:12]}.mp4"
+    try:
+        render_approved_shot_timeline(
+            path,
+            timeline_path=timeline_path,
+            output_path=output_path,
+            output_aspect_ratio=request.aspect_ratio,
+            output_resolution=request.resolution,
+        )
+    except (FileNotFoundError, FileExistsError, ValueError, RenderError) as exc:
+        output_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=422, detail=f"Video export failed: {exc}") from exc
+
+    return FileResponse(
+        output_path,
+        media_type="video/mp4",
+        filename=f"{_read_project(path)['name']}.mp4",
+    )
 
 
 @app.get("/api/projects/{project_id}/analysis")
