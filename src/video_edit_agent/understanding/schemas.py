@@ -2,7 +2,9 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from ..context_signals import ContextSignal, SceneContext
 
 
 class FrameObservation(BaseModel):
@@ -137,3 +139,23 @@ class VideoUnderstanding(BaseModel):
     scene_count: int = Field(ge=0)
     scenes: list[VideoScene] = Field(default_factory=list)
     model: str
+    context_signal: ContextSignal | None = None
+
+    @model_validator(mode="after")
+    def attach_context_signal(self) -> "VideoUnderstanding":
+        if self.context_signal is None:
+            self.context_signal = ContextSignal(
+                scenes=[
+                    SceneContext(
+                        scene_id=scene.scene_id,
+                        video_path=scene.source_video_path,
+                        start_seconds=scene.start_seconds,
+                        end_seconds=scene.end_seconds,
+                        summary=scene.summary[:240],
+                        visual_role=scene.story_function,
+                        mood=scene.dominant_mood,
+                    )
+                    for scene in self.scenes
+                ]
+            )
+        return self
