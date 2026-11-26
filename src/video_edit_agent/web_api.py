@@ -21,9 +21,9 @@ from pydantic import BaseModel, Field, model_validator
 
 from .artifact_tracking import register_artifact
 from .atomic_io import write_json_atomic
+from .config import get_setting
 from .editing.timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
 from .rendering.shot_renderer import RenderError, render_approved_shot_timeline
-from .config import get_setting
 from .runtime_capabilities import probe_runtime_capabilities
 from .understanding.pipeline import understand_folder
 
