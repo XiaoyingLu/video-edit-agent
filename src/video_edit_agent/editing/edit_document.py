@@ -36,9 +36,7 @@ class EditTrackClip(BaseModel):
                 self.source_end_seconds,
             )
             if any(value is None for value in media_fields):
-                raise ValueError(
-                    "media clips require a source path and complete source interval"
-                )
+                raise ValueError("media clips require a source path and complete source interval")
             if self.source_end_seconds <= self.source_start_seconds:
                 raise ValueError("source end must be greater than source start")
         if self.kind == "title" and not self.text:
