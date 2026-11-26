@@ -142,8 +142,11 @@ export default function App() {
           return clipRecords.map((clip: any) => {
             const start = clip.start_seconds ?? scene.start_seconds;
             const end = clip.end_seconds ?? scene.end_seconds;
+            const savedId = Number.parseInt(clip.clip_id ?? "", 10);
+            const clipId = Number.isFinite(savedId) && savedId > 0 ? savedId : nextId;
+            nextId = Math.max(nextId, clipId + 1);
             return {
-              id: Number.parseInt(clip.clip_id ?? "", 10) || nextId++,
+              id: clipId,
               title: scene.summary || "Scene " + (index + 1),
               place: formatTime(start) + " – " + formatTime(end),
               duration: Math.max(0.1, end - start),
@@ -291,9 +294,10 @@ export default function App() {
     }
   };
   const removeCurrentShot = () => {
-    setShots(prev => prev.filter(shot => shot.id !== current.id));
-    const remaining = shots.filter(shot => shot.id !== current.id);
-    setActive(remaining[0]?.id ?? 0);
+    update(current.id, { selected: false });
+    const next = shots.find(shot => shot.id !== current.id && shot.selected);
+    if (next) setActive(next.id);
+    announce("Scene removed from the edit. Save your decisions to keep this change.");
   };
   const splitCurrentShot = () => {
     const midpoint = (current.start + current.end) / 2;
