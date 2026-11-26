@@ -134,7 +134,10 @@ _SAVE_CONTROLS = """
     const clips = Array.from(document.querySelectorAll("main .clip")).map(card => ({
       clip_id: card.dataset.clipId,
       source_start_seconds: Number(card.querySelector(".trim-start").value),
-      source_end_seconds: Number(card.querySelector(".trim-end").value)
+      source_end_seconds: Number(card.querySelector(".trim-end").value),
+      caption: card.querySelector(".clip-caption").value,
+      gain_db: card.querySelector(".clip-gain").value === ""
+        ? null : Number(card.querySelector(".clip-gain").value)
     }));
     button.disabled = true;
     status.textContent = "Validating and saving draft revision…";
