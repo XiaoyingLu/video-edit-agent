@@ -33,7 +33,11 @@ def test_probe_builds_tool_and_skill_allowlists_from_runtime(monkeypatch, tmp_pa
         return SimpleNamespace(returncode=0, stdout=output, stderr="")
 
     monkeypatch.setattr(capabilities.subprocess, "run", fake_run)
-    monkeypatch.setattr(capabilities, "_available_fonts", lambda: frozenset({"Lato", "DejaVu Sans"}))
+    monkeypatch.setattr(
+        capabilities,
+        "_available_fonts",
+        lambda: frozenset({"Lato", "DejaVu Sans"}),
+    )
     monkeypatch.setattr(
         capabilities.importlib.util,
         "find_spec",
