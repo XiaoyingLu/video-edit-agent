@@ -127,3 +127,37 @@ def test_save_edit_decisions_rejects_interval_outside_detected_scene(
     with pytest.raises(HTTPException) as exc_info:
         web_api.save_edit_decisions(project["id"], request)
     assert exc_info.value.status_code == 400
+
+
+
+def test_get_project_media_serves_uploaded_video(tmp_path: Path, monkeypatch) -> None:
+    from fastapi.testclient import TestClient
+
+    project = _create_project(tmp_path, monkeypatch)
+    source = tmp_path / project["id"] / "source" / "clip.mp4"
+    source.write_bytes(b"fake-video-content")
+
+    response = TestClient(web_api.app).get(
+        f'/api/projects/{project["id"]}/media/source/clip.mp4',
+        headers={"Range": "bytes=0-3"},
+    )
+
+    assert response.status_code == 206
+    assert response.content == b"fake"
+    assert response.headers["content-range"] == "bytes 0-3/18"
+
+
+def test_get_project_media_rejects_paths_outside_source(
+    tmp_path: Path, monkeypatch
+) -> None:
+    from fastapi.testclient import TestClient
+
+    project = _create_project(tmp_path, monkeypatch)
+    outside = tmp_path / project["id"] / "private.mp4"
+    outside.write_bytes(b"not-public")
+
+    response = TestClient(web_api.app).get(
+        f'/api/projects/{project["id"]}/media/private.mp4'
+    )
+
+    assert response.status_code == 404
