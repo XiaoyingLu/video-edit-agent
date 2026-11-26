@@ -7,8 +7,8 @@ from ..artifact_tracking import register_artifact, validate_artifact
 from ..atomic_io import write_json_atomic
 from ..context_signals import ContextSignal, PacingConstraint, SceneContext, TimedBoundary
 from ..music.schemas import MusicAnalysis
-from ..transcription.schemas import ProjectTranscription
 from ..silence.schemas import ProjectSilenceAnalysis
+from ..transcription.schemas import ProjectTranscription
 from .draft_schemas import ProjectDraftSelection
 from .intent_schemas import EditingPlan
 from .timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
