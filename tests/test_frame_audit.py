@@ -1,4 +1,3 @@
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -48,7 +47,8 @@ def test_audit_decodes_frames_in_two_orders_and_reports_clipping_skip(monkeypatc
     assert report["sample_count"] >= 4
     assert report["boundary_count"] == 1
     assert "Tesseract OCR is not installed" in report["warnings"][0]
-    assert len([command for command in calls if "-frames:v" in command]) == report["sample_count"] * 2
+    frame_commands = [command for command in calls if "-frames:v" in command]
+    assert len(frame_commands) == report["sample_count"] * 2
 
 
 def test_audit_fails_when_random_access_frames_are_not_deterministic(monkeypatch, tmp_path):
