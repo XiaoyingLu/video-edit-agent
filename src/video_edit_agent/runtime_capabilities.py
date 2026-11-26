@@ -151,9 +151,7 @@ def probe_runtime_capabilities(project_root: Path) -> CapabilityReport:
     if media_files and ffprobe and importlib.util.find_spec("cv2") is not None:
         skills.add("scene_understanding")
     else:
-        unavailable["scene_understanding"] = (
-            "Requires supported video files, ffprobe, and OpenCV."
-        )
+        unavailable["scene_understanding"] = "Requires supported video files, ffprobe, and OpenCV."
 
     vision_provider = (get_setting("VISION_PROVIDER") or "ollama").strip().lower()
     if vision_provider == "ollama":
@@ -192,12 +190,7 @@ def probe_runtime_capabilities(project_root: Path) -> CapabilityReport:
         "aformat",
         "anullsrc",
     }
-    if (
-        ffmpeg
-        and ffprobe
-        and {"libx264", "aac"} <= encoders
-        and required_render_filters <= filters
-    ):
+    if ffmpeg and ffprobe and {"libx264", "aac"} <= encoders and required_render_filters <= filters:
         tools.add("render_video")
     else:
         unavailable["render_video"] = (
