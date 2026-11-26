@@ -20,6 +20,43 @@ const image = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit
 const shotImage = (value: string) => value.startsWith("/api/") ? value : image(value);
 const formatTime = (seconds: number) => `${Math.floor(seconds / 60).toString().padStart(2, "0")}:${Math.floor(seconds % 60).toString().padStart(2, "0")}`;
 
+const selectScenesForBrief = (scenes: any[], briefText: string, durationLabel: string) => {
+  if (scenes.length === 0) return scenes;
+  const stopWords = new Set(["the", "and", "for", "with", "from", "that", "this", "into", "your", "film", "video", "some", "few", "make", "want", "about", "then", "than", "over", "under", "while", "there", "their", "have", "keep", "more", "less"]);
+  const terms = [...new Set((briefText.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter(word => word.length > 2 && !stopWords.has(word)))];
+  const durationNumbers = durationLabel.match(/\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+  const durationUnit = /min/i.test(durationLabel) ? 60 : 1;
+  const targetSeconds = durationNumbers.length > 1
+    ? (durationNumbers[0] + durationNumbers[1]) / 2 * durationUnit
+    : durationNumbers.length === 1 ? durationNumbers[0] * durationUnit : 75;
+  const ranked = scenes.map((scene, index) => {
+    const summary = String(scene.summary ?? "").toLowerCase();
+    const details = [scene.story_function, scene.dominant_mood, scene.primary_subject, scene.temporal_summary, scene.setting]
+      .filter(Boolean).join(" ").toLowerCase();
+    const score = terms.reduce((total, term) => total + (summary.includes(term) ? 3 : details.includes(term) ? 1 : 0), 0);
+    const confidence = (scene.observations ?? []).reduce((sum: number, item: any) => sum + Number(item.confidence ?? 0), 0)
+      / Math.max(1, (scene.observations ?? []).length);
+    return { scene, index, score: score || confidence };
+  });
+  ranked.sort((a, b) => b.score - a.score || a.index - b.index);
+  const selected: Array<{ scene: any; index: number; used: number }> = [];
+  let remaining = Math.max(1, targetSeconds);
+  for (const item of ranked) {
+    if (remaining <= 0.5) break;
+    const available = Math.max(0, Number(item.scene.end_seconds) - Number(item.scene.start_seconds));
+    if (!available) continue;
+    const used = Math.min(available, remaining);
+    selected.push({ ...item, used });
+    remaining -= used;
+  }
+  return selected
+    .sort((a, b) => a.index - b.index)
+    .map(({ scene, used }) => ({
+      ...scene,
+      end_seconds: Math.min(Number(scene.end_seconds), Number(scene.start_seconds) + Math.max(0.1, used)),
+    }));
+};
+
 const analysisPhase = (event: string) => {
   if (event === "queued" || event === "starting") return { title: "Getting analysis ready", detail: "Preparing your footage and vision model.", stage: 0 };
   if (event.startsWith("scene_detection")) return { title: "Finding scene boundaries", detail: "Scanning the video for meaningful cuts and changes. This step can take a while on long footage.", stage: 0 };
@@ -54,6 +91,8 @@ export default function App() {
   const [startingAnalysis, setStartingAnalysis] = useState(false);
   const [savingEdits, setSavingEdits] = useState(false);
   const [exportIndex, setExportIndex] = useState(0);
+  const [exportResolution, setExportResolution] = useState("1080p");
+  const [exporting, setExporting] = useState(false);
   const [projects, setProjects] = useState<any[]>([]);
   const [showProjectLibrary, setShowProjectLibrary] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
@@ -191,7 +230,7 @@ export default function App() {
           clipsByScene.set(clip.scene_id, list);
         }
         let nextId = 1;
-        const restored: Shot[] = (analysis.scenes ?? []).flatMap((scene: any, index: number) => {
+        const restored: Shot[] = selectScenesForBrief(analysis.scenes ?? [], project.brief ?? brief, project.target_duration ?? duration).flatMap((scene: any, index: number) => {
           const firstFrame = scene.observations?.[0]?.frame_path;
           const frameUrl = firstFrame
             ? "/api/projects/" + id + "/frames/" + firstFrame.split("/").map(encodeURIComponent).join("/")
@@ -286,7 +325,7 @@ export default function App() {
           const resultResponse = await fetch("/api/projects/" + projectId + "/analysis");
           if (!resultResponse.ok) throw new Error("Analysis completed but its result could not be loaded");
           const result = await resultResponse.json();
-          const nextShots: Shot[] = (result.scenes ?? []).map((scene: any, index: number) => {
+          const nextShots: Shot[] = selectScenesForBrief(result.scenes ?? [], brief, duration).map((scene: any, index: number) => {
             const firstFrame = scene.observations?.[0]?.frame_path;
             const frameUrl = firstFrame
               ? "/api/projects/" + projectId + "/frames/" + firstFrame.split("/").map(encodeURIComponent).join("/")
@@ -309,7 +348,7 @@ export default function App() {
           });
           setShots(nextShots);
           setActive(1);
-          announce("Analysis complete. " + nextShots.length + " scenes are ready in your storyboard.");
+          announce("Analysis complete. " + nextShots.length + " scenes selected from your brief are ready in the storyboard.");
         } else if (project.analysis_status === "failed") {
           announce(project.analysis_error || "Footage analysis failed. You can retry.");
         }
@@ -326,6 +365,47 @@ export default function App() {
       if (timer !== undefined) window.clearTimeout(timer);
     };
   }, [projectId, analysisStatus]);
+
+  const exportVideo = async () => {
+    if (!projectId || !exportShots.length || exporting) return;
+    setExporting(true);
+    try {
+      const response = await fetch("/api/projects/" + projectId + "/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          aspect_ratio: format.startsWith("9:16") ? "9:16" : format.startsWith("1:1") ? "1:1" : "16:9",
+          resolution: exportResolution,
+          clips: shots.filter(shot => shot.sceneId && shot.sourceVideoPath).map(shot => ({
+            clip_id: String(shot.id),
+            scene_id: shot.sceneId,
+            source_video_path: shot.sourceVideoPath,
+            start_seconds: shot.start,
+            end_seconds: shot.end,
+            included: shot.selected,
+          })),
+        }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail ?? "Video export failed");
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = projectName.trim().replace(/[^a-z0-9-_]+/gi, "-") + ".mp4";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      announce("Your video has been rendered and downloaded.");
+    } catch (error) {
+      announce(error instanceof Error ? error.message : "Video export failed.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const saveEdits = async () => {
     if (!projectId) return;
@@ -495,7 +575,7 @@ export default function App() {
         {stage === "Export" && <div className="export-layout"><section className="export-preview"><div className={`export-video-stage ${format.startsWith("9:16") ? "export-ratio-portrait" : format.startsWith("1:1") ? "export-ratio-square" : "export-ratio-landscape"}`}>
             {exportVideoUrl && exportShot ? <video key={exportShot.id} ref={exportVideoRef} className="export-video" src={exportVideoUrl} controls playsInline preload="metadata" onLoadedMetadata={event=>{event.currentTarget.currentTime=exportShot.start;if(playing)void event.currentTarget.play().catch(()=>setPlaying(false));}} onPlay={()=>setPlaying(true)} onPause={()=>setPlaying(false)} onTimeUpdate={event=>{if(event.currentTarget.currentTime>=exportShot.end-0.05){if(exportIndex<exportShots.length-1){setExportIndex(index=>index+1);}else{event.currentTarget.pause();setPlaying(false);}}}} /> : <div className="export-empty"><Film size={28}/><b>No playable clips yet</b><span>Analyze your footage and keep at least one scene in the edit to preview your film.</span></div>}
             {exportShots.length>0 && <span className="export-duration">{formatTime(total)}</span>}
-          </div><div className="export-meta"><div><h2>{projectName}</h2><p>{exportShots.length ? "Previewing your selected clips in timeline order." : "Your film preview will appear here once clips are ready."}</p></div><span className="pill"><Film size={12}/> {exportShots.length ? "Sequence preview" : "No preview"}</span></div><div className="export-checks"><div><Check size={15}/> {exportShots.length} selected clips ready to preview</div><div><Check size={15}/> Clip trims are applied during playback</div><div><Check size={15}/> Original footage remains untouched</div></div></section><section className="export-settings"><span className="field-label">EXPORT SETTINGS</span><h2>Make it yours to keep.</h2><p>Choose how you'd like to share your film.</p><label className="field-label">VIDEO SIZE</label><select className="text-input"><option>1080p · Full HD</option><option>4K · Ultra HD</option><option>720p · HD</option></select><label className="field-label">ASPECT RATIO</label><select
+          </div><div className="export-meta"><div><h2>{projectName}</h2><p>{exportShots.length ? "Previewing your selected clips in timeline order." : "Your film preview will appear here once clips are ready."}</p></div><span className="pill"><Film size={12}/> {exportShots.length ? "Sequence preview" : "No preview"}</span></div><div className="export-checks"><div><Check size={15}/> {exportShots.length} selected clips ready to preview</div><div><Check size={15}/> Clip trims are applied during playback</div><div><Check size={15}/> Original footage remains untouched</div></div></section><section className="export-settings"><span className="field-label">EXPORT SETTINGS</span><h2>Make it yours to keep.</h2><p>Choose how you'd like to share your film.</p><label className="field-label">VIDEO SIZE</label><select className="text-input" value={exportResolution} onChange={event=>setExportResolution(event.target.value)}><option value="1080p">1080p · Full HD</option><option value="4k">4K · Ultra HD</option><option value="720p">720p · HD</option></select><label className="field-label">ASPECT RATIO</label><select
   className="text-input"
   value={format}
   onChange={event => setFormat(event.target.value)}
@@ -503,7 +583,7 @@ export default function App() {
   <option value="16:9 · YouTube">16:9</option>
   <option value="9:16 · Reels / TikTok">9:16</option>
   <option value="1:1 · Square">1:1</option>
-</select><label className="field-label">FRAME RATE</label><select className="text-input"><option>24 fps · Cinematic</option><option>30 fps · Standard</option><option>60 fps · Smooth</option></select><div className="export-estimate"><span>Estimated file size</span><b>Not available yet</b></div><button className="primary-button export-button" disabled onClick={()=>announce("Video rendering is not available yet.")}><Download size={16}/> Export video</button><small className="export-note">Sequence preview only — final rendering and download are coming next.</small></section></div>}
+</select><label className="field-label">FRAME RATE</label><select className="text-input"><option>24 fps · Cinematic</option><option>30 fps · Standard</option><option>60 fps · Smooth</option></select><div className="export-estimate"><span>Estimated file size</span><b>Not available yet</b></div><button className="primary-button export-button" disabled={!projectId || !exportShots.length || exporting} onClick={exportVideo}><Download size={16}/> {exporting ? "Rendering video…" : "Render & download MP4"}</button><small className="export-note">{exporting ? "Rendering and validating your selected clips. This may take a few minutes." : "Your selected clips will be rendered into a downloadable MP4."}</small></section></div>}
         <footer className="page-footer"><span>Made for the moments that matter.</span><span>FRAME <span className="footer-dot">●</span> AI VIDEO EDITOR</span></footer>
       </div>
     </main>
