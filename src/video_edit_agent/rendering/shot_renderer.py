@@ -806,11 +806,16 @@ def render_approved_shot_timeline(
     configured_font = (get_setting("TITLE_FONT", DEFAULT_TITLE_FONT) or DEFAULT_TITLE_FONT).strip()
     if approved_titles:
         try:
-            resolved_font = validate_title_font(configured_font, _BUNDLED_FONT)
+            resolved_fonts = {validate_title_font(configured_font, _BUNDLED_FONT)}
+            if any(
+                not (item.text or "").isascii()
+                or (item.secondary_text is not None and not item.secondary_text.isascii())
+                for item in approved_titles
+            ) and configured_font.casefold() in {"lato", "bundled"}:
+                resolved_fonts.add(validate_title_font("DejaVu Sans", _BUNDLED_FONT))
         except FrameAuditError as exc:
             raise RenderError(str(exc)) from exc
-        if resolved_font is not None:
-            dependencies.append(resolved_font)
+        dependencies.extend(font for font in resolved_fonts if font is not None)
 
     ffmpeg_version_result = run_ffmpeg(
         [ffmpeg, "-version"],
