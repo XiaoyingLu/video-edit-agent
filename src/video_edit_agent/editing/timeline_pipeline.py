@@ -8,6 +8,7 @@ from ..atomic_io import write_json_atomic
 from ..context_signals import ContextSignal, PacingConstraint, SceneContext, TimedBoundary
 from ..music.schemas import MusicAnalysis
 from ..transcription.schemas import ProjectTranscription
+from ..silence.schemas import ProjectSilenceAnalysis
 from .draft_schemas import ProjectDraftSelection
 from .intent_schemas import EditingPlan
 from .timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
@@ -508,6 +509,15 @@ def build_draft_timeline(
         )
         if Path(transcription.project_path).resolve() != root:
             raise ValueError("transcription belongs to a different project folder")
+    silence_file = artifact_dir / "silence-analysis.json"
+    silence_analysis = None
+    if silence_file.is_file():
+        validate_artifact(root, silence_file)
+        silence_analysis = ProjectSilenceAnalysis.model_validate_json(
+            silence_file.read_text(encoding="utf-8")
+        )
+        if Path(silence_analysis.project_path).resolve() != root:
+            raise ValueError("silence analysis belongs to a different project folder")
     if music_file is not None:
         if not music_file.is_file():
             raise FileNotFoundError(f"Music analysis not found: {music_file}")
@@ -574,6 +584,9 @@ def build_draft_timeline(
         source_transcription=(
             str(transcription_file.relative_to(root)) if transcription is not None else None
         ),
+        source_silence_analysis=(
+            str(silence_file.relative_to(root)) if silence_analysis is not None else None
+        ),
         context_signal=ContextSignal(
             scenes=[
                 SceneContext(
@@ -597,15 +610,27 @@ def build_draft_timeline(
                 for video in (transcription.videos if transcription is not None else [])
                 for segment in video.segments
             ][:500],
-            silence_boundaries=[
-                TimedBoundary(
-                    video_path=video.path,
-                    start_seconds=pause.start_seconds,
-                    end_seconds=pause.end_seconds,
-                )
-                for video in (transcription.videos if transcription is not None else [])
-                for pause in video.pauses
-            ][:500],
+            silence_boundaries=(
+                [
+                    TimedBoundary(
+                        video_path=video.path,
+                        start_seconds=interval.start_seconds,
+                        end_seconds=interval.end_seconds,
+                    )
+                    for video in silence_analysis.videos
+                    for interval in video.audio_silences
+                ][:500]
+                if silence_analysis is not None
+                else [
+                    TimedBoundary(
+                        video_path=video.path,
+                        start_seconds=pause.start_seconds,
+                        end_seconds=pause.end_seconds,
+                    )
+                    for video in (transcription.videos if transcription is not None else [])
+                    for pause in video.pauses
+                ][:500]
+            ),
             target_aspect_ratio=plan.aspect_ratio,
             pacing=plan.pacing,
             pacing_constraints=[
@@ -656,6 +681,7 @@ def save_draft_timeline(timeline: ProjectDraftTimeline, destination: Path) -> No
                 timeline.source_editing_plan,
                 timeline.source_music_analysis,
                 timeline.source_transcription,
+                timeline.source_silence_analysis,
             )
             if value is not None
         ]
