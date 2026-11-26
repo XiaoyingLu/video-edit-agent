@@ -1,4 +1,4 @@
-"""Canonical, renderer-independent multitrack edit document derived from a reviewed shot timeline."""
+"""Canonical, renderer-independent edit document from a reviewed shot timeline."""
 
 from typing import Literal
 
@@ -30,8 +30,15 @@ class EditTrackClip(BaseModel):
         if self.timeline_end_seconds <= self.timeline_start_seconds:
             raise ValueError("timeline end must be greater than timeline start")
         if self.kind in {"video", "audio"}:
-            if self.source_path is None or self.source_start_seconds is None or self.source_end_seconds is None:
-                raise ValueError("media clips require a source path and complete source interval")
+            media_fields = (
+                self.source_path,
+                self.source_start_seconds,
+                self.source_end_seconds,
+            )
+            if any(value is None for value in media_fields):
+                raise ValueError(
+                    "media clips require a source path and complete source interval"
+                )
             if self.source_end_seconds <= self.source_start_seconds:
                 raise ValueError("source end must be greater than source start")
         if self.kind == "title" and not self.text:
@@ -93,7 +100,7 @@ class StructuredEditDocument(BaseModel):
 def build_edit_document(
     timeline: ProjectDraftTimeline, *, source_timeline: str
 ) -> StructuredEditDocument:
-    """Map the reviewed linear shot list into explicit video, source-audio and title tracks."""
+    """Map a reviewed shot list into explicit video, audio and title tracks."""
     video_clips: list[EditTrackClip] = []
     audio_clips: list[EditTrackClip] = []
     title_clips: list[EditTrackClip] = []
@@ -114,9 +121,7 @@ def build_edit_document(
             "decision": clip.decision,
         }
         video_clips.append(EditTrackClip(kind="video", **common))
-        audio_clips.append(
-            EditTrackClip(kind="audio", **common, gain_db=clip.gain_db)
-        )
+        audio_clips.append(EditTrackClip(kind="audio", **common, gain_db=clip.gain_db))
         if clip.caption:
             title_clips.append(
                 EditTrackClip(
@@ -134,7 +139,14 @@ def build_edit_document(
         EditTrack(track_id="audio-source", kind="audio", name="Source audio", clips=audio_clips),
     ]
     if title_clips:
-        tracks.append(EditTrack(track_id="titles", kind="title", name="Titles & captions", clips=title_clips))
+        tracks.append(
+            EditTrack(
+                track_id="titles",
+                kind="title",
+                name="Titles & captions",
+                clips=title_clips,
+            )
+        )
     return StructuredEditDocument(
         project_path=timeline.project_path,
         source_timeline=source_timeline,
