@@ -20,6 +20,44 @@ const image = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit
 const shotImage = (value: string) => value.startsWith("/api/") ? value : image(value);
 const formatTime = (seconds: number) => `${Math.floor(seconds / 60).toString().padStart(2, "0")}:${Math.floor(seconds % 60).toString().padStart(2, "0")}`;
 
+const selectScenesForBrief = (scenes: any[], briefText: string, durationLabel: string) => {
+  if (scenes.length < 2) return scenes;
+  const stopWords = new Set(["the", "and", "for", "with", "from", "that", "this", "into", "your", "film", "video", "some", "few", "make", "want", "about", "then", "than", "over", "under", "while", "there", "their", "have", "keep", "more", "less"]);
+  const terms = [...new Set((briefText.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter(word => word.length > 2 && !stopWords.has(word)))];
+  const durationNumbers = durationLabel.match(/\\d+(?:\\.\\d+)?/g)?.map(Number) ?? [];
+  const durationUnit = /min/i.test(durationLabel) ? 60 : 1;
+  const targetSeconds = durationNumbers.length > 1
+    ? (durationNumbers[0] + durationNumbers[1]) / 2 * durationUnit
+    : durationNumbers.length === 1 ? durationNumbers[0] * durationUnit : 75;
+  const ranked = scenes.map((scene, index) => {
+    const summary = String(scene.summary ?? "").toLowerCase();
+    const details = [scene.story_function, scene.dominant_mood, scene.primary_subject, scene.temporal_summary, scene.setting]
+      .filter(Boolean).join(" ").toLowerCase();
+    const searchable = summary + " " + details;
+    const score = terms.reduce((total, term) => total + (summary.includes(term) ? 3 : details.includes(term) ? 1 : 0), 0);
+    const confidence = (scene.observations ?? []).reduce((sum: number, item: any) => sum + Number(item.confidence ?? 0), 0)
+      / Math.max(1, (scene.observations ?? []).length);
+    return { scene, index, score: score || confidence, searchable };
+  });
+  ranked.sort((a, b) => b.score - a.score || a.index - b.index);
+  const selected: typeof ranked = [];
+  let remaining = Math.max(1, targetSeconds);
+  for (const item of ranked) {
+    if (remaining <= 0.5) break;
+    const available = Math.max(0, Number(item.scene.end_seconds) - Number(item.scene.start_seconds));
+    if (!available) continue;
+    selected.push(item);
+    remaining -= Math.min(available, remaining);
+  }
+  return selected
+    .sort((a, b) => a.index - b.index)
+    .map(({ scene }) => {
+      const available = Math.max(0, Number(scene.end_seconds) - Number(scene.start_seconds));
+      const used = Math.min(available, targetSeconds - (targetSeconds - remaining));
+      return { ...scene, end_seconds: Math.min(Number(scene.end_seconds), Number(scene.start_seconds) + Math.max(0.1, used)) };
+    });
+};
+
 const analysisPhase = (event: string) => {
   if (event === "queued" || event === "starting") return { title: "Getting analysis ready", detail: "Preparing your footage and vision model.", stage: 0 };
   if (event.startsWith("scene_detection")) return { title: "Finding scene boundaries", detail: "Scanning the video for meaningful cuts and changes. This step can take a while on long footage.", stage: 0 };
@@ -193,7 +231,7 @@ export default function App() {
           clipsByScene.set(clip.scene_id, list);
         }
         let nextId = 1;
-        const restored: Shot[] = (analysis.scenes ?? []).flatMap((scene: any, index: number) => {
+        const restored: Shot[] = selectScenesForBrief(analysis.scenes ?? [], project.brief ?? brief, project.target_duration ?? duration).flatMap((scene: any, index: number) => {
           const firstFrame = scene.observations?.[0]?.frame_path;
           const frameUrl = firstFrame
             ? "/api/projects/" + id + "/frames/" + firstFrame.split("/").map(encodeURIComponent).join("/")
@@ -288,7 +326,7 @@ export default function App() {
           const resultResponse = await fetch("/api/projects/" + projectId + "/analysis");
           if (!resultResponse.ok) throw new Error("Analysis completed but its result could not be loaded");
           const result = await resultResponse.json();
-          const nextShots: Shot[] = (result.scenes ?? []).map((scene: any, index: number) => {
+          const nextShots: Shot[] = selectScenesForBrief(result.scenes ?? [], brief, duration).map((scene: any, index: number) => {
             const firstFrame = scene.observations?.[0]?.frame_path;
             const frameUrl = firstFrame
               ? "/api/projects/" + projectId + "/frames/" + firstFrame.split("/").map(encodeURIComponent).join("/")
@@ -311,7 +349,7 @@ export default function App() {
           });
           setShots(nextShots);
           setActive(1);
-          announce("Analysis complete. " + nextShots.length + " scenes are ready in your storyboard.");
+          announce("Analysis complete. " + nextShots.length + " scenes selected from your brief are ready in the storyboard.");
         } else if (project.analysis_status === "failed") {
           announce(project.analysis_error || "Footage analysis failed. You can retry.");
         }
