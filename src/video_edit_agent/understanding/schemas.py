@@ -155,7 +155,7 @@ class VideoUnderstanding(BaseModel):
                         visual_role=scene.story_function,
                         mood=scene.dominant_mood,
                     )
-                    for scene in self.scenes
+                    for scene in self.scenes[:300]
                 ]
             )
         return self
