@@ -1111,3 +1111,14 @@ the outer safe margin are reported as possible clipping warnings; if Tesseract i
 the report explicitly says that the OCR check was skipped. Warnings are included in the
 render report and printed by `render-draft`. Missing media or explicitly configured font
 files fail the render before artifact registration.
+
+
+## Atomic render staging and failure cleanup
+
+Generated shot renders are written into an isolated `.video-agent/workspaces/run-*` directory,
+not directly into the active output path. The staged file is fully probed and frame-audited,
+then SHA-256 fingerprinted before an atomic filesystem replacement promotes it. Promotion
+verifies the checksum again; a failed promotion or finalization can restore the previous
+active output. Per-run workspaces, checksum sidecars, and partial media are removed on exit,
+including failed renders. The active artifact manifest is updated only after the validated
+render has been promoted.
