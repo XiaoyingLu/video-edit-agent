@@ -150,8 +150,9 @@ def test_edit_decision_put_allows_frontend_cors_preflight() -> None:
     assert "PUT" in response.headers["access-control-allow-methods"]
 
 
-
-def test_export_project_renders_included_clips_and_returns_mp4(tmp_path, monkeypatch) -> None:
+def test_export_project_renders_included_clips_and_returns_mp4(
+    tmp_path, monkeypatch
+) -> None:
     from fastapi.testclient import TestClient
 
     project = _create_project(tmp_path, monkeypatch)
@@ -166,7 +167,9 @@ def test_export_project_renders_included_clips_and_returns_mp4(tmp_path, monkeyp
         encoding="utf-8",
     )
 
-    def fake_render(folder, *, timeline_path, output_path, output_aspect_ratio, output_resolution):
+    def fake_render(
+        folder, *, timeline_path, output_path, output_aspect_ratio, output_resolution
+    ):
         from video_edit_agent.editing.timeline_schemas import ProjectDraftTimeline
 
         timeline = ProjectDraftTimeline.model_validate_json(timeline_path.read_text())
