@@ -73,7 +73,6 @@ def test_transcription_output_attaches_speech_and_silence_boundaries() -> None:
     assert signal.silence_boundaries[0].end_seconds == 5
 
 
-
 def test_editing_plan_attaches_target_format_and_pacing() -> None:
     plan = EditingPlan(
         source_prompt="Make a concise travel film",
