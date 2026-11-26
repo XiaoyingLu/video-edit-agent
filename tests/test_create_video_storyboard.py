@@ -39,8 +39,6 @@ def test_storyboard_playback_preview_opens_video_and_requires_final_confirmation
     preview = tmp_path / ".video-agent" / "revision-previews" / "timeline.mp4"
     preview.parent.mkdir(parents=True)
     preview.write_bytes(b"preview")
-    title_overlays = tmp_path / ".video-agent" / "title-overlays.json"
-    title_overlays.write_text("{}", encoding="utf-8")
     manifest = preview.with_suffix(".preview.json")
     calls = []
     monkeypatch.setattr(
