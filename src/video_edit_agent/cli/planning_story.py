@@ -103,7 +103,8 @@ def _review_storyboard_playback_preview(folder: Path, timeline_path: Path) -> No
         else:
             console.print(
                 "[yellow]Skipping title overlays: they were prepared for a different "
-                "timeline revision. Recreate and review them for this revision to include titles.[/yellow]"
+                "timeline revision. Recreate and review them for this revision "
+                "to include titles.[/yellow]"
             )
     report, manifest = render_timeline_revision_preview(
         root,
