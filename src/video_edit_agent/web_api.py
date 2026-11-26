@@ -300,7 +300,6 @@ def save_edit_decisions(project_id: str, request: EditDecisions) -> dict:
     return payload
 
 
-
 @app.post("/api/projects/{project_id}/export")
 def export_project(project_id: str, request: ExportRequest) -> FileResponse:
     """Render the explicitly selected project clips into a downloadable MP4."""
