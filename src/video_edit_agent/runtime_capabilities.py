@@ -85,7 +85,11 @@ def _listed_names(output: str) -> frozenset[str]:
         if match:
             names.add(match.group(1))
             continue
-        # FFmpeg -filters and -encoders use a six-character capability flag.
+        # FFmpeg filters use three flag columns; encoders use six.
+        match = re.match(r"^\s*[A-Z.]{3}\s+([A-Za-z0-9_]+)\s+", line)
+        if match:
+            names.add(match.group(1))
+            continue
         match = re.match(r"^\s*[A-Z.]{6}\s+([A-Za-z0-9_]+)\s+", line)
         if match:
             names.add(match.group(1))
