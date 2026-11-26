@@ -164,7 +164,9 @@ def _create_storyboard_video_draft(
             "Submit selections. The choices will be applied automatically.[/yellow]"
         )
         if not submitted.wait(timeout=1800):
-            raise ValueError("Footage review timed out after 30 minutes; no selections were applied.")
+            raise ValueError(
+                "Footage review timed out after 30 minutes; no selections were applied."
+            )
     finally:
         server.shutdown()
         server.server_close()
