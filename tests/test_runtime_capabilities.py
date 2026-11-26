@@ -51,6 +51,7 @@ def test_probe_builds_tool_and_skill_allowlists_from_runtime(monkeypatch, tmp_pa
     assert report.has("transcription")
     assert report.has("render_video")
     assert report.has("render_subtitles")
+    assert report.has("render_titles")
     assert report.has("search_soundtrack_catalog")
     assert not report.has("generate_soundtrack")
     assert "SOUNDSTRIPE_API_KEY" in report.external_keys
