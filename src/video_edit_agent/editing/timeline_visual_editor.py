@@ -29,6 +29,8 @@ class TimelineVisualEditClip(BaseModel):
         | None
     ) = None
     transition_duration_seconds: float | None = Field(default=None, ge=0, le=2)
+    caption: str | None = Field(default=None, max_length=500)
+    gain_db: float | None = Field(default=None, ge=-60, le=24)
 
 
 class TimelineVisualEditExport(BaseModel):
@@ -134,6 +136,10 @@ def apply_timeline_visual_edits(
         clip.source_start_seconds = round(edit.source_start_seconds, 3)
         clip.source_end_seconds = round(edit.source_end_seconds, 3)
         clip.duration_seconds = duration
+        if edit.caption is not None:
+            clip.caption = edit.caption
+        if edit.gain_db is not None:
+            clip.gain_db = edit.gain_db
         clip.decision = "pending"
         clip.review_required = True
         ratio = duration / clip.pacing_target_seconds
@@ -217,6 +223,10 @@ def apply_timeline_visual_edits(
             values["source_end_seconds"] = clip.source_end_seconds
         if order_changed:
             values["sequence_index"] = clip.sequence_index
+        if clip.caption != original_clip.caption:
+            values["caption"] = clip.caption
+        if clip.gain_db != original_clip.gain_db:
+            values["gain_db"] = clip.gain_db
         if (
             order_changed
             or clip.transition_in != original_clip.transition_in
