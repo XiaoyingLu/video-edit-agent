@@ -252,7 +252,8 @@ def _render_timeline_review_card(
     )
     transition_options = "".join(
         f'<option value="{name}" '
-        f'{"selected" if clip.transition_in == name else ""}>{name.replace("_", " ").title()}</option>'
+        f'{"selected" if clip.transition_in == name else ""}'
+        f'>{name.replace("_", " ").title()}</option>'
         for name in transition_types
     )
     return (
