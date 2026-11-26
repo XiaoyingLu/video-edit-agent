@@ -137,7 +137,6 @@ def test_create_video_draft_stops_when_no_highlights_are_found(tmp_path: Path, m
         workflow.create_video_draft(tmp_path, "Create a travel video")
 
 
-
 def test_create_video_draft_checks_capabilities_before_parsing_prompt(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -148,9 +147,7 @@ def test_create_video_draft_checks_capabilities_before_parsing_prompt(
             calls.append("capability_check")
             raise RuntimeCapabilityError("transcription is unavailable")
 
-    monkeypatch.setattr(
-        workflow, "probe_runtime_capabilities", lambda _root: MissingCapabilities()
-    )
+    monkeypatch.setattr(workflow, "probe_runtime_capabilities", lambda _root: MissingCapabilities())
     monkeypatch.setattr(
         workflow,
         "parse_editing_intent",
