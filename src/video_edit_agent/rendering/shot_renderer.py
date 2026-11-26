@@ -13,7 +13,7 @@ from ..media_runner import run_ffmpeg
 from ..music.schemas import MusicAnalysis
 from .audio_mix import append_music_input, append_music_mix, resolve_selected_music
 from .face_reframing import detect_face_crop_paths
-from .frame_audit import FrameAuditError, audit_rendered_frames
+from .frame_audit import FrameAuditError, audit_rendered_frames, validate_title_font
 from .overlay_filters import _append_asset_overlay_filters, _append_title_overlay_filters
 from .renderer import (
     RenderError,
@@ -791,12 +791,12 @@ def render_approved_shot_timeline(
 
     configured_font = (get_setting("TITLE_FONT", DEFAULT_TITLE_FONT) or DEFAULT_TITLE_FONT).strip()
     if approved_titles:
-        if configured_font.casefold() in {"lato", "bundled"} and _BUNDLED_FONT.is_file():
-            dependencies.append(_BUNDLED_FONT)
-        else:
-            configured_font_path = Path(configured_font).expanduser()
-            if configured_font_path.is_file():
-                dependencies.append(configured_font_path.resolve())
+        try:
+            resolved_font = validate_title_font(configured_font, _BUNDLED_FONT)
+        except FrameAuditError as exc:
+            raise RenderError(str(exc)) from exc
+        if resolved_font is not None:
+            dependencies.append(resolved_font)
 
     ffmpeg_version_result = run_ffmpeg(
         [ffmpeg, "-version"],
