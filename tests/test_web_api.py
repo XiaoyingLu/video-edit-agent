@@ -1,7 +1,8 @@
 from pathlib import Path
 from types import SimpleNamespace
 
-from fastapi import BackgroundTasks
+import pytest
+from fastapi import BackgroundTasks, HTTPException
 
 from video_edit_agent import web_api
 
@@ -30,12 +31,9 @@ def test_start_project_analysis_requires_uploaded_media(tmp_path: Path, monkeypa
     monkeypatch.setattr(web_api, "PROJECTS_DIR", tmp_path)
     project = web_api.create_project(web_api.ProjectCreate(name="Empty project"))
 
-    try:
+    with pytest.raises(HTTPException) as exc_info:
         web_api.start_project_analysis(project["id"], BackgroundTasks())
-    except Exception as exc:
-        assert getattr(exc, "status_code", None) == 400
-    else:
-        raise AssertionError("Expected analysis without media to be rejected")
+    assert exc_info.value.status_code == 400
 
 
 def test_background_analysis_persists_result_and_status(tmp_path: Path, monkeypatch) -> None:
