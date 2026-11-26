@@ -2,12 +2,14 @@
 
 # ruff: noqa: F403,F405,I001
 from . import common
+import webbrowser
 from ..atomic_io import write_json_atomic
 from ..editing.planning_schemas import VideoProjectPlan
 from ..editing.footage_visual_review import (
     generate_footage_visual_review,
     load_footage_review_selections,
 )
+from ..editing.footage_review_server import start_footage_review_server
 from .common import *  # noqa: F403
 
 
@@ -137,34 +139,40 @@ def _create_storyboard_video_draft(
             f"{len(missing)} storyboard shot(s): {', '.join(missing[:8])}. "
             "No footage was assigned; inspect footage-suggestions.json."
         )
-    review_page, _, candidate_count = generate_footage_visual_review(
-        folder,
-        plan_path=plan_path,
-        suggestions_path=suggestions_path,
-        understanding_path=understanding_path,
+    selection_path = folder.resolve() / ".video-agent" / "footage-review-selections.json"
+    server, submitted, review_url, submission_url = start_footage_review_server(
+        folder, selection_path
     )
-    console.print(
-        f"Storyboard: {project_plan.story_treatment.working_title} — "
-        f"{len(project_plan.scenes)} scene(s), {len(shots)} shot(s), "
-        f"{candidate_count} footage candidate(s)."
-    )
-    console.print(f"Visual footage review: [green]{review_page}[/green]")
-    console.print(
-        "[yellow]Open the review page, choose a footage option for each shot, "
-        "and download the selections JSON into the project folder.[/yellow]"
-    )
-    selection_path = console.input(
-        "Selections JSON path (Enter to use the top-ranked matches): "
-    ).strip()
-    if selection_path:
-        selections, rejected = load_footage_review_selections(
-            Path(selection_path),
-            expected_shot_ids={shot.shot_id for shot in shots},
+    try:
+        review_page, _, candidate_count = generate_footage_visual_review(
+            folder,
+            plan_path=plan_path,
             suggestions_path=suggestions_path,
+            understanding_path=understanding_path,
+            submission_url=submission_url,
         )
-    else:
-        selections = {shot.shot_id: 1 for shot in shots}
-        rejected = set()
+        console.print(
+            f"Storyboard: {project_plan.story_treatment.working_title} — "
+            f"{len(project_plan.scenes)} scene(s), {len(shots)} shot(s), "
+            f"{candidate_count} footage candidate(s)."
+        )
+        console.print(f"Visual footage review: [green]{review_page}[/green]")
+        console.print(f"Opening review in your browser: [link]{review_url}[/link]")
+        webbrowser.open(review_url)
+        console.print(
+            "[yellow]Choose a footage option for each shot and click "
+            "Submit selections. The choices will be applied automatically.[/yellow]"
+        )
+        if not submitted.wait(timeout=1800):
+            raise ValueError("Footage review timed out after 30 minutes; no selections were applied.")
+    finally:
+        server.shutdown()
+        server.server_close()
+    selections, rejected = load_footage_review_selections(
+        selection_path,
+        expected_shot_ids={shot.shot_id for shot in shots},
+        suggestions_path=suggestions_path,
+    )
     project_plan, plan_path = review_storyboard_footage(
         folder,
         selections=selections,
