@@ -42,9 +42,7 @@ def detect_scenes(
         if progress_callback is None:
             detector = ContentDetector(**detector_options)
         else:
-            total_frames = (
-                int(video.duration.frame_num) if video.duration is not None else 0
-            )
+            total_frames = int(video.duration.frame_num) if video.duration is not None else 0
             report_interval = max(1, round(video.frame_rate))
             detection_started = time.perf_counter()
 
@@ -58,9 +56,8 @@ def detect_scenes(
                         frames_processed = int(frame_position.get_frames()) + 1
                     else:
                         frames_processed = int(frame_position) + 1
-                    if (
-                        frames_processed % report_interval == 0
-                        or (total_frames and frames_processed >= total_frames)
+                    if frames_processed % report_interval == 0 or (
+                        total_frames and frames_processed >= total_frames
                     ):
                         elapsed = time.perf_counter() - detection_started
                         frames_per_second = frames_processed / elapsed if elapsed else 0.0

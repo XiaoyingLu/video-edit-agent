@@ -363,13 +363,15 @@ def understand_folder(
                 video_info.duration_seconds,
                 show_progress=progress_callback is not None,
                 progress_callback=(
-                    lambda details: report(
-                        "scene_detection_progress",
-                        video_path=relative_path,
-                        **details,
+                    lambda details, relative_path=relative_path: (
+                        report(
+                            "scene_detection_progress",
+                            video_path=relative_path,
+                            **details,
+                        )
+                        if progress_callback is not None
+                        else None
                     )
-                    if progress_callback is not None
-                    else None
                 ),
             )
             detected[video_path] = intervals
