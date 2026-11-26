@@ -828,7 +828,11 @@ Then open `http://127.0.0.1:8000/.video-agent/timeline-visual-review/review.html
 Playback uses cuts between clips, so it is a sequence/pacing preview rather than a final
 transition-accurate render.
 
-Drag cards to change shot order and adjust the source in/out points to trim a shot. Use
+Drag cards to change shot order, adjust source in/out points, and choose an incoming transition
+(cut, crossfade, dissolve, fade to black, wipe, slide, or circle reveal) with its duration.
+The first shot always starts with a cut; transition durations are capped to a quarter of each
+adjacent shot to avoid excessive overlaps. The browser's sequence player uses cuts while you edit;
+the later playback render applies the selected transitions. Use
 **Export visual edits (.json)** to save a proposal, then import it as a separate revision:
 
 ```bash
