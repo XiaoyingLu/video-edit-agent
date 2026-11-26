@@ -19,6 +19,8 @@ class DraftTimelineClip(BaseModel):
     combined_score: float = Field(ge=0, le=100)
     scene_summary: str | None = None
     transcript_excerpt: str | None = None
+    caption: str | None = Field(default=None, max_length=500)
+    gain_db: float | None = Field(default=None, ge=-60, le=24)
     shot_scale: Literal[
         "extreme_wide", "wide", "medium", "close_up", "extreme_close_up", "aerial", "unknown"
     ] = "unknown"
