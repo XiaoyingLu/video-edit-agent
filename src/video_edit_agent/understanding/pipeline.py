@@ -363,7 +363,7 @@ def understand_folder(
                 video_info.duration_seconds,
                 show_progress=progress_callback is not None,
                 progress_callback=(
-                    lambda details: report(
+                    lambda details, relative_path=relative_path: report(
                         "scene_detection_progress",
                         video_path=relative_path,
                         **details,
