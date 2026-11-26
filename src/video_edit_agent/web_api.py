@@ -92,10 +92,10 @@ def health() -> dict:
     return {"status": "ok"}
 
 
-@app.get("/api/capabilities")
-def get_runtime_capabilities() -> dict:
-    """Expose the current secret-free tool and skill allowlists to the editor."""
-    return probe_runtime_capabilities(PROJECTS_DIR).prompt_context()
+@app.get("/api/projects/{project_id}/capabilities")
+def get_runtime_capabilities(project_id: str) -> dict:
+    """Expose the project-specific, secret-free tool and skill allowlists."""
+    return probe_runtime_capabilities(_project_path(project_id)).prompt_context()
 
 
 @app.get("/api/projects")
