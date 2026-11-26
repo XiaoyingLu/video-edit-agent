@@ -20,6 +20,18 @@ const image = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit
 const shotImage = (value: string) => value.startsWith("/api/") ? value : image(value);
 const formatTime = (seconds: number) => `${Math.floor(seconds / 60).toString().padStart(2, "0")}:${Math.floor(seconds % 60).toString().padStart(2, "0")}`;
 
+const analysisPhase = (event: string) => {
+  if (event === "queued" || event === "starting") return { title: "Getting analysis ready", detail: "Preparing your footage and vision model.", stage: 0 };
+  if (event.startsWith("scene_detection")) return { title: "Finding scene boundaries", detail: "Scanning the video for meaningful cuts and changes. This step can take a while on long footage.", stage: 0 };
+  if (event === "frame_workload_ready" || event === "scene_started" || event === "frame_extraction_completed") return { title: "Extracting key frames", detail: "Selecting representative moments from each detected scene.", stage: 1 };
+  if (event.startsWith("frame_")) return { title: "Understanding what happens", detail: "The vision model is describing each representative frame.", stage: 2 };
+  if (event.startsWith("temporal_analysis")) return { title: "Understanding scene movement", detail: "Comparing frames to understand motion and continuity.", stage: 3 };
+  if (event === "scene_completed") return { title: "Scene analysis completed", detail: "This scene is finished. Moving on to the next one.", stage: 3 };
+  if (event === "completed") return { title: "Storyboard ready", detail: "Your footage has been analyzed.", stage: 4 };
+  if (event === "failed") return { title: "Analysis needs attention", detail: "The analysis stopped before it could finish.", stage: 0 };
+  return { title: "Analyzing footage", detail: "Working through your video.", stage: 0 };
+};
+
 export default function App() {
   const [stage, setStage] = useState<Stage>("Create");
   const [shots, setShots] = useState<Shot[]>([]);
@@ -48,6 +60,12 @@ export default function App() {
     ? "/api/projects/" + projectId + "/media/" + current.sourceVideoPath.split("/").map(encodeURIComponent).join("/")
     : "";
   const selectedCount = shots.filter(s => s.selected).length;
+  const progressEvent = String(analysisProgress.event ?? "starting");
+  const progressPhase = analysisPhase(progressEvent);
+  const completedFrames = typeof analysisProgress.completed_frames === "number" ? analysisProgress.completed_frames : 0;
+  const totalFrames = typeof analysisProgress.total_frames === "number" ? analysisProgress.total_frames : 0;
+  const progressPercent = totalFrames > 0 ? Math.min(100, Math.round(completedFrames / totalFrames * 100)) : null;
+  const progressSteps = ["Detect scene boundaries", "Extract representative frames", "Describe frames with AI", "Understand movement and continuity", "Build your storyboard"];
   const total = useMemo(() => shots.filter(s => s.selected).reduce((n, s) => n + s.duration, 0), [shots]);
   useEffect(() => {
     const video = videoRef.current;
@@ -369,12 +387,29 @@ export default function App() {
         </section>}
 
         {stage === "Storyboard" && <><div className="story-toolbar"><div><div className="section-title">Your story <span className="count-pill">{selectedCount} of {shots.length} scenes</span></div><p className="section-subtitle">{shots.length ? "Review the real scenes detected in your footage." : "Upload your footage and let the editor find the scenes."}</p></div><div className="toolbar-actions">{(analysisStatus === "failed" || analysisStatus === "completed") && <button className="secondary-button" disabled={!hasMedia || startingAnalysis} onClick={startAnalysis}><WandSparkles size={15}/>{startingAnalysis ? "Starting..." : analysisStatus === "failed" ? "Retry analysis" : "Analyze again"}</button>}<button className="primary-button" disabled={!shots.length || analysisStatus !== "completed"} onClick={()=>setStage("Edit")}>Continue to edit <ArrowRight size={16}/></button></div></div>
-          {analysisStatus === "running" && shots.length > 0 ? <div className="analysis-progress"><span>{String(analysisProgress.event ?? "Analyzing footage").replace(/_/g, " ")}</span>{typeof analysisProgress.completed_frames === "number" && typeof analysisProgress.total_frames === "number" ? <b>{analysisProgress.completed_frames} / {analysisProgress.total_frames} frames</b> : null}</div> : null}
+          {(analysisStatus === "queued" || analysisStatus === "running") && <section className="analysis-card panel" aria-live="polite">
+            <div className="analysis-card-heading"><div className="analysis-spinner" /><div><span className="analysis-kicker">{analysisStatus === "queued" ? "QUEUED" : "ANALYSIS IN PROGRESS"}</span><h2>{progressPhase.title}</h2><p>{progressPhase.detail}</p></div></div>
+            <div className="analysis-meter">
+              {progressPercent === null ? <div className="analysis-meter-indeterminate"><i /></div> : <div className="analysis-meter-track"><i style={{ width: progressPercent + "%" }} /></div>}
+              <div className="analysis-meter-label"><span>{progressPercent === null ? "Preparing workload…" : completedFrames + " of " + totalFrames + " frames analyzed"}</span>{progressPercent !== null ? <b>{progressPercent}%</b> : <b>In progress</b>}</div>
+            </div>
+            <div className="analysis-steps">{progressSteps.map((label, index) => {
+              const done = analysisStatus === "completed" || index < progressPhase.stage;
+              const activeStep = !done && index === progressPhase.stage;
+              return <div key={label} className={"analysis-step " + (done ? "done" : activeStep ? "active" : "")}><span className="analysis-step-icon">{done ? <Check size={12}/> : activeStep ? <span className="analysis-step-dot" /> : index + 1}</span><span>{label}</span></div>;
+            })}</div>
+            {(analysisProgress.video_path || analysisProgress.scene_index || analysisProgress.frame_index) && <div className="analysis-current">
+              {typeof analysisProgress.video_path === "string" && <span><b>Video</b> {analysisProgress.video_path}</span>}
+              {typeof analysisProgress.scene_index === "number" && <span><b>Scene</b> {analysisProgress.scene_index}{typeof analysisProgress.scene_count === "number" ? " of " + analysisProgress.scene_count : ""}</span>}
+              {typeof analysisProgress.frame_index === "number" && <span><b>Frame</b> {analysisProgress.frame_index}{typeof analysisProgress.frame_count === "number" ? " of " + analysisProgress.frame_count : ""}</span>}
+            </div>}
+            {typeof analysisProgress.estimated_remaining_seconds === "number" && analysisProgress.estimated_remaining_seconds > 0 && <p className="analysis-eta">Estimated time remaining: about {Math.max(1, Math.ceil(analysisProgress.estimated_remaining_seconds / 60))} min</p>}
+            <p className="analysis-reassurance">You can leave this page open. Progress is saved as each frame is analyzed, so completed work can be reused if analysis is interrupted.</p>
+          </section>}
           {shots.length === 0 ? <section className="empty-story panel">
             <div className="upload-icon"><Film size={21}/></div>
             <h2>{analysisStatus === "running" || analysisStatus === "queued" ? "Finding the scenes in your footage" : analysisStatus === "failed" ? "Analysis needs another try" : hasMedia ? "Your footage is ready to analyze" : "Add footage to get started"}</h2>
             <p>{analysisStatus === "running" || analysisStatus === "queued" ? "The editor is detecting scene boundaries, extracting frames and describing what happens." : analysisStatus === "failed" ? "The analysis did not finish. Check that the vision model is available, then retry." : hasMedia ? "Analyze your videos to turn them into a real, visual storyboard." : "Go back to Project and upload one or more video files. Your original files stay untouched."}</p>
-            {analysisStatus === "running" || analysisStatus === "queued" ? <div className="analysis-progress"><span>{String(analysisProgress.event ?? "Starting analysis").replace(/_/g, " ")}</span>{typeof analysisProgress.completed_frames === "number" && typeof analysisProgress.total_frames === "number" ? <b>{analysisProgress.completed_frames} / {analysisProgress.total_frames} frames</b> : null}</div> : null}
             {!hasMedia ? <button className="primary-button" onClick={()=>setStage("Create")}>Add video footage <ArrowRight size={16}/></button> : null}
           </section> : <div className="story-layout"><div className="shot-grid">{shots.map((shot, i)=><article key={shot.id} className={`shot-card ${active===shot.id?"focused":""} ${!shot.selected?"dimmed":""}`} onClick={()=>setActive(shot.id)}><div className="shot-image" style={{backgroundImage:`url(${shotImage(shot.image)})`}}><span className="shot-number">{String(i+1).padStart(2,"0")}</span><button className={`select-shot ${shot.selected?"checked":""}`} onClick={e=>{e.stopPropagation();update(shot.id,{selected:!shot.selected})}} aria-label="Toggle shot"><Check size={13}/></button><span className="shot-duration">{shot.duration.toFixed(1)}s</span></div><div className="shot-info"><b>{shot.title}</b><span>{shot.place}</span><p>{shot.note}</p><div className="shot-card-bottom"><span className="ai-match"><Sparkles size={11}/> Scene detected</span><button className="tiny-action" onClick={e=>{e.stopPropagation();move(shot.id,-1)}} aria-label="Move shot up"><ArrowLeft size={13}/></button><button className="tiny-action" onClick={e=>{e.stopPropagation();move(shot.id,1)}} aria-label="Move shot down"><ArrowRight size={13}/></button></div></div></article>)}
             <button className="add-shot" onClick={()=>announce("Choose a clip from your media library (backend integration pending).")}><div><Plus size={20}/></div><b>Add a moment</b><span>Choose from your footage</span></button>
