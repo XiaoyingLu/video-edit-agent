@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Aperture, ArrowDown, ArrowLeft, ArrowRight, AudioLines, Check, ChevronDown,
   Clapperboard, Clock3, Download, Film, FolderOpen, Gauge, Grid2X2, HelpCircle,
@@ -28,12 +28,45 @@ export default function App() {
   const [duration, setDuration] = useState("60–90 seconds");
   const [format, setFormat] = useState("16:9 · YouTube");
   const [notice, setNotice] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [creatingProject, setCreatingProject] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
   const current = shots.find(s => s.id === active) ?? shots[0];
   const selectedCount = shots.filter(s => s.selected).length;
   const total = useMemo(() => shots.filter(s => s.selected).reduce((n, s) => n + s.duration, 0), [shots]);
   const update = (id: number, patch: Partial<Shot>) => setShots(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s));
   const move = (id: number, delta: number) => setShots(prev => { const list = [...prev]; const i = list.findIndex(s => s.id === id); const j = i + delta; if (j < 0 || j >= list.length) return list; [list[i], list[j]] = [list[j], list[i]]; return list; });
-  const announce = (message: string) => { setNotice(message); window.setTimeout(() => setNotice(""), 2600); };
+  const announce = (message: string) => { setNotice(message); window.setTimeout(() => setNotice(""), 5000); };
+  const createProject = async () => {
+    setCreatingProject(true);
+    try {
+      const response = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: projectName, brief, target_duration: duration, format }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail ?? "Could not create project");
+      }
+      const project = await response.json();
+      if (selectedFiles.length > 0) {
+        const form = new FormData();
+        selectedFiles.forEach(file => form.append("files", file));
+        const upload = await fetch("/api/projects/" + project.id + "/media", { method: "POST", body: form });
+        if (!upload.ok) {
+          const error = await upload.json();
+          throw new Error(error.detail ?? "Video upload failed");
+        }
+      }
+      announce("Project created" + (selectedFiles.length ? " with " + selectedFiles.length + " video file(s)" : "") + ". Storyboard analysis is the next integration step; the shots shown here are still demo content.");
+      setStage("Storyboard");
+    } catch (error) {
+      announce(error instanceof Error ? error.message : "Could not connect to the local project service.");
+    } finally {
+      setCreatingProject(false);
+    }
+  };
   const stages: { name: Stage; label: string; icon: typeof Film }[] = [
     { name: "Create", label: "Project", icon: FolderOpen }, { name: "Storyboard", label: "Storyboard", icon: Grid2X2 },
     { name: "Edit", label: "Edit", icon: Scissors }, { name: "Export", label: "Export", icon: Clapperboard },
@@ -67,8 +100,8 @@ export default function App() {
             <label className="field-label">PROJECT NAME</label><input className="text-input" value={projectName} onChange={e=>setProjectName(e.target.value)}/>
             <label className="field-label">WHAT'S THE STORY?</label><textarea className="brief-input" value={brief} onChange={e=>setBrief(e.target.value)}/>
             <div className="two-fields"><div><label className="field-label">TARGET LENGTH</label><select className="text-input" value={duration} onChange={e=>setDuration(e.target.value)}><option>30–60 seconds</option><option>60–90 seconds</option><option>2–3 minutes</option><option>5+ minutes</option></select></div><div><label className="field-label">VIDEO FORMAT</label><select className="text-input" value={format} onChange={e=>setFormat(e.target.value)}><option>16:9 · YouTube</option><option>9:16 · Reels / TikTok</option><option>1:1 · Square</option></select></div></div>
-            <div className="dropzone"><div className="upload-icon"><Plus size={20}/></div><div><b>Drop your footage here</b><p>or <button onClick={()=>announce("File import will be connected to the local project backend.")}>browse files</button> from your computer</p><small>MP4, MOV, M4V · Up to 20 GB per file</small></div></div>
-            <div className="panel-footer"><span className="muted"><Clock3 size={14}/> You can change these later</span><button className="primary-button" onClick={()=>setStage("Storyboard")}>Continue <ArrowRight size={16}/></button></div>
+            <div className="dropzone"><div className="upload-icon"><Plus size={20}/></div><div><b>{selectedFiles.length ? selectedFiles.length + " video file(s) selected" : "Add your footage"}</b><p>or <button type="button" onClick={()=>fileInput.current?.click()}>browse files</button> from your computer</p><small>MP4, MOV, M4V, MKV, AVI, WEBM · Up to 20 GB per file</small>{selectedFiles.length > 0 && <small>{selectedFiles.map(file=>file.name).join(", ")}</small>}</div><input ref={fileInput} type="file" accept="video/*,.m4v,.mkv" multiple hidden onChange={event=>setSelectedFiles(Array.from(event.target.files ?? []))}/></div>
+            <div className="panel-footer"><span className="muted"><Clock3 size={14}/> You can change these later</span><button className="primary-button" disabled={creatingProject || !projectName.trim()} onClick={createProject}>{creatingProject ? "Creating..." : "Create project"} <ArrowRight size={16}/></button></div>
           </div>
           <aside className="inspiration-card"><div className="inspiration-image" style={{backgroundImage:`url(${image("photo-1470770841072-f978cf4d019e")})`}}/><div className="inspiration-content"><span className="pill"><WandSparkles size={12}/> YOUR CREATIVE ASSISTANT</span><h3>Good stories start with a feeling.</h3><p>Describe the atmosphere, not every single shot. The AI will find the moments that fit.</p><div className="tip"><Star size={15}/><span><b>A little tip</b> Mention a mood, a place, or a moment you don't want to miss.</span></div></div></aside>
         </section>}
