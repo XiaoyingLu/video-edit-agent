@@ -138,7 +138,7 @@ def test_live_review_html_submits_visual_edits_to_local_session(tmp_path, monkey
     assert "Submit visual edits" in rendered
     assert 'const submissionUrl = "http://127.0.0.1:43210/__video-agent/timeline/test-token";' in rendered
     assert 'fetch(submissionUrl, {method:"POST"' in rendered
-    assert "timeline-visual-edits.json" not in rendered
+    assert "if (submissionUrl)" in rendered
 
 
 def test_save_review_writes_html_and_metadata_without_overwrite(tmp_path, monkeypatch):
