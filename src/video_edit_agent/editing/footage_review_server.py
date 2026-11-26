@@ -10,7 +10,7 @@ from pathlib import Path
 
 def start_footage_review_server(
     project_root: Path, selections_path: Path
-) -> tuple[ThreadingHTTPServer, threading.Event, str]:
+) -> tuple[ThreadingHTTPServer, threading.Event, str, str]:
     """Serve project previews and accept one local browser selection submission."""
     root = project_root.expanduser().resolve()
     destination = selections_path.expanduser().resolve()
@@ -68,4 +68,5 @@ def start_footage_review_server(
     port = server.server_address[1]
     review_path = ".video-agent/footage-review.html"
     review_url = f"http://127.0.0.1:{port}/{review_path}"
-    return server, submitted, f"{review_url}|{endpoint}"
+    submission_url = f"http://127.0.0.1:{port}{endpoint}"
+    return server, submitted, review_url, submission_url
