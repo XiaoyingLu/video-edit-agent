@@ -147,28 +147,37 @@ def generate_footage_visual_review(
     title = plan.story_treatment.working_title if plan.story_treatment else "Storyboard"
     suggestions_sha256 = hashlib.sha256(loaded[1].read_bytes()).hexdigest()
     document = f"""<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(title)} — Footage Review</title>
 <style>
 :root{{color-scheme:dark;font-family:Inter,system-ui,sans-serif;background:#101318;color:#edf0f4}}
 body{{margin:0}}main{{max-width:1200px;margin:auto;padding:32px 22px 70px}}
 h1{{font-size:2.4rem;margin:.2em 0}}h2{{font-size:1.5rem}}h3{{font-size:1.05rem;margin:.2em 0}}
 p{{color:#b8c0cc;line-height:1.45}}.hero{{border-bottom:1px solid #39414c;padding-bottom:24px}}
-.actions{{position:sticky;top:0;background:#101318ed;padding:14px 0;z-index:2;border-bottom:1px solid #39414c}}
-button{{background:#d8e6f7;color:#111923;border:0;border-radius:8px;padding:11px 16px;font-weight:700;cursor:pointer}}
+.actions{{position:sticky;top:0;background:#101318ed;padding:14px 0;
+z-index:2;border-bottom:1px solid #39414c}}
+button{{background:#d8e6f7;color:#111923;border:0;border-radius:8px;
+padding:11px 16px;font-weight:700;cursor:pointer}}
 #status{{margin-left:12px;color:#b8c0cc}}section{{margin:34px 0}}.shots{{display:grid;gap:18px}}
 .shot{{background:#1a2029;border:1px solid #35404e;border-radius:12px;padding:16px}}
-.shot-heading{{margin-bottom:12px}}.shot-heading span{{color:#8fa7c5;font-size:.8rem;text-transform:uppercase}}
+.shot-heading{{margin-bottom:12px}}
+.shot-heading span{{color:#8fa7c5;font-size:.8rem;text-transform:uppercase}}
 .options{{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}}
-.candidate{{display:block;border:1px solid #465366;border-radius:10px;overflow:hidden;cursor:pointer}}
+.candidate{{display:block;border:1px solid #465366;border-radius:10px;
+overflow:hidden;cursor:pointer}}
 .candidate:has(input:checked){{border:2px solid #83b7f5}}.candidate input{{margin:12px}}
-.preview{{aspect-ratio:16/9;background:#0b0e12}}.preview img{{width:100%;height:100%;object-fit:cover}}
+.preview{{aspect-ratio:16/9;background:#0b0e12}}
+.preview img{{width:100%;height:100%;object-fit:cover}}
 .placeholder{{height:100%;display:grid;place-items:center;color:#8793a2}}
 .candidate-body{{padding:0 12px 12px}}.candidate-body p{{font-size:.88rem;margin:.5em 0}}
-.candidate-body ul{{padding-left:18px;color:#9eacbc;font-size:.82rem}}.skip{{display:inline-block;margin-top:14px;color:#d2d8e0}}
+.candidate-body ul{{padding-left:18px;color:#9eacbc;font-size:.82rem}}
+.skip{{display:inline-block;margin-top:14px;color:#d2d8e0}}
 .empty{{color:#e6bd79}}
-</style></head><body><main><div class="hero"><p>VISUAL FOOTAGE REVIEW · {shot_count} SHOTS · {candidate_count} CANDIDATES</p>
-<h1>{html.escape(title)}</h1><p>Choose the footage that best fits each storyboard shot. The first-ranked match is preselected,
+</style></head><body><main><div class="hero">
+<p>VISUAL FOOTAGE REVIEW · {shot_count} SHOTS · {candidate_count} CANDIDATES</p>
+<h1>{html.escape(title)}</h1>
+<p>Choose the footage that best fits each storyboard shot. The first-ranked match is preselected,
 but you can change it or leave a shot unassigned. Nothing is approved or rendered by this page.</p></div>
 <div class="actions"><button id="export">Download selections</button><span id="status" role="status">Review each shot, then download your choices.</span></div>
 {"".join(sections)}</main>
