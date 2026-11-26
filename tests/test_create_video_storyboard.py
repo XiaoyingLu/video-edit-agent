@@ -69,6 +69,8 @@ def test_storyboard_playback_preview_preserves_timeline_when_user_declines(tmp_p
 
     preview = tmp_path / "preview.mp4"
     preview.write_bytes(b"preview")
+    timeline = tmp_path / "timeline.json"
+    timeline.write_bytes(b'{"approved": true}')
     monkeypatch.setattr(
         planning_story,
         "render_timeline_revision_preview",
@@ -85,7 +87,9 @@ def test_storyboard_playback_preview_preserves_timeline_when_user_declines(tmp_p
     monkeypatch.setattr(planning_story.webbrowser, "open", lambda url: None)
     monkeypatch.setattr(planning_story.console, "input", lambda prompt: "n")
 
-    with pytest.raises(click.exceptions.Exit) as exc_info:
-        planning_story._review_storyboard_playback_preview(tmp_path, tmp_path / "timeline.json")
+    with pytest.raises(typer.Exit) as exc_info:
+        planning_story._review_storyboard_playback_preview(tmp_path, timeline)
 
     assert exc_info.value.exit_code == 2
+    assert timeline.read_bytes() == b'{"approved": true}'
+    assert preview.read_bytes() == b"preview"
