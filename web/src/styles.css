@@ -86,13 +86,27 @@
 
 /* Real source-footage sequence preview */
 .export-video-stage {
-  height: 300px;
+  height: auto;
+  max-width: 100%;
   position: relative;
   display: grid;
   place-items: center;
   overflow: hidden;
+  margin: 0 auto;
   border-radius: 8px;
   background: #08090b;
+}
+.export-video-stage.export-ratio-landscape {
+  width: min(100%, 640px);
+  aspect-ratio: 16 / 9;
+}
+.export-video-stage.export-ratio-portrait {
+  width: min(100%, 270px);
+  aspect-ratio: 9 / 16;
+}
+.export-video-stage.export-ratio-square {
+  width: min(100%, 420px);
+  aspect-ratio: 1 / 1;
 }
 .export-video {
   display: block;
@@ -114,10 +128,6 @@
 .export-empty svg { color: var(--accent); }
 .export-empty b { color: #ececf0; font-size: 12px; }
 .export-empty span { font-size: 10px; line-height: 1.6; }
-@media(max-width:560px) {
-  .export-video-stage { height: 210px; }
-}
-
 
 /* The export preview dimensions are driven by the selected ratio in React. */
 .export-video { object-fit: cover; }
