@@ -263,10 +263,7 @@ def save_edit_decisions(project_id: str, request: EditDecisions) -> dict:
         scene = scenes.get(clip.scene_id)
         if scene is None or scene.get("source_video_path", "") != clip.source_video_path:
             raise HTTPException(status_code=400, detail=f"Unknown source scene: {clip.scene_id}")
-        if (
-            clip.start_seconds < scene["start_seconds"]
-            or clip.end_seconds > scene["end_seconds"]
-        ):
+        if clip.start_seconds < scene["start_seconds"] or clip.end_seconds > scene["end_seconds"]:
             raise HTTPException(
                 status_code=400,
                 detail=f"Clip {clip.clip_id} must stay within its detected scene boundaries",
