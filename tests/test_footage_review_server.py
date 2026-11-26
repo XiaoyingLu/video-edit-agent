@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from video_edit_agent.editing.footage_review_server import start_footage_review_server
@@ -52,8 +53,8 @@ def test_local_review_server_rejects_unknown_submission_path(tmp_path: Path) -> 
         )
         try:
             urlopen(request)
-        except Exception as exc:
-            assert getattr(exc, "code", None) == 404
+        except HTTPError as exc:
+            assert exc.code == 404
         else:
             raise AssertionError("unexpectedly accepted an unknown submission path")
     finally:
