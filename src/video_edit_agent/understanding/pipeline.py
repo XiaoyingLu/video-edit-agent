@@ -359,7 +359,18 @@ def understand_folder(
             report("scene_detection_started", video_path=relative_path)
             detection_started = time.perf_counter()
             intervals = detect_scenes(
-                video_path, video_info.duration_seconds, show_progress=progress_callback is not None
+                video_path,
+                video_info.duration_seconds,
+                show_progress=progress_callback is not None,
+                progress_callback=(
+                    lambda details: report(
+                        "scene_detection_progress",
+                        video_path=relative_path,
+                        **details,
+                    )
+                    if progress_callback is not None
+                    else None
+                ),
             )
             detected[video_path] = intervals
             report(
