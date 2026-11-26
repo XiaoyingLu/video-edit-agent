@@ -786,7 +786,20 @@ transition context:
 docker compose run --rm video-agent review-timeline-visual ./travel-test
 ```
 
-Open `.video-agent/timeline-visual-review/review.html` in a browser. The built-in player can
+For an interactive local session that submits shot order and trim changes directly back to
+the running command, use `--live`:
+
+```bash
+video-agent review-timeline-visual ./travel-test --live
+```
+
+The command opens a loopback-only browser review session. Choose **Submit visual edits** when
+finished; the CLI validates the version-bound proposal and saves a separate unapproved
+revision. You do not need to download or import a JSON file. The session expires after
+30 minutes, and the original timeline and source media remain unchanged. Review and approve
+the new revision before rendering.
+
+Open `.video-agent/timeline-visual-review/review.html` in a browser for the offline workflow. The built-in player can
 play the current shot or the complete sequence in card order, honoring each shot's source in/out
 points. Use Previous/Next to inspect individual shots. The preview reads the original local video
 files through paths relative to the HTML page; keep the review page in its generated project

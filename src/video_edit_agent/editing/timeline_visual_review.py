@@ -285,8 +285,9 @@ def render_timeline_visual_review_html(
     report: TimelineVisualReviewReport,
     *,
     media_sources: dict[str, str] | None = None,
+    submission_url: str | None = None,
 ) -> str:
-    """Render the offline timeline review using a separately maintained HTML template."""
+    """Render a browser timeline review, optionally with live edit submission."""
     payload_json = json.dumps(report.model_dump(mode="json"), ensure_ascii=True).replace(
         "<", "\\u003c"
     )
@@ -308,6 +309,11 @@ def render_timeline_visual_review_html(
         .replace("__CROP_WARNING_HTML__", crop_warning_html)
         .replace("__CLIP_CARDS__", cards_html or "<p>No clips are present in this timeline.</p>")
         .replace("__PAYLOAD_JSON__", payload_json)
+        .replace("__SUBMISSION_URL__", submission_url or "")
+        .replace(
+            "__EDIT_ACTION_LABEL__",
+            "Submit visual edits" if submission_url else "Export visual edits (.json)",
+        )
     )
 
 

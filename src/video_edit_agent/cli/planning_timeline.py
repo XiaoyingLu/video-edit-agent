@@ -1,8 +1,18 @@
 """Story planning and timeline command workflows."""
 
 # ruff: noqa: F403,F405,I001
+import os
+import webbrowser
+from urllib.parse import quote
+
 from . import common
 from .common import *  # noqa: F403
+from ..editing.timeline_review_server import start_timeline_review_server
+from ..editing.timeline_visual_editor import (
+    apply_timeline_visual_edits,
+    load_timeline_visual_edits,
+)
+from ..editing.timeline_visual_review import render_timeline_visual_review_html
 
 
 @story_app.command("optimize-timeline")
@@ -264,10 +274,65 @@ def review_timeline_visual(
     output: Annotated[
         Path | None, typer.Option("--output", "-o", help="Output base path for JSON and HTML.")
     ] = None,
+    live: Annotated[
+        bool,
+        typer.Option(
+            "--live",
+            help="Open a local browser session and submit visual edits directly.",
+        ),
+    ] = False,
 ) -> None:
-    """Create an offline browser review page for proposed timeline shots."""
+    """Create a browser review page; --live applies submitted edits as an unapproved revision."""
     try:
         report = build_timeline_visual_review(folder, timeline_path=timeline)
+        if live:
+            root = folder.expanduser().resolve()
+            review_file = root / ".video-agent" / "timeline-live-review.html"
+            edits_file = root / ".video-agent" / "timeline-live-edits.json"
+            review_file.parent.mkdir(parents=True, exist_ok=True)
+            server, submitted, review_url, submission_url = start_timeline_review_server(
+                root, edits_file
+            )
+            media_sources = {
+                clip.clip_id: quote(
+                    os.path.relpath(
+                        (root / clip.video_path).resolve()
+                        if not Path(clip.video_path).is_absolute()
+                        else Path(clip.video_path).resolve(),
+                        review_file.parent,
+                    ).replace(os.sep, "/"),
+                    safe="/:@-._~",
+                )
+                for clip in report.clips
+            }
+            try:
+                review_file.write_text(
+                    render_timeline_visual_review_html(
+                        report,
+                        media_sources=media_sources,
+                        submission_url=submission_url,
+                    ),
+                    encoding="utf-8",
+                )
+                console.print(f"Opening visual timeline editor: [green]{review_url}[/green]")
+                webbrowser.open(review_url)
+                console.print(
+                    "Reorder shots and adjust trims in the browser, then choose "
+                    "'Submit visual edits'. Waiting up to 30 minutes."
+                )
+                if not submitted.wait(timeout=1800):
+                    raise ValueError("Timeline review timed out after 30 minutes.")
+            finally:
+                server.shutdown()
+                server.server_close()
+            edits = load_timeline_visual_edits(edits_file)
+            revision = apply_timeline_visual_edits(root, edits)
+            console.print(f"Unapproved timeline revision: [green]{revision}[/green]")
+            console.print(
+                "[yellow]Edits were saved as a separate revision. Review and approve "
+                "that revision before rendering; the original timeline is unchanged.[/yellow]"
+            )
+            return
         json_file, html_file = save_timeline_visual_review(folder, report, output_path=output)
     except (
         FileNotFoundError,
