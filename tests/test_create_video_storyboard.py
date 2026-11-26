@@ -62,9 +62,7 @@ def test_storyboard_playback_preview_opens_video_and_requires_final_confirmation
     assert calls == [preview.as_uri()]
 
 
-def test_storyboard_playback_preview_preserves_timeline_when_user_declines(
-    tmp_path, monkeypatch
-):
+def test_storyboard_playback_preview_preserves_timeline_when_user_declines(tmp_path, monkeypatch):
     from types import SimpleNamespace
 
     from video_edit_agent.cli import planning_story
@@ -88,8 +86,6 @@ def test_storyboard_playback_preview_preserves_timeline_when_user_declines(
     monkeypatch.setattr(planning_story.console, "input", lambda prompt: "n")
 
     with pytest.raises(click.exceptions.Exit) as exc_info:
-        planning_story._review_storyboard_playback_preview(
-            tmp_path, tmp_path / "timeline.json"
-        )
+        planning_story._review_storyboard_playback_preview(tmp_path, tmp_path / "timeline.json")
 
     assert exc_info.value.exit_code == 2
