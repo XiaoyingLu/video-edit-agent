@@ -107,7 +107,7 @@ def _available_fonts() -> frozenset[str]:
                 )
             except (OSError, subprocess.TimeoutExpired):
                 continue
-            if result.returncode == 0 and result.stdout.strip():
+            if result.returncode == 0 and name.casefold() in result.stdout.casefold():
                 fonts.add(name)
     bundled = Path(__file__).parent / "rendering" / "fonts" / "Lato-Regular.ttf"
     if bundled.is_file():
