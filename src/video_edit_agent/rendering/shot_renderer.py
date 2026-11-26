@@ -12,6 +12,7 @@ from ..editing.user_overrides import apply_user_overrides
 from ..media_runner import run_ffmpeg
 from ..music.schemas import MusicAnalysis
 from .audio_mix import append_music_input, append_music_mix, resolve_selected_music
+from .atomic_staging import RunWorkspace
 from .face_reframing import detect_face_crop_paths
 from .frame_audit import FrameAuditError, audit_rendered_frames, validate_title_font
 from .overlay_filters import _append_asset_overlay_filters, _append_title_overlay_filters
@@ -529,12 +530,11 @@ def _render_and_validate_shot_output(
 ) -> tuple[dict, dict, dict, float, dict] | None:
     """Build, execute, and verify FFmpeg output without registering project artifacts."""
     temporary_path = destination
+    workspace = None
     if not dry_run:
-        temporary_file = tempfile.NamedTemporaryFile(
-            prefix=".video-agent-shot-render-", suffix=".mp4", dir=destination.parent, delete=False
-        )
-        temporary_path = Path(temporary_file.name)
-        temporary_file.close()
+        workspace = RunWorkspace(root)
+        workspace.__enter__()
+        temporary_path = workspace.stage_path("renders/shot-render.mp4")
     try:
         try:
             crop_paths = detect_face_crop_paths(clip_inputs) if reframe_mode == "face" else None
@@ -631,11 +631,17 @@ def _render_and_validate_shot_output(
             )
         except FrameAuditError as exc:
             raise RenderError(f"render frame audit failed: {exc}") from exc
-        temporary_path.replace(destination)
+        if workspace is None:
+            raise RenderError("render staging workspace was not initialized")
+        workspace.checksum(temporary_path)
+        workspace.promote(temporary_path, destination)
     except Exception:
         if not dry_run:
             temporary_path.unlink(missing_ok=True)
         raise
+    finally:
+        if workspace is not None:
+            workspace.__exit__(None, None, None)
 
     return output_probe, output_video, output_audio, actual_duration, audit
 
