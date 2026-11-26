@@ -6,6 +6,7 @@ from ..artifact_tracking import register_artifact, validate_artifact
 from ..atomic_io import write_json_atomic
 from ..config import get_setting
 from ..music.schemas import MusicAnalysis, MusicSection
+from ..runtime_capabilities import probe_runtime_capabilities
 from ..story_proposal import StoryProposal
 from .intent import parse_editing_intent
 from .music_pacing import annotate_music_pacing
@@ -30,6 +31,8 @@ def create_video_project_plan(
     root = folder.expanduser().resolve()
     if not root.is_dir():
         raise FileNotFoundError(f"Project folder does not exist: {root}")
+
+    capabilities = probe_runtime_capabilities(root)
 
     artifact_dir = root / ".video-agent"
     editing_path = artifact_dir / "editing-plan.json"
@@ -123,6 +126,8 @@ def create_video_project_plan(
         creative_priorities=editing_plan.priorities,
         assumptions=editing_plan.assumptions,
     )
+    brief_payload = brief.model_dump(mode="json")
+    brief_payload["runtime_capabilities"] = capabilities.prompt_context()
     music_sections = (
         [section.model_dump(mode="json") for section in music_analysis.sections]
         if music_analysis is not None
@@ -130,7 +135,7 @@ def create_video_project_plan(
     )
     generated = generate_video_plan_content(
         prompt,
-        brief.model_dump(mode="json"),
+        brief_payload,
         model=planner_model,
         music_sections=music_sections,
         story_chapters=(
