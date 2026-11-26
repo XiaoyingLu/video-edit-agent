@@ -551,6 +551,7 @@ def build_draft_timeline(
             str(plan_file.relative_to(root)) if plan_file.is_relative_to(root) else str(plan_file)
         ),
         style=plan.style,
+        aspect_ratio=plan.aspect_ratio,
         pacing=plan.pacing,
         target_duration_seconds=plan.target_duration_seconds,
         proposed_duration_seconds=round(duration, 3),
