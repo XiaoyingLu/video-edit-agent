@@ -9,6 +9,7 @@ from ..music.schemas import MusicAnalysis
 from .draft_schemas import ProjectDraftSelection
 from .intent_schemas import EditingPlan
 from .timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
+from .user_overrides import apply_user_overrides
 
 _PACING_RANGES = {
     "slow": (4.0, 8.0),
@@ -579,8 +580,6 @@ def load_draft_timeline(
         raise ValueError("draft timeline belongs to a different project folder")
     # The on-disk artifact remains agent-generated and checksum-verifiable;
     # user edits are composed in memory from the separate override manifest.
-    from .user_overrides import apply_user_overrides
-
     timeline = apply_user_overrides(timeline)
     return timeline, destination
 
