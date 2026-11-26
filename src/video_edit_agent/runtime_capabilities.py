@@ -80,10 +80,6 @@ def _run_help(executable: str | None, option: str) -> str:
 def _listed_names(output: str) -> frozenset[str]:
     names = set()
     for line in output.splitlines():
-        match = re.match(r"^\s*[TSC.]?[.]{5,}\s+([A-Za-z0-9_]+)\s+", line)
-        if match:
-            names.add(match.group(1))
-            continue
         # FFmpeg filters use three flag columns; encoders use six.
         match = re.match(r"^\s*[A-Z.]{3}\s+([A-Za-z0-9_]+)\s+", line)
         if match:
