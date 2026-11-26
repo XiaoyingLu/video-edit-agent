@@ -10,6 +10,7 @@ from ..music.schemas import MusicAnalysis
 from ..silence.schemas import ProjectSilenceAnalysis
 from ..transcription.schemas import ProjectTranscription
 from .draft_schemas import ProjectDraftSelection
+from .edit_document import build_edit_document
 from .intent_schemas import EditingPlan
 from .timeline_schemas import DraftTimelineClip, ProjectDraftTimeline
 from .user_overrides import apply_user_overrides
@@ -672,8 +673,15 @@ def save_draft_timeline(timeline: ProjectDraftTimeline, destination: Path) -> No
     """Persist review decisions as JSON."""
     destination.parent.mkdir(parents=True, exist_ok=True)
     write_json_atomic(destination, timeline)
+    root = Path(timeline.project_path).expanduser().resolve()
+    try:
+        source_timeline = destination.relative_to(root).as_posix()
+    except ValueError:
+        source_timeline = str(destination)
+    edit_document_path = root / ".video-agent" / "edit-document.json"
+    edit_document = build_edit_document(timeline, source_timeline=source_timeline)
+    write_json_atomic(edit_document_path, edit_document)
     if (destination.parent / "artifact-manifest.json").is_file():
-        root = Path(timeline.project_path).expanduser().resolve()
         dependencies = [
             Path(value) if Path(value).is_absolute() else root / value
             for value in (
@@ -686,6 +694,7 @@ def save_draft_timeline(timeline: ProjectDraftTimeline, destination: Path) -> No
             if value is not None
         ]
         register_artifact(root, destination, dependencies=dependencies)
+        register_artifact(root, edit_document_path, dependencies=[destination])
 
 
 def apply_timeline_review(

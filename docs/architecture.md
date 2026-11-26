@@ -76,3 +76,14 @@ The LLM must not generate shell commands for direct execution. It may only propo
 ## Travel-footage safety rule
 
 Silence is not equivalent to dead air. Speech gaps are descriptive metadata only; quiet scenic footage, ambient sound, and music are retained unless the user explicitly requests otherwise.
+
+
+## Structured edit document
+
+The optimized shot timeline is also serialized as a versioned, renderer-independent
+`.video-agent/edit-document.json`. It exposes explicit video, source-audio, and optional
+title/caption tracks. Every clip carries both source in/out points and output-timeline
+start/end points, so transition overlaps are represented as real timing rather than
+being inferred by downstream consumers. The document retains review decisions and
+references its source timeline; it is a planning/interchange artifact, not a render
+instruction or approval to modify source media.
