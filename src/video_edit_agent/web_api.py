@@ -17,7 +17,7 @@ from typing import Annotated
 from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from .atomic_io import write_json_atomic
 from .config import get_setting
@@ -36,6 +36,25 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+
+class EditDecision(BaseModel):
+    clip_id: str = Field(min_length=1, max_length=100)
+    scene_id: str = Field(min_length=1, max_length=100)
+    source_video_path: str = Field(min_length=1, max_length=500)
+    start_seconds: float = Field(ge=0)
+    end_seconds: float = Field(gt=0)
+    included: bool = True
+
+    @model_validator(mode="after")
+    def validate_interval(self):
+        if self.end_seconds <= self.start_seconds:
+            raise ValueError("end_seconds must be greater than start_seconds")
+        return self
+
+
+class EditDecisions(BaseModel):
+    clips: list[EditDecision] = Field(max_length=2000)
 
 
 class ProjectCreate(BaseModel):
@@ -221,6 +240,44 @@ def start_project_analysis(project_id: str, background_tasks: BackgroundTasks) -
     _write_project(path, project)
     background_tasks.add_task(_run_project_analysis, project_id)
     return project
+
+
+@app.get("/api/projects/{project_id}/edit-decisions")
+def get_edit_decisions(project_id: str) -> dict:
+    path = _project_path(project_id)
+    artifact = path / ".video-agent" / "edit-decisions.json"
+    if not artifact.is_file():
+        return {"clips": []}
+    return json.loads(artifact.read_text(encoding="utf-8"))
+
+
+@app.put("/api/projects/{project_id}/edit-decisions")
+def save_edit_decisions(project_id: str, request: EditDecisions) -> dict:
+    path = _project_path(project_id)
+    understanding_path = path / ".video-agent" / "understanding.json"
+    if not understanding_path.is_file():
+        raise HTTPException(status_code=409, detail="Analyze footage before saving edits")
+    understanding = json.loads(understanding_path.read_text(encoding="utf-8"))
+    scenes = {scene["scene_id"]: scene for scene in understanding.get("scenes", [])}
+    for clip in request.clips:
+        scene = scenes.get(clip.scene_id)
+        if scene is None or scene.get("source_video_path", "") != clip.source_video_path:
+            raise HTTPException(status_code=400, detail=f"Unknown source scene: {clip.scene_id}")
+        if clip.start_seconds < scene["start_seconds"] or clip.end_seconds > scene["end_seconds"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Clip {clip.clip_id} must stay within its detected scene boundaries",
+            )
+        source = (path / clip.source_video_path).resolve()
+        if not source.is_relative_to((path / "source").resolve()) or not source.is_file():
+            raise HTTPException(status_code=400, detail="Edit references an invalid source video")
+    payload = request.model_dump(mode="json")
+    artifact = path / ".video-agent" / "edit-decisions.json"
+    write_json_atomic(artifact, payload)
+    project = _read_project(path)
+    project["updated_at"] = datetime.now(UTC).isoformat()
+    _write_project(path, project)
+    return payload
 
 
 @app.get("/api/projects/{project_id}/analysis")

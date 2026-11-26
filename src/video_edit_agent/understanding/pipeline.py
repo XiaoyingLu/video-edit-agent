@@ -290,6 +290,7 @@ def _understand_detected_scenes(
             scenes.append(
                 VideoScene(
                     scene_id=scene_id,
+                    source_video_path=relative_path,
                     start_seconds=start,
                     end_seconds=end,
                     summary=_scene_summary(observations),
