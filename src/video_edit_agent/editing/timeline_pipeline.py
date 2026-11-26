@@ -585,7 +585,7 @@ def build_draft_timeline(
                     visual_role=clip.visual_role,
                     mood=clip.mood,
                 )
-                for clip in timeline_clips
+                for clip in timeline_clips[:300]
             ],
             speech_boundaries=[
                 TimedBoundary(
