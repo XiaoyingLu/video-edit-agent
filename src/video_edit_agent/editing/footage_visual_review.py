@@ -60,7 +60,7 @@ def generate_footage_visual_review(
     if any(
         Path(item).resolve() != root
         for item in (plan.project_path, suggestions.project_path, understanding.project_path)
-    ): 
+    ):
         raise ValueError("review artifacts belong to a different project folder")
     if suggestions.source_plan != loaded[0].relative_to(root).as_posix():
         raise ValueError("footage suggestions were generated from a different storyboard")
