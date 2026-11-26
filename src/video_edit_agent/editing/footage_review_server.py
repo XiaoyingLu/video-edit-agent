@@ -40,7 +40,7 @@ def start_footage_review_server(
                     raise ValueError("selection payload is missing its selections")
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 destination.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-            except (ValueError, OSError, json.JSONDecodeError) as exc:
+            except (ValueError, OSError) as exc:
                 body = json.dumps({"error": str(exc)}).encode("utf-8")
                 self.send_response(400)
                 self.send_header("Content-Type", "application/json")
