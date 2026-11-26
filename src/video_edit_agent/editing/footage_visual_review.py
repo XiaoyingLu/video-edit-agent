@@ -223,6 +223,8 @@ document.getElementById("export").addEventListener("click", async () => {{
 </script></body></html>"""
     document = document.replace("__SUGGESTIONS_SHA256__", suggestions_sha256)
     document = document.replace("__SUBMISSION_URL__", submission_url or "")
+    if submission_url:
+        document = document.replace("Download selections", "Submit selections")
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(document, encoding="utf-8")
     return destination, shot_count, candidate_count
