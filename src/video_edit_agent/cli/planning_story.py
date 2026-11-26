@@ -116,8 +116,7 @@ def _review_storyboard_playback_preview(folder: Path, timeline_path: Path) -> No
     console.print("[bold green]Playback preview rendered.[/bold green]")
     console.print(f"Preview video: [green]{report.output_path}[/green]")
     console.print(
-        f"Preview format: {report.width}x{report.height}; "
-        f"{report.actual_duration_seconds:.1f}s."
+        f"Preview format: {report.width}x{report.height}; {report.actual_duration_seconds:.1f}s."
     )
     console.print("Opening the preview so you can watch the complete edit.")
     webbrowser.open(report.output_path.resolve().as_uri())
