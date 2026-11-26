@@ -6,6 +6,7 @@ import webbrowser
 from ..atomic_io import write_json_atomic
 from ..editing.planning_schemas import VideoProjectPlan
 from ..editing.revision_preview import render_timeline_revision_preview
+from ..rendering.title_overlays import load_title_overlays
 from ..editing.footage_visual_review import (
     generate_footage_visual_review,
     load_footage_review_selections,
@@ -91,10 +92,23 @@ def _review_storyboard_playback_preview(folder: Path, timeline_path: Path) -> No
     """Render and play a 720p review copy before starting the final render."""
     root = folder.expanduser().resolve()
     title_overlays = root / ".video-agent" / "title-overlays.json"
+    title_overlay_path = None
+    if title_overlays.is_file():
+        title_document, _ = load_title_overlays(root, title_overlays)
+        source_timeline = Path(title_document.source_timeline)
+        if not source_timeline.is_absolute():
+            source_timeline = root / source_timeline
+        if source_timeline.resolve() == timeline_path.expanduser().resolve():
+            title_overlay_path = title_overlays
+        else:
+            console.print(
+                "[yellow]Skipping title overlays: they were prepared for a different "
+                "timeline revision. Recreate and review them for this revision to include titles.[/yellow]"
+            )
     report, manifest = render_timeline_revision_preview(
         root,
         timeline_path=timeline_path,
-        title_overlay_path=title_overlays if title_overlays.is_file() else None,
+        title_overlay_path=title_overlay_path,
     )
     if report is None or manifest is None:
         raise ValueError("The playback preview did not produce a video.")
