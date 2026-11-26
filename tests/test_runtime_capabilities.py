@@ -20,9 +20,15 @@ def test_probe_builds_tool_and_skill_allowlists_from_runtime(monkeypatch, tmp_pa
 
     def fake_run(command, **_kwargs):
         output = (
-            "Filters:\n ... scale V->V scale video\n ... subtitles V->V render subtitles\n"
+            "Filters:\\n ..C scale V->V scale video\\n ... pad V->V pad video\\n"
+            " ... setsar V->V set sample aspect\\n ... fps V->V frame rate\\n"
+            " ... format V->V format\\n ... trim V->V trim\\n"
+            " ... setpts V->V set timestamps\\n ... concat N->N concat\\n"
+            " ... aresample A->A resample audio\\n ... aformat A->A audio format\\n"
+            " ... anullsrc |->A null audio\\n ... subtitles V->V render subtitles\\n"
+            " ... drawtext V->V draw text\\n"
             if command[-1] == "-filters"
-            else "Encoders:\n V....D libx264 H.264\n A..... aac AAC\n"
+            else "Encoders:\\n V....D libx264 H.264\\n A....D aac AAC\\n"
         )
         return SimpleNamespace(returncode=0, stdout=output, stderr="")
 
