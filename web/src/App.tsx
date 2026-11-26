@@ -29,7 +29,6 @@ export default function App() {
   const [format, setFormat] = useState("16:9 · YouTube");
   const [notice, setNotice] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [projectId, setProjectId] = useState<string | null>(null);
   const [creatingProject, setCreatingProject] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const current = shots.find(s => s.id === active) ?? shots[0];
@@ -51,7 +50,6 @@ export default function App() {
         throw new Error(error.detail ?? "Could not create project");
       }
       const project = await response.json();
-      setProjectId(project.id);
       if (selectedFiles.length > 0) {
         const form = new FormData();
         selectedFiles.forEach(file => form.append("files", file));
