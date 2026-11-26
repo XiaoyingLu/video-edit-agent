@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Aperture, ArrowDown, ArrowLeft, ArrowRight, AudioLines, Check, ChevronDown,
   Clapperboard, Clock3, Download, Film, FolderOpen, Gauge, Grid2X2, HelpCircle,
@@ -17,9 +17,11 @@ const initialShots: Shot[] = [
   { id: 5, title: "Golden hour on the peaks", place: "Mountain summit · 04:31", duration: 9.1, start: 15, end: 24.1, image: "photo-1469474968028-56623f02e42e", note: "A memorable visual high point for the ending.", transition: "Cross dissolve", selected: true },
 ];
 const image = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=1000&q=85`;
+const shotImage = (value: string) => value.startsWith("/api/") ? value : image(value);
+const formatTime = (seconds: number) => `${Math.floor(seconds / 60).toString().padStart(2, "0")}:${Math.floor(seconds % 60).toString().padStart(2, "0")}`;
 
 export default function App() {
-  const [stage, setStage] = useState<Stage>("Storyboard");
+  const [stage, setStage] = useState<Stage>("Create");
   const [shots, setShots] = useState(initialShots);
   const [active, setActive] = useState(1);
   const [playing, setPlaying] = useState(false);
@@ -30,8 +32,13 @@ export default function App() {
   const [notice, setNotice] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [creatingProject, setCreatingProject] = useState(false);
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [hasMedia, setHasMedia] = useState(false);
+  const [analysisStatus, setAnalysisStatus] = useState("not_started");
+  const [analysisProgress, setAnalysisProgress] = useState<Record<string, unknown>>({});
+  const [startingAnalysis, setStartingAnalysis] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
-  const current = shots.find(s => s.id === active) ?? shots[0];
+  const current = shots.find(s => s.id === active) ?? shots[0] ?? initialShots[0];
   const selectedCount = shots.filter(s => s.selected).length;
   const total = useMemo(() => shots.filter(s => s.selected).reduce((n, s) => n + s.duration, 0), [shots]);
   const update = (id: number, patch: Partial<Shot>) => setShots(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s));
@@ -50,6 +57,7 @@ export default function App() {
         throw new Error(error.detail ?? "Could not create project");
       }
       const project = await response.json();
+      let uploadedMediaCount = 0;
       if (selectedFiles.length > 0) {
         const form = new FormData();
         selectedFiles.forEach(file => form.append("files", file));
@@ -58,8 +66,16 @@ export default function App() {
           const error = await upload.json();
           throw new Error(error.detail ?? "Video upload failed");
         }
+        const uploadedProject = await upload.json();
+        uploadedMediaCount = uploadedProject.media?.length ?? selectedFiles.length;
       }
-      announce("Project created" + (selectedFiles.length ? " with " + selectedFiles.length + " video file(s)" : "") + ". Storyboard analysis is the next integration step; the shots shown here are still demo content.");
+      setProjectId(project.id);
+      setHasMedia(uploadedMediaCount > 0);
+      setAnalysisStatus("not_started");
+      setAnalysisProgress({});
+      setShots([]);
+      setProjectName(project.name);
+      announce("Project created" + (uploadedMediaCount ? " with " + uploadedMediaCount + " video file(s). You can now analyze your footage." : ". Add video files to begin."));
       setStage("Storyboard");
     } catch (error) {
       announce(error instanceof Error ? error.message : "Could not connect to the local project service.");
@@ -67,6 +83,80 @@ export default function App() {
       setCreatingProject(false);
     }
   };
+  const startAnalysis = async () => {
+    if (!projectId || !hasMedia) return;
+    setStartingAnalysis(true);
+    try {
+      const response = await fetch("/api/projects/" + projectId + "/analyze", { method: "POST" });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail ?? "Could not start footage analysis");
+      }
+      const project = await response.json();
+      setAnalysisStatus(project.analysis_status);
+      setAnalysisProgress(project.analysis_progress ?? {});
+      announce("Footage analysis started. You can keep this page open while scenes are being prepared.");
+    } catch (error) {
+      announce(error instanceof Error ? error.message : "Could not start footage analysis.");
+    } finally {
+      setStartingAnalysis(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!projectId || !["queued", "running"].includes(analysisStatus)) return;
+    let cancelled = false;
+    let timer: number | undefined;
+    const refresh = async () => {
+      try {
+        const response = await fetch("/api/projects/" + projectId);
+        if (!response.ok) throw new Error("Could not read project status");
+        const project = await response.json();
+        if (cancelled) return;
+        setAnalysisStatus(project.analysis_status);
+        setAnalysisProgress(project.analysis_progress ?? {});
+        if (project.analysis_status === "completed") {
+          const resultResponse = await fetch("/api/projects/" + projectId + "/analysis");
+          if (!resultResponse.ok) throw new Error("Analysis completed but its result could not be loaded");
+          const result = await resultResponse.json();
+          const nextShots: Shot[] = (result.scenes ?? []).map((scene: any, index: number) => {
+            const firstFrame = scene.observations?.[0]?.frame_path;
+            const frameUrl = firstFrame
+              ? "/api/projects/" + projectId + "/frames/" + firstFrame.split("/").map(encodeURIComponent).join("/")
+              : "";
+            return {
+              id: index + 1,
+              title: scene.summary || "Scene " + (index + 1),
+              place: formatTime(scene.start_seconds) + " – " + formatTime(scene.end_seconds),
+              duration: Math.max(0.1, scene.end_seconds - scene.start_seconds),
+              start: scene.start_seconds,
+              end: scene.end_seconds,
+              image: frameUrl,
+              note: [scene.story_function, scene.dominant_mood].filter(Boolean).join(" · "),
+              transition: "Cut",
+              selected: true,
+            };
+          });
+          setShots(nextShots);
+          setActive(1);
+          announce("Analysis complete. " + nextShots.length + " scenes are ready in your storyboard.");
+        } else if (project.analysis_status === "failed") {
+          announce(project.analysis_error || "Footage analysis failed. You can retry.");
+        }
+      } catch (error) {
+        if (!cancelled) announce(error instanceof Error ? error.message : "Could not refresh analysis status.");
+      }
+      if (!cancelled && ["queued", "running"].includes(analysisStatus)) {
+        timer = window.setTimeout(refresh, 2500);
+      }
+    };
+    timer = window.setTimeout(refresh, 1000);
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [projectId, analysisStatus]);
+
   const stages: { name: Stage; label: string; icon: typeof Film }[] = [
     { name: "Create", label: "Project", icon: FolderOpen }, { name: "Storyboard", label: "Storyboard", icon: Grid2X2 },
     { name: "Edit", label: "Edit", icon: Scissors }, { name: "Export", label: "Export", icon: Clapperboard },
@@ -106,11 +196,17 @@ export default function App() {
           <aside className="inspiration-card"><div className="inspiration-image" style={{backgroundImage:`url(${image("photo-1470770841072-f978cf4d019e")})`}}/><div className="inspiration-content"><span className="pill"><WandSparkles size={12}/> YOUR CREATIVE ASSISTANT</span><h3>Good stories start with a feeling.</h3><p>Describe the atmosphere, not every single shot. The AI will find the moments that fit.</p><div className="tip"><Star size={15}/><span><b>A little tip</b> Mention a mood, a place, or a moment you don't want to miss.</span></div></div></aside>
         </section>}
 
-        {stage === "Storyboard" && <><div className="story-toolbar"><div><div className="section-title">Your story <span className="count-pill">{selectedCount} of {shots.length} shots</span></div><p className="section-subtitle">We've found the moments that tell your story. Select, reorder or refine them.</p></div><div className="toolbar-actions"><button className="secondary-button" onClick={()=>announce("Finding alternate footage will connect to the AI pipeline.")}><WandSparkles size={15}/> Find alternatives</button><button className="primary-button" onClick={()=>setStage("Edit")}>Continue to edit <ArrowRight size={16}/></button></div></div>
-          <div className="story-layout"><div className="shot-grid">{shots.map((shot, i)=><article key={shot.id} className={`shot-card ${active===shot.id?"focused":""} ${!shot.selected?"dimmed":""}`} onClick={()=>setActive(shot.id)}><div className="shot-image" style={{backgroundImage:`url(${image(shot.image)})`}}><span className="shot-number">{String(i+1).padStart(2,"0")}</span><button className={`select-shot ${shot.selected?"checked":""}`} onClick={e=>{e.stopPropagation();update(shot.id,{selected:!shot.selected})}} aria-label="Toggle shot"><Check size={13}/></button><span className="shot-duration">{shot.duration.toFixed(1)}s</span></div><div className="shot-info"><b>{shot.title}</b><span>{shot.place}</span><p>{shot.note}</p><div className="shot-card-bottom"><span className="ai-match"><Sparkles size={11}/> AI selected</span><button className="tiny-action" onClick={e=>{e.stopPropagation();move(shot.id,-1)}} aria-label="Move shot up"><ArrowLeft size={13}/></button><button className="tiny-action" onClick={e=>{e.stopPropagation();move(shot.id,1)}} aria-label="Move shot down"><ArrowRight size={13}/></button></div></div></article>)}
+        {stage === "Storyboard" && <><div className="story-toolbar"><div><div className="section-title">Your story <span className="count-pill">{selectedCount} of {shots.length} scenes</span></div><p className="section-subtitle">{shots.length ? "Review the real scenes detected in your footage." : "Upload your footage and let the editor find the scenes."}</p></div><div className="toolbar-actions"><button className="secondary-button" disabled={!hasMedia || startingAnalysis || analysisStatus === "queued" || analysisStatus === "running"} onClick={startAnalysis}><WandSparkles size={15}/>{startingAnalysis || analysisStatus === "queued" || analysisStatus === "running" ? "Analyzing..." : analysisStatus === "failed" ? "Retry analysis" : analysisStatus === "completed" ? "Analyze again" : "Analyze footage"}</button><button className="primary-button" disabled={!shots.length} onClick={()=>setStage("Edit")}>Continue to edit <ArrowRight size={16}/></button></div></div>
+          {shots.length === 0 ? <section className="empty-story panel">
+            <div className="upload-icon"><Film size={21}/></div>
+            <h2>{analysisStatus === "running" || analysisStatus === "queued" ? "Finding the scenes in your footage" : analysisStatus === "failed" ? "Analysis needs another try" : hasMedia ? "Your footage is ready to analyze" : "Add footage to get started"}</h2>
+            <p>{analysisStatus === "running" || analysisStatus === "queued" ? "The editor is detecting scene boundaries, extracting frames and describing what happens." : analysisStatus === "failed" ? "The analysis did not finish. Check that the vision model is available, then retry." : hasMedia ? "Analyze your videos to turn them into a real, visual storyboard." : "Go back to Project and upload one or more video files. Your original files stay untouched."}</p>
+            {analysisStatus === "running" || analysisStatus === "queued" ? <div className="analysis-progress"><span>{String(analysisProgress.event ?? "Starting analysis").replaceAll("_", " ")}</span>{typeof analysisProgress.completed_frames === "number" && typeof analysisProgress.total_frames === "number" ? <b>{analysisProgress.completed_frames} / {analysisProgress.total_frames} frames</b> : null}</div> : null}
+            {!hasMedia ? <button className="primary-button" onClick={()=>setStage("Create")}>Add video footage <ArrowRight size={16}/></button> : null}
+          </section> : <div className="story-layout"><div className="shot-grid">{shots.map((shot, i)=><article key={shot.id} className={`shot-card ${active===shot.id?"focused":""} ${!shot.selected?"dimmed":""}`} onClick={()=>setActive(shot.id)}><div className="shot-image" style={{backgroundImage:`url(${shotImage(shot.image)})`}}><span className="shot-number">{String(i+1).padStart(2,"0")}</span><button className={`select-shot ${shot.selected?"checked":""}`} onClick={e=>{e.stopPropagation();update(shot.id,{selected:!shot.selected})}} aria-label="Toggle shot"><Check size={13}/></button><span className="shot-duration">{shot.duration.toFixed(1)}s</span></div><div className="shot-info"><b>{shot.title}</b><span>{shot.place}</span><p>{shot.note}</p><div className="shot-card-bottom"><span className="ai-match"><Sparkles size={11}/> AI selected</span><button className="tiny-action" onClick={e=>{e.stopPropagation();move(shot.id,-1)}} aria-label="Move shot up"><ArrowLeft size={13}/></button><button className="tiny-action" onClick={e=>{e.stopPropagation();move(shot.id,1)}} aria-label="Move shot down"><ArrowRight size={13}/></button></div></div></article>)}
             <button className="add-shot" onClick={()=>announce("Choose a clip from your media library (backend integration pending).")}><div><Plus size={20}/></div><b>Add a moment</b><span>Choose from your footage</span></button>
-          </div><aside className="story-inspector"><div className="inspector-heading"><span>SHOT DETAILS</span><MoreHorizontal size={17}/></div><div className="inspector-preview" style={{backgroundImage:`url(${image(current.image)})`}}><span className="preview-tag">SHOT {String(shots.findIndex(s=>s.id===current.id)+1).padStart(2,"0")}</span><button onClick={()=>setPlaying(!playing)} className="preview-play">{playing?<Pause size={16}/>:<Play size={16} fill="currentColor"/>}</button></div><h3>{current.title}</h3><p className="inspector-location">{current.place}</p><div className="inspector-divider"/><div className="detail-row"><span>AI confidence</span><b className="confidence">94% <span className="confidence-bar"><i/></span></b></div><div className="detail-row"><span>Clip length</span><b>{current.duration.toFixed(1)} sec</b></div><div className="detail-row"><span>In your story</span><b>{current.selected?"Included":"Not included"}</b></div><div className="inspector-divider"/><div className="ai-reason"><span><Sparkles size={13}/> WHY THIS MOMENT</span><p>{current.note}</p></div><button className="full-secondary" onClick={()=>update(current.id,{selected:!current.selected})}>{current.selected?"Remove from story":"Add to story"}</button></aside></div>
-          <div className="bottom-summary"><div><span className="summary-icon"><Clock3 size={16}/></span><span><b>Looking good so far</b><small>{selectedCount} selected moments · About {Math.round(total)} seconds of footage</small></span></div><span className="summary-right">Your original footage is always safe <Check size={14}/></span></div>
+          </div><aside className="story-inspector"><div className="inspector-heading"><span>SHOT DETAILS</span><MoreHorizontal size={17}/></div><div className="inspector-preview" style={{backgroundImage:`url(${shotImage(current.image)})`}}><span className="preview-tag">SHOT {String(shots.findIndex(s=>s.id===current.id)+1).padStart(2,"0")}</span><button onClick={()=>setPlaying(!playing)} className="preview-play">{playing?<Pause size={16}/>:<Play size={16} fill="currentColor"/>}</button></div><h3>{current.title}</h3><p className="inspector-location">{current.place}</p><div className="inspector-divider"/><div className="detail-row"><span>AI confidence</span><b className="confidence">94% <span className="confidence-bar"><i/></span></b></div><div className="detail-row"><span>Clip length</span><b>{current.duration.toFixed(1)} sec</b></div><div className="detail-row"><span>In your story</span><b>{current.selected?"Included":"Not included"}</b></div><div className="inspector-divider"/><div className="ai-reason"><span><Sparkles size={13}/> WHY THIS MOMENT</span><p>{current.note}</p></div><button className="full-secondary" onClick={()=>update(current.id,{selected:!current.selected})}>{current.selected?"Remove from story":"Add to story"}</button></aside></div>
+          {shots.length > 0 ? <div className="bottom-summary"><div><span className="summary-icon"><Clock3 size={16}/></span><span><b>Looking good so far</b><small>{selectedCount} selected moments · About {Math.round(total)} seconds of footage</small></span></div><span className="summary-right">Your original footage is always safe <Check size={14}/></span></div> : null}
         </>}
 
         {stage === "Edit" && <><div className="edit-toolbar"><div><div className="section-title">Your edit <span className="count-pill">Draft 01</span></div><p className="section-subtitle">Select a shot below to adjust its timing and transition.</p></div><button className="primary-button" onClick={()=>setStage("Export")}>Preview film <ArrowRight size={16}/></button></div><div className="editor-layout"><section className="preview-panel"><div className="preview-top"><span><span className="live-dot"/> PREVIEW</span><button className="icon-button dark-icon" onClick={()=>announce("Expanded preview coming soon.")}><Maximize2 size={15}/></button></div><div className="video-stage" style={{backgroundImage:`url(${image(current.image)})`}}><button className="big-play" onClick={()=>setPlaying(!playing)}>{playing?<Pause size={22}/>:<Play size={22} fill="currentColor"/>}</button><div className="video-caption">{current.title}</div></div><div className="player-controls"><button onClick={()=>setPlaying(!playing)}>{playing?<Pause size={16}/>:<Play size={16} fill="currentColor"/>}</button><span>00:12</span><div className="player-track"><i/></div><span>01:14</span><button onClick={()=>announce("Volume control coming soon.")}><AudioLines size={17}/></button></div><div className="preview-foot"><span><Film size={14}/> {projectName}</span><span>1080p · 24 fps</span></div></section><section className="edit-inspector"><div className="inspector-heading"><span>SHOT SETTINGS</span><span className="count-pill">#{shots.findIndex(s=>s.id===current.id)+1}</span></div><h3>{current.title}</h3><p className="inspector-location">{current.place}</p><div className="inspector-divider"/><label className="field-label">TRIM CLIP</label><div className="trim-fields"><label><span>IN</span><input type="number" step=".1" value={current.start} onChange={e=>update(current.id,{start:Number(e.target.value)})}/><small>sec</small></label><label><span>OUT</span><input type="number" step=".1" value={current.end} onChange={e=>update(current.id,{end:Number(e.target.value)})}/><small>sec</small></label></div><div className="range-visual"><span style={{left:`${Math.max(0,current.start/30*100)}%`,width:`${Math.max(4,(current.end-current.start)/30*100)}%`}}/></div><label className="field-label">TRANSITION INTO THIS SHOT</label><select className="text-input" value={current.transition} onChange={e=>update(current.id,{transition:e.target.value})}><option>Cut</option><option>Cross dissolve</option><option>Fade</option><option>Wipe</option><option>Slide</option></select><div className="ai-suggestion"><Sparkles size={14}/><span><b>AI suggestion</b> {current.transition==="Cut"?"A clean cut keeps the pacing natural.":"This transition creates a gentle visual flow."}</span></div><button className="full-secondary" onClick={()=>announce("Changes are saved in this prototype's browser state.")}><Check size={15}/> Save shot changes</button></section></div><div className="timeline-panel"><div className="timeline-header"><div><b>Sequence timeline</b><span>{selectedCount} clips · {Math.round(total)} sec</span></div><div className="timeline-tools"><button className="tiny-action"><ArrowLeft size={14}/></button><button className="tiny-action"><ArrowRight size={14}/></button><button className="tiny-action"><Gauge size={14}/></button></div></div><div className="timeline-ruler"><span>00:00</span><span>00:15</span><span>00:30</span><span>00:45</span><span>01:00</span><span>01:15</span></div><div className="timeline-clips">{shots.filter(s=>s.selected).map((s,i)=><button key={s.id} className={`timeline-clip ${active===s.id?"active":""}`} style={{backgroundImage:`linear-gradient(0deg,rgba(0,0,0,.55),transparent),url(${image(s.image)})`,flexGrow:s.duration}} onClick={()=>setActive(s.id)}><span>{i+1}. {s.title}</span><small>{s.duration.toFixed(1)}s</small></button>)}</div><div className="audio-track"><AudioLines size={14}/><span>Soundtrack · Ambient journey</span><div className="waveform">{Array.from({length:65},(_,i)=><i key={i} style={{height:`${12+Math.abs(Math.sin(i*2.1)*32)}px`}}/>)}</div></div></div></>}
